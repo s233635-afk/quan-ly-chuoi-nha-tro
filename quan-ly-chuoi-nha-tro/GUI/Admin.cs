@@ -10,9 +10,9 @@ using System.Windows.Forms;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
-    public partial class FrmMain : Form
+    public partial class Admin : Form
     {
-        public FrmMain()
+        public Admin()
         {
             InitializeComponent();
         }

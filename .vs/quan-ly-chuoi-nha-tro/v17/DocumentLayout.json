@@ -1,46 +1,10 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "D:\\L\u1EADp Tr\u00ECnh .NET\\quan-ly-chuoi-nha-tro\\",
+  "WorkspaceRootPath": "D:\\laptrinhnet\\quan-ly-chuoi-nha-tro\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{286D47B3-5E63-40E1-B8C6-6817FB80551C}|quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro.csproj|d:\\l\u1EADp tr\u00ECnh .net\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\bll\\userbll.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{286D47B3-5E63-40E1-B8C6-6817FB80551C}|quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro.csproj|solutionrelative:quan-ly-chuoi-nha-tro\\bll\\userbll.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{286D47B3-5E63-40E1-B8C6-6817FB80551C}|quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro.csproj|d:\\l\u1EADp tr\u00ECnh .net\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\dal\\databasehelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{286D47B3-5E63-40E1-B8C6-6817FB80551C}|quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro.csproj|solutionrelative:quan-ly-chuoi-nha-tro\\dal\\databasehelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{286D47B3-5E63-40E1-B8C6-6817FB80551C}|quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro.csproj|d:\\l\u1EADp tr\u00ECnh .net\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\gui\\frmmain.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
-      "RelativeMoniker": "D:0:0:{286D47B3-5E63-40E1-B8C6-6817FB80551C}|quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro.csproj|solutionrelative:quan-ly-chuoi-nha-tro\\gui\\frmmain.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{286D47B3-5E63-40E1-B8C6-6817FB80551C}|quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro.csproj|d:\\l\u1EADp tr\u00ECnh .net\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{286D47B3-5E63-40E1-B8C6-6817FB80551C}|quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro.csproj|solutionrelative:quan-ly-chuoi-nha-tro\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{286D47B3-5E63-40E1-B8C6-6817FB80551C}|quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro.csproj|d:\\l\u1EADp tr\u00ECnh .net\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\gui\\frmregister.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{286D47B3-5E63-40E1-B8C6-6817FB80551C}|quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro.csproj|solutionrelative:quan-ly-chuoi-nha-tro\\gui\\frmregister.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{286D47B3-5E63-40E1-B8C6-6817FB80551C}|quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro.csproj|d:\\l\u1EADp tr\u00ECnh .net\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\gui\\frmregister.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
-      "RelativeMoniker": "D:0:0:{286D47B3-5E63-40E1-B8C6-6817FB80551C}|quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro.csproj|solutionrelative:quan-ly-chuoi-nha-tro\\gui\\frmregister.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{286D47B3-5E63-40E1-B8C6-6817FB80551C}|quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro.csproj|d:\\l\u1EADp tr\u00ECnh .net\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\gui\\frmlogin.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{286D47B3-5E63-40E1-B8C6-6817FB80551C}|quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro.csproj|solutionrelative:quan-ly-chuoi-nha-tro\\gui\\frmlogin.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{286D47B3-5E63-40E1-B8C6-6817FB80551C}|quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro.csproj|d:\\l\u1EADp tr\u00ECnh .net\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\gui\\frmlogin.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
-      "RelativeMoniker": "D:0:0:{286D47B3-5E63-40E1-B8C6-6817FB80551C}|quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro.csproj|solutionrelative:quan-ly-chuoi-nha-tro\\gui\\frmlogin.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{286D47B3-5E63-40E1-B8C6-6817FB80551C}|quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro.csproj|d:\\l\u1EADp tr\u00ECnh .net\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\gui\\frmregister.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{286D47B3-5E63-40E1-B8C6-6817FB80551C}|quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro.csproj|solutionrelative:quan-ly-chuoi-nha-tro\\gui\\frmregister.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{286D47B3-5E63-40E1-B8C6-6817FB80551C}|quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro.csproj|d:\\l\u1EADp tr\u00ECnh .net\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\app.config||{FA3CD31E-987B-443A-9B81-186104E8DAC1}",
-      "RelativeMoniker": "D:0:0:{286D47B3-5E63-40E1-B8C6-6817FB80551C}|quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro.csproj|solutionrelative:quan-ly-chuoi-nha-tro\\app.config||{FA3CD31E-987B-443A-9B81-186104E8DAC1}"
+      "AbsoluteMoniker": "D:0:0:{286D47B3-5E63-40E1-B8C6-6817FB80551C}|quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro.csproj|d:\\laptrinhnet\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\gui\\frmmain.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{286D47B3-5E63-40E1-B8C6-6817FB80551C}|quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro.csproj|solutionrelative:quan-ly-chuoi-nha-tro\\gui\\frmmain.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -50,133 +14,19 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 6,
+          "SelectedChildIndex": 0,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 7,
-              "Title": "FrmLogin.cs [Design]",
-              "DocumentMoniker": "D:\\L\u1EADp Tr\u00ECnh .NET\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\GUI\\FrmLogin.cs",
-              "RelativeDocumentMoniker": "quan-ly-chuoi-nha-tro\\GUI\\FrmLogin.cs",
-              "ToolTip": "D:\\L\u1EADp Tr\u00ECnh .NET\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\GUI\\FrmLogin.cs [Design]",
-              "RelativeToolTip": "quan-ly-chuoi-nha-tro\\GUI\\FrmLogin.cs [Design]",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-04T15:26:34.631Z",
-              "EditorCaption": " [Design]"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 3,
-              "Title": "Program.cs",
-              "DocumentMoniker": "D:\\L\u1EADp Tr\u00ECnh .NET\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\Program.cs",
-              "RelativeDocumentMoniker": "quan-ly-chuoi-nha-tro\\Program.cs",
-              "ToolTip": "D:\\L\u1EADp Tr\u00ECnh .NET\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\Program.cs",
-              "RelativeToolTip": "quan-ly-chuoi-nha-tro\\Program.cs",
-              "ViewState": "AgIAAAkAAAAAAAAAAAAAABIAAAAsAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-04T15:20:18.17Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 4,
-              "Title": "FrmRegister.cs",
-              "DocumentMoniker": "D:\\L\u1EADp Tr\u00ECnh .NET\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\GUI\\FrmRegister.cs",
-              "RelativeDocumentMoniker": "quan-ly-chuoi-nha-tro\\GUI\\FrmRegister.cs",
-              "ToolTip": "D:\\L\u1EADp Tr\u00ECnh .NET\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\GUI\\FrmRegister.cs",
-              "RelativeToolTip": "quan-ly-chuoi-nha-tro\\GUI\\FrmRegister.cs",
-              "ViewState": "AgIAABYAAAAAAAAAAAAAABkAAAAqAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-04T15:13:38.469Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 5,
-              "Title": "FrmRegister.cs [Design]",
-              "DocumentMoniker": "D:\\L\u1EADp Tr\u00ECnh .NET\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\GUI\\FrmRegister.cs",
-              "RelativeDocumentMoniker": "quan-ly-chuoi-nha-tro\\GUI\\FrmRegister.cs",
-              "ToolTip": "D:\\L\u1EADp Tr\u00ECnh .NET\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\GUI\\FrmRegister.cs [Design]",
-              "RelativeToolTip": "quan-ly-chuoi-nha-tro\\GUI\\FrmRegister.cs [Design]",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-04T15:13:28.249Z",
-              "EditorCaption": " [Design]"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "FrmMain.cs [Design]",
-              "DocumentMoniker": "D:\\L\u1EADp Tr\u00ECnh .NET\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\GUI\\FrmMain.cs",
-              "RelativeDocumentMoniker": "quan-ly-chuoi-nha-tro\\GUI\\FrmMain.cs",
-              "ToolTip": "D:\\L\u1EADp Tr\u00ECnh .NET\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\GUI\\FrmMain.cs [Design]",
-              "RelativeToolTip": "quan-ly-chuoi-nha-tro\\GUI\\FrmMain.cs [Design]",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-04T15:33:57.19Z",
-              "EditorCaption": " [Design]"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "DatabaseHelper.cs",
-              "DocumentMoniker": "D:\\L\u1EADp Tr\u00ECnh .NET\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\DAL\\DatabaseHelper.cs",
-              "RelativeDocumentMoniker": "quan-ly-chuoi-nha-tro\\DAL\\DatabaseHelper.cs",
-              "ToolTip": "D:\\L\u1EADp Tr\u00ECnh .NET\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\DAL\\DatabaseHelper.cs",
-              "RelativeToolTip": "quan-ly-chuoi-nha-tro\\DAL\\DatabaseHelper.cs",
-              "ViewState": "AgIAAEgAAAAAAAAAAAAQwBIAAAAIAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-04T15:08:44.092Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
               "DocumentIndex": 0,
-              "Title": "UserBLL.cs",
-              "DocumentMoniker": "D:\\L\u1EADp Tr\u00ECnh .NET\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\BLL\\UserBLL.cs",
-              "RelativeDocumentMoniker": "quan-ly-chuoi-nha-tro\\BLL\\UserBLL.cs",
-              "ToolTip": "D:\\L\u1EADp Tr\u00ECnh .NET\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\BLL\\UserBLL.cs",
-              "RelativeToolTip": "quan-ly-chuoi-nha-tro\\BLL\\UserBLL.cs",
-              "ViewState": "AgIAAAMAAAAAAAAAAAAAAAwAAAAPAAAAAAAAAA==",
+              "Title": "FrmMain.Designer.cs",
+              "DocumentMoniker": "D:\\laptrinhnet\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\GUI\\FrmMain.Designer.cs",
+              "RelativeDocumentMoniker": "quan-ly-chuoi-nha-tro\\GUI\\FrmMain.Designer.cs",
+              "ToolTip": "D:\\laptrinhnet\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\GUI\\FrmMain.Designer.cs",
+              "RelativeToolTip": "quan-ly-chuoi-nha-tro\\GUI\\FrmMain.Designer.cs",
+              "ViewState": "AgIAAFAAAAAAAAAAAAAYwAoAAAAuAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-04T15:10:08.974Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 6,
-              "Title": "FrmLogin.cs",
-              "DocumentMoniker": "D:\\L\u1EADp Tr\u00ECnh .NET\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\GUI\\FrmLogin.cs",
-              "RelativeDocumentMoniker": "quan-ly-chuoi-nha-tro\\GUI\\FrmLogin.cs",
-              "ToolTip": "D:\\L\u1EADp Tr\u00ECnh .NET\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\GUI\\FrmLogin.cs",
-              "RelativeToolTip": "quan-ly-chuoi-nha-tro\\GUI\\FrmLogin.cs",
-              "ViewState": "AgIAADwAAAAAAAAAAAAuwE0AAAAEAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-04T15:27:44.396Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 9,
-              "Title": "App.config",
-              "DocumentMoniker": "D:\\L\u1EADp Tr\u00ECnh .NET\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\App.config",
-              "RelativeDocumentMoniker": "quan-ly-chuoi-nha-tro\\App.config",
-              "ToolTip": "D:\\L\u1EADp Tr\u00ECnh .NET\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\App.config",
-              "RelativeToolTip": "quan-ly-chuoi-nha-tro\\App.config",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000601|",
-              "WhenOpened": "2025-12-04T15:32:06.796Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 8,
-              "Title": "FrmRegister.Designer.cs",
-              "DocumentMoniker": "D:\\L\u1EADp Tr\u00ECnh .NET\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\GUI\\FrmRegister.Designer.cs",
-              "RelativeDocumentMoniker": "quan-ly-chuoi-nha-tro\\GUI\\FrmRegister.Designer.cs",
-              "ToolTip": "D:\\L\u1EADp Tr\u00ECnh .NET\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\GUI\\FrmRegister.Designer.cs",
-              "RelativeToolTip": "quan-ly-chuoi-nha-tro\\GUI\\FrmRegister.Designer.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-04T15:34:06.267Z",
+              "WhenOpened": "2025-12-07T15:07:57.537Z",
               "EditorCaption": ""
             }
           ]

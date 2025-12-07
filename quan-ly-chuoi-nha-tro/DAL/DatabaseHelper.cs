@@ -1,24 +1,17 @@
-﻿using MySqlConnector;
-using System;
+﻿using System;
 using System.Data;
+using System.Data.SqlClient;
 using System.Threading.Tasks;
 
-namespace WinformTiDB.DAL
+namespace QuanLyNhaTro.DAL
 {
     public class DatabaseHelper
     {
-        // Tôi đã chuyển đổi chuỗi mysql:// của bạn sang chuẩn ADO.NET
-        // Thêm SslMode=VerifyCA vì TiDB Cloud bắt buộc bảo mật SSL
-        private string connectionString = "Server=gateway01.ap-southeast-1.prod.aws.tidbcloud.com;" +
-                                          "Port=4000;" +
-                                          "Database=test;" +
-                                          "Uid=2AHiCRdnyxEBa2H.root;" +
-                                          "Pwd=h4OkywilZcCWARp5;" +
-                                          "SslMode=VerifyCA;";
+        private string connectionString = "Data Source=SQL9001.site4now.net;Initial Catalog=db_ac1f11_quanlynhatro;User Id=db_ac1f11_quanlynhatro_admin;Password=admin123";
 
         public async Task<bool> RegisterUserAsync(string username, string password, string fullName)
         {
-            using (var conn = new MySqlConnection(connectionString))
+            using (var conn = new SqlConnection(connectionString))
             {
                 try
                 {
@@ -27,7 +20,7 @@ namespace WinformTiDB.DAL
 
                     string sql = "INSERT INTO Users (Username, Password, FullName) VALUES (@user, @pass, @name)";
 
-                    using (var cmd = new MySqlCommand(sql, conn))
+                    using (var cmd = new SqlCommand(sql, conn))
                     {
                         // Dùng tham số (Parameters) để chống hack SQL Injection
                         cmd.Parameters.AddWithValue("@user", username);
@@ -39,13 +32,13 @@ namespace WinformTiDB.DAL
                         return result > 0;
                     }
                 }
-                catch (MySqlException ex)
+                catch (SqlException ex)
                 {
-                    // Lỗi 1062 là trùng lặp dữ liệu (Trùng Username)
-                    if (ex.Number == 1062)
+                    // Lỗi 2627 là trùng lặp dữ liệu (Trùng Username)
+                    if (ex.Number == 2627)
                         throw new Exception("Tài khoản này đã tồn tại rồi!");
 
-                    throw new Exception("Lỗi TiDB: " + ex.Message);
+                    throw new Exception("Lỗi database: " + ex.Message);
                 }
                 catch (Exception ex)
                 {
@@ -57,7 +50,7 @@ namespace WinformTiDB.DAL
         // Thêm vào class DatabaseHelper trong thư mục DAL
         public async Task<string> LoginAsync(string username, string password)
         {
-            using (var conn = new MySqlConnection(connectionString)) // connectionString lấy từ bài trước
+            using (var conn = new SqlConnection(connectionString))
             {
                 try
                 {
@@ -66,7 +59,7 @@ namespace WinformTiDB.DAL
                     // Câu lệnh tìm người dùng
                     string sql = "SELECT FullName FROM Users WHERE Username = @user AND Password = @pass";
 
-                    using (var cmd = new MySqlCommand(sql, conn))
+                    using (var cmd = new SqlCommand(sql, conn))
                     {
                         cmd.Parameters.AddWithValue("@user", username);
                         cmd.Parameters.AddWithValue("@pass", password);
@@ -85,7 +78,7 @@ namespace WinformTiDB.DAL
                 catch (Exception ex)
                 {
                     // Ném lỗi ra để tầng UI xử lý hiển thị
-                    throw new Exception("Lỗi kết nối TiDB: " + ex.Message);
+                    throw new Exception("Lỗi kết nối database: " + ex.Message);
                 }
             }
         }

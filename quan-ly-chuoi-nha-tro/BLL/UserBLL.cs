@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
-using WinformTiDB.DAL;
+using QuanLyNhaTro.DAL;
 
-namespace WinformTiDB.BLL
+namespace QuanLyNhaTro.BLL
 {
     public class UserBLL
     {
