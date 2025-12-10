@@ -25,7 +25,6 @@ namespace QuanLyNhaTro.BLL
             return await dbHelper.RegisterUserAsync(username, password, fullname);
         }
 
-        // Thêm vào class UserBLL trong thư mục BLL
         public async Task<string> DangNhap(string username, string password)
         {
             // 1. Kiểm tra rỗng
@@ -46,7 +45,18 @@ namespace QuanLyNhaTro.BLL
             // 3. Trả về tên người dùng để hiển thị xin chào
             return fullName;
         }
+
+        /// <summary>
+        /// Lấy RoleId của người dùng
+        /// </summary>
+        public async Task<int> GetUserRoleAsync(string username)
+        {
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                throw new Exception("Tên người dùng không hợp lệ!");
+            }
+
+            return await dbHelper.GetUserRoleAsync(username);
+        }
     }
-
-
 }

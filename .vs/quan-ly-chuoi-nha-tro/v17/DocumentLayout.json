@@ -3,8 +3,12 @@
   "WorkspaceRootPath": "D:\\laptrinhnet\\quan-ly-chuoi-nha-tro\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{286D47B3-5E63-40E1-B8C6-6817FB80551C}|quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro.csproj|d:\\laptrinhnet\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\gui\\frmmain.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{286D47B3-5E63-40E1-B8C6-6817FB80551C}|quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro.csproj|solutionrelative:quan-ly-chuoi-nha-tro\\gui\\frmmain.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{286D47B3-5E63-40E1-B8C6-6817FB80551C}|quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro.csproj|d:\\laptrinhnet\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\gui\\admin.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{286D47B3-5E63-40E1-B8C6-6817FB80551C}|quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro.csproj|solutionrelative:quan-ly-chuoi-nha-tro\\gui\\admin.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{286D47B3-5E63-40E1-B8C6-6817FB80551C}|quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro.csproj|D:\\laptrinhnet\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\gui\\admin.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
+      "RelativeMoniker": "D:0:0:{286D47B3-5E63-40E1-B8C6-6817FB80551C}|quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro.csproj|solutionrelative:quan-ly-chuoi-nha-tro\\gui\\admin.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
     }
   ],
   "DocumentGroupContainers": [
@@ -19,15 +23,26 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
-              "Title": "FrmMain.Designer.cs",
-              "DocumentMoniker": "D:\\laptrinhnet\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\GUI\\FrmMain.Designer.cs",
-              "RelativeDocumentMoniker": "quan-ly-chuoi-nha-tro\\GUI\\FrmMain.Designer.cs",
-              "ToolTip": "D:\\laptrinhnet\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\GUI\\FrmMain.Designer.cs",
-              "RelativeToolTip": "quan-ly-chuoi-nha-tro\\GUI\\FrmMain.Designer.cs",
-              "ViewState": "AgIAAFAAAAAAAAAAAAAYwAoAAAAuAAAAAAAAAA==",
+              "Title": "Admin.cs",
+              "DocumentMoniker": "D:\\laptrinhnet\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\GUI\\Admin.cs",
+              "RelativeDocumentMoniker": "quan-ly-chuoi-nha-tro\\GUI\\Admin.cs",
+              "ToolTip": "D:\\laptrinhnet\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\GUI\\Admin.cs",
+              "RelativeToolTip": "quan-ly-chuoi-nha-tro\\GUI\\Admin.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-07T15:07:57.537Z",
+              "WhenOpened": "2025-12-10T06:58:33.028Z",
               "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "Admin.cs [Design]",
+              "DocumentMoniker": "D:\\laptrinhnet\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\GUI\\Admin.cs",
+              "RelativeDocumentMoniker": "quan-ly-chuoi-nha-tro\\GUI\\Admin.cs",
+              "ToolTip": "D:\\laptrinhnet\\quan-ly-chuoi-nha-tro\\quan-ly-chuoi-nha-tro\\GUI\\Admin.cs [Design]",
+              "RelativeToolTip": "quan-ly-chuoi-nha-tro\\GUI\\Admin.cs [Design]",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-10T06:58:27.676Z"
             }
           ]
         }

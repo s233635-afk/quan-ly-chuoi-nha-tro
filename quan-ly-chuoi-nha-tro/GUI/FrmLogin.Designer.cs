@@ -2,15 +2,8 @@
 {
     partial class FrmLogin
     {
-        /// <summary>
-        /// Required designer variable.
-        /// </summary>
         private System.ComponentModel.IContainer components = null;
 
-        /// <summary>
-        /// Clean up any resources being used.
-        /// </summary>
-        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null))
@@ -20,99 +13,128 @@
             base.Dispose(disposing);
         }
 
-        #region Windows Form Designer generated code
-
-        /// <summary>
-        /// Required method for Designer support - do not modify
-        /// the contents of this method with the code editor.
-        /// </summary>
         private void InitializeComponent()
         {
+            this.pnlContainer = new System.Windows.Forms.Panel();
+            this.pnlForm = new System.Windows.Forms.Panel();
+            this.lblTitle = new System.Windows.Forms.Label();
+            this.lblUser = new System.Windows.Forms.Label();
             this.txtUser = new System.Windows.Forms.TextBox();
+            this.lblPass = new System.Windows.Forms.Label();
             this.txtPass = new System.Windows.Forms.TextBox();
-            this.btnExit = new System.Windows.Forms.Button();
             this.btnLogin = new System.Windows.Forms.Button();
-            this.label1 = new System.Windows.Forms.Label();
-            this.label2 = new System.Windows.Forms.Label();
+            this.pnlContainer.SuspendLayout();
+            this.pnlForm.SuspendLayout();
             this.SuspendLayout();
-            // 
-            // txtUser
-            // 
-            this.txtUser.Location = new System.Drawing.Point(87, 85);
-            this.txtUser.Name = "txtUser";
-            this.txtUser.Size = new System.Drawing.Size(100, 22);
-            this.txtUser.TabIndex = 0;
-            // 
-            // txtPass
-            // 
-            this.txtPass.Location = new System.Drawing.Point(87, 186);
-            this.txtPass.Name = "txtPass";
-            this.txtPass.Size = new System.Drawing.Size(100, 22);
-            this.txtPass.TabIndex = 1;
-            // 
-            // btnExit
-            // 
-            this.btnExit.Location = new System.Drawing.Point(398, 186);
-            this.btnExit.Name = "btnExit";
-            this.btnExit.Size = new System.Drawing.Size(75, 23);
-            this.btnExit.TabIndex = 2;
-            this.btnExit.Text = "Exit";
-            this.btnExit.UseVisualStyleBackColor = true;
-            // 
-            // btnLogin
-            // 
-            this.btnLogin.Location = new System.Drawing.Point(398, 85);
-            this.btnLogin.Name = "btnLogin";
-            this.btnLogin.Size = new System.Drawing.Size(75, 23);
-            this.btnLogin.TabIndex = 3;
-            this.btnLogin.Text = "Login";
-            this.btnLogin.UseVisualStyleBackColor = true;
-            this.btnLogin.Click += new System.EventHandler(this.btnLogin_Click);
-            // 
-            // label1
-            // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(21, 92);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(36, 16);
-            this.label1.TabIndex = 4;
-            this.label1.Text = "User";
-            this.label1.Click += new System.EventHandler(this.label1_Click);
-            // 
-            // label2
-            // 
-            this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(24, 191);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(38, 16);
-            this.label2.TabIndex = 5;
-            this.label2.Text = "Pass";
-            // 
-            // FrmLogin
-            // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(800, 450);
-            this.Controls.Add(this.label2);
-            this.Controls.Add(this.label1);
-            this.Controls.Add(this.btnLogin);
-            this.Controls.Add(this.btnExit);
-            this.Controls.Add(this.txtPass);
-            this.Controls.Add(this.txtUser);
-            this.Name = "FrmLogin";
-            this.Text = "FrmLogin";
-            this.ResumeLayout(false);
-            this.PerformLayout();
 
+            // pnlContainer
+            this.pnlContainer.BackColor = System.Drawing.Color.FromArgb(240, 240, 240);
+            this.pnlContainer.Controls.Add(this.pnlForm);
+            this.pnlContainer.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.pnlContainer.Name = "pnlContainer";
+            this.pnlContainer.Size = new System.Drawing.Size(400, 500);
+            this.pnlContainer.TabIndex = 0;
+
+            // pnlForm
+            this.pnlForm.BackColor = System.Drawing.Color.White;
+            this.pnlForm.Controls.Add(this.btnLogin);
+            this.pnlForm.Controls.Add(this.txtPass);
+            this.pnlForm.Controls.Add(this.lblPass);
+            this.pnlForm.Controls.Add(this.txtUser);
+            this.pnlForm.Controls.Add(this.lblUser);
+            this.pnlForm.Controls.Add(this.lblTitle);
+            this.pnlForm.Location = new System.Drawing.Point(30, 80);
+            this.pnlForm.Name = "pnlForm";
+            this.pnlForm.Size = new System.Drawing.Size(340, 340);
+            this.pnlForm.TabIndex = 1;
+
+            // lblTitle
+            this.lblTitle.AutoSize = true;
+            this.lblTitle.Font = new System.Drawing.Font("Segoe UI", 18F, System.Drawing.FontStyle.Bold);
+            this.lblTitle.ForeColor = System.Drawing.Color.FromArgb(33, 37, 41);
+            this.lblTitle.Location = new System.Drawing.Point(20, 20);
+            this.lblTitle.Name = "lblTitle";
+            this.lblTitle.Size = new System.Drawing.Size(200, 32);
+            this.lblTitle.TabIndex = 0;
+            this.lblTitle.Text = "🔐 Đăng Nhập";
+
+            // lblUser
+            this.lblUser.AutoSize = true;
+            this.lblUser.Font = new System.Drawing.Font("Segoe UI", 10F);
+            this.lblUser.ForeColor = System.Drawing.Color.FromArgb(80, 80, 80);
+            this.lblUser.Location = new System.Drawing.Point(20, 70);
+            this.lblUser.Name = "lblUser";
+            this.lblUser.Size = new System.Drawing.Size(80, 19);
+            this.lblUser.TabIndex = 1;
+            this.lblUser.Text = "Tài Khoản";
+
+            // txtUser
+            this.txtUser.Font = new System.Drawing.Font("Segoe UI", 11F);
+            this.txtUser.Location = new System.Drawing.Point(20, 92);
+            this.txtUser.Name = "txtUser";
+            this.txtUser.Size = new System.Drawing.Size(300, 26);
+            this.txtUser.TabIndex = 2;
+            this.txtUser.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+
+            // lblPass
+            this.lblPass.AutoSize = true;
+            this.lblPass.Font = new System.Drawing.Font("Segoe UI", 10F);
+            this.lblPass.ForeColor = System.Drawing.Color.FromArgb(80, 80, 80);
+            this.lblPass.Location = new System.Drawing.Point(20, 130);
+            this.lblPass.Name = "lblPass";
+            this.lblPass.Size = new System.Drawing.Size(75, 19);
+            this.lblPass.TabIndex = 3;
+            this.lblPass.Text = "Mật Khẩu";
+
+            // txtPass
+            this.txtPass.Font = new System.Drawing.Font("Segoe UI", 11F);
+            this.txtPass.Location = new System.Drawing.Point(20, 152);
+            this.txtPass.Name = "txtPass";
+            this.txtPass.Size = new System.Drawing.Size(300, 26);
+            this.txtPass.TabIndex = 4;
+            this.txtPass.UseSystemPasswordChar = true;
+            this.txtPass.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.txtPass.KeyDown += new System.Windows.Forms.KeyEventHandler(this.txtPass_KeyDown);
+
+            // btnLogin
+            this.btnLogin.BackColor = System.Drawing.Color.FromArgb(0, 120, 212);
+            this.btnLogin.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnLogin.FlatAppearance.BorderSize = 0;
+            this.btnLogin.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold);
+            this.btnLogin.ForeColor = System.Drawing.Color.White;
+            this.btnLogin.Location = new System.Drawing.Point(20, 220);
+            this.btnLogin.Name = "btnLogin";
+            this.btnLogin.Size = new System.Drawing.Size(300, 45);
+            this.btnLogin.TabIndex = 5;
+            this.btnLogin.Text = "🔓 Đăng Nhập";
+            this.btnLogin.UseVisualStyleBackColor = false;
+            this.btnLogin.Click += new System.EventHandler(this.btnLogin_Click);
+
+            // FrmLogin
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.ClientSize = new System.Drawing.Size(400, 500);
+            this.Controls.Add(this.pnlContainer);
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
+            this.MaximizeBox = false;
+            this.MinimizeBox = false;
+            this.Name = "FrmLogin";
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
+            this.Text = "Đăng Nhập - Quản Lý Chuỗi Nhà Trọ";
+            this.Load += new System.EventHandler(this.FrmLogin_Load);
+            this.pnlContainer.ResumeLayout(false);
+            this.pnlForm.ResumeLayout(false);
+            this.pnlForm.PerformLayout();
+            this.ResumeLayout(false);
         }
 
-        #endregion
-
+        private System.Windows.Forms.Panel pnlContainer;
+        private System.Windows.Forms.Panel pnlForm;
+        private System.Windows.Forms.Label lblTitle;
+        private System.Windows.Forms.Label lblUser;
         private System.Windows.Forms.TextBox txtUser;
+        private System.Windows.Forms.Label lblPass;
         private System.Windows.Forms.TextBox txtPass;
-        private System.Windows.Forms.Button btnExit;
         private System.Windows.Forms.Button btnLogin;
-        private System.Windows.Forms.Label label1;
-        private System.Windows.Forms.Label label2;
     }
 }
