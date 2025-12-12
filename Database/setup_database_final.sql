@@ -308,6 +308,26 @@ CREATE TABLE Assets (
 );
 
 -- =====================================================
+-- 9. BẢNG THÔNG BÁO & CẤU HÌNH (2 bảng)
+-- =====================================================
+
+CREATE TABLE Notifications (
+    NotificationId INT PRIMARY KEY IDENTITY(1,1),
+    UserId INT,
+    Title NVARCHAR(255) NOT NULL,
+    Message NVARCHAR(MAX),
+    Status NVARCHAR(50), -- 'Unread', 'Read', 'Sent'
+    CreatedDate DATETIME DEFAULT GETDATE(),
+    FOREIGN KEY (UserId) REFERENCES Users(UserId)
+);
+
+CREATE TABLE SystemSettings (
+    SettingKey NVARCHAR(100) PRIMARY KEY,
+    SettingValue NVARCHAR(500),
+    Description NVARCHAR(500)
+);
+
+-- =====================================================
 -- INSERT DỮ LIỆU MẪU
 -- =====================================================
 
@@ -352,13 +372,112 @@ INSERT INTO Rooms (BranchId, SectionId, RoomNumber, RoomTypeId, RoomPrice, Curre
 INSERT INTO UtilityTypes (UtilityName, UtilityCode, Unit, DefaultPrice) VALUES
 (N'Điện', N'ELEC', N'kWh', 3500),
 (N'Nước', N'WATER', N'm3', 25000),
-(N'Internet', N'INET', N'lần/tháng', 200000);
+(N'Internet', N'INET', N'lần/tháng', 200000),
+(N'Rác thải', N'TRASH', N'lần/tháng', 50000);
 
 -- Insert Users
 INSERT INTO Users (Username, Password, Email, FullName, RoleId, BranchId, IsActive) VALUES
 (N'admin', N'admin123', N'admin@quanlynhatro.com', N'Quản trị viên', 1, NULL, 1),
 (N'nhanvien1', N'pass123', N'nv1@quanlynhatro.com', N'Nguyễn Văn A', 2, 1, 1),
 (N'nhanvien2', N'pass123', N'nv2@quanlynhatro.com', N'Trần Thị B', 2, 2, 1);
+
+-- Insert Tenants (khách thuê mẫu)
+INSERT INTO Tenants (FullName, IdentityCard, PhoneNumber, Email, BirthDate, Address, TemporaryRegistration, TemporaryRegistrationDate, TemporaryRegistrationExpiry)
+VALUES
+(N'Phạm Minh Tuấn', N'032456789', N'0901234567', N'tuan@example.com', '1995-01-12', N'12 Nguyễn Huệ, Q1', N'Tạm trú Q1', '2024-01-01', '2025-01-01'),
+(N'Lê Thị Hoa', N'074589632', N'0938123456', N'hoa@example.com', '1993-05-20', N'45 Lý Thường Kiệt, Q3', N'Tạm trú Q3', '2024-02-01', '2025-02-01'),
+(N'Nguyễn Văn Long', N'021345678', N'0912987654', N'long@example.com', '1990-11-02', N'89 Trần Hưng Đạo, Q5', N'Tạm trú Q5', '2024-03-01', '2025-03-01'),
+(N'Trần Thu Uyên', N'058963214', N'0945123789', N'uyen@example.com', '1996-07-15', N'15 Võ Thị Sáu, Q1', N'Tạm trú Q1', '2024-04-01', '2025-04-01');
+
+-- Insert Tenant room history
+INSERT INTO TenantRoomHistory (TenantId, RoomId, CheckInDate, CheckOutDate, Status, Notes) VALUES
+(1, 1, '2024-04-01', NULL, N'Active', N'Đang ở phòng A01'),
+(2, 2, '2024-04-15', NULL, N'Active', N'Đang ở phòng A02'),
+(3, 3, '2024-05-01', NULL, N'Active', N'Đang ở phòng B01'),
+(4, 4, '2024-06-01', NULL, N'Active', N'Đang ở phòng C01');
+
+-- Insert Dependents (người ở chung)
+INSERT INTO Dependents (TenantId, FullName, Relationship, PhoneNumber) VALUES
+(1, N'Nguyễn Thị Mai', N'Vợ', N'0902223344'),
+(1, N'Nguyễn Minh Khang', N'Con', N'0903334455'),
+(2, N'Phạm Văn Bình', N'Anh trai', N'0934332211'),
+(3, N'Lê Hoàng Nam', N'Bạn ở ghép', N'0912888999'),
+(4, N'Trần Anh Thư', N'Chị gái', N'0944332211');
+
+-- Insert Deposits
+INSERT INTO Deposits (TenantId, RoomId, DepositAmount, DepositDate, DepositType, Status, ReturnedAmount, ReturnedDate, Notes) VALUES
+(1, 1, 5000000, '2024-03-20', N'Booking', N'Confirmed', 0, NULL, N'Cọc đặt phòng'),
+(2, 2, 6000000, '2024-03-25', N'Official', N'Confirmed', 0, NULL, N'Cọc hợp đồng'),
+(3, 3, 4000000, '2024-04-10', N'Booking', N'Pending', 0, NULL, N'Cọc giữ phòng'),
+(4, 4, 4500000, '2024-05-20', N'Official', N'Returned', 4500000, '2024-06-05', N'Hoàn cọc do hủy phòng');
+
+-- Insert Contracts
+INSERT INTO Contracts (TenantId, RoomId, ContractNumber, SignDate, StartDate, EndDate, RentalPrice, DepositRequired, Terms, ContractPdfPath, Status)
+VALUES
+(1, 1, N'HD-2024-001', '2024-03-25', '2024-04-01', '2025-03-31', 3000000, 5000000, N'Thanh toán đầu tháng, điện nước theo chỉ số.', NULL, N'Active'),
+(2, 2, N'HD-2024-002', '2024-04-05', '2024-04-15', '2025-04-14', 5000000, 6000000, N'Thanh toán đầu tháng, cho phép nuôi thú nhỏ.', NULL, N'Active'),
+(3, 3, N'HD-2024-003', '2024-05-05', '2024-05-10', '2025-05-09', 3000000, 4000000, N'Thanh toán ngày 10 hàng tháng.', NULL, N'Active'),
+(4, 4, N'HD-2024-004', '2024-06-10', '2024-06-15', '2025-06-14', 5000000, 4500000, N'Thanh toán ngày 5 hàng tháng, đặt cọc 1 tháng.', NULL, N'Active');
+
+-- Insert UtilityReadings
+INSERT INTO UtilityReadings (RoomId, UtilityTypeId, ReadingDate, PreviousReading, CurrentReading, UsageAmount, UnitPrice, TotalCost, Notes)
+VALUES
+(1, 1, '2024-06-01', 1000, 1100, 100, 3500, 350000, N'Điện tháng 6'),
+(1, 2, '2024-06-01', 200, 230, 30, 25000, 750000, N'Nước tháng 6'),
+(2, 1, '2024-06-01', 900, 980, 80, 3500, 280000, N'Điện tháng 6'),
+(2, 2, '2024-06-01', 150, 180, 30, 25000, 750000, N'Nước tháng 6'),
+(3, 1, '2024-06-01', 500, 560, 60, 3500, 210000, N'Điện tháng 6'),
+(3, 2, '2024-06-01', 120, 140, 20, 25000, 500000, N'Nước tháng 6'),
+(4, 1, '2024-06-01', 300, 360, 60, 3500, 210000, N'Điện tháng 6'),
+(4, 2, '2024-06-01', 80, 98, 18, 25000, 450000, N'Nước tháng 6'),
+(1, 1, '2024-07-01', 1100, 1180, 80, 3500, 280000, N'Điện tháng 7'),
+(1, 2, '2024-07-01', 230, 260, 30, 25000, 750000, N'Nước tháng 7');
+
+-- Insert Invoices
+INSERT INTO Invoices (InvoiceNumber, TenantId, RoomId, InvoiceDate, FromDate, ToDate, RentalCost, UtilityCost, OtherCost, TotalAmount, PaidAmount, RemainingAmount, Status, DueDate)
+VALUES
+(N'INV-2024-06-01', 1, 1, '2024-06-02', '2024-06-01', '2024-06-30', 3000000, 1100000, 0, 4100000, 2000000, 2100000, N'PartialPaid', '2024-06-10'),
+(N'INV-2024-06-02', 2, 2, '2024-06-02', '2024-06-01', '2024-06-30', 5000000, 1030000, 0, 6030000, 6030000, 0, N'Paid', '2024-06-10'),
+(N'INV-2024-06-03', 3, 3, '2024-06-02', '2024-06-01', '2024-06-30', 3000000, 710000, 0, 3710000, 0, 3710000, N'Issued', '2024-06-10'),
+(N'INV-2024-06-04', 4, 4, '2024-06-12', '2024-06-01', '2024-06-30', 5000000, 660000, 0, 5660000, 0, 5660000, N'Issued', '2024-06-15'),
+(N'INV-2024-07-01', 1, 1, '2024-07-02', '2024-07-01', '2024-07-31', 3000000, 1030000, 0, 4030000, 0, 4030000, N'Draft', '2024-07-10');
+
+-- Insert Payments
+INSERT INTO Payments (InvoiceId, PaymentDate, PaymentAmount, PaymentMethod, TransactionReference, Notes) VALUES
+(1, '2024-06-03', 2000000, N'Transfer', N'TXN12345', N'Thanh toán đợt 1'),
+(2, '2024-06-04', 6030000, N'Cash', N'', N'Thanh toán đủ'),
+(3, '2024-06-15', 1500000, N'QR', N'TXN88888', N'Thanh toán 1 phần'),
+(4, '2024-06-16', 2000000, N'Transfer', N'TXN99999', N'Thanh toán trước hạn');
+
+-- Insert Maintenance tickets
+INSERT INTO MaintenanceTickets (TicketNumber, RoomId, RequestorType, RequestorId, IssueDescription, Priority, AssignedToUserId, Status, CreatedDate, Notes) VALUES
+(N'MT-2024-001', 1, N'Tenant', 1, N'Hỏng vòi nước phòng tắm', N'Medium', 2, N'InProgress', GETDATE(), N'Đã giao cho NV A'),
+(N'MT-2024-002', 2, N'Tenant', 2, N'Máy lạnh không lạnh', N'High', 2, N'Created', GETDATE(), N'Chờ kiểm tra'),
+(N'MT-2024-003', 3, N'Tenant', 3, N'Rò rỉ điện', N'Urgent', 2, N'InProgress', GETDATE(), N'Ưu tiên xử lý'),
+(N'MT-2024-004', 4, N'Tenant', 4, N'Cửa phòng hỏng bản lề', N'Low', 3, N'Completed', GETDATE(), N'Đã thay bản lề');
+
+-- Insert Assets
+INSERT INTO Assets (AssetCode, AssetName, Category, RoomId, Quantity, Condition, PurchaseDate, PurchasePrice, Description, IsActive)
+VALUES
+(N'TS-001', N'Máy lạnh Panasonic', N'Thiết bị', 1, 1, N'Good', '2023-01-10', 8000000, N'Hàng còn bảo hành', 1),
+(N'TS-002', N'Bàn gỗ', N'Nội thất', 1, 1, N'Good', '2023-03-12', 1200000, N'Bàn làm việc', 1),
+(N'TS-003', N'Ghế gỗ', N'Nội thất', 2, 2, N'Fair', '2023-03-12', 600000, N'Ghế phòng ngủ', 1),
+(N'TS-004', N'Giường gỗ', N'Nội thất', 3, 1, N'Good', '2023-04-10', 2500000, N'Giường đơn', 1),
+(N'TS-005', N'Máy nước nóng', N'Thiết bị', 4, 1, N'Good', '2023-05-15', 3500000, N'Bảo trì 1 lần/năm', 1);
+
+-- Insert Notifications
+INSERT INTO Notifications (UserId, Title, Message, Status, CreatedDate) VALUES
+(1, N'Nhắc thanh toán', N'Khách 1 còn nợ 2.1 triệu tháng 6', N'Unread', GETDATE()),
+(2, N'Lịch bảo trì', N'Kiểm tra máy lạnh phòng A02 ngày 15/06', N'Read', GETDATE()),
+(3, N'Nhập chỉ số điện', N'Nhắc nhập chỉ số điện nước trước ngày 05/07', N'Unread', GETDATE());
+
+-- Insert SystemSettings
+INSERT INTO SystemSettings (SettingKey, SettingValue, Description) VALUES
+(N'DefaultDepositRate', N'1_month', N'Cọc mặc định 1 tháng tiền phòng'),
+(N'InvoiceDueDay', N'10', N'Ngày đáo hạn hóa đơn hàng tháng'),
+(N'DefaultContractTemplate', N'HD_CHUOI_NHA_TRO_V1', N'Mẫu hợp đồng chuẩn'),
+(N'AutoReminderEnabled', N'true', N'Bật nhắc nhở tự động'),
+(N'DefaultUtilityPrice_ELEC', N'3500', N'Giá điện mặc định');
 
 -- =====================================================
 -- TẠO CÁC CHỈ MỤC

@@ -1,4 +1,5 @@
 using System;
+using System.Data;
 using System.Drawing;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
@@ -14,7 +15,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private string currentUser;
         private int currentUserId;
         private AdminDataBLL adminDataBLL = new AdminDataBLL();
-        private bool overviewBuilt = false;
+        private Form currentModule;
+        private readonly string defaultPlaceholderText = "Chọn chức năng ở thanh bên hoặc nhấn \"Tổng quan\" để xem thống kê nhanh.";
 
         public FrmAdminDashboard(string username, int userId)
         {
@@ -37,7 +39,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.WindowState = FormWindowState.Maximized;
             lblWelcome.Text = $"👋 Xin chào Admin: {currentUser}";
             lblUser.Text = $"Admin: {currentUser}";
-            HideOverview();
+            lblPlaceholder.Text = defaultPlaceholderText;
+            await ShowOverviewAsync();
         }
 
         /// <summary>
@@ -61,65 +64,97 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
         }
 
-        private void BuildOverviewMenu()
+        private string BuildBulletText(params string[] items)
         {
-            if (overviewBuilt) return;
-            // Tạo các nút menu cho 13 tính năng Admin
-            tableLayoutPanel1.Controls.Clear();
-            tableLayoutPanel1.ColumnCount = 2;
-            tableLayoutPanel1.RowCount = 7;
-            tableLayoutPanel1.ColumnStyles.Clear();
-            tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-            tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-            tableLayoutPanel1.RowStyles.Clear();
-            for (int i = 0; i < 7; i++)
-            {
-                tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Absolute, 170F));
-            }
-
-            // 01. Quản lý Chi nhánh
-            AddMenuButton(0, 0, "📍 Quản Lý Chi Nhánh", "Thêm/Sửa/Xóa/Cấu hình chi nhánh", btnBranch_Click);
-
-            // 02. Quản lý Phòng
-            AddMenuButton(0, 1, "🏠 Quản Lý Phòng", "Tạo/Sửa phòng, loại phòng, trạng thái", btnRoom_Click);
-
-            // 03. Quản lý Nhân viên
-            AddMenuButton(1, 0, "👤 Quản Lý Nhân Viên", "Tạo tài khoản, gán chi nhánh, theo dõi", btnStaff_Click);
-
-            // 04. Quản lý Khách thuê
-            AddMenuButton(1, 1, "👥 Quản Lý Khách Thuê", "Hồ sơ, tạm trú, check-in/out, lịch sử", btnTenant_Click);
-
-            // 05. Quản lý Hợp đồng
-            AddMenuButton(2, 0, "📄 Quản Lý Hợp Đồng", "Tạo, gia hạn, chấm dứt hợp đồng", btnContract_Click);
-
-            // 06. Đặt phòng & Cọc
-            AddMenuButton(2, 1, "💰 Đặt Phòng - Cọc", "Nhận lead, thu cọc, hủy đặt phòng", btnDeposit_Click);
-
-            // 07. Điện - Nước - Dịch vụ
-            AddMenuButton(3, 0, "⚡ Điện, Nước, Dịch Vụ", "Nhập chỉ số, quản lý dịch vụ, phí", btnUtility_Click);
-
-            // 08. Hóa đơn & Thanh toán
-            AddMenuButton(3, 1, "💳 Hóa Đơn - Thanh Toán", "Tạo hóa đơn, thu tiền, quản lý công nợ", btnInvoice_Click);
-
-            // 09. Bảo trì & Sự cố
-            AddMenuButton(4, 0, "🔧 Bảo Trì - Sự Cố", "Quản lý ticket, phân công, theo dõi", btnMaintenance_Click);
-
-            // 10. Quản lý Tài sản
-            AddMenuButton(4, 1, "📦 Quản Lý Tài Sản", "Danh mục tài sản, hư hỏng, thay thế", btnAsset_Click);
-
-            // 11. Báo cáo & Thống kê
-            AddMenuButton(5, 0, "📊 Báo Cáo - Thống Kê", "Báo cáo tổng hợp, doanh thu, công nợ", btnReport_Click);
-
-            // 12. Thông báo & Nhắc lịch
-            AddMenuButton(5, 1, "🔔 Thông Báo - Nhắc Lịch", "Nhắc nợ, hết hạn, hệ thống thông báo", btnNotification_Click);
-
-            // 13. Cấu hình Hệ thống
-            AddMenuButton(6, 0, "⚙️ Cấu Hình Hệ Thống", "Tham số mặc định, sao lưu, phục hồi", btnSettings_Click);
-
-            overviewBuilt = true;
+            return "• " + string.Join("\n• ", items);
         }
 
-        private void AddMenuButton(int row, int col, string title, string description, EventHandler clickHandler)
+        private void BuildOverviewStats(DataTable summary)
+        {
+            tableLayoutPanel1.Controls.Clear();
+            tableLayoutPanel1.ColumnCount = 3;
+            tableLayoutPanel1.ColumnStyles.Clear();
+            tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
+            tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
+            tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.34F));
+
+            int GetInt(string col)
+            {
+                if (summary == null || summary.Rows.Count == 0) return 0;
+                var v = summary.Rows[0][col];
+                if (v == null || v == DBNull.Value) return 0;
+                return Convert.ToInt32(v);
+            }
+
+            decimal GetDecimal(string col)
+            {
+                if (summary == null || summary.Rows.Count == 0) return 0m;
+                var v = summary.Rows[0][col];
+                if (v == null || v == DBNull.Value) return 0m;
+                return Convert.ToDecimal(v);
+            }
+
+            int totalBranches = GetInt("TotalBranches");
+            int totalRooms = GetInt("TotalRooms");
+            int totalTenants = GetInt("TotalTenants");
+            int totalContracts = GetInt("TotalContracts");
+            int totalInvoices = GetInt("TotalInvoices");
+            int outstandingCount = GetInt("OutstandingInvoiceCount");
+            decimal outstandingAmount = GetDecimal("OutstandingAmount");
+            int totalDeposits = GetInt("TotalDeposits");
+            decimal depositAmount = GetDecimal("DepositAmount");
+            decimal paymentsThisMonth = GetDecimal("PaymentsThisMonth");
+            int openMaintenance = GetInt("OpenMaintenance");
+
+            var metrics = new[]
+            {
+                new StatMetric("🏢 Chi nhánh", totalBranches.ToString("N0"), "Tổng số chi nhánh", Color.FromArgb(0, 122, 204), (EventHandler)btnBranch_Click),
+                new StatMetric("🏠 Phòng", totalRooms.ToString("N0"), "Tổng số phòng", Color.FromArgb(0, 150, 136), (EventHandler)btnRoom_Click),
+                new StatMetric("👥 Khách thuê", totalTenants.ToString("N0"), "Tổng khách thuê", Color.FromArgb(63, 81, 181), (EventHandler)btnTenant_Click),
+                new StatMetric("📄 Hợp đồng", totalContracts.ToString("N0"), "Tổng hợp đồng", Color.FromArgb(103, 58, 183), (EventHandler)btnContract_Click),
+                new StatMetric("🧾 Hóa đơn", totalInvoices.ToString("N0"), $"Còn nợ: {outstandingCount:N0}", Color.FromArgb(255, 152, 0), (EventHandler)btnInvoice_Click),
+                new StatMetric("💸 Công nợ", outstandingAmount.ToString("N0"), "Tổng tiền còn nợ", Color.FromArgb(244, 67, 54), (EventHandler)btnInvoice_Click),
+                new StatMetric("💰 Đặt cọc", depositAmount.ToString("N0"), $"Phiếu cọc: {totalDeposits:N0}", Color.FromArgb(33, 150, 243), (EventHandler)btnDeposit_Click),
+                new StatMetric("💵 Thu tháng này", paymentsThisMonth.ToString("N0"), "Tổng tiền đã thu", Color.FromArgb(76, 175, 80), (EventHandler)btnPayment_Click),
+                new StatMetric("🔧 Bảo trì", openMaintenance.ToString("N0"), "Yêu cầu đang mở", Color.FromArgb(156, 39, 176), (EventHandler)btnMaintenance_Click),
+            };
+
+            int colCount = tableLayoutPanel1.ColumnCount;
+            int rowCount = (int)Math.Ceiling(metrics.Length / (double)colCount);
+            tableLayoutPanel1.RowCount = rowCount;
+            tableLayoutPanel1.RowStyles.Clear();
+            for (int i = 0; i < rowCount; i++)
+            {
+                tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Absolute, 140F));
+            }
+
+            for (int i = 0; i < metrics.Length; i++)
+            {
+                int row = i / colCount;
+                int col = i % colCount;
+                AddStatCard(row, col, metrics[i]);
+            }
+        }
+
+        private sealed class StatMetric
+        {
+            public StatMetric(string title, string valueText, string subText, Color accentColor, EventHandler clickHandler)
+            {
+                Title = title;
+                ValueText = valueText;
+                SubText = subText;
+                AccentColor = accentColor;
+                ClickHandler = clickHandler;
+            }
+
+            public string Title { get; }
+            public string ValueText { get; }
+            public string SubText { get; }
+            public Color AccentColor { get; }
+            public EventHandler ClickHandler { get; }
+        }
+
+        private void AddStatCard(int row, int col, StatMetric metric)
         {
             Panel pnl = new Panel
             {
@@ -134,177 +169,231 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 Dock = DockStyle.Left,
                 Width = 4,
-                BackColor = Color.FromArgb(0, 122, 204)
+                BackColor = metric.AccentColor
             };
 
             Label lblTitle = new Label
             {
-                Text = title,
+                Text = metric.Title,
                 Font = new System.Drawing.Font("Segoe UI", 12, System.Drawing.FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 79, 159),
                 Dock = DockStyle.Top,
                 Padding = new Padding(10, 2, 0, 4)
             };
 
-            Label lblDesc = new Label
+            Label lblValue = new Label
             {
-                Text = description,
-                Font = new System.Drawing.Font("Segoe UI", 10),
-                ForeColor = Color.FromArgb(70, 94, 120),
-                Dock = DockStyle.Fill,
-                Padding = new Padding(10, 0, 0, 0),
-                AutoSize = true,
-                TextAlign = System.Drawing.ContentAlignment.TopLeft
+                Text = metric.ValueText,
+                Font = new Font("Segoe UI", 22, FontStyle.Bold),
+                ForeColor = Color.FromArgb(30, 55, 90),
+                Dock = DockStyle.Top,
+                Height = 48,
+                Padding = new Padding(10, 0, 0, 0)
             };
 
-            pnl.Controls.Add(lblTitle);
-            pnl.Controls.Add(lblDesc);
+            Label lblSub = new Label
+            {
+                Text = metric.SubText,
+                Font = new Font("Segoe UI", 10),
+                ForeColor = Color.FromArgb(70, 94, 120),
+                Dock = DockStyle.Fill,
+                Padding = new Padding(10, 4, 0, 0),
+                AutoSize = false,
+                TextAlign = ContentAlignment.TopLeft
+            };
+
+            // Add theo thứ tự để Dock layout đúng (Fill trước, Top sau)
             pnl.Controls.Add(accent);
+            pnl.Controls.Add(lblSub);
+            pnl.Controls.Add(lblValue);
+            pnl.Controls.Add(lblTitle);
 
             pnl.Cursor = Cursors.Hand;
 
             // Xử lý sự kiện click
-            pnl.Click += clickHandler;
-            lblTitle.Click += clickHandler;
-            lblDesc.Click += clickHandler;
-            accent.Click += clickHandler;
+            if (metric.ClickHandler != null)
+            {
+                pnl.Click += metric.ClickHandler;
+                lblTitle.Click += metric.ClickHandler;
+                lblValue.Click += metric.ClickHandler;
+                lblSub.Click += metric.ClickHandler;
+                accent.Click += metric.ClickHandler;
+            }
             pnl.MouseEnter += (s, e) =>
             {
                 pnl.BackColor = Color.FromArgb(232, 244, 255);
-                accent.BackColor = Color.FromArgb(0, 105, 190);
+                accent.BackColor = ControlPaint.Dark(metric.AccentColor);
             };
             pnl.MouseLeave += (s, e) =>
             {
                 pnl.BackColor = Color.White;
-                accent.BackColor = Color.FromArgb(0, 122, 204);
+                accent.BackColor = metric.AccentColor;
             };
 
             tableLayoutPanel1.Controls.Add(pnl, col, row);
         }
 
-        private void ShowOverview()
+        private void ClearCurrentModule()
         {
-            BuildOverviewMenu();
-            tableLayoutPanel1.Visible = true;
+            if (currentModule != null)
+            {
+                currentModule.Close();
+                currentModule.Dispose();
+                currentModule = null;
+            }
+
+            pnlModuleHost.Controls.Clear();
+            pnlModuleHost.Visible = false;
+        }
+
+        private void LoadModule(Form module, string headerTitle)
+        {
+            HideOverview();
             lblPlaceholder.Visible = false;
+
+            ClearCurrentModule();
+
+            module.TopLevel = false;
+            module.FormBorderStyle = FormBorderStyle.None;
+            module.Dock = DockStyle.Fill;
+            module.StartPosition = FormStartPosition.CenterParent;
+
+            currentModule = module;
+            pnlModuleHost.Controls.Add(module);
+            pnlModuleHost.Visible = true;
+            pnlModuleHost.BringToFront();
+
+            lblWelcome.Text = headerTitle;
+            module.Show();
+        }
+
+        private async System.Threading.Tasks.Task ShowOverviewAsync()
+        {
+            ClearCurrentModule();
+
+            try
+            {
+                // Có thể hiển thị trạng thái tải nhanh (nếu muốn)
+                lblPlaceholder.Text = "Đang tải thống kê...";
+                lblPlaceholder.Visible = true;
+                tableLayoutPanel1.Visible = false;
+                pnlModuleHost.Visible = false;
+
+                var summary = await adminDataBLL.GetDashboardSummaryAsync();
+                BuildOverviewStats(summary);
+
+                tableLayoutPanel1.Visible = true;
+                lblPlaceholder.Visible = false;
+                pnlModuleHost.Visible = false;
+                lblWelcome.Text = $"👋 Xin chào Admin: {currentUser}";
+            }
+            catch (Exception ex)
+            {
+                tableLayoutPanel1.Visible = false;
+                pnlModuleHost.Visible = false;
+                lblPlaceholder.Text = "Không thể tải thống kê tổng quan.\n\n" + ex.Message;
+                lblPlaceholder.Visible = true;
+                lblWelcome.Text = $"👋 Xin chào Admin: {currentUser}";
+            }
         }
 
         private void HideOverview()
         {
             tableLayoutPanel1.Visible = false;
+            lblPlaceholder.Visible = false;
+        }
+
+        private void ShowSectionInfo(string title, params string[] features)
+        {
+            ClearCurrentModule();
+            HideOverview();
+            lblPlaceholder.Text = $"{title}\n\n{BuildBulletText(features)}";
             lblPlaceholder.Visible = true;
+            pnlModuleHost.Visible = false;
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            ClearCurrentModule();
+            base.OnFormClosing(e);
         }
 
         // ========== EVENT HANDLERS ==========
 
-        private void btnOverview_Click(object sender, EventArgs e)
+        private async void btnOverview_Click(object sender, EventArgs e)
         {
-            ShowOverview();
+            lblPlaceholder.Text = defaultPlaceholderText;
+            await ShowOverviewAsync();
         }
 
         private void btnBranch_Click(object sender, EventArgs e)
         {
-            using (FrmBranch frm = new FrmBranch())
-            {
-                frm.StartPosition = FormStartPosition.CenterParent;
-                frm.ShowDialog();
-            }
+            LoadModule(new FrmBranch(), "📍 Quản lý Chi nhánh");
         }
 
         private void btnRoom_Click(object sender, EventArgs e)
         {
-            using (var frm = new FrmDataViewer("Quản Lý Phòng", () => adminDataBLL.GetRoomsAsync()))
-            {
-                frm.ShowDialog();
-            }
+            LoadModule(new FrmRoomManager(), "🏠 Quản lý Phòng");
         }
 
         private void btnStaff_Click(object sender, EventArgs e)
         {
-            using (var frm = new FrmDataViewer("Quản Lý Nhân Viên", () => adminDataBLL.GetStaffAsync()))
-            {
-                frm.ShowDialog();
-            }
+            LoadModule(new FrmStaffManager(), "👤 Quản lý Nhân viên");
         }
 
         private void btnTenant_Click(object sender, EventArgs e)
         {
-            using (var frm = new FrmDataViewer("Quản Lý Khách Thuê", () => adminDataBLL.GetTenantsAsync()))
-            {
-                frm.ShowDialog();
-            }
+            LoadModule(new FrmTenantManager(), "👥 Quản lý Khách thuê");
         }
 
         private void btnContract_Click(object sender, EventArgs e)
         {
-            using (var frm = new FrmDataViewer("Quản Lý Hợp Đồng", () => adminDataBLL.GetContractsAsync()))
-            {
-                frm.ShowDialog();
-            }
+            LoadModule(new FrmDataViewer("Quản Lý Hợp Đồng", () => adminDataBLL.GetContractsAsync()), "📄 Quản lý Hợp đồng");
         }
 
         private void btnDeposit_Click(object sender, EventArgs e)
         {
-            using (var frm = new FrmDataViewer("Đặt Phòng & Cọc", () => adminDataBLL.GetDepositsAsync()))
-            {
-                frm.ShowDialog();
-            }
+            LoadModule(new FrmDepositManager(), "💰 Đặt phòng & Cọc");
+        }
+
+        private void btnPayment_Click(object sender, EventArgs e)
+        {
+            LoadModule(new FrmDataViewer("Thanh Toán", () => adminDataBLL.GetPaymentsAsync()), "💳 Thanh toán");
         }
 
         private void btnUtility_Click(object sender, EventArgs e)
         {
-            using (var frm = new FrmDataViewer("Điện - Nước - Dịch Vụ", () => adminDataBLL.GetUtilitiesAsync()))
-            {
-                frm.ShowDialog();
-            }
+            LoadModule(new FrmDataViewer("Điện - Nước - Dịch Vụ", () => adminDataBLL.GetUtilitiesAsync()), "⚡ Điện - Nước - Dịch vụ");
         }
 
         private void btnInvoice_Click(object sender, EventArgs e)
         {
-            using (var frm = new FrmDataViewer("Hóa Đơn & Thanh Toán", () => adminDataBLL.GetInvoicesAsync()))
-            {
-                frm.ShowDialog();
-            }
+            LoadModule(new FrmDataViewer("Hóa Đơn & Thanh Toán", () => adminDataBLL.GetInvoicesAsync()), "💳 Hóa đơn & Thanh toán");
         }
 
         private void btnMaintenance_Click(object sender, EventArgs e)
         {
-            using (var frm = new FrmDataViewer("Bảo Trì & Sự Cố", () => adminDataBLL.GetMaintenanceAsync()))
-            {
-                frm.ShowDialog();
-            }
+            LoadModule(new FrmDataViewer("Bảo Trì & Sự Cố", () => adminDataBLL.GetMaintenanceAsync()), "🔧 Bảo trì & Sự cố");
         }
 
         private void btnAsset_Click(object sender, EventArgs e)
         {
-            using (var frm = new FrmDataViewer("Quản Lý Tài Sản", () => adminDataBLL.GetAssetsAsync()))
-            {
-                frm.ShowDialog();
-            }
+            LoadModule(new FrmDataViewer("Quản Lý Tài Sản", () => adminDataBLL.GetAssetsAsync()), "📦 Quản lý Tài sản");
         }
 
         private void btnReport_Click(object sender, EventArgs e)
         {
-            using (var frm = new FrmDataViewer("Báo Cáo & Thống Kê", () => adminDataBLL.GetInvoicesAsync()))
-            {
-                frm.ShowDialog();
-            }
+            LoadModule(new FrmDataViewer("Báo Cáo & Thống Kê", () => adminDataBLL.GetInvoicesAsync()), "📊 Báo cáo & Thống kê");
         }
 
         private void btnNotification_Click(object sender, EventArgs e)
         {
-            using (var frm = new FrmDataViewer("Thông Báo & Nhắc Lịch", () => adminDataBLL.GetNotificationsAsync()))
-            {
-                frm.ShowDialog();
-            }
+            LoadModule(new FrmDataViewer("Thông Báo & Nhắc Lịch", () => adminDataBLL.GetNotificationsAsync()), "🔔 Thông báo & Nhắc lịch");
         }
 
         private void btnSettings_Click(object sender, EventArgs e)
         {
-            using (var frm = new FrmDataViewer("Cấu Hình Hệ Thống", () => adminDataBLL.GetSystemSettingsAsync()))
-            {
-                frm.ShowDialog();
-            }
+            LoadModule(new FrmDataViewer("Cấu Hình Hệ Thống", () => adminDataBLL.GetSystemSettingsAsync()), "⚙️ Cấu hình Hệ thống");
         }
 
         private void btnLogout_Click(object sender, EventArgs e)
