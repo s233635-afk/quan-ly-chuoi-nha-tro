@@ -1,5 +1,5 @@
 ═══════════════════════════════════════════════════════════════════════════════
-  ✅ ADMIN DASHBOARD - HOÀN THÀNH
+  ✅ ADMIN + STAFF DASHBOARD - HOÀN THÀNH
 ═══════════════════════════════════════════════════════════════════════════════
 
 📊 THỐNG KÊ HOÀN THÀNH:
@@ -8,38 +8,35 @@
 │ LAYER          │ MODULE              │ FILES CREATED    │ STATUS             │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ GUI            │ FrmAdminDashboard   │ .cs + .Designer  │ ✅ HOÀN THÀNH       │
+│ GUI            │ FrmStaffDashboard   │ .cs              │ ✅ HOÀN THÀNH       │
 │ GUI            │ FrmBranch           │ .cs              │ ✅ HOÀN THÀNH       │
 │ GUI            │ FrmBranchDetail     │ .cs + .Designer  │ ✅ HOÀN THÀNH       │
+│ GUI            │ Room/Staff/Tenant   │ Managers/Editors │ ✅ HOÀN THÀNH       │
+│ GUI            │ Contract/Deposit    │ Managers/Editors │ ✅ HOÀN THÀNH       │
+│ GUI            │ Utility/Invoice     │ Managers/Editors │ ✅ HOÀN THÀNH       │
+│ GUI            │ Payment/Maintenance │ Managers/Editors │ ✅ HOÀN THÀNH       │
+│ GUI            │ Asset/Notify/Config │ Managers/Editors │ ✅ HOÀN THÀNH       │
+│ BLL            │ AdminDataBLL        │ .cs (CRUD/Load)   │ ✅ HOÀN THÀNH       │
 │ BLL            │ BranchBLL           │ .cs (6 methods)  │ ✅ HOÀN THÀNH       │
 │ BLL            │ UserBLL             │ .cs (updated)    │ ✅ HOÀN THÀNH       │
+│ DAL            │ AdminDataDAL        │ .cs (SQL CRUD)    │ ✅ HOÀN THÀNH       │
 │ DAL            │ BranchDAL           │ .cs (6 methods)  │ ✅ HOÀN THÀNH       │
 │ DAL            │ DatabaseHelper      │ .cs (updated)    │ ✅ HOÀN THÀNH       │
 │ Config         │ quan-ly-chuoi-...   │ .csproj (fixed)  │ ✅ HOÀN THÀNH       │
+│ Database       │ setup_database_...  │ (schema final)    │ ✅ HOÀN THÀNH       │
 │ Database       │ sample_data.sql     │ (mẫu dữ liệu)    │ ✅ HOÀN THÀNH       │
 │ Documentation  │ README.md           │ (hướng dẫn)      │ ✅ HOÀN THÀNH       │
 └─────────────────────────────────────────────────────────────────────────────┘
 
-🎯 CÁC TÍNH NĂNG ĐÃ TRIỂN KHAI:
+🎯 CÁC TÍNH NĂNG ĐÃ TRIỂN KHAI (TÓM TẮT):
 
 ✅ FrmAdminDashboard (Form chính Admin)
-   - Layout: TableLayoutPanel 2 cột × 7 hàng
-   - Header: Tên user + Button Đăng Xuất
-   - 13 Module Buttons:
-     1. 🏢 Quản Lý Chi Nhánh (HOẠT ĐỘNG)
-     2. 🚪 Quản Lý Phòng (Placeholder)
-     3. 👥 Quản Lý Nhân Viên (Placeholder)
-     4. 🧑 Quản Lý Khách Thuê (Placeholder)
-     5. 📜 Quản Lý Hợp Đồng (Placeholder)
-     6. 💰 Quản Lý Ký Cược (Placeholder)
-     7. 💡 Quản Lý Tiện Ích (Placeholder)
-     8. 🧾 Quản Lý Hóa Đơn (Placeholder)
-     9. 🔧 Quản Lý Bảo Trì (Placeholder)
-     10. 🏠 Quản Lý Tài Sản (Placeholder)
-     11. 📊 Báo Cáo & Thống Kê (Placeholder)
-     12. 📢 Quản Lý Thông Báo (Placeholder)
-     13. ⚙️ Cài Đặt Hệ Thống (Placeholder)
-   - Hover Effects: Màu xanh dương khi hover
+   - Tổng quan (Dashboard Summary) + 13 module mở form thật (không còn placeholder)
+   - Modern UI + sidebar + module host
    - Role Check: RoleId = 1 (Admin) mới vào được
+
+✅ FrmStaffDashboard (Form chính Nhân viên)
+   - Navigation theo chi nhánh + các màn tra cứu/CRUD phù hợp (RoleId = 2)
 
 ✅ FrmBranch (Quản Lý Chi Nhánh)
    - DataGridView CRUD:
@@ -123,7 +120,9 @@ Sample Data Included:
   ✅ Bảo trì, Tài sản, Hóa đơn mẫu
   ✅ Admin User: admin / 123456
 
-File: sample_data.sql (Ready to execute on SQL Server)
+Files:
+  - Database/setup_database_final.sql (Schema)
+  - sample_data.sql (Sample data)
 
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -197,9 +196,9 @@ quan-ly-chuoi-nha-tro/
 
 ⚠️ KNOWN LIMITATIONS & NOTES:
 
-1. ❌ 12 Module placeholders (not implemented yet):
-   - Room, Staff, Tenant, Contract, Deposit, Utility
-   - Invoice, Maintenance, Asset, Report, Notification, Settings
+1. ⚠️ Lưu ý:
+   - Một số màn hình báo cáo đang dùng FrmDataViewer (đơn giản, ưu tiên hiển thị nhanh)
+   - Password vẫn lưu plain text theo DB mẫu (nên hash khi production)
 
 2. ⚠️ Branch Module Features:
    - Soft delete only (no hard delete)
@@ -270,22 +269,17 @@ Architecture:
 ✅ Test admin account created
 ✅ First module fully functional
 
-🎯 NEXT PRIORITIES:
+🎯 NEXT PRIORITIES (GỢI Ý):
 
-1. Room Management Module (Similar structure to Branch)
-2. Tenant Management Module
-3. Contract Management Module
-4. Invoice & Payment System
-5. Maintenance & Issue Tracking
-6. Reporting & Statistics
-7. Notification System
-8. Settings & Configuration
+1. Hash mật khẩu (BCrypt/PBKDF2) + migration
+2. RBAC chi tiết theo module (permission matrix)
+3. Export Excel / in hóa đơn/hợp đồng
+4. Audit log + lịch sử thao tác
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-Hoàn thành ngày: 2024-12-31 ✅
-Thời gian phát triển: ~2 giờ
-Tính năng chính: Admin Dashboard + Branch Management Module
+Hoàn thành ngày: 2025-12-13 ✅
+Tính năng chính: Admin Dashboard + Staff Dashboard + 13 module quản trị
 Status: Production Ready 🚀
 
 ═══════════════════════════════════════════════════════════════════════════════

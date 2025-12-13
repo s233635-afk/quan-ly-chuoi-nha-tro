@@ -66,7 +66,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 var bll = new UserBLL();
                 var access = await bll.GetUserAccessAsync(_username);
-                return access.RoleId == 2;
+                return access.RoleId == 2 || access.RoleId == 3;
             }
             catch
             {

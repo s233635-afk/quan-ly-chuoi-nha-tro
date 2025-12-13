@@ -15,10 +15,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private readonly DataRow _row;
         private readonly bool _isEdit;
 
-        private TextBox txtUsername, txtFullName, txtEmail, txtPhone, txtPassword, txtConfirm;
+        private DataTable _branchTable;
+
+        private TextBox txtUsername;
+        private TextBox txtFullName;
+        private TextBox txtEmail;
+        private TextBox txtPhone;
+        private ComboBox cboBranch;
         private CheckBox chkActive;
-        private Label lblPassword, lblConfirm;
-        private Button btnSave, btnCancel;
+        private TextBox txtPassword;
+        private TextBox txtConfirm;
+
+        private Button btnSave;
+        private Button btnCancel;
 
         public FrmStaffEditor(AdminDataBLL bll, DataRow row = null)
         {
@@ -30,72 +39,200 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void InitializeComponent()
         {
-            this.Text = _isEdit ? "Sửa nhân viên" : "Thêm nhân viên";
-            this.StartPosition = FormStartPosition.CenterParent;
-            this.FormBorderStyle = FormBorderStyle.FixedDialog;
-            this.MaximizeBox = false;
-            this.MinimizeBox = false;
-            this.ClientSize = new Size(420, 360);
+            Text = _isEdit ? "Sửa nhân viên" : "Thêm nhân viên";
+            StartPosition = FormStartPosition.CenterParent;
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            MaximizeBox = false;
+            MinimizeBox = false;
+            ClientSize = new Size(680, 460);
+            BackColor = Color.White;
 
-            Label lblUsername = new Label { Text = "Tên đăng nhập", AutoSize = true, Location = new Point(20, 20) };
-            txtUsername = new TextBox { Location = new Point(150, 16), Width = 230 };
+            var pnlBottom = new Panel
+            {
+                Dock = DockStyle.Bottom,
+                Height = 58,
+                Padding = new Padding(12, 10, 12, 10),
+                BackColor = Color.White
+            };
 
-            Label lblFullName = new Label { Text = "Họ tên", AutoSize = true, Location = new Point(20, 60) };
-            txtFullName = new TextBox { Location = new Point(150, 56), Width = 230 };
+            var pnlBody = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(18, 18, 18, 10),
+                AutoScroll = true,
+                BackColor = Color.White
+            };
 
-            Label lblEmail = new Label { Text = "Email", AutoSize = true, Location = new Point(20, 100) };
-            txtEmail = new TextBox { Location = new Point(150, 96), Width = 230 };
+            int labelWidth = 190;
+            int inputWidth = 420;
+            int top = 10;
+            int left = 6;
+            int line = 34;
 
-            Label lblPhone = new Label { Text = "SĐT", AutoSize = true, Location = new Point(20, 140) };
-            txtPhone = new TextBox { Location = new Point(150, 136), Width = 230 };
+            Label MakeLabel(string text, int y) => new Label
+            {
+                Text = text,
+                Location = new Point(left, y),
+                Width = labelWidth,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
 
-            lblPassword = new Label { Text = _isEdit ? "Mật khẩu mới (tùy chọn)" : "Mật khẩu", AutoSize = true, Location = new Point(20, 180) };
-            txtPassword = new TextBox { Location = new Point(150, 176), Width = 230, UseSystemPasswordChar = true };
+            Control MakeInput(Control ctl, int y)
+            {
+                ctl.Location = new Point(left + labelWidth, y);
+                ctl.Width = inputWidth;
+                return ctl;
+            }
 
-            lblConfirm = new Label { Text = _isEdit ? "Xác nhận (nếu đổi)" : "Xác nhận mật khẩu", AutoSize = true, Location = new Point(20, 220) };
-            txtConfirm = new TextBox { Location = new Point(150, 216), Width = 230, UseSystemPasswordChar = true };
+            txtUsername = new TextBox();
+            txtFullName = new TextBox();
+            txtEmail = new TextBox();
+            txtPhone = new TextBox();
+            cboBranch = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
+            chkActive = new CheckBox { Text = "Kích hoạt tài khoản", AutoSize = true, Checked = true };
+            txtPassword = new TextBox { UseSystemPasswordChar = true };
+            txtConfirm = new TextBox { UseSystemPasswordChar = true };
 
-            chkActive = new CheckBox { Text = "Kích hoạt tài khoản", Location = new Point(150, 248), AutoSize = true, Checked = true };
+            pnlBody.Controls.Add(MakeLabel("Tên đăng nhập (*)", top));
+            pnlBody.Controls.Add(MakeInput(txtUsername, top));
+            top += line;
 
-            btnSave = new Button { Text = "Lưu", Width = 90, Location = new Point(150, 290) };
-            btnCancel = new Button { Text = "Hủy", Width = 90, Location = new Point(250, 290) };
+            pnlBody.Controls.Add(MakeLabel("Họ tên (*)", top));
+            pnlBody.Controls.Add(MakeInput(txtFullName, top));
+            top += line;
 
+            pnlBody.Controls.Add(MakeLabel("Email", top));
+            pnlBody.Controls.Add(MakeInput(txtEmail, top));
+            top += line;
+
+            pnlBody.Controls.Add(MakeLabel("SĐT", top));
+            pnlBody.Controls.Add(MakeInput(txtPhone, top));
+            top += line;
+
+            pnlBody.Controls.Add(MakeLabel("Chi nhánh", top));
+            pnlBody.Controls.Add(MakeInput(cboBranch, top));
+            top += line;
+
+            var pnlActive = new Panel { Location = new Point(left + labelWidth, top), Width = inputWidth, Height = 26, BackColor = Color.Transparent };
+            chkActive.Parent = pnlActive;
+            chkActive.Location = new Point(0, 3);
+            pnlBody.Controls.Add(MakeLabel("Trạng thái", top));
+            pnlBody.Controls.Add(pnlActive);
+            top += line;
+
+            pnlBody.Controls.Add(MakeLabel(_isEdit ? "Mật khẩu mới (tùy chọn)" : "Mật khẩu (*)", top));
+            pnlBody.Controls.Add(MakeInput(txtPassword, top));
+            top += line;
+
+            pnlBody.Controls.Add(MakeLabel(_isEdit ? "Xác nhận (nếu đổi)" : "Xác nhận mật khẩu (*)", top));
+            pnlBody.Controls.Add(MakeInput(txtConfirm, top));
+
+            btnCancel = new Button
+            {
+                Text = "Hủy",
+                Width = 110,
+                Height = 34,
+                Anchor = AnchorStyles.Right | AnchorStyles.Top,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.White
+            };
+            btnCancel.FlatAppearance.BorderColor = Color.FromArgb(210, 210, 210);
+            btnCancel.FlatAppearance.BorderSize = 1;
+            btnCancel.Click += (s, e) => DialogResult = DialogResult.Cancel;
+
+            btnSave = new Button
+            {
+                Text = "Lưu",
+                Width = 110,
+                Height = 34,
+                Anchor = AnchorStyles.Right | AnchorStyles.Top,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(0, 122, 204),
+                ForeColor = Color.White
+            };
+            btnSave.FlatAppearance.BorderSize = 0;
             btnSave.Click += async (s, e) => await SaveAsync();
-            btnCancel.Click += (s, e) => this.DialogResult = DialogResult.Cancel;
 
-            this.Controls.Add(lblUsername);
-            this.Controls.Add(txtUsername);
-            this.Controls.Add(lblFullName);
-            this.Controls.Add(txtFullName);
-            this.Controls.Add(lblEmail);
-            this.Controls.Add(txtEmail);
-            this.Controls.Add(lblPhone);
-            this.Controls.Add(txtPhone);
-            this.Controls.Add(lblPassword);
-            this.Controls.Add(txtPassword);
-            this.Controls.Add(lblConfirm);
-            this.Controls.Add(txtConfirm);
-            this.Controls.Add(chkActive);
-            this.Controls.Add(btnSave);
-            this.Controls.Add(btnCancel);
+            pnlBottom.Controls.Add(btnCancel);
+            pnlBottom.Controls.Add(btnSave);
+            btnCancel.Location = new Point(pnlBottom.Width - btnCancel.Width - 12, 12);
+            btnSave.Location = new Point(btnCancel.Left - btnSave.Width - 10, 12);
+            pnlBottom.Resize += (s, e) =>
+            {
+                btnCancel.Location = new Point(pnlBottom.Width - btnCancel.Width - 12, 12);
+                btnSave.Location = new Point(btnCancel.Left - btnSave.Width - 10, 12);
+            };
+
+            Controls.Add(pnlBody);
+            Controls.Add(pnlBottom);
+
+            AcceptButton = btnSave;
+            CancelButton = btnCancel;
+
+            Load += async (s, e) => await LoadAsync();
+        }
+
+        private async System.Threading.Tasks.Task LoadAsync()
+        {
+            await LoadBranchesAsync();
 
             if (_isEdit)
-            {
                 LoadDataFromRow();
+        }
+
+        private async System.Threading.Tasks.Task LoadBranchesAsync()
+        {
+            try
+            {
+                var dt = await _bll.GetBranchesAsync();
+                _branchTable = new DataTable();
+                _branchTable.Columns.Add("BranchId", typeof(int));
+                _branchTable.Columns.Add("BranchName", typeof(string));
+                _branchTable.Rows.Add(0, "— Không chọn —");
+
+                if (dt != null && dt.Columns.Contains("BranchId") && dt.Columns.Contains("BranchName"))
+                {
+                    foreach (DataRow r in dt.Rows)
+                    {
+                        int id = 0;
+                        try { id = Convert.ToInt32(r["BranchId"]); } catch { }
+                        string name = r["BranchName"]?.ToString();
+                        _branchTable.Rows.Add(id, name);
+                    }
+                }
+
+                cboBranch.DataSource = _branchTable;
+                cboBranch.DisplayMember = "BranchName";
+                cboBranch.ValueMember = "BranchId";
+                cboBranch.SelectedValue = 0;
+            }
+            catch
+            {
+                cboBranch.Items.Clear();
+                cboBranch.Items.Add("— Không chọn —");
+                cboBranch.SelectedIndex = 0;
             }
         }
 
         private void LoadDataFromRow()
         {
-            txtUsername.Text = _row["UserName"]?.ToString();
+            txtUsername.Text = ReadString(_row, "UserName", "Username", "User");
             txtUsername.ReadOnly = true;
-            txtFullName.Text = _row["FullName"]?.ToString();
-            txtEmail.Text = _row["Email"]?.ToString();
-            txtPhone.Text = _row["Phone"]?.ToString();
+            txtFullName.Text = ReadString(_row, "FullName");
+            txtEmail.Text = ReadString(_row, "Email");
+            txtPhone.Text = ReadString(_row, "Phone");
 
-            bool isActive = false;
-            bool.TryParse(_row["IsActive"]?.ToString(), out isActive);
-            chkActive.Checked = isActive;
+            chkActive.Checked = ReadBool(_row, "IsActive") ?? true;
+
+            int? branchId = TryReadIntNullable(_row, "BranchId");
+            if (branchId.HasValue)
+            {
+                try { cboBranch.SelectedValue = branchId.Value; } catch { }
+            }
+            else
+            {
+                try { cboBranch.SelectedValue = 0; } catch { }
+            }
         }
 
         private async System.Threading.Tasks.Task SaveAsync()
@@ -107,6 +244,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
             string password = txtPassword.Text;
             string confirm = txtConfirm.Text;
             bool isActive = chkActive.Checked;
+            int? branchId = null;
+            try
+            {
+                if (cboBranch.SelectedValue != null && int.TryParse(cboBranch.SelectedValue.ToString(), out var bid) && bid > 0)
+                    branchId = bid;
+            }
+            catch { }
 
             if (string.IsNullOrWhiteSpace(username))
             {
@@ -141,11 +285,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 {
                     int id = Convert.ToInt32(_row["UserId"]);
                     string newPassword = string.IsNullOrWhiteSpace(password) ? null : password;
-                    await _bll.UpdateStaffUserAsync(id, fullName, email, phone, isActive, newPassword);
+                    await _bll.UpdateStaffUserAsync(id, fullName, email, phone, branchId, isActive, newPassword);
                 }
                 else
                 {
-                    await _bll.AddStaffUserAsync(username, password, fullName, email, phone, isActive);
+                    await _bll.AddStaffUserAsync(username, password, fullName, email, phone, branchId, isActive);
                 }
 
                 this.DialogResult = DialogResult.OK;
@@ -154,6 +298,58 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 MessageBox.Show("Lỗi lưu nhân viên: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private static string ReadString(DataRow row, params string[] cols)
+        {
+            if (row?.Table == null) return null;
+            foreach (var c in cols)
+            {
+                if (row.Table.Columns.Contains(c))
+                {
+                    var v = row[c];
+                    if (v != null && v != DBNull.Value) return v.ToString();
+                }
+            }
+            return null;
+        }
+
+        private static int ReadInt(DataRow row, params string[] cols)
+        {
+            if (row?.Table == null) return 0;
+            foreach (var c in cols)
+            {
+                if (row.Table.Columns.Contains(c))
+                {
+                    var v = row[c];
+                    if (v == null || v == DBNull.Value) continue;
+                    if (int.TryParse(v.ToString(), out var i)) return i;
+                    try { return Convert.ToInt32(v); } catch { }
+                }
+            }
+            return 0;
+        }
+
+        private static int? TryReadIntNullable(DataRow row, params string[] cols)
+        {
+            int i = ReadInt(row, cols);
+            return i > 0 ? (int?)i : null;
+        }
+
+        private static bool? ReadBool(DataRow row, params string[] cols)
+        {
+            if (row?.Table == null) return null;
+            foreach (var c in cols)
+            {
+                if (row.Table.Columns.Contains(c))
+                {
+                    var v = row[c];
+                    if (v == null || v == DBNull.Value) continue;
+                    if (bool.TryParse(v.ToString(), out var b)) return b;
+                    try { return Convert.ToBoolean(v); } catch { }
+                }
+            }
+            return null;
         }
     }
 }

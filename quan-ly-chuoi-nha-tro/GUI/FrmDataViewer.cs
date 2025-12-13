@@ -31,6 +31,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.StartPosition = FormStartPosition.CenterParent;
             this.Width = 1000;
             this.Height = 600;
+            this.BackColor = UiKit.AppBackground;
 
             dgv = new DataGridView
             {
@@ -45,23 +46,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 BackgroundColor = Color.White,
                 BorderStyle = BorderStyle.None
             };
-            dgv.EnableHeadersVisualStyles = false;
-            dgv.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(0, 120, 215);
-            dgv.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            dgv.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
-            dgv.DefaultCellStyle.Font = new Font("Segoe UI", 10, FontStyle.Regular);
-            dgv.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 249, 255);
-            dgv.DefaultCellStyle.SelectionBackColor = Color.FromArgb(232, 244, 252);
-            dgv.DefaultCellStyle.SelectionForeColor = Color.Black;
+            UiKit.StyleGrid(dgv);
 
-            btnRefresh = new Button
-            {
-                Text = "Tải lại",
-                Width = 80,
-                Height = 28,
-                Anchor = AnchorStyles.Right | AnchorStyles.Top
-            };
-            btnRefresh.Click += async (s, e) => await LoadDataAsync();
+            btnRefresh = UiKit.MakeButton("Tải lại", UiKit.Primary, async (s, e) => await LoadDataAsync(), 92);
 
             lblCount = new Label
             {
@@ -73,13 +60,18 @@ namespace quan_ly_chuoi_nha_tro.GUI
             Panel top = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 38
+                Height = 54,
+                Padding = new Padding(12, 10, 12, 10),
+                BackColor = Color.White
             };
             top.Controls.Add(lblCount);
             top.Controls.Add(btnRefresh);
-            btnRefresh.Location = new System.Drawing.Point(900, 6);
+            btnRefresh.Dock = DockStyle.Right;
 
-            this.Controls.Add(dgv);
+            var gridHost = new Panel { Dock = DockStyle.Fill, Padding = new Padding(12), BackColor = BackColor };
+            gridHost.Controls.Add(dgv);
+
+            this.Controls.Add(gridHost);
             this.Controls.Add(top);
             this.Load += async (s, e) => await LoadDataAsync();
         }

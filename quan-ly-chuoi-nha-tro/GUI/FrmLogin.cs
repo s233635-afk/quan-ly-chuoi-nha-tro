@@ -102,12 +102,16 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     adminForm.ShowDialog();
                     Show();
                 }
-                else if (roleId == 2) // Staff
+                else if (roleId == 2 || roleId == 3) // Staff/Manager
                 {
                     FrmStaffDashboard staffForm = new FrmStaffDashboard(user, fullName, access.BranchId);
                     Hide();
                     staffForm.ShowDialog();
                     Show();
+                }
+                else
+                {
+                    MessageBox.Show("Tài khoản có RoleId không được hỗ trợ: " + roleId, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
 
                 UpdateOverlayPlaceholderVisibility(_userPlaceholderLabel, txtUser);

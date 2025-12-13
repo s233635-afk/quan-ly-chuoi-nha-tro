@@ -326,74 +326,87 @@ namespace quan_ly_chuoi_nha_tro.GUI
             await ShowOverviewAsync();
         }
 
+        private void LoadModuleSafe(Func<Form> create, string headerTitle)
+        {
+            try
+            {
+                LoadModule(create(), headerTitle);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Không thể mở chức năng này.\n\n" + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                _ = ShowOverviewAsync();
+            }
+        }
+
         private void btnBranch_Click(object sender, EventArgs e)
         {
-            LoadModule(new FrmBranch(), "📍 Quản lý Chi nhánh");
+            LoadModuleSafe(() => new FrmBranch(), "📍 Quản lý Chi nhánh");
         }
 
         private void btnRoom_Click(object sender, EventArgs e)
         {
-            LoadModule(new FrmRoomManager(), "🏠 Quản lý Phòng");
+            LoadModuleSafe(() => new FrmRoomManager(), "🏠 Quản lý Phòng");
         }
 
         private void btnStaff_Click(object sender, EventArgs e)
         {
-            LoadModule(new FrmStaffManager(), "👤 Quản lý Nhân viên");
+            LoadModuleSafe(() => new FrmStaffManager(), "👤 Quản lý Nhân viên");
         }
 
         private void btnTenant_Click(object sender, EventArgs e)
         {
-            LoadModule(new FrmTenantManager(), "👥 Quản lý Khách thuê");
+            LoadModuleSafe(() => new FrmTenantManager(), "👥 Quản lý Khách thuê");
         }
 
         private void btnContract_Click(object sender, EventArgs e)
         {
-            LoadModule(new FrmContractManager(), "📄 Quản lý Hợp đồng");
+            LoadModuleSafe(() => new FrmContractManager(), "📄 Quản lý Hợp đồng");
         }
 
         private void btnDeposit_Click(object sender, EventArgs e)
         {
-            LoadModule(new FrmDepositManager(), "💰 Đặt phòng & Cọc");
+            LoadModuleSafe(() => new FrmDepositManager(), "💰 Đặt phòng & Cọc");
         }
 
         private void btnPayment_Click(object sender, EventArgs e)
         {
-            LoadModule(new FrmPaymentManager(adminDataBLL), "💳 Thanh toán");
+            LoadModuleSafe(() => new FrmPaymentManager(adminDataBLL), "💳 Thanh toán");
         }
 
         private void btnUtility_Click(object sender, EventArgs e)
         {
-            LoadModule(new FrmDataViewer("Điện - Nước - Dịch Vụ", () => adminDataBLL.GetUtilitiesAsync()), "⚡ Điện - Nước - Dịch vụ");
+            LoadModuleSafe(() => new FrmUtilityManager(), "⚡ Điện - Nước - Dịch vụ");
         }
 
         private void btnInvoice_Click(object sender, EventArgs e)
         {
-            LoadModule(new FrmInvoiceManager(), "💳 Hóa đơn & Thanh toán");
+            LoadModuleSafe(() => new FrmInvoiceManager(), "💳 Hóa đơn & Thanh toán");
         }
 
         private void btnMaintenance_Click(object sender, EventArgs e)
         {
-            LoadModule(new FrmDataViewer("Bảo Trì & Sự Cố", () => adminDataBLL.GetMaintenanceAsync()), "🔧 Bảo trì & Sự cố");
+            LoadModuleSafe(() => new FrmMaintenanceManager(), "🔧 Bảo trì & Sự cố");
         }
 
         private void btnAsset_Click(object sender, EventArgs e)
         {
-            LoadModule(new FrmDataViewer("Quản Lý Tài Sản", () => adminDataBLL.GetAssetsAsync()), "📦 Quản lý Tài sản");
+            LoadModuleSafe(() => new FrmAssetManager(), "📦 Quản lý Tài sản");
         }
 
         private void btnReport_Click(object sender, EventArgs e)
         {
-            LoadModule(new FrmDataViewer("Báo Cáo & Thống Kê", () => adminDataBLL.GetInvoicesAsync()), "📊 Báo cáo & Thống kê");
+            LoadModuleSafe(() => new FrmReportManager(adminDataBLL), "📊 Báo cáo & Thống kê");
         }
 
         private void btnNotification_Click(object sender, EventArgs e)
         {
-            LoadModule(new FrmDataViewer("Thông Báo & Nhắc Lịch", () => adminDataBLL.GetNotificationsAsync()), "🔔 Thông báo & Nhắc lịch");
+            LoadModuleSafe(() => new FrmNotificationManager(), "🔔 Thông báo & Nhắc lịch");
         }
 
         private void btnSettings_Click(object sender, EventArgs e)
         {
-            LoadModule(new FrmDataViewer("Cấu Hình Hệ Thống", () => adminDataBLL.GetSystemSettingsAsync()), "⚙️ Cấu hình Hệ thống");
+            LoadModuleSafe(() => new FrmSystemSettingsManager(), "⚙️ Cấu hình Hệ thống");
         }
 
         private void btnLogout_Click(object sender, EventArgs e)

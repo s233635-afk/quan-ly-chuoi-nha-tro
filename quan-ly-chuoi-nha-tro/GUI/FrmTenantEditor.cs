@@ -31,23 +31,40 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _bll = bll;
             _existingRow = existingRow;
             InitializeComponent();
-            LoadExisting();
+            Load += (s, e) => LoadExisting();
         }
 
         private void InitializeComponent()
         {
-            this.Text = _existingRow == null ? "Thêm khách thuê" : "Cập nhật khách thuê";
-            this.StartPosition = FormStartPosition.CenterParent;
-            this.FormBorderStyle = FormBorderStyle.FixedDialog;
-            this.MaximizeBox = false;
-            this.MinimizeBox = false;
-            this.ClientSize = new Size(520, 430);
+            Text = _existingRow == null ? "Thêm khách thuê" : "Cập nhật khách thuê";
+            StartPosition = FormStartPosition.CenterParent;
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            MaximizeBox = false;
+            MinimizeBox = false;
+            ClientSize = new Size(720, 520);
+            BackColor = Color.White;
 
-            int labelWidth = 140;
-            int inputWidth = 320;
-            int top = 20;
-            int left = 20;
-            int lineHeight = 30;
+            var pnlBottom = new Panel
+            {
+                Dock = DockStyle.Bottom,
+                Height = 58,
+                Padding = new Padding(12, 10, 12, 10),
+                BackColor = Color.White
+            };
+
+            var pnlBody = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(18, 18, 18, 10),
+                AutoScroll = true,
+                BackColor = Color.White
+            };
+
+            int labelWidth = 190;
+            int inputWidth = 440;
+            int top = 10;
+            int left = 6;
+            int line = 34;
 
             Label MakeLabel(string text, int y) => new Label
             {
@@ -69,74 +86,95 @@ namespace quan_ly_chuoi_nha_tro.GUI
             txtPhone = new TextBox();
             txtEmail = new TextBox();
             dtBirth = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true };
-            txtAddress = new TextBox { Multiline = true, Height = 60, ScrollBars = ScrollBars.Vertical };
+            txtAddress = new TextBox { Multiline = true, Height = 70, ScrollBars = ScrollBars.Vertical };
             txtTempReg = new TextBox();
             dtTempFrom = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true };
             dtTempTo = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true };
             chkActive = new CheckBox { Text = "Đang hoạt động", Checked = true, AutoSize = true };
 
-            this.Controls.Add(MakeLabel("Họ tên (*)", top));
-            this.Controls.Add(MakeInput(txtFullName, top));
-            top += lineHeight;
+            pnlBody.Controls.Add(MakeLabel("Họ tên (*)", top));
+            pnlBody.Controls.Add(MakeInput(txtFullName, top));
+            top += line;
 
-            this.Controls.Add(MakeLabel("CMND/CCCD", top));
-            this.Controls.Add(MakeInput(txtIdentity, top));
-            top += lineHeight;
+            pnlBody.Controls.Add(MakeLabel("CMND/CCCD", top));
+            pnlBody.Controls.Add(MakeInput(txtIdentity, top));
+            top += line;
 
-            this.Controls.Add(MakeLabel("Điện thoại", top));
-            this.Controls.Add(MakeInput(txtPhone, top));
-            top += lineHeight;
+            pnlBody.Controls.Add(MakeLabel("SĐT", top));
+            pnlBody.Controls.Add(MakeInput(txtPhone, top));
+            top += line;
 
-            this.Controls.Add(MakeLabel("Email", top));
-            this.Controls.Add(MakeInput(txtEmail, top));
-            top += lineHeight;
+            pnlBody.Controls.Add(MakeLabel("Email", top));
+            pnlBody.Controls.Add(MakeInput(txtEmail, top));
+            top += line;
 
-            this.Controls.Add(MakeLabel("Ngày sinh", top));
-            this.Controls.Add(MakeInput(dtBirth, top));
-            top += lineHeight;
+            pnlBody.Controls.Add(MakeLabel("Ngày sinh", top));
+            pnlBody.Controls.Add(MakeInput(dtBirth, top));
+            top += line;
 
-            this.Controls.Add(MakeLabel("Địa chỉ", top));
-            this.Controls.Add(MakeInput(txtAddress, top));
-            top += 70;
+            pnlBody.Controls.Add(MakeLabel("Địa chỉ", top));
+            pnlBody.Controls.Add(MakeInput(txtAddress, top));
+            top += 80;
 
-            this.Controls.Add(MakeLabel("Tạm trú tại", top));
-            this.Controls.Add(MakeInput(txtTempReg, top));
-            top += lineHeight;
+            pnlBody.Controls.Add(MakeLabel("Tạm trú tại", top));
+            pnlBody.Controls.Add(MakeInput(txtTempReg, top));
+            top += line;
 
-            this.Controls.Add(MakeLabel("Ngày tạm trú", top));
-            this.Controls.Add(MakeInput(dtTempFrom, top));
-            top += lineHeight;
+            pnlBody.Controls.Add(MakeLabel("Ngày đăng ký", top));
+            pnlBody.Controls.Add(MakeInput(dtTempFrom, top));
+            top += line;
 
-            this.Controls.Add(MakeLabel("Hết hạn tạm trú", top));
-            this.Controls.Add(MakeInput(dtTempTo, top));
-            top += lineHeight;
+            pnlBody.Controls.Add(MakeLabel("Hết hạn tạm trú", top));
+            pnlBody.Controls.Add(MakeInput(dtTempTo, top));
+            top += line;
 
-            chkActive.Location = new Point(left + labelWidth, top);
-            this.Controls.Add(chkActive);
-            top += lineHeight + 10;
-
-            btnSave = new Button
-            {
-                Text = "Lưu",
-                Width = 100,
-                Height = 32,
-                Location = new Point(this.ClientSize.Width - 220, this.ClientSize.Height - 50),
-                Anchor = AnchorStyles.Right | AnchorStyles.Bottom
-            };
-            btnSave.Click += async (s, e) => await SaveAsync();
+            var pnlActive = new Panel { Location = new Point(left + labelWidth, top), Width = inputWidth, Height = 26, BackColor = Color.Transparent };
+            chkActive.Parent = pnlActive;
+            chkActive.Location = new Point(0, 3);
+            pnlBody.Controls.Add(MakeLabel("Trạng thái", top));
+            pnlBody.Controls.Add(pnlActive);
 
             btnCancel = new Button
             {
                 Text = "Hủy",
-                Width = 100,
-                Height = 32,
-                Location = new Point(this.ClientSize.Width - 110, this.ClientSize.Height - 50),
-                Anchor = AnchorStyles.Right | AnchorStyles.Bottom
+                Width = 110,
+                Height = 34,
+                Anchor = AnchorStyles.Right | AnchorStyles.Top,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.White
             };
-            btnCancel.Click += (s, e) => this.DialogResult = DialogResult.Cancel;
+            btnCancel.FlatAppearance.BorderColor = Color.FromArgb(210, 210, 210);
+            btnCancel.FlatAppearance.BorderSize = 1;
+            btnCancel.Click += (s, e) => DialogResult = DialogResult.Cancel;
 
-            this.Controls.Add(btnSave);
-            this.Controls.Add(btnCancel);
+            btnSave = new Button
+            {
+                Text = "Lưu",
+                Width = 110,
+                Height = 34,
+                Anchor = AnchorStyles.Right | AnchorStyles.Top,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(0, 122, 204),
+                ForeColor = Color.White
+            };
+            btnSave.FlatAppearance.BorderSize = 0;
+            btnSave.Click += async (s, e) => await SaveAsync();
+
+            pnlBottom.Controls.Add(btnCancel);
+            pnlBottom.Controls.Add(btnSave);
+            btnCancel.Location = new Point(pnlBottom.Width - btnCancel.Width - 12, 12);
+            btnSave.Location = new Point(btnCancel.Left - btnSave.Width - 10, 12);
+            pnlBottom.Resize += (s, e) =>
+            {
+                btnCancel.Location = new Point(pnlBottom.Width - btnCancel.Width - 12, 12);
+                btnSave.Location = new Point(btnCancel.Left - btnSave.Width - 10, 12);
+            };
+
+            AcceptButton = btnSave;
+            CancelButton = btnCancel;
+
+            Controls.Add(pnlBody);
+            Controls.Add(pnlBottom);
         }
 
         private void LoadExisting()
@@ -144,43 +182,43 @@ namespace quan_ly_chuoi_nha_tro.GUI
             if (_existingRow == null) return;
 
             txtFullName.Text = _existingRow["FullName"]?.ToString();
-            txtIdentity.Text = _existingRow["IdentityCard"]?.ToString();
-            txtPhone.Text = _existingRow["PhoneNumber"]?.ToString();
-            txtEmail.Text = _existingRow["Email"]?.ToString();
-            if (DateTime.TryParse(_existingRow["BirthDate"]?.ToString(), out var b))
+            txtIdentity.Text = _existingRow.Table.Columns.Contains("IdentityCard") ? _existingRow["IdentityCard"]?.ToString() : string.Empty;
+            txtPhone.Text = _existingRow.Table.Columns.Contains("PhoneNumber") ? _existingRow["PhoneNumber"]?.ToString() : string.Empty;
+            txtEmail.Text = _existingRow.Table.Columns.Contains("Email") ? _existingRow["Email"]?.ToString() : string.Empty;
+
+            if (_existingRow.Table.Columns.Contains("BirthDate") && DateTime.TryParse(_existingRow["BirthDate"]?.ToString(), out var b))
             {
                 dtBirth.Value = b;
                 dtBirth.Checked = true;
             }
             else dtBirth.Checked = false;
 
-            txtAddress.Text = _existingRow["Address"]?.ToString();
-            txtTempReg.Text = _existingRow["TemporaryRegistration"]?.ToString();
-            if (DateTime.TryParse(_existingRow["TemporaryRegistrationDate"]?.ToString(), out var t1))
+            txtAddress.Text = _existingRow.Table.Columns.Contains("Address") ? _existingRow["Address"]?.ToString() : string.Empty;
+            txtTempReg.Text = _existingRow.Table.Columns.Contains("TemporaryRegistration") ? _existingRow["TemporaryRegistration"]?.ToString() : string.Empty;
+
+            if (_existingRow.Table.Columns.Contains("TemporaryRegistrationDate") && DateTime.TryParse(_existingRow["TemporaryRegistrationDate"]?.ToString(), out var t1))
             {
                 dtTempFrom.Value = t1;
                 dtTempFrom.Checked = true;
             }
             else dtTempFrom.Checked = false;
 
-            if (DateTime.TryParse(_existingRow["TemporaryRegistrationExpiry"]?.ToString(), out var t2))
+            if (_existingRow.Table.Columns.Contains("TemporaryRegistrationExpiry") && DateTime.TryParse(_existingRow["TemporaryRegistrationExpiry"]?.ToString(), out var t2))
             {
                 dtTempTo.Value = t2;
                 dtTempTo.Checked = true;
             }
             else dtTempTo.Checked = false;
 
-            if (bool.TryParse(_existingRow["IsActive"]?.ToString(), out var act))
-            {
+            if (_existingRow.Table.Columns.Contains("IsActive") && bool.TryParse(_existingRow["IsActive"]?.ToString(), out var act))
                 chkActive.Checked = act;
-            }
         }
 
         private async System.Threading.Tasks.Task SaveAsync()
         {
             if (string.IsNullOrWhiteSpace(txtFullName.Text))
             {
-                MessageBox.Show("Vui lòng nhập Họ tên", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Vui lòng nhập Họ tên.", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -221,7 +259,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     SavedTenantId = id;
                 }
 
-                this.DialogResult = DialogResult.OK;
+                DialogResult = DialogResult.OK;
             }
             catch (Exception ex)
             {
@@ -230,3 +268,4 @@ namespace quan_ly_chuoi_nha_tro.GUI
         }
     }
 }
+

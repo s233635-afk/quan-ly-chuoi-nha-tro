@@ -22,6 +22,7 @@ CREATE TABLE Users (
     Password NVARCHAR(255) NOT NULL,
     Email NVARCHAR(100),
     FullName NVARCHAR(255) NOT NULL,
+    Phone NVARCHAR(20),
     RoleId INT NOT NULL,
     BranchId INT,
     IsActive BIT DEFAULT 1,
@@ -376,10 +377,10 @@ INSERT INTO UtilityTypes (UtilityName, UtilityCode, Unit, DefaultPrice) VALUES
 (N'Rác thải', N'TRASH', N'lần/tháng', 50000);
 
 -- Insert Users
-INSERT INTO Users (Username, Password, Email, FullName, RoleId, BranchId, IsActive) VALUES
-(N'admin', N'admin123', N'admin@quanlynhatro.com', N'Quản trị viên', 1, NULL, 1),
-(N'nhanvien1', N'pass123', N'nv1@quanlynhatro.com', N'Nguyễn Văn A', 2, 1, 1),
-(N'nhanvien2', N'pass123', N'nv2@quanlynhatro.com', N'Trần Thị B', 2, 2, 1);
+INSERT INTO Users (Username, Password, Email, FullName, Phone, RoleId, BranchId, IsActive) VALUES
+(N'admin', N'admin123', N'admin@quanlynhatro.com', N'Quản trị viên', NULL, 1, NULL, 1),
+(N'nhanvien1', N'pass123', N'nv1@quanlynhatro.com', N'Nguyễn Văn A', NULL, 2, 1, 1),
+(N'nhanvien2', N'pass123', N'nv2@quanlynhatro.com', N'Trần Thị B', NULL, 2, 2, 1);
 
 -- Insert Tenants (khách thuê mẫu)
 INSERT INTO Tenants (FullName, IdentityCard, PhoneNumber, Email, BirthDate, Address, TemporaryRegistration, TemporaryRegistrationDate, TemporaryRegistrationExpiry)

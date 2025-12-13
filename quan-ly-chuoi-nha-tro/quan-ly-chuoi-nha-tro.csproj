@@ -221,6 +221,45 @@
     <Compile Include="GUI\FrmTenantEditor.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="GUI\FrmDependentEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GUI\FrmTenantHistoryEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GUI\FrmUtilityManager.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GUI\FrmUtilityTypeEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GUI\FrmUtilityReadingEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GUI\FrmMaintenanceManager.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GUI\FrmMaintenanceEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GUI\FrmAssetManager.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GUI\FrmAssetEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GUI\FrmNotificationManager.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GUI\FrmNotificationEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GUI\FrmSystemSettingsManager.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GUI\FrmSystemSettingEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="GUI\FrmStaffDashboard.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -251,6 +290,9 @@
     <Compile Include="GUI\FrmDataViewer.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="GUI\FrmReportManager.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="GUI\FrmBranch.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -279,6 +321,25 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="GUI\FrmRoomManager.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GUI\UiKit.cs" />
+    <Compile Include="GUI\FrmBranchSectionManager.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GUI\FrmBranchSectionEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GUI\FrmRoomTypeManager.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GUI\FrmRoomTypeEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GUI\FrmRoomStatusManager.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GUI\FrmRoomStatusEditor.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="GUI\FrmMain.cs">

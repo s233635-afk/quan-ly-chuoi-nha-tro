@@ -487,68 +487,551 @@ namespace QuanLyNhaTro.DAL
                 @"SELECT r.RoomId,
                          r.RoomNumber,
                          r.BranchId,
+                         b.BranchName,
                          r.SectionId,
+                         s.SectionName,
                          r.RoomTypeId,
+                         rt.RoomTypeName,
                          r.RoomPrice,
                          r.CurrentStatusId,
+                         st.StatusName,
                          r.Floor,
                          r.Area,
                          r.IsActive,
                          r.CreatedDate,
                          r.UpdatedDate
                   FROM Rooms r
+                  LEFT JOIN Branches b ON b.BranchId = r.BranchId
+                  LEFT JOIN BranchSections s ON s.SectionId = r.SectionId
+                  LEFT JOIN RoomTypes rt ON rt.RoomTypeId = r.RoomTypeId
+                  LEFT JOIN RoomStatuses st ON st.StatusId = r.CurrentStatusId
                   ORDER BY r.RoomNumber",
                 "SELECT * FROM Rooms"
             );
         }
 
-        public Task<DataTable> GetUsersByRoleAsync(int roleId)
+        public Task<DataTable> GetBranchesAsync()
         {
             return GetTableSafeAsync(
+                "Branches",
+                null,
+                @"SELECT BranchId, BranchCode, BranchName, IsActive
+                  FROM Branches
+                  ORDER BY BranchName",
+                "SELECT * FROM Branches"
+            );
+        }
+
+        public Task<DataTable> GetBranchSectionsAsync(int? branchId = null)
+        {
+            if (branchId.HasValue)
+            {
+                return GetTableSafeAsync(
+                    "BranchSections",
+                    cmd => cmd.Parameters.AddWithValue("@BranchId", branchId.Value),
+                    @"SELECT SectionId, BranchId, SectionCode, SectionName, Description, IsActive
+                      FROM BranchSections
+                      WHERE BranchId = @BranchId
+                      ORDER BY SectionName",
+                    "SELECT * FROM BranchSections WHERE BranchId = @BranchId",
+                    "SELECT * FROM BranchSections"
+                );
+            }
+
+            return GetTableSafeAsync(
+                "BranchSections",
+                null,
+                @"SELECT SectionId, BranchId, SectionCode, SectionName, Description, IsActive
+                  FROM BranchSections
+                  ORDER BY SectionName",
+                "SELECT * FROM BranchSections"
+            );
+        }
+
+        public Task<DataTable> GetRoomTypesAsync()
+        {
+            return GetTableSafeAsync(
+                "RoomTypes",
+                null,
+                @"SELECT RoomTypeId, RoomTypeName, DefaultPrice, Amenities, MaxCapacity, Description, IsActive
+                  FROM RoomTypes
+                  ORDER BY RoomTypeName",
+                "SELECT * FROM RoomTypes"
+            );
+        }
+
+        public Task<DataTable> GetRoomStatusesAsync()
+        {
+            return GetTableSafeAsync(
+                "RoomStatuses",
+                null,
+                @"SELECT StatusId, StatusName, Description
+                  FROM RoomStatuses
+                  ORDER BY StatusId",
+                "SELECT * FROM RoomStatuses"
+            );
+        }
+
+        #region BranchSections CRUD
+
+        public async Task<int> AddBranchSectionAsync(int branchId, string sectionCode, string sectionName, string description, bool isActive)
+        {
+            if (branchId <= 0) throw new Exception("Chi nhánh không hợp lệ.");
+            if (string.IsNullOrWhiteSpace(sectionCode)) throw new Exception("Mã khu/dãy không được để trống.");
+            if (string.IsNullOrWhiteSpace(sectionName)) throw new Exception("Tên khu/dãy không được để trống.");
+
+            if (!await TableExistsAsync("BranchSections"))
+                throw new Exception("Bảng BranchSections không tồn tại.");
+
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+
+                string tbl = "BranchSections";
+                bool hasBranchId = await ColumnExistsAsync(conn, tbl, "BranchId");
+                bool hasSectionCode = await ColumnExistsAsync(conn, tbl, "SectionCode");
+                bool hasSectionName = await ColumnExistsAsync(conn, tbl, "SectionName");
+                bool hasDescription = await ColumnExistsAsync(conn, tbl, "Description");
+                bool hasIsActive = await ColumnExistsAsync(conn, tbl, "IsActive");
+                bool hasCreatedDate = await ColumnExistsAsync(conn, tbl, "CreatedDate");
+
+                var cols = new System.Collections.Generic.List<string>();
+                var vals = new System.Collections.Generic.List<string>();
+
+                if (hasBranchId) { cols.Add("BranchId"); vals.Add("@BranchId"); }
+                if (hasSectionCode) { cols.Add("SectionCode"); vals.Add("@SectionCode"); }
+                if (hasSectionName) { cols.Add("SectionName"); vals.Add("@SectionName"); }
+                if (hasDescription) { cols.Add("Description"); vals.Add("@Description"); }
+                if (hasIsActive) { cols.Add("IsActive"); vals.Add("@IsActive"); }
+                if (hasCreatedDate) { cols.Add("CreatedDate"); vals.Add("GETDATE()"); }
+
+                string sql = $"INSERT INTO {tbl} ({string.Join(",", cols)}) VALUES ({string.Join(",", vals)}); SELECT CAST(SCOPE_IDENTITY() AS INT);";
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    if (hasBranchId) cmd.Parameters.AddWithValue("@BranchId", branchId);
+                    if (hasSectionCode) cmd.Parameters.AddWithValue("@SectionCode", sectionCode.Trim());
+                    if (hasSectionName) cmd.Parameters.AddWithValue("@SectionName", sectionName.Trim());
+                    if (hasDescription) cmd.Parameters.AddWithValue("@Description", string.IsNullOrWhiteSpace(description) ? (object)DBNull.Value : description.Trim());
+                    if (hasIsActive) cmd.Parameters.AddWithValue("@IsActive", isActive ? 1 : 0);
+                    var result = await cmd.ExecuteScalarAsync();
+                    return result == null || result == DBNull.Value ? 0 : Convert.ToInt32(result);
+                }
+            }
+        }
+
+        public async Task<bool> UpdateBranchSectionAsync(int sectionId, int branchId, string sectionCode, string sectionName, string description, bool isActive)
+        {
+            if (sectionId <= 0) throw new Exception("ID khu/dãy không hợp lệ.");
+            if (branchId <= 0) throw new Exception("Chi nhánh không hợp lệ.");
+            if (string.IsNullOrWhiteSpace(sectionCode)) throw new Exception("Mã khu/dãy không được để trống.");
+            if (string.IsNullOrWhiteSpace(sectionName)) throw new Exception("Tên khu/dãy không được để trống.");
+
+            if (!await TableExistsAsync("BranchSections"))
+                throw new Exception("Bảng BranchSections không tồn tại.");
+
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+
+                string tbl = "BranchSections";
+                bool hasBranchId = await ColumnExistsAsync(conn, tbl, "BranchId");
+                bool hasSectionCode = await ColumnExistsAsync(conn, tbl, "SectionCode");
+                bool hasSectionName = await ColumnExistsAsync(conn, tbl, "SectionName");
+                bool hasDescription = await ColumnExistsAsync(conn, tbl, "Description");
+                bool hasIsActive = await ColumnExistsAsync(conn, tbl, "IsActive");
+
+                var sets = new System.Collections.Generic.List<string>();
+                if (hasBranchId) sets.Add("BranchId=@BranchId");
+                if (hasSectionCode) sets.Add("SectionCode=@SectionCode");
+                if (hasSectionName) sets.Add("SectionName=@SectionName");
+                if (hasDescription) sets.Add("Description=@Description");
+                if (hasIsActive) sets.Add("IsActive=@IsActive");
+
+                string sql = $"UPDATE {tbl} SET {string.Join(",", sets)} WHERE SectionId=@SectionId";
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@SectionId", sectionId);
+                    if (hasBranchId) cmd.Parameters.AddWithValue("@BranchId", branchId);
+                    if (hasSectionCode) cmd.Parameters.AddWithValue("@SectionCode", sectionCode.Trim());
+                    if (hasSectionName) cmd.Parameters.AddWithValue("@SectionName", sectionName.Trim());
+                    if (hasDescription) cmd.Parameters.AddWithValue("@Description", string.IsNullOrWhiteSpace(description) ? (object)DBNull.Value : description.Trim());
+                    if (hasIsActive) cmd.Parameters.AddWithValue("@IsActive", isActive ? 1 : 0);
+
+                    int affected = await cmd.ExecuteNonQueryAsync();
+                    return affected > 0;
+                }
+            }
+        }
+
+        public async Task<bool> DeleteBranchSectionAsync(int sectionId)
+        {
+            if (sectionId <= 0) throw new Exception("ID khu/dãy không hợp lệ.");
+
+            if (!await TableExistsAsync("BranchSections"))
+                throw new Exception("Bảng BranchSections không tồn tại.");
+
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+
+                string tbl = "BranchSections";
+                bool hasIsActive = await ColumnExistsAsync(conn, tbl, "IsActive");
+
+                string sql = hasIsActive
+                    ? $"UPDATE {tbl} SET IsActive = 0 WHERE SectionId=@SectionId"
+                    : $"DELETE FROM {tbl} WHERE SectionId=@SectionId";
+
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@SectionId", sectionId);
+                    int affected = await cmd.ExecuteNonQueryAsync();
+                    return affected > 0;
+                }
+            }
+        }
+
+        #endregion
+
+        #region RoomTypes CRUD
+
+        public async Task<int> AddRoomTypeAsync(string roomTypeName, decimal? defaultPrice, string amenities, int? maxCapacity, string description, bool isActive)
+        {
+            if (string.IsNullOrWhiteSpace(roomTypeName)) throw new Exception("Tên loại phòng không được để trống.");
+
+            if (!await TableExistsAsync("RoomTypes"))
+                throw new Exception("Bảng RoomTypes không tồn tại.");
+
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+
+                string tbl = "RoomTypes";
+                bool hasName = await ColumnExistsAsync(conn, tbl, "RoomTypeName");
+                bool hasDefaultPrice = await ColumnExistsAsync(conn, tbl, "DefaultPrice");
+                bool hasAmenities = await ColumnExistsAsync(conn, tbl, "Amenities");
+                bool hasMaxCapacity = await ColumnExistsAsync(conn, tbl, "MaxCapacity");
+                bool hasDescription = await ColumnExistsAsync(conn, tbl, "Description");
+                bool hasIsActive = await ColumnExistsAsync(conn, tbl, "IsActive");
+                bool hasCreatedDate = await ColumnExistsAsync(conn, tbl, "CreatedDate");
+
+                var cols = new System.Collections.Generic.List<string>();
+                var vals = new System.Collections.Generic.List<string>();
+
+                if (hasName) { cols.Add("RoomTypeName"); vals.Add("@RoomTypeName"); }
+                if (hasDefaultPrice) { cols.Add("DefaultPrice"); vals.Add("@DefaultPrice"); }
+                if (hasAmenities) { cols.Add("Amenities"); vals.Add("@Amenities"); }
+                if (hasMaxCapacity) { cols.Add("MaxCapacity"); vals.Add("@MaxCapacity"); }
+                if (hasDescription) { cols.Add("Description"); vals.Add("@Description"); }
+                if (hasIsActive) { cols.Add("IsActive"); vals.Add("@IsActive"); }
+                if (hasCreatedDate) { cols.Add("CreatedDate"); vals.Add("GETDATE()"); }
+
+                string sql = $"INSERT INTO {tbl} ({string.Join(",", cols)}) VALUES ({string.Join(",", vals)}); SELECT CAST(SCOPE_IDENTITY() AS INT);";
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    if (hasName) cmd.Parameters.AddWithValue("@RoomTypeName", roomTypeName.Trim());
+                    if (hasDefaultPrice) cmd.Parameters.AddWithValue("@DefaultPrice", (object)defaultPrice ?? DBNull.Value);
+                    if (hasAmenities) cmd.Parameters.AddWithValue("@Amenities", string.IsNullOrWhiteSpace(amenities) ? (object)DBNull.Value : amenities.Trim());
+                    if (hasMaxCapacity) cmd.Parameters.AddWithValue("@MaxCapacity", (object)maxCapacity ?? DBNull.Value);
+                    if (hasDescription) cmd.Parameters.AddWithValue("@Description", string.IsNullOrWhiteSpace(description) ? (object)DBNull.Value : description.Trim());
+                    if (hasIsActive) cmd.Parameters.AddWithValue("@IsActive", isActive ? 1 : 0);
+
+                    var result = await cmd.ExecuteScalarAsync();
+                    return result == null || result == DBNull.Value ? 0 : Convert.ToInt32(result);
+                }
+            }
+        }
+
+        public async Task<bool> UpdateRoomTypeAsync(int roomTypeId, string roomTypeName, decimal? defaultPrice, string amenities, int? maxCapacity, string description, bool isActive)
+        {
+            if (roomTypeId <= 0) throw new Exception("ID loại phòng không hợp lệ.");
+            if (string.IsNullOrWhiteSpace(roomTypeName)) throw new Exception("Tên loại phòng không được để trống.");
+
+            if (!await TableExistsAsync("RoomTypes"))
+                throw new Exception("Bảng RoomTypes không tồn tại.");
+
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+
+                string tbl = "RoomTypes";
+                bool hasName = await ColumnExistsAsync(conn, tbl, "RoomTypeName");
+                bool hasDefaultPrice = await ColumnExistsAsync(conn, tbl, "DefaultPrice");
+                bool hasAmenities = await ColumnExistsAsync(conn, tbl, "Amenities");
+                bool hasMaxCapacity = await ColumnExistsAsync(conn, tbl, "MaxCapacity");
+                bool hasDescription = await ColumnExistsAsync(conn, tbl, "Description");
+                bool hasIsActive = await ColumnExistsAsync(conn, tbl, "IsActive");
+
+                var sets = new System.Collections.Generic.List<string>();
+                if (hasName) sets.Add("RoomTypeName=@RoomTypeName");
+                if (hasDefaultPrice) sets.Add("DefaultPrice=@DefaultPrice");
+                if (hasAmenities) sets.Add("Amenities=@Amenities");
+                if (hasMaxCapacity) sets.Add("MaxCapacity=@MaxCapacity");
+                if (hasDescription) sets.Add("Description=@Description");
+                if (hasIsActive) sets.Add("IsActive=@IsActive");
+
+                string sql = $"UPDATE {tbl} SET {string.Join(",", sets)} WHERE RoomTypeId=@RoomTypeId";
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@RoomTypeId", roomTypeId);
+                    if (hasName) cmd.Parameters.AddWithValue("@RoomTypeName", roomTypeName.Trim());
+                    if (hasDefaultPrice) cmd.Parameters.AddWithValue("@DefaultPrice", (object)defaultPrice ?? DBNull.Value);
+                    if (hasAmenities) cmd.Parameters.AddWithValue("@Amenities", string.IsNullOrWhiteSpace(amenities) ? (object)DBNull.Value : amenities.Trim());
+                    if (hasMaxCapacity) cmd.Parameters.AddWithValue("@MaxCapacity", (object)maxCapacity ?? DBNull.Value);
+                    if (hasDescription) cmd.Parameters.AddWithValue("@Description", string.IsNullOrWhiteSpace(description) ? (object)DBNull.Value : description.Trim());
+                    if (hasIsActive) cmd.Parameters.AddWithValue("@IsActive", isActive ? 1 : 0);
+
+                    int affected = await cmd.ExecuteNonQueryAsync();
+                    return affected > 0;
+                }
+            }
+        }
+
+        public async Task<bool> DeleteRoomTypeAsync(int roomTypeId)
+        {
+            if (roomTypeId <= 0) throw new Exception("ID loại phòng không hợp lệ.");
+
+            if (!await TableExistsAsync("RoomTypes"))
+                throw new Exception("Bảng RoomTypes không tồn tại.");
+
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+
+                string tbl = "RoomTypes";
+                bool hasIsActive = await ColumnExistsAsync(conn, tbl, "IsActive");
+
+                string sql = hasIsActive
+                    ? $"UPDATE {tbl} SET IsActive = 0 WHERE RoomTypeId=@RoomTypeId"
+                    : $"DELETE FROM {tbl} WHERE RoomTypeId=@RoomTypeId";
+
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@RoomTypeId", roomTypeId);
+                    int affected = await cmd.ExecuteNonQueryAsync();
+                    return affected > 0;
+                }
+            }
+        }
+
+        #endregion
+
+        #region RoomStatuses CRUD
+
+        public async Task<int> AddRoomStatusAsync(string statusName, string description)
+        {
+            if (string.IsNullOrWhiteSpace(statusName)) throw new Exception("Tên trạng thái không được để trống.");
+
+            if (!await TableExistsAsync("RoomStatuses"))
+                throw new Exception("Bảng RoomStatuses không tồn tại.");
+
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+
+                string tbl = "RoomStatuses";
+                bool hasName = await ColumnExistsAsync(conn, tbl, "StatusName");
+                bool hasDescription = await ColumnExistsAsync(conn, tbl, "Description");
+
+                var cols = new System.Collections.Generic.List<string>();
+                var vals = new System.Collections.Generic.List<string>();
+
+                if (hasName) { cols.Add("StatusName"); vals.Add("@StatusName"); }
+                if (hasDescription) { cols.Add("Description"); vals.Add("@Description"); }
+
+                string sql = $"INSERT INTO {tbl} ({string.Join(",", cols)}) VALUES ({string.Join(",", vals)}); SELECT CAST(SCOPE_IDENTITY() AS INT);";
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    if (hasName) cmd.Parameters.AddWithValue("@StatusName", statusName.Trim());
+                    if (hasDescription) cmd.Parameters.AddWithValue("@Description", string.IsNullOrWhiteSpace(description) ? (object)DBNull.Value : description.Trim());
+
+                    var result = await cmd.ExecuteScalarAsync();
+                    return result == null || result == DBNull.Value ? 0 : Convert.ToInt32(result);
+                }
+            }
+        }
+
+        public async Task<bool> UpdateRoomStatusAsync(int statusId, string statusName, string description)
+        {
+            if (statusId <= 0) throw new Exception("ID trạng thái không hợp lệ.");
+            if (string.IsNullOrWhiteSpace(statusName)) throw new Exception("Tên trạng thái không được để trống.");
+
+            if (!await TableExistsAsync("RoomStatuses"))
+                throw new Exception("Bảng RoomStatuses không tồn tại.");
+
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+
+                string tbl = "RoomStatuses";
+                bool hasName = await ColumnExistsAsync(conn, tbl, "StatusName");
+                bool hasDescription = await ColumnExistsAsync(conn, tbl, "Description");
+
+                var sets = new System.Collections.Generic.List<string>();
+                if (hasName) sets.Add("StatusName=@StatusName");
+                if (hasDescription) sets.Add("Description=@Description");
+
+                string sql = $"UPDATE {tbl} SET {string.Join(",", sets)} WHERE StatusId=@StatusId";
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@StatusId", statusId);
+                    if (hasName) cmd.Parameters.AddWithValue("@StatusName", statusName.Trim());
+                    if (hasDescription) cmd.Parameters.AddWithValue("@Description", string.IsNullOrWhiteSpace(description) ? (object)DBNull.Value : description.Trim());
+
+                    int affected = await cmd.ExecuteNonQueryAsync();
+                    return affected > 0;
+                }
+            }
+        }
+
+        public async Task<bool> DeleteRoomStatusAsync(int statusId)
+        {
+            if (statusId <= 0) throw new Exception("ID trạng thái không hợp lệ.");
+
+            if (!await TableExistsAsync("RoomStatuses"))
+                throw new Exception("Bảng RoomStatuses không tồn tại.");
+
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+
+                string sql = "DELETE FROM RoomStatuses WHERE StatusId=@StatusId";
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@StatusId", statusId);
+                    int affected = await cmd.ExecuteNonQueryAsync();
+                    return affected > 0;
+                }
+            }
+        }
+
+        #endregion
+
+        public async Task<DataTable> GetUsersByRoleAsync(int roleId)
+        {
+            await EnsureUsersPhoneColumnBestEffortAsync();
+
+            return await GetTableSafeAsync(
                 "Users",
                 cmd => cmd.Parameters.AddWithValue("@roleId", roleId),
-                @"SELECT UserId, UserName, FullName, Email, Phone, RoleId, IsActive, CreatedDate 
-                  FROM Users WHERE RoleId = @roleId",
-                "SELECT * FROM Users WHERE RoleId = @roleId",
-                "SELECT * FROM Users"
+                @"SELECT u.UserId,
+                         u.Username AS UserName,
+                         u.Email,
+                         u.FullName,
+                         u.Phone,
+                         u.RoleId,
+                         u.BranchId,
+                         b.BranchName,
+                         u.IsActive,
+                         u.CreatedDate,
+                         u.UpdatedDate
+                  FROM Users u
+                  LEFT JOIN Branches b ON b.BranchId = u.BranchId
+                  WHERE u.RoleId = @roleId
+                  ORDER BY u.UserId DESC",
+                // Nếu DB chưa có cột Phone, vẫn trả về cột Phone dạng NULL để UI không bị lỗi.
+                @"SELECT u.UserId,
+                         u.Username AS UserName,
+                         u.Email,
+                         u.FullName,
+                         CAST(NULL AS NVARCHAR(20)) AS Phone,
+                         u.RoleId,
+                         u.BranchId,
+                         b.BranchName,
+                         u.IsActive,
+                         u.CreatedDate,
+                         u.UpdatedDate
+                  FROM Users u
+                  LEFT JOIN Branches b ON b.BranchId = u.BranchId
+                  WHERE u.RoleId = @roleId
+                  ORDER BY u.UserId DESC",
+                @"SELECT UserId,
+                         Username AS UserName,
+                         Email,
+                         FullName,
+                         CAST(NULL AS NVARCHAR(20)) AS Phone,
+                         RoleId,
+                         BranchId,
+                         CAST(NULL AS NVARCHAR(255)) AS BranchName,
+                         IsActive,
+                         CreatedDate,
+                         UpdatedDate
+                  FROM Users
+                  WHERE RoleId = @roleId
+                  ORDER BY UserId DESC",
+                @"SELECT UserId,
+                         UserName,
+                         Email,
+                         FullName,
+                         CAST(NULL AS NVARCHAR(20)) AS Phone,
+                         RoleId,
+                         CAST(NULL AS INT) AS BranchId,
+                         CAST(NULL AS NVARCHAR(255)) AS BranchName,
+                         IsActive,
+                         CreatedDate,
+                         CAST(NULL AS DATETIME) AS UpdatedDate
+                  FROM Users
+                  WHERE RoleId = @roleId
+                  ORDER BY UserId DESC"
             );
         }
 
         #region CRUD Staff (RoleId = 2)
 
-        public async Task<int> AddStaffUserAsync(string username, string password, string fullName, string email, string phone, bool isActive)
+        public async Task<int> AddStaffUserAsync(string username, string password, string fullName, string email, string phone, int? branchId, bool isActive)
         {
-            const string sql = @"
-                INSERT INTO Users (Username, Password, FullName, Email, Phone, RoleId, IsActive, CreatedDate)
-                VALUES (@Username, @Password, @FullName, @Email, @Phone, 2, @IsActive, GETDATE());
+            await EnsureUsersPhoneColumnBestEffortAsync();
+
+            const string sqlWithPhone = @"
+                INSERT INTO Users (Username, Password, Email, FullName, Phone, RoleId, BranchId, IsActive, CreatedDate, UpdatedDate)
+                VALUES (@Username, @Password, @Email, @FullName, @Phone, 2, @BranchId, @IsActive, GETDATE(), GETDATE());
+                SELECT CAST(SCOPE_IDENTITY() AS INT);";
+
+            const string sqlNoPhone = @"
+                INSERT INTO Users (Username, Password, Email, FullName, RoleId, BranchId, IsActive, CreatedDate, UpdatedDate)
+                VALUES (@Username, @Password, @Email, @FullName, 2, @BranchId, @IsActive, GETDATE(), GETDATE());
                 SELECT CAST(SCOPE_IDENTITY() AS INT);";
 
             using (var conn = new SqlConnection(connectionString))
             {
                 await conn.OpenAsync();
-                using (var cmd = new SqlCommand(sql, conn))
+                using (var cmd = new SqlCommand(sqlWithPhone, conn))
                 {
                     cmd.Parameters.AddWithValue("@Username", username);
                     cmd.Parameters.AddWithValue("@Password", password);
-                    cmd.Parameters.AddWithValue("@FullName", fullName);
                     cmd.Parameters.AddWithValue("@Email", string.IsNullOrWhiteSpace(email) ? (object)DBNull.Value : email);
+                    cmd.Parameters.AddWithValue("@FullName", fullName);
                     cmd.Parameters.AddWithValue("@Phone", string.IsNullOrWhiteSpace(phone) ? (object)DBNull.Value : phone);
+                    cmd.Parameters.AddWithValue("@BranchId", branchId.HasValue && branchId.Value > 0 ? (object)branchId.Value : DBNull.Value);
                     cmd.Parameters.AddWithValue("@IsActive", isActive);
 
-                    var result = await cmd.ExecuteScalarAsync();
-                    return result != null ? Convert.ToInt32(result) : 0;
+                    try
+                    {
+                        var result = await cmd.ExecuteScalarAsync();
+                        return result != null ? Convert.ToInt32(result) : 0;
+                    }
+                    catch (SqlException ex) when (IsInvalidColumn(ex, "Phone"))
+                    {
+                        cmd.CommandText = sqlNoPhone;
+                        cmd.Parameters.RemoveAt("@Phone");
+                        var result = await cmd.ExecuteScalarAsync();
+                        return result != null ? Convert.ToInt32(result) : 0;
+                    }
                 }
             }
         }
 
-        public async Task<bool> UpdateStaffUserAsync(int userId, string fullName, string email, string phone, bool isActive, string newPassword = null)
+        public async Task<bool> UpdateStaffUserAsync(int userId, string fullName, string email, string phone, int? branchId, bool isActive, string newPassword = null)
         {
+            await EnsureUsersPhoneColumnBestEffortAsync();
+
             string sql = @"
                 UPDATE Users SET
                     FullName = @FullName,
                     Email = @Email,
                     Phone = @Phone,
-                    IsActive = @IsActive
+                    BranchId = @BranchId,
+                    IsActive = @IsActive,
+                    UpdatedDate = GETDATE()
                 WHERE UserId = @UserId AND RoleId = 2";
 
             if (!string.IsNullOrWhiteSpace(newPassword))
@@ -558,8 +1041,10 @@ namespace QuanLyNhaTro.DAL
                     FullName = @FullName,
                     Email = @Email,
                     Phone = @Phone,
+                    BranchId = @BranchId,
                     IsActive = @IsActive,
-                    Password = @Password
+                    Password = @Password,
+                    UpdatedDate = GETDATE()
                 WHERE UserId = @UserId AND RoleId = 2";
             }
 
@@ -572,6 +1057,7 @@ namespace QuanLyNhaTro.DAL
                     cmd.Parameters.AddWithValue("@FullName", fullName);
                     cmd.Parameters.AddWithValue("@Email", string.IsNullOrWhiteSpace(email) ? (object)DBNull.Value : email);
                     cmd.Parameters.AddWithValue("@Phone", string.IsNullOrWhiteSpace(phone) ? (object)DBNull.Value : phone);
+                    cmd.Parameters.AddWithValue("@BranchId", branchId.HasValue && branchId.Value > 0 ? (object)branchId.Value : DBNull.Value);
                     cmd.Parameters.AddWithValue("@IsActive", isActive);
 
                     if (!string.IsNullOrWhiteSpace(newPassword))
@@ -579,10 +1065,71 @@ namespace QuanLyNhaTro.DAL
                         cmd.Parameters.AddWithValue("@Password", newPassword);
                     }
 
-                    int affected = await cmd.ExecuteNonQueryAsync();
-                    return affected > 0;
+                    try
+                    {
+                        int affected = await cmd.ExecuteNonQueryAsync();
+                        return affected > 0;
+                    }
+                    catch (SqlException ex) when (IsInvalidColumn(ex, "Phone"))
+                    {
+                        string sqlNoPhone = !string.IsNullOrWhiteSpace(newPassword)
+                            ? @"
+                                UPDATE Users SET
+                                    FullName = @FullName,
+                                    Email = @Email,
+                                    BranchId = @BranchId,
+                                    IsActive = @IsActive,
+                                    Password = @Password,
+                                    UpdatedDate = GETDATE()
+                                WHERE UserId = @UserId AND RoleId = 2"
+                            : @"
+                                UPDATE Users SET
+                                    FullName = @FullName,
+                                    Email = @Email,
+                                    BranchId = @BranchId,
+                                    IsActive = @IsActive,
+                                    UpdatedDate = GETDATE()
+                                WHERE UserId = @UserId AND RoleId = 2";
+
+                        cmd.CommandText = sqlNoPhone;
+                        cmd.Parameters.RemoveAt("@Phone");
+                        int affected = await cmd.ExecuteNonQueryAsync();
+                        return affected > 0;
+                    }
                 }
             }
+        }
+
+        private async Task EnsureUsersPhoneColumnBestEffortAsync()
+        {
+            try
+            {
+                const string sql = @"
+                    IF OBJECT_ID('Users', 'U') IS NOT NULL AND COL_LENGTH('Users', 'Phone') IS NULL
+                    BEGIN
+                        ALTER TABLE Users ADD Phone NVARCHAR(20) NULL;
+                    END";
+
+                using (var conn = new SqlConnection(connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand(sql, conn))
+                    {
+                        await cmd.ExecuteNonQueryAsync();
+                    }
+                }
+            }
+            catch
+            {
+                // Best-effort: nếu không có quyền ALTER TABLE, các query sẽ tự fallback không dùng Phone.
+            }
+        }
+
+        private static bool IsInvalidColumn(SqlException ex, string columnName)
+        {
+            if (ex == null || string.IsNullOrWhiteSpace(columnName)) return false;
+            string token = "Invalid column name '" + columnName + "'";
+            return ex.Message != null && ex.Message.IndexOf(token, StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         public async Task<bool> DeleteStaffUserAsync(int userId)
@@ -650,15 +1197,156 @@ namespace QuanLyNhaTro.DAL
                 @"SELECT HistoryId,
                          TenantId,
                          RoomId,
+                         r.RoomNumber,
+                         r.BranchId,
                          CheckInDate,
                          CheckOutDate,
                          Status,
                          Notes,
                          CreatedDate
-                  FROM TenantRoomHistory",
+                  FROM TenantRoomHistory h
+                  LEFT JOIN Rooms r ON r.RoomId = h.RoomId",
                 "SELECT * FROM TenantRoomHistory"
             );
         }
+
+        #region CRUD Dependents
+
+        public async Task<int> AddDependentAsync(int tenantId, string fullName, string relationship, string phoneNumber)
+        {
+            const string sql = @"
+                INSERT INTO Dependents (TenantId, FullName, Relationship, PhoneNumber, CreatedDate)
+                VALUES (@TenantId, @FullName, @Relationship, @PhoneNumber, GETDATE());
+                SELECT CAST(SCOPE_IDENTITY() AS INT);";
+
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@TenantId", tenantId);
+                    cmd.Parameters.AddWithValue("@FullName", fullName);
+                    cmd.Parameters.AddWithValue("@Relationship", string.IsNullOrWhiteSpace(relationship) ? (object)DBNull.Value : relationship);
+                    cmd.Parameters.AddWithValue("@PhoneNumber", string.IsNullOrWhiteSpace(phoneNumber) ? (object)DBNull.Value : phoneNumber);
+                    var result = await cmd.ExecuteScalarAsync();
+                    return result != null ? Convert.ToInt32(result) : 0;
+                }
+            }
+        }
+
+        public async Task<bool> UpdateDependentAsync(int dependentId, int tenantId, string fullName, string relationship, string phoneNumber)
+        {
+            const string sql = @"
+                UPDATE Dependents SET
+                    TenantId = @TenantId,
+                    FullName = @FullName,
+                    Relationship = @Relationship,
+                    PhoneNumber = @PhoneNumber
+                WHERE DependentId = @DependentId";
+
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@DependentId", dependentId);
+                    cmd.Parameters.AddWithValue("@TenantId", tenantId);
+                    cmd.Parameters.AddWithValue("@FullName", fullName);
+                    cmd.Parameters.AddWithValue("@Relationship", string.IsNullOrWhiteSpace(relationship) ? (object)DBNull.Value : relationship);
+                    cmd.Parameters.AddWithValue("@PhoneNumber", string.IsNullOrWhiteSpace(phoneNumber) ? (object)DBNull.Value : phoneNumber);
+                    int affected = await cmd.ExecuteNonQueryAsync();
+                    return affected > 0;
+                }
+            }
+        }
+
+        public async Task<bool> DeleteDependentAsync(int dependentId)
+        {
+            const string sql = @"DELETE FROM Dependents WHERE DependentId = @DependentId";
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@DependentId", dependentId);
+                    int affected = await cmd.ExecuteNonQueryAsync();
+                    return affected > 0;
+                }
+            }
+        }
+
+        #endregion
+
+        #region CRUD TenantRoomHistory
+
+        public async Task<int> AddTenantHistoryAsync(int tenantId, int roomId, DateTime checkInDate, DateTime? checkOutDate, string status, string notes)
+        {
+            const string sql = @"
+                INSERT INTO TenantRoomHistory (TenantId, RoomId, CheckInDate, CheckOutDate, Status, Notes, CreatedDate)
+                VALUES (@TenantId, @RoomId, @CheckInDate, @CheckOutDate, @Status, @Notes, GETDATE());
+                SELECT CAST(SCOPE_IDENTITY() AS INT);";
+
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@TenantId", tenantId);
+                    cmd.Parameters.AddWithValue("@RoomId", roomId);
+                    cmd.Parameters.AddWithValue("@CheckInDate", checkInDate.Date);
+                    cmd.Parameters.AddWithValue("@CheckOutDate", checkOutDate.HasValue ? (object)checkOutDate.Value.Date : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Status", string.IsNullOrWhiteSpace(status) ? (object)DBNull.Value : status);
+                    cmd.Parameters.AddWithValue("@Notes", string.IsNullOrWhiteSpace(notes) ? (object)DBNull.Value : notes);
+                    var result = await cmd.ExecuteScalarAsync();
+                    return result != null ? Convert.ToInt32(result) : 0;
+                }
+            }
+        }
+
+        public async Task<bool> UpdateTenantHistoryAsync(int historyId, int roomId, DateTime checkInDate, DateTime? checkOutDate, string status, string notes)
+        {
+            const string sql = @"
+                UPDATE TenantRoomHistory SET
+                    RoomId = @RoomId,
+                    CheckInDate = @CheckInDate,
+                    CheckOutDate = @CheckOutDate,
+                    Status = @Status,
+                    Notes = @Notes
+                WHERE HistoryId = @HistoryId";
+
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@HistoryId", historyId);
+                    cmd.Parameters.AddWithValue("@RoomId", roomId);
+                    cmd.Parameters.AddWithValue("@CheckInDate", checkInDate.Date);
+                    cmd.Parameters.AddWithValue("@CheckOutDate", checkOutDate.HasValue ? (object)checkOutDate.Value.Date : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Status", string.IsNullOrWhiteSpace(status) ? (object)DBNull.Value : status);
+                    cmd.Parameters.AddWithValue("@Notes", string.IsNullOrWhiteSpace(notes) ? (object)DBNull.Value : notes);
+                    int affected = await cmd.ExecuteNonQueryAsync();
+                    return affected > 0;
+                }
+            }
+        }
+
+        public async Task<bool> DeleteTenantHistoryAsync(int historyId)
+        {
+            const string sql = @"DELETE FROM TenantRoomHistory WHERE HistoryId = @HistoryId";
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@HistoryId", historyId);
+                    int affected = await cmd.ExecuteNonQueryAsync();
+                    return affected > 0;
+                }
+            }
+        }
+
+        #endregion
 
         public Task<DataTable> GetContractsAsync()
         {
@@ -718,6 +1406,7 @@ namespace QuanLyNhaTro.DAL
                          ur.RoomId,
                          r.RoomNumber,
                          r.BranchId,
+                         ur.UtilityTypeId,
                          ut.UtilityName,
                          ut.UtilityCode,
                          ur.ReadingDate,
@@ -726,6 +1415,7 @@ namespace QuanLyNhaTro.DAL
                          ur.UsageAmount,
                          ur.UnitPrice,
                          ur.TotalCost,
+                         ur.Notes,
                          ur.CreatedDate
                   FROM UtilityReadings ur
                   LEFT JOIN Rooms r ON r.RoomId = ur.RoomId
@@ -753,6 +1443,160 @@ namespace QuanLyNhaTro.DAL
                 "SELECT * FROM UtilityTypes"
             );
         }
+
+        #region CRUD Utilities
+
+        public async Task<int> AddUtilityTypeAsync(string utilityName, string utilityCode, string unit, bool isRecurring, decimal? defaultPrice, string description, bool isActive)
+        {
+            const string sql = @"
+                INSERT INTO UtilityTypes (UtilityName, UtilityCode, Unit, IsRecurring, DefaultPrice, Description, IsActive, CreatedDate)
+                VALUES (@UtilityName, @UtilityCode, @Unit, @IsRecurring, @DefaultPrice, @Description, @IsActive, GETDATE());
+                SELECT CAST(SCOPE_IDENTITY() AS INT);";
+
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@UtilityName", utilityName);
+                    cmd.Parameters.AddWithValue("@UtilityCode", string.IsNullOrWhiteSpace(utilityCode) ? (object)DBNull.Value : utilityCode);
+                    cmd.Parameters.AddWithValue("@Unit", string.IsNullOrWhiteSpace(unit) ? (object)DBNull.Value : unit);
+                    cmd.Parameters.AddWithValue("@IsRecurring", isRecurring);
+                    cmd.Parameters.AddWithValue("@DefaultPrice", defaultPrice.HasValue ? (object)defaultPrice.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Description", string.IsNullOrWhiteSpace(description) ? (object)DBNull.Value : description);
+                    cmd.Parameters.AddWithValue("@IsActive", isActive);
+                    var result = await cmd.ExecuteScalarAsync();
+                    return result != null ? Convert.ToInt32(result) : 0;
+                }
+            }
+        }
+
+        public async Task<bool> UpdateUtilityTypeAsync(int utilityTypeId, string utilityName, string utilityCode, string unit, bool isRecurring, decimal? defaultPrice, string description, bool isActive)
+        {
+            const string sql = @"
+                UPDATE UtilityTypes SET
+                    UtilityName = @UtilityName,
+                    UtilityCode = @UtilityCode,
+                    Unit = @Unit,
+                    IsRecurring = @IsRecurring,
+                    DefaultPrice = @DefaultPrice,
+                    Description = @Description,
+                    IsActive = @IsActive
+                WHERE UtilityTypeId = @UtilityTypeId";
+
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@UtilityTypeId", utilityTypeId);
+                    cmd.Parameters.AddWithValue("@UtilityName", utilityName);
+                    cmd.Parameters.AddWithValue("@UtilityCode", string.IsNullOrWhiteSpace(utilityCode) ? (object)DBNull.Value : utilityCode);
+                    cmd.Parameters.AddWithValue("@Unit", string.IsNullOrWhiteSpace(unit) ? (object)DBNull.Value : unit);
+                    cmd.Parameters.AddWithValue("@IsRecurring", isRecurring);
+                    cmd.Parameters.AddWithValue("@DefaultPrice", defaultPrice.HasValue ? (object)defaultPrice.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Description", string.IsNullOrWhiteSpace(description) ? (object)DBNull.Value : description);
+                    cmd.Parameters.AddWithValue("@IsActive", isActive);
+                    int affected = await cmd.ExecuteNonQueryAsync();
+                    return affected > 0;
+                }
+            }
+        }
+
+        public async Task<bool> DeleteUtilityTypeAsync(int utilityTypeId)
+        {
+            const string sql = @"DELETE FROM UtilityTypes WHERE UtilityTypeId = @UtilityTypeId";
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@UtilityTypeId", utilityTypeId);
+                    int affected = await cmd.ExecuteNonQueryAsync();
+                    return affected > 0;
+                }
+            }
+        }
+
+        public async Task<int> AddUtilityReadingAsync(int roomId, int utilityTypeId, DateTime? readingDate, decimal? previousReading, decimal? currentReading, decimal? usageAmount, decimal? unitPrice, decimal? totalCost, string notes)
+        {
+            const string sql = @"
+                INSERT INTO UtilityReadings (RoomId, UtilityTypeId, ReadingDate, PreviousReading, CurrentReading, UsageAmount, UnitPrice, TotalCost, Notes, CreatedDate)
+                VALUES (@RoomId, @UtilityTypeId, @ReadingDate, @PreviousReading, @CurrentReading, @UsageAmount, @UnitPrice, @TotalCost, @Notes, GETDATE());
+                SELECT CAST(SCOPE_IDENTITY() AS INT);";
+
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@RoomId", roomId);
+                    cmd.Parameters.AddWithValue("@UtilityTypeId", utilityTypeId);
+                    cmd.Parameters.AddWithValue("@ReadingDate", readingDate.HasValue ? (object)readingDate.Value.Date : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@PreviousReading", previousReading.HasValue ? (object)previousReading.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@CurrentReading", currentReading.HasValue ? (object)currentReading.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@UsageAmount", usageAmount.HasValue ? (object)usageAmount.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@UnitPrice", unitPrice.HasValue ? (object)unitPrice.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@TotalCost", totalCost.HasValue ? (object)totalCost.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Notes", string.IsNullOrWhiteSpace(notes) ? (object)DBNull.Value : notes);
+                    var result = await cmd.ExecuteScalarAsync();
+                    return result != null ? Convert.ToInt32(result) : 0;
+                }
+            }
+        }
+
+        public async Task<bool> UpdateUtilityReadingAsync(int readingId, int roomId, int utilityTypeId, DateTime? readingDate, decimal? previousReading, decimal? currentReading, decimal? usageAmount, decimal? unitPrice, decimal? totalCost, string notes)
+        {
+            const string sql = @"
+                UPDATE UtilityReadings SET
+                    RoomId = @RoomId,
+                    UtilityTypeId = @UtilityTypeId,
+                    ReadingDate = @ReadingDate,
+                    PreviousReading = @PreviousReading,
+                    CurrentReading = @CurrentReading,
+                    UsageAmount = @UsageAmount,
+                    UnitPrice = @UnitPrice,
+                    TotalCost = @TotalCost,
+                    Notes = @Notes
+                WHERE ReadingId = @ReadingId";
+
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@ReadingId", readingId);
+                    cmd.Parameters.AddWithValue("@RoomId", roomId);
+                    cmd.Parameters.AddWithValue("@UtilityTypeId", utilityTypeId);
+                    cmd.Parameters.AddWithValue("@ReadingDate", readingDate.HasValue ? (object)readingDate.Value.Date : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@PreviousReading", previousReading.HasValue ? (object)previousReading.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@CurrentReading", currentReading.HasValue ? (object)currentReading.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@UsageAmount", usageAmount.HasValue ? (object)usageAmount.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@UnitPrice", unitPrice.HasValue ? (object)unitPrice.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@TotalCost", totalCost.HasValue ? (object)totalCost.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Notes", string.IsNullOrWhiteSpace(notes) ? (object)DBNull.Value : notes);
+                    int affected = await cmd.ExecuteNonQueryAsync();
+                    return affected > 0;
+                }
+            }
+        }
+
+        public async Task<bool> DeleteUtilityReadingAsync(int readingId)
+        {
+            const string sql = @"DELETE FROM UtilityReadings WHERE ReadingId = @ReadingId";
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@ReadingId", readingId);
+                    int affected = await cmd.ExecuteNonQueryAsync();
+                    return affected > 0;
+                }
+            }
+        }
+
+        #endregion
 
         public Task<DataTable> GetInvoicesAsync()
         {
@@ -824,6 +1668,93 @@ namespace QuanLyNhaTro.DAL
             );
         }
 
+        #region CRUD MaintenanceTickets
+
+        public async Task<int> AddMaintenanceTicketAsync(string ticketNumber, int roomId, string requestorType, int? requestorId,
+            string issueDescription, string priority, int? assignedToUserId, string status, DateTime? completedDate, string notes)
+        {
+            const string sql = @"
+                INSERT INTO MaintenanceTickets
+                    (TicketNumber, RoomId, RequestorType, RequestorId, IssueDescription, Priority, AssignedToUserId, Status, CreatedDate, CompletedDate, Notes)
+                VALUES
+                    (@TicketNumber, @RoomId, @RequestorType, @RequestorId, @IssueDescription, @Priority, @AssignedToUserId, @Status, GETDATE(), @CompletedDate, @Notes);
+                SELECT CAST(SCOPE_IDENTITY() AS INT);";
+
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@TicketNumber", ticketNumber);
+                    cmd.Parameters.AddWithValue("@RoomId", roomId);
+                    cmd.Parameters.AddWithValue("@RequestorType", string.IsNullOrWhiteSpace(requestorType) ? (object)DBNull.Value : requestorType);
+                    cmd.Parameters.AddWithValue("@RequestorId", requestorId.HasValue && requestorId.Value > 0 ? (object)requestorId.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@IssueDescription", string.IsNullOrWhiteSpace(issueDescription) ? (object)DBNull.Value : issueDescription);
+                    cmd.Parameters.AddWithValue("@Priority", string.IsNullOrWhiteSpace(priority) ? (object)DBNull.Value : priority);
+                    cmd.Parameters.AddWithValue("@AssignedToUserId", assignedToUserId.HasValue && assignedToUserId.Value > 0 ? (object)assignedToUserId.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Status", string.IsNullOrWhiteSpace(status) ? (object)DBNull.Value : status);
+                    cmd.Parameters.AddWithValue("@CompletedDate", completedDate.HasValue ? (object)completedDate.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Notes", string.IsNullOrWhiteSpace(notes) ? (object)DBNull.Value : notes);
+                    var result = await cmd.ExecuteScalarAsync();
+                    return result != null ? Convert.ToInt32(result) : 0;
+                }
+            }
+        }
+
+        public async Task<bool> UpdateMaintenanceTicketAsync(int ticketId, int roomId, string requestorType, int? requestorId,
+            string issueDescription, string priority, int? assignedToUserId, string status, DateTime? completedDate, string notes)
+        {
+            const string sql = @"
+                UPDATE MaintenanceTickets SET
+                    RoomId = @RoomId,
+                    RequestorType = @RequestorType,
+                    RequestorId = @RequestorId,
+                    IssueDescription = @IssueDescription,
+                    Priority = @Priority,
+                    AssignedToUserId = @AssignedToUserId,
+                    Status = @Status,
+                    CompletedDate = @CompletedDate,
+                    Notes = @Notes
+                WHERE TicketId = @TicketId";
+
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@TicketId", ticketId);
+                    cmd.Parameters.AddWithValue("@RoomId", roomId);
+                    cmd.Parameters.AddWithValue("@RequestorType", string.IsNullOrWhiteSpace(requestorType) ? (object)DBNull.Value : requestorType);
+                    cmd.Parameters.AddWithValue("@RequestorId", requestorId.HasValue && requestorId.Value > 0 ? (object)requestorId.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@IssueDescription", string.IsNullOrWhiteSpace(issueDescription) ? (object)DBNull.Value : issueDescription);
+                    cmd.Parameters.AddWithValue("@Priority", string.IsNullOrWhiteSpace(priority) ? (object)DBNull.Value : priority);
+                    cmd.Parameters.AddWithValue("@AssignedToUserId", assignedToUserId.HasValue && assignedToUserId.Value > 0 ? (object)assignedToUserId.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Status", string.IsNullOrWhiteSpace(status) ? (object)DBNull.Value : status);
+                    cmd.Parameters.AddWithValue("@CompletedDate", completedDate.HasValue ? (object)completedDate.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Notes", string.IsNullOrWhiteSpace(notes) ? (object)DBNull.Value : notes);
+                    int affected = await cmd.ExecuteNonQueryAsync();
+                    return affected > 0;
+                }
+            }
+        }
+
+        public async Task<bool> DeleteMaintenanceTicketAsync(int ticketId)
+        {
+            const string sql = @"DELETE FROM MaintenanceTickets WHERE TicketId = @TicketId";
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@TicketId", ticketId);
+                    int affected = await cmd.ExecuteNonQueryAsync();
+                    return affected > 0;
+                }
+            }
+        }
+
+        #endregion
+
         public Task<DataTable> GetAssetsAsync()
         {
             return GetTableSafeAsync(
@@ -850,6 +1781,94 @@ namespace QuanLyNhaTro.DAL
             );
         }
 
+        #region CRUD Assets
+
+        public async Task<int> AddAssetAsync(string assetCode, string assetName, string category, int? roomId, int quantity, string condition,
+            DateTime? purchaseDate, decimal? purchasePrice, string description, bool isActive)
+        {
+            const string sql = @"
+                INSERT INTO Assets (AssetCode, AssetName, Category, RoomId, Quantity, Condition, PurchaseDate, PurchasePrice, Description, IsActive, CreatedDate, UpdatedDate)
+                VALUES (@AssetCode, @AssetName, @Category, @RoomId, @Quantity, @Condition, @PurchaseDate, @PurchasePrice, @Description, @IsActive, GETDATE(), GETDATE());
+                SELECT CAST(SCOPE_IDENTITY() AS INT);";
+
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@AssetCode", assetCode);
+                    cmd.Parameters.AddWithValue("@AssetName", assetName);
+                    cmd.Parameters.AddWithValue("@Category", string.IsNullOrWhiteSpace(category) ? (object)DBNull.Value : category);
+                    cmd.Parameters.AddWithValue("@RoomId", roomId.HasValue && roomId.Value > 0 ? (object)roomId.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Quantity", quantity);
+                    cmd.Parameters.AddWithValue("@Condition", string.IsNullOrWhiteSpace(condition) ? (object)DBNull.Value : condition);
+                    cmd.Parameters.AddWithValue("@PurchaseDate", purchaseDate.HasValue ? (object)purchaseDate.Value.Date : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@PurchasePrice", purchasePrice.HasValue ? (object)purchasePrice.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Description", string.IsNullOrWhiteSpace(description) ? (object)DBNull.Value : description);
+                    cmd.Parameters.AddWithValue("@IsActive", isActive);
+                    var result = await cmd.ExecuteScalarAsync();
+                    return result != null ? Convert.ToInt32(result) : 0;
+                }
+            }
+        }
+
+        public async Task<bool> UpdateAssetAsync(int assetId, string assetCode, string assetName, string category, int? roomId, int quantity, string condition,
+            DateTime? purchaseDate, decimal? purchasePrice, string description, bool isActive)
+        {
+            const string sql = @"
+                UPDATE Assets SET
+                    AssetCode = @AssetCode,
+                    AssetName = @AssetName,
+                    Category = @Category,
+                    RoomId = @RoomId,
+                    Quantity = @Quantity,
+                    Condition = @Condition,
+                    PurchaseDate = @PurchaseDate,
+                    PurchasePrice = @PurchasePrice,
+                    Description = @Description,
+                    IsActive = @IsActive,
+                    UpdatedDate = GETDATE()
+                WHERE AssetId = @AssetId";
+
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@AssetId", assetId);
+                    cmd.Parameters.AddWithValue("@AssetCode", assetCode);
+                    cmd.Parameters.AddWithValue("@AssetName", assetName);
+                    cmd.Parameters.AddWithValue("@Category", string.IsNullOrWhiteSpace(category) ? (object)DBNull.Value : category);
+                    cmd.Parameters.AddWithValue("@RoomId", roomId.HasValue && roomId.Value > 0 ? (object)roomId.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Quantity", quantity);
+                    cmd.Parameters.AddWithValue("@Condition", string.IsNullOrWhiteSpace(condition) ? (object)DBNull.Value : condition);
+                    cmd.Parameters.AddWithValue("@PurchaseDate", purchaseDate.HasValue ? (object)purchaseDate.Value.Date : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@PurchasePrice", purchasePrice.HasValue ? (object)purchasePrice.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Description", string.IsNullOrWhiteSpace(description) ? (object)DBNull.Value : description);
+                    cmd.Parameters.AddWithValue("@IsActive", isActive);
+                    int affected = await cmd.ExecuteNonQueryAsync();
+                    return affected > 0;
+                }
+            }
+        }
+
+        public async Task<bool> DeleteAssetAsync(int assetId)
+        {
+            const string sql = @"DELETE FROM Assets WHERE AssetId = @AssetId";
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@AssetId", assetId);
+                    int affected = await cmd.ExecuteNonQueryAsync();
+                    return affected > 0;
+                }
+            }
+        }
+
+        #endregion
+
         public Task<DataTable> GetNotificationsAsync()
         {
             return GetTableSafeAsync(
@@ -861,6 +1880,73 @@ namespace QuanLyNhaTro.DAL
             );
         }
 
+        #region CRUD Notifications
+
+        public async Task<int> AddNotificationAsync(int? userId, string title, string message, string status)
+        {
+            const string sql = @"
+                INSERT INTO Notifications (UserId, Title, Message, Status, CreatedDate)
+                VALUES (@UserId, @Title, @Message, @Status, GETDATE());
+                SELECT CAST(SCOPE_IDENTITY() AS INT);";
+
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@UserId", userId.HasValue && userId.Value > 0 ? (object)userId.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Title", title);
+                    cmd.Parameters.AddWithValue("@Message", string.IsNullOrWhiteSpace(message) ? (object)DBNull.Value : message);
+                    cmd.Parameters.AddWithValue("@Status", string.IsNullOrWhiteSpace(status) ? (object)DBNull.Value : status);
+                    var result = await cmd.ExecuteScalarAsync();
+                    return result != null ? Convert.ToInt32(result) : 0;
+                }
+            }
+        }
+
+        public async Task<bool> UpdateNotificationAsync(int notificationId, int? userId, string title, string message, string status)
+        {
+            const string sql = @"
+                UPDATE Notifications SET
+                    UserId = @UserId,
+                    Title = @Title,
+                    Message = @Message,
+                    Status = @Status
+                WHERE NotificationId = @NotificationId";
+
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@NotificationId", notificationId);
+                    cmd.Parameters.AddWithValue("@UserId", userId.HasValue && userId.Value > 0 ? (object)userId.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Title", title);
+                    cmd.Parameters.AddWithValue("@Message", string.IsNullOrWhiteSpace(message) ? (object)DBNull.Value : message);
+                    cmd.Parameters.AddWithValue("@Status", string.IsNullOrWhiteSpace(status) ? (object)DBNull.Value : status);
+                    int affected = await cmd.ExecuteNonQueryAsync();
+                    return affected > 0;
+                }
+            }
+        }
+
+        public async Task<bool> DeleteNotificationAsync(int notificationId)
+        {
+            const string sql = @"DELETE FROM Notifications WHERE NotificationId = @NotificationId";
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@NotificationId", notificationId);
+                    int affected = await cmd.ExecuteNonQueryAsync();
+                    return affected > 0;
+                }
+            }
+        }
+
+        #endregion
+
         public Task<DataTable> GetSystemSettingsAsync()
         {
             return GetTableSafeAsync(
@@ -870,6 +1956,67 @@ namespace QuanLyNhaTro.DAL
                 "SELECT * FROM SystemSettings"
             );
         }
+
+        #region CRUD SystemSettings
+
+        public async Task<bool> AddSystemSettingAsync(string key, string value, string description)
+        {
+            const string sql = @"
+                INSERT INTO SystemSettings (SettingKey, SettingValue, Description)
+                VALUES (@SettingKey, @SettingValue, @Description)";
+
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@SettingKey", key);
+                    cmd.Parameters.AddWithValue("@SettingValue", string.IsNullOrWhiteSpace(value) ? (object)DBNull.Value : value);
+                    cmd.Parameters.AddWithValue("@Description", string.IsNullOrWhiteSpace(description) ? (object)DBNull.Value : description);
+                    int affected = await cmd.ExecuteNonQueryAsync();
+                    return affected > 0;
+                }
+            }
+        }
+
+        public async Task<bool> UpdateSystemSettingAsync(string key, string value, string description)
+        {
+            const string sql = @"
+                UPDATE SystemSettings SET
+                    SettingValue = @SettingValue,
+                    Description = @Description
+                WHERE SettingKey = @SettingKey";
+
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@SettingKey", key);
+                    cmd.Parameters.AddWithValue("@SettingValue", string.IsNullOrWhiteSpace(value) ? (object)DBNull.Value : value);
+                    cmd.Parameters.AddWithValue("@Description", string.IsNullOrWhiteSpace(description) ? (object)DBNull.Value : description);
+                    int affected = await cmd.ExecuteNonQueryAsync();
+                    return affected > 0;
+                }
+            }
+        }
+
+        public async Task<bool> DeleteSystemSettingAsync(string key)
+        {
+            const string sql = @"DELETE FROM SystemSettings WHERE SettingKey = @SettingKey";
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@SettingKey", key);
+                    int affected = await cmd.ExecuteNonQueryAsync();
+                    return affected > 0;
+                }
+            }
+        }
+
+        #endregion
 
         #region CRUD Tenants
 
