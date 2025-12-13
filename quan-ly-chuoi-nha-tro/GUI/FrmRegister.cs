@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
 
@@ -6,15 +6,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
 {
     public partial class FrmRegister : Form
     {
-        private UserBLL userBLL = new UserBLL();
+        private readonly UserBLL userBLL = new UserBLL();
 
         public FrmRegister()
         {
             InitializeComponent();
-            this.StartPosition = FormStartPosition.CenterScreen;
-            this.FormBorderStyle = FormBorderStyle.FixedSingle;
-            this.MaximizeBox = false;
-            this.MinimizeBox = false;
+            StartPosition = FormStartPosition.CenterScreen;
+            FormBorderStyle = FormBorderStyle.FixedSingle;
+            MaximizeBox = false;
+            MinimizeBox = false;
         }
 
         private void FrmRegister_Load(object sender, EventArgs e)
@@ -24,11 +24,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void ApplyModernStyling()
         {
-            // Form styling
-            this.BackColor = System.Drawing.Color.FromArgb(245, 245, 245);
+            BackColor = System.Drawing.Color.FromArgb(245, 245, 245);
 
-            // Text fields
-            foreach (Control ctrl in this.Controls)
+            foreach (Control ctrl in Controls)
             {
                 if (ctrl is TextBox textBox)
                 {
@@ -39,7 +37,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 }
             }
 
-            // Register button
             if (Controls.Contains(btnRegister))
             {
                 btnRegister.BackColor = System.Drawing.Color.FromArgb(40, 167, 69);
@@ -47,10 +44,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 btnRegister.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold);
                 btnRegister.FlatStyle = FlatStyle.Flat;
                 btnRegister.FlatAppearance.BorderSize = 0;
-                btnRegister.Cursor = System.Windows.Forms.Cursors.Hand;
+                btnRegister.Cursor = Cursors.Hand;
             }
 
-            // Focus on username
             if (Controls.Contains(txtUser))
                 txtUser.Focus();
         }
@@ -58,7 +54,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private async void btnRegister_Click(object sender, EventArgs e)
         {
             btnRegister.Enabled = false;
-            btnRegister.Text = "⏳ Đang xử lý...";
+            btnRegister.Text = "Đang xử lý...";
 
             try
             {
@@ -66,88 +62,60 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 string pass = txtPass.Text.Trim();
                 string name = txtName.Text.Trim();
 
-                // Validation
                 if (string.IsNullOrWhiteSpace(user) || string.IsNullOrWhiteSpace(pass) || string.IsNullOrWhiteSpace(name))
                 {
-                    MessageBox.Show("⚠️ Vui lòng điền đầy đủ thông tin!", "Lỗi Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show("Vui lòng điền đầy đủ thông tin!", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
                 if (user.Length < 3)
                 {
-                    MessageBox.Show("⚠️ Tên tài khoản phải có ít nhất 3 ký tự!", "Lỗi Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show("Tên đăng nhập phải có ít nhất 3 ký tự!", "Không hợp lệ", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
                 if (pass.Length < 6)
                 {
-                    MessageBox.Show("⚠️ Mật khẩu phải có ít nhất 6 ký tự!", "Lỗi Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show("Mật khẩu phải có ít nhất 6 ký tự!", "Không hợp lệ", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
                 if (name.Length < 2)
                 {
-                    MessageBox.Show("⚠️ Tên người dùng phải có ít nhất 2 ký tự!", "Lỗi Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show("Họ tên phải có ít nhất 2 ký tự!", "Không hợp lệ", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
-                // Register
                 bool isSuccess = await userBLL.DangKy(user, pass, name);
-
                 if (isSuccess)
                 {
-                    MessageBox.Show("✅ Đăng ký thành công!\nBạn có thể đăng nhập ngay bây giờ.", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    
-                    // Clear and close
+                    MessageBox.Show("Đăng ký thành công! Bạn có thể đăng nhập ngay.", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     txtUser.Text = "";
                     txtPass.Text = "";
                     txtName.Text = "";
-                    this.Close();
+                    Close();
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"❌ Lỗi: {ex.Message}", "Lỗi Đăng Ký", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(ex.Message, "Lỗi đăng ký", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
                 btnRegister.Enabled = true;
-                btnRegister.Text = "✅ Đăng Ký";
+                btnRegister.Text = "Đăng ký";
             }
         }
 
         private void lblLogin_Click(object sender, EventArgs e)
         {
-            this.Close();
+            Close();
         }
 
         private void txtPass_TextChanged(object sender, EventArgs e)
         {
-            // Optional: Show password strength indicator
-            if (Controls.Contains(lblPasswordStrength))
-            {
-                string password = txtPass.Text;
-                if (password.Length == 0)
-                {
-                    lblPasswordStrength.Text = "";
-                    lblPasswordStrength.ForeColor = System.Drawing.Color.Gray;
-                }
-                else if (password.Length < 6)
-                {
-                    lblPasswordStrength.Text = "⚠️ Yếu";
-                    lblPasswordStrength.ForeColor = System.Drawing.Color.Red;
-                }
-                else if (password.Length < 10)
-                {
-                    lblPasswordStrength.Text = "⚡ Trung bình";
-                    lblPasswordStrength.ForeColor = System.Drawing.Color.Orange;
-                }
-                else
-                {
-                    lblPasswordStrength.Text = "✓ Mạnh";
-                    lblPasswordStrength.ForeColor = System.Drawing.Color.Green;
-                }
-            }
+            // Optional: bạn có thể thêm chỉ báo độ mạnh mật khẩu tại đây.
         }
     }
 }
+

@@ -358,7 +358,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void btnPayment_Click(object sender, EventArgs e)
         {
-            LoadModule(new FrmDataViewer("Thanh Toán", () => adminDataBLL.GetPaymentsAsync()), "💳 Thanh toán");
+            LoadModule(new FrmPaymentManager(adminDataBLL), "💳 Thanh toán");
         }
 
         private void btnUtility_Click(object sender, EventArgs e)
@@ -368,7 +368,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void btnInvoice_Click(object sender, EventArgs e)
         {
-            LoadModule(new FrmDataViewer("Hóa Đơn & Thanh Toán", () => adminDataBLL.GetInvoicesAsync()), "💳 Hóa đơn & Thanh toán");
+            LoadModule(new FrmInvoiceManager(), "💳 Hóa đơn & Thanh toán");
         }
 
         private void btnMaintenance_Click(object sender, EventArgs e)

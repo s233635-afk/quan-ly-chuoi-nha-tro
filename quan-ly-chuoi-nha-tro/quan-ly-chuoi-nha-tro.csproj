@@ -196,6 +196,7 @@
     <Compile Include="DAL\DatabaseHelper.cs" />
     <Compile Include="DAL\BranchDAL.cs" />
     <Compile Include="DAL\AdminDataDAL.cs" />
+    <Compile Include="DAL\InvoicePaymentDAL.cs" />
     <Compile Include="GUI\Admin.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -226,6 +227,18 @@
     <Compile Include="GUI\FrmDepositEditor.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="GUI\FrmInvoiceManager.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GUI\FrmInvoiceEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GUI\FrmPaymentManager.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GUI\FrmPaymentEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="GUI\FrmDataViewer.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -246,6 +259,12 @@
     </Compile>
     <Compile Include="GUI\FrmLogin.Designer.cs">
       <DependentUpon>FrmLogin.cs</DependentUpon>
+    </Compile>
+    <Compile Include="GUI\FrmRegister.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GUI\FrmRegister.Designer.cs">
+      <DependentUpon>FrmRegister.cs</DependentUpon>
     </Compile>
     <Compile Include="GUI\FrmRoomEditor.cs">
       <SubType>Form</SubType>

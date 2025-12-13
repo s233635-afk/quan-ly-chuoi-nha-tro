@@ -20,6 +20,9 @@ namespace QuanLyNhaTro.BLL
         public Task<DataTable> GetUtilityTypesAsync() => dbHelper.GetUtilityTypesAsync();
         public Task<DataTable> GetInvoicesAsync() => dbHelper.GetInvoicesAsync();
         public Task<DataTable> GetPaymentsAsync() => dbHelper.GetPaymentsAsync();
+        public Task<DataTable> GetInvoicesViewAsync() => dbHelper.GetInvoicesViewAsync();
+        public Task<DataTable> GetPaymentsViewAsync() => dbHelper.GetPaymentsViewAsync();
+        public Task<DataTable> GetPaymentsByInvoiceAsync(int invoiceId) => dbHelper.GetPaymentsByInvoiceAsync(invoiceId);
         public Task<DataTable> GetMaintenanceAsync() => dbHelper.GetMaintenanceAsync();
         public Task<DataTable> GetAssetsAsync() => dbHelper.GetAssetsAsync();
         public Task<DataTable> GetNotificationsAsync() => dbHelper.GetNotificationsAsync();
@@ -53,6 +56,44 @@ namespace QuanLyNhaTro.BLL
             => dbHelper.UpdateDepositAsync(depositId, tenantId, roomId, depositAmount, depositDate, depositType, status, returnedAmount, returnedDate, notes);
 
         public Task<bool> DeleteDepositAsync(int depositId) => dbHelper.DeleteDepositAsync(depositId);
+
+        public Task<int> AddInvoiceAsync(
+            string invoiceNumber,
+            int tenantId,
+            int roomId,
+            DateTime invoiceDate,
+            DateTime? fromDate,
+            DateTime? toDate,
+            decimal rentalCost,
+            decimal utilityCost,
+            decimal otherCost,
+            DateTime? dueDate)
+            => dbHelper.AddInvoiceAsync(invoiceNumber, tenantId, roomId, invoiceDate, fromDate, toDate, rentalCost, utilityCost, otherCost, dueDate);
+
+        public Task<bool> UpdateInvoiceAsync(
+            int invoiceId,
+            string invoiceNumber,
+            int tenantId,
+            int roomId,
+            DateTime invoiceDate,
+            DateTime? fromDate,
+            DateTime? toDate,
+            decimal rentalCost,
+            decimal utilityCost,
+            decimal otherCost,
+            DateTime? dueDate)
+            => dbHelper.UpdateInvoiceAsync(invoiceId, invoiceNumber, tenantId, roomId, invoiceDate, fromDate, toDate, rentalCost, utilityCost, otherCost, dueDate);
+
+        public Task<bool> DeleteInvoiceAsync(int invoiceId, bool deletePaymentsFirst)
+            => dbHelper.DeleteInvoiceAsync(invoiceId, deletePaymentsFirst);
+
+        public Task<int> AddPaymentAsync(int invoiceId, DateTime paymentDate, decimal paymentAmount, string paymentMethod, string transactionReference, string notes)
+            => dbHelper.AddPaymentAsync(invoiceId, paymentDate, paymentAmount, paymentMethod, transactionReference, notes);
+
+        public Task<bool> DeletePaymentAsync(int paymentId) => dbHelper.DeletePaymentAsync(paymentId);
+
+        public Task<int> GenerateMonthlyInvoicesAsync(int year, int month, DateTime? invoiceDate = null, int? dueDay = null)
+            => dbHelper.GenerateMonthlyInvoicesAsync(year, month, invoiceDate, dueDay);
 
         public Task<int> AddRoomAsync(string roomNumber, int branchId, int? sectionId, int? roomTypeId, decimal? roomPrice,
             int? currentStatusId, int? floor, decimal? area, bool? isActive)
