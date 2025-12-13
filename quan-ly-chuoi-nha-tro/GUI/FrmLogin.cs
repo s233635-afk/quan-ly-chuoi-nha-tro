@@ -22,6 +22,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private readonly Color _loginPrimary = Color.FromArgb(0, 173, 181);
         private readonly Color _loginPrimaryHover = Color.FromArgb(0, 153, 160);
 
+        private Label _userPlaceholderLabel;
+        private Label _passPlaceholderLabel;
+
         public FrmLogin()
         {
             InitializeComponent();
@@ -60,8 +63,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             WireInputFocus(txtUser, pnlUserBox);
             WireInputFocus(txtPass, pnlPassBox);
 
-            SetupPlaceholder(txtUser, UserPlaceholder, isPassword: false);
-            SetupPlaceholder(txtPass, PassPlaceholder, isPassword: true);
+            _userPlaceholderLabel = SetupOverlayPlaceholder(txtUser, pnlUserBox, UserPlaceholder, isPassword: false);
+            _passPlaceholderLabel = SetupOverlayPlaceholder(txtPass, pnlPassBox, PassPlaceholder, isPassword: true);
 
             TryLoadRememberedUsername();
 
@@ -75,10 +78,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             try
             {
-                string user = ReadTextboxValue(txtUser, UserPlaceholder).Trim();
-                string pass = ReadTextboxValue(txtPass, PassPlaceholder).Trim();
+                string user = (txtUser.Text ?? string.Empty).Trim();
+                string pass = txtPass.Text ?? string.Empty;
 
-                if (string.IsNullOrWhiteSpace(user) || string.IsNullOrWhiteSpace(pass))
+                if (string.IsNullOrWhiteSpace(user) || string.IsNullOrEmpty(pass))
                 {
                     MessageBox.Show("Vui lòng nhập tên đăng nhập và mật khẩu!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
@@ -106,8 +109,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     Show();
                 }
 
-                SetPlaceholderIfEmpty(txtUser, UserPlaceholder, isPassword: false);
-                SetPlaceholderIfEmpty(txtPass, PassPlaceholder, isPassword: true);
+                UpdateOverlayPlaceholderVisibility(_userPlaceholderLabel, txtUser);
+                UpdateOverlayPlaceholderVisibility(_passPlaceholderLabel, txtPass);
             }
             catch (Exception ex)
             {
@@ -124,8 +127,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (e.KeyCode == Keys.Enter)
             {
-                btnLogin.PerformClick();
                 e.Handled = true;
+                e.SuppressKeyPress = true;
+                if (btnLogin.Enabled)
+                    btnLogin.PerformClick();
             }
         }
 
@@ -158,7 +163,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
                 path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
                 path.CloseFigure();
+                var oldRegion = control.Region;
                 control.Region = new Region(path);
+                oldRegion?.Dispose();
             }
         }
 
@@ -179,60 +186,50 @@ namespace quan_ly_chuoi_nha_tro.GUI
             hostPanel.Click += (s, e) => textBox.Focus();
         }
 
-        private void SetupPlaceholder(TextBox textBox, string placeholder, bool isPassword)
+        private Label SetupOverlayPlaceholder(TextBox textBox, Panel hostPanel, string placeholder, bool isPassword)
         {
-            if (textBox == null) return;
-
-            textBox.GotFocus += (s, e) => ClearPlaceholder(textBox, isPassword);
-            textBox.LostFocus += (s, e) => SetPlaceholderIfEmpty(textBox, placeholder, isPassword);
-
-            textBox.Tag = new PlaceholderState { Placeholder = placeholder, IsPassword = isPassword, IsActive = false };
-            SetPlaceholderIfEmpty(textBox, placeholder, isPassword);
-        }
-
-        private void ClearPlaceholder(TextBox textBox, bool isPassword)
-        {
-            if (!(textBox?.Tag is PlaceholderState st)) return;
-            if (!st.IsActive) return;
-
-            textBox.Text = string.Empty;
-            textBox.ForeColor = Color.FromArgb(33, 37, 41);
-            st.IsActive = false;
-            textBox.Tag = st;
+            if (textBox == null || hostPanel == null) return null;
 
             if (isPassword)
                 textBox.UseSystemPasswordChar = true;
+
+            var label = new Label
+            {
+                Text = placeholder ?? string.Empty,
+                Font = textBox.Font,
+                ForeColor = Color.FromArgb(140, 140, 140),
+                BackColor = hostPanel.BackColor,
+                AutoSize = false,
+                Location = textBox.Location,
+                Size = textBox.Size,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Cursor = Cursors.IBeam
+            };
+
+            label.Click += (s, e) => textBox.Focus();
+            hostPanel.Controls.Add(label);
+            label.BringToFront();
+
+            textBox.TextChanged += (s, e) => UpdateOverlayPlaceholderVisibility(label, textBox);
+            textBox.GotFocus += (s, e) => UpdateOverlayPlaceholderVisibility(label, textBox, forceHideWhenFocused: true);
+            textBox.LostFocus += (s, e) => UpdateOverlayPlaceholderVisibility(label, textBox);
+
+            UpdateOverlayPlaceholderVisibility(label, textBox);
+            return label;
         }
 
-        private void SetPlaceholderIfEmpty(TextBox textBox, string placeholder, bool isPassword)
+        private static void UpdateOverlayPlaceholderVisibility(Label placeholderLabel, TextBox textBox, bool forceHideWhenFocused = false)
         {
-            if (!(textBox?.Tag is PlaceholderState st)) return;
+            if (placeholderLabel == null || textBox == null) return;
+            if (textBox.IsDisposed || placeholderLabel.IsDisposed) return;
 
-            if (!string.IsNullOrWhiteSpace(textBox.Text) && textBox.Text != placeholder)
+            if (forceHideWhenFocused && textBox.Focused)
+            {
+                placeholderLabel.Visible = false;
                 return;
+            }
 
-            textBox.UseSystemPasswordChar = false;
-            textBox.Text = placeholder;
-            textBox.ForeColor = Color.FromArgb(140, 140, 140);
-            st.IsActive = true;
-            st.Placeholder = placeholder;
-            st.IsPassword = isPassword;
-            textBox.Tag = st;
-        }
-
-        private static string ReadTextboxValue(TextBox textBox, string placeholder)
-        {
-            if (textBox == null) return string.Empty;
-            if (textBox.Text == placeholder) return string.Empty;
-            if (textBox.Tag is PlaceholderState st && st.IsActive) return string.Empty;
-            return textBox.Text ?? string.Empty;
-        }
-
-        private struct PlaceholderState
-        {
-            public string Placeholder;
-            public bool IsPassword;
-            public bool IsActive;
+            placeholderLabel.Visible = string.IsNullOrEmpty(textBox.Text);
         }
 
         private string GetRememberPath()
@@ -259,9 +256,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 if (!string.IsNullOrWhiteSpace(user))
                 {
                     chkRemember.Checked = true;
-                    ClearPlaceholder(txtUser, isPassword: false);
                     txtUser.Text = user;
                     txtUser.ForeColor = Color.FromArgb(33, 37, 41);
+                    UpdateOverlayPlaceholderVisibility(_userPlaceholderLabel, txtUser);
                 }
             }
             catch
@@ -485,4 +482,3 @@ namespace quan_ly_chuoi_nha_tro.GUI
         }
     }
 }
-
