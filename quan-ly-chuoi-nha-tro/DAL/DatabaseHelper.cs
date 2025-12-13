@@ -216,5 +216,46 @@ namespace QuanLyNhaTro.DAL
                 }
             }
         }
+
+        public async Task<(int UserId, int RoleId, int? BranchId)> GetUserAccessAsync(string username)
+        {
+            using (var conn = new SqlConnection(connectionString))
+            {
+                try
+                {
+                    await OpenConnectionWithTimeoutAsync(conn);
+
+                    const string sql = "SELECT UserId, RoleId, BranchId FROM Users WHERE Username = @user AND IsActive = 1";
+                    using (var cmd = new SqlCommand(sql, conn))
+                    {
+                        cmd.CommandTimeout = commandTimeoutSeconds;
+                        cmd.Parameters.AddWithValue("@user", username);
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            if (!await reader.ReadAsync())
+                                return (0, 0, null);
+
+                            int userId = reader["UserId"] != DBNull.Value ? Convert.ToInt32(reader["UserId"]) : 0;
+                            int roleId = reader["RoleId"] != DBNull.Value ? Convert.ToInt32(reader["RoleId"]) : 0;
+                            int? branchId = reader["BranchId"] != DBNull.Value ? (int?)Convert.ToInt32(reader["BranchId"]) : null;
+                            return (userId, roleId, branchId);
+                        }
+                    }
+                }
+                catch (TaskCanceledException ex)
+                {
+                    throw CreateTimeoutException("kết nối database", ex);
+                }
+                catch (SqlException ex) when (ex.Number == -2)
+                {
+                    throw CreateTimeoutException("thực thi truy vấn database", ex);
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception("Lỗi lấy thông tin truy cập: " + ex.Message);
+                }
+            }
+        }
     }
 }

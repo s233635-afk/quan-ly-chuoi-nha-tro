@@ -49,5 +49,13 @@ namespace QuanLyNhaTro.BLL
 
             return await dbHelper.GetUserRoleAsync(username);
         }
+
+        public async Task<(int UserId, int RoleId, int? BranchId)> GetUserAccessAsync(string username)
+        {
+            if (string.IsNullOrWhiteSpace(username))
+                throw new Exception("Tên người dùng không hợp lệ!");
+
+            return await dbHelper.GetUserAccessAsync(username);
+        }
     }
 }

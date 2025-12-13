@@ -21,6 +21,7 @@ namespace QuanLyNhaTro.DAL
                          t.FullName AS TenantName,
                          i.RoomId,
                          r.RoomNumber,
+                         r.BranchId,
                          i.InvoiceDate,
                          i.FromDate,
                          i.ToDate,
@@ -59,6 +60,7 @@ namespace QuanLyNhaTro.DAL
                          t.FullName AS TenantName,
                          i.RoomId,
                          r.RoomNumber,
+                         r.BranchId,
                          p.PaymentDate,
                          p.PaymentAmount,
                          p.PaymentMethod,
@@ -350,6 +352,71 @@ namespace QuanLyNhaTro.DAL
 
                         tx.Commit();
                         return paymentId;
+                    }
+                    catch
+                    {
+                        tx.Rollback();
+                        throw;
+                    }
+                }
+            }
+        }
+
+        public async Task<bool> UpdatePaymentAsync(
+            int paymentId,
+            DateTime paymentDate,
+            decimal paymentAmount,
+            string paymentMethod,
+            string transactionReference,
+            string notes)
+        {
+            if (!await TableExistsAsync("Payments"))
+                throw new Exception("Bảng Payments không tồn tại.");
+            if (paymentAmount <= 0) throw new Exception("Số tiền thanh toán phải > 0.");
+
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                using (var tx = conn.BeginTransaction())
+                {
+                    try
+                    {
+                        int invoiceId;
+                        using (var cmd = new SqlCommand("SELECT InvoiceId FROM Payments WHERE PaymentId = @PaymentId", conn, tx))
+                        {
+                            cmd.Parameters.AddWithValue("@PaymentId", paymentId);
+                            var result = await cmd.ExecuteScalarAsync();
+                            if (result == null || result == DBNull.Value)
+                                throw new Exception("Không tìm thấy thanh toán.");
+                            invoiceId = Convert.ToInt32(result);
+                        }
+
+                        const string sql = @"
+                            UPDATE Payments SET
+                                PaymentDate = @PaymentDate,
+                                PaymentAmount = @PaymentAmount,
+                                PaymentMethod = @PaymentMethod,
+                                TransactionReference = @TransactionReference,
+                                Notes = @Notes
+                            WHERE PaymentId = @PaymentId;";
+
+                        using (var cmd = new SqlCommand(sql, conn, tx))
+                        {
+                            cmd.Parameters.AddWithValue("@PaymentId", paymentId);
+                            cmd.Parameters.AddWithValue("@PaymentDate", paymentDate.Date);
+                            cmd.Parameters.AddWithValue("@PaymentAmount", paymentAmount);
+                            cmd.Parameters.AddWithValue("@PaymentMethod", string.IsNullOrWhiteSpace(paymentMethod) ? (object)DBNull.Value : paymentMethod.Trim());
+                            cmd.Parameters.AddWithValue("@TransactionReference", string.IsNullOrWhiteSpace(transactionReference) ? (object)DBNull.Value : transactionReference.Trim());
+                            cmd.Parameters.AddWithValue("@Notes", string.IsNullOrWhiteSpace(notes) ? (object)DBNull.Value : notes.Trim());
+                            int affected = await cmd.ExecuteNonQueryAsync();
+                            if (affected <= 0)
+                                throw new Exception("Không thể cập nhật thanh toán.");
+                        }
+
+                        await RecalculateInvoiceFromPaymentsAsync(conn, tx, invoiceId);
+
+                        tx.Commit();
+                        return true;
                     }
                     catch
                     {

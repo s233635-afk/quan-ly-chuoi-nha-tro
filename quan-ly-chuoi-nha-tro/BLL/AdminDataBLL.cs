@@ -47,6 +47,37 @@ namespace QuanLyNhaTro.BLL
 
         public Task<bool> DeleteTenantAsync(int tenantId) => dbHelper.DeleteTenantAsync(tenantId);
 
+        public Task<int> AddContractAsync(
+            string contractNumber,
+            int tenantId,
+            int roomId,
+            DateTime? signDate,
+            DateTime startDate,
+            DateTime endDate,
+            decimal? rentalPrice,
+            decimal? depositRequired,
+            string terms,
+            string contractPdfPath,
+            string status)
+            => dbHelper.AddContractAsync(contractNumber, tenantId, roomId, signDate, startDate, endDate, rentalPrice, depositRequired, terms, contractPdfPath, status);
+
+        public Task<bool> UpdateContractAsync(
+            int contractId,
+            string contractNumber,
+            int tenantId,
+            int roomId,
+            DateTime? signDate,
+            DateTime startDate,
+            DateTime endDate,
+            decimal? rentalPrice,
+            decimal? depositRequired,
+            string terms,
+            string contractPdfPath,
+            string status)
+            => dbHelper.UpdateContractAsync(contractId, contractNumber, tenantId, roomId, signDate, startDate, endDate, rentalPrice, depositRequired, terms, contractPdfPath, status);
+
+        public Task<bool> DeleteContractAsync(int contractId) => dbHelper.DeleteContractAsync(contractId);
+
         public Task<int> AddDepositAsync(int tenantId, int roomId, decimal depositAmount, DateTime? depositDate,
             string depositType, string status, decimal? returnedAmount, DateTime? returnedDate, string notes)
             => dbHelper.AddDepositAsync(tenantId, roomId, depositAmount, depositDate, depositType, status, returnedAmount, returnedDate, notes);
@@ -89,6 +120,9 @@ namespace QuanLyNhaTro.BLL
 
         public Task<int> AddPaymentAsync(int invoiceId, DateTime paymentDate, decimal paymentAmount, string paymentMethod, string transactionReference, string notes)
             => dbHelper.AddPaymentAsync(invoiceId, paymentDate, paymentAmount, paymentMethod, transactionReference, notes);
+
+        public Task<bool> UpdatePaymentAsync(int paymentId, DateTime paymentDate, decimal paymentAmount, string paymentMethod, string transactionReference, string notes)
+            => dbHelper.UpdatePaymentAsync(paymentId, paymentDate, paymentAmount, paymentMethod, transactionReference, notes);
 
         public Task<bool> DeletePaymentAsync(int paymentId) => dbHelper.DeletePaymentAsync(paymentId);
 

@@ -88,7 +88,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 }
 
                 string fullName = await userBLL.DangNhap(user, pass);
-                int roleId = await userBLL.GetUserRoleAsync(user);
+                var access = await userBLL.GetUserAccessAsync(user);
+                int roleId = access.RoleId;
 
                 SaveRememberedUsername(user);
 
@@ -96,16 +97,16 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                 if (roleId == 1) // Admin
                 {
-                    FrmAdminDashboard adminForm = new FrmAdminDashboard(user, 1);
+                    FrmAdminDashboard adminForm = new FrmAdminDashboard(user, access.UserId);
                     Hide();
                     adminForm.ShowDialog();
                     Show();
                 }
                 else if (roleId == 2) // Staff
                 {
-                    FrmMain formMain = new FrmMain(user, "Nhân Viên");
+                    FrmStaffDashboard staffForm = new FrmStaffDashboard(user, fullName, access.BranchId);
                     Hide();
-                    formMain.ShowDialog();
+                    staffForm.ShowDialog();
                     Show();
                 }
 

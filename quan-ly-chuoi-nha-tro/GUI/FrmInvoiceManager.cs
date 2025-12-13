@@ -13,6 +13,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
     public class FrmInvoiceManager : Form
     {
         private readonly AdminDataBLL _bll = new AdminDataBLL();
+        private readonly int? _branchId;
         private DataTable _table;
 
         private DataGridView _grid;
@@ -22,8 +23,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Label _lblSummary;
         private Button _btnAdd, _btnEdit, _btnDelete, _btnPay, _btnPayments, _btnGenerate, _btnExport, _btnRefresh;
 
-        public FrmInvoiceManager()
+        public FrmInvoiceManager() : this(null)
         {
+        }
+
+        public FrmInvoiceManager(int? branchId)
+        {
+            _branchId = branchId;
             InitializeComponent();
         }
 
@@ -125,6 +131,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             try
             {
                 _table = await _bll.GetInvoicesViewAsync();
+                _table = FilterByBranch(_table, _branchId);
                 _grid.DataSource = _table;
                 ApplyFilter();
                 AutoFormatGrid();
@@ -133,6 +140,21 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 MessageBox.Show("Lỗi tải hóa đơn: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private static DataTable FilterByBranch(DataTable dt, int? branchId)
+        {
+            if (dt == null) return dt;
+            if (!branchId.HasValue) return dt;
+            if (!dt.Columns.Contains("BranchId")) return dt;
+
+            var filtered = dt.Clone();
+            foreach (DataRow r in dt.Rows)
+            {
+                if (int.TryParse(r["BranchId"]?.ToString(), out var b) && b == branchId.Value)
+                    filtered.ImportRow(r);
+            }
+            return filtered;
         }
 
         private void AutoFormatGrid()

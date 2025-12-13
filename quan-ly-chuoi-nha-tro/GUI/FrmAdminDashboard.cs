@@ -348,7 +348,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void btnContract_Click(object sender, EventArgs e)
         {
-            LoadModule(new FrmDataViewer("Quản Lý Hợp Đồng", () => adminDataBLL.GetContractsAsync()), "📄 Quản lý Hợp đồng");
+            LoadModule(new FrmContractManager(), "📄 Quản lý Hợp đồng");
         }
 
         private void btnDeposit_Click(object sender, EventArgs e)

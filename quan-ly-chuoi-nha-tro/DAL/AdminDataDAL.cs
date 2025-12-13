@@ -665,21 +665,23 @@ namespace QuanLyNhaTro.DAL
             return GetTableSafeAsync(
                 "Contracts",
                 null,
-                @"SELECT ContractId,
-                         ContractNumber,
-                         TenantId,
-                         RoomId,
-                         SignDate,
-                         StartDate,
-                         EndDate,
-                         RentalPrice,
-                         DepositRequired,
-                         Terms,
-                         ContractPdfPath,
-                         Status,
-                         CreatedDate,
-                         UpdatedDate
-                  FROM Contracts",
+                @"SELECT c.ContractId,
+                         c.ContractNumber,
+                         c.TenantId,
+                         c.RoomId,
+                         r.BranchId,
+                         c.SignDate,
+                         c.StartDate,
+                         c.EndDate,
+                         c.RentalPrice,
+                         c.DepositRequired,
+                         c.Terms,
+                         c.ContractPdfPath,
+                         c.Status,
+                         c.CreatedDate,
+                         c.UpdatedDate
+                  FROM Contracts c
+                  LEFT JOIN Rooms r ON r.RoomId = c.RoomId",
                 "SELECT * FROM Contracts"
             );
         }
@@ -689,18 +691,20 @@ namespace QuanLyNhaTro.DAL
             return GetTableSafeAsync(
                 "Deposits",
                 null,
-                @"SELECT DepositId,
-                         TenantId,
-                         RoomId,
-                         DepositAmount,
-                         DepositDate,
-                         DepositType,
-                         Status,
-                         ReturnedAmount,
-                         ReturnedDate,
-                         Notes,
-                         CreatedDate
-                  FROM Deposits",
+                @"SELECT d.DepositId,
+                         d.TenantId,
+                         d.RoomId,
+                         r.BranchId,
+                         d.DepositAmount,
+                         d.DepositDate,
+                         d.DepositType,
+                         d.Status,
+                         d.ReturnedAmount,
+                         d.ReturnedDate,
+                         d.Notes,
+                         d.CreatedDate
+                  FROM Deposits d
+                  LEFT JOIN Rooms r ON r.RoomId = d.RoomId",
                 "SELECT * FROM Deposits"
             );
         }
@@ -712,6 +716,8 @@ namespace QuanLyNhaTro.DAL
                 null,
                 @"SELECT ur.ReadingId,
                          ur.RoomId,
+                         r.RoomNumber,
+                         r.BranchId,
                          ut.UtilityName,
                          ut.UtilityCode,
                          ur.ReadingDate,
@@ -722,6 +728,7 @@ namespace QuanLyNhaTro.DAL
                          ur.TotalCost,
                          ur.CreatedDate
                   FROM UtilityReadings ur
+                  LEFT JOIN Rooms r ON r.RoomId = ur.RoomId
                   LEFT JOIN UtilityTypes ut ON ut.UtilityTypeId = ur.UtilityTypeId
                   ORDER BY ur.ReadingDate DESC",
                 "SELECT * FROM UtilityReadings"
@@ -797,9 +804,11 @@ namespace QuanLyNhaTro.DAL
             return GetTableSafeAsync(
                 "MaintenanceTickets",
                 null,
-                @"SELECT TicketId,
-                         TicketNumber,
-                         RoomId,
+                @"SELECT t.TicketId,
+                         t.TicketNumber,
+                         t.RoomId,
+                         r.RoomNumber,
+                         r.BranchId,
                          RequestorType,
                          RequestorId,
                          IssueDescription,
@@ -809,7 +818,8 @@ namespace QuanLyNhaTro.DAL
                          CreatedDate,
                          CompletedDate,
                          Notes
-                  FROM MaintenanceTickets",
+                  FROM MaintenanceTickets t
+                  LEFT JOIN Rooms r ON r.RoomId = t.RoomId",
                 "SELECT * FROM MaintenanceTickets"
             );
         }
@@ -819,20 +829,23 @@ namespace QuanLyNhaTro.DAL
             return GetTableSafeAsync(
                 "Assets",
                 null,
-                @"SELECT AssetId,
-                         AssetCode,
-                         AssetName,
-                         Category,
-                         RoomId,
-                         Quantity,
-                         Condition,
-                         PurchaseDate,
-                         PurchasePrice,
-                         Description,
-                         IsActive,
-                         CreatedDate,
-                         UpdatedDate
-                  FROM Assets",
+                @"SELECT a.AssetId,
+                         a.AssetCode,
+                         a.AssetName,
+                         a.Category,
+                         a.RoomId,
+                         r.RoomNumber,
+                         r.BranchId,
+                         a.Quantity,
+                         a.Condition,
+                         a.PurchaseDate,
+                         a.PurchasePrice,
+                         a.Description,
+                         a.IsActive,
+                         a.CreatedDate,
+                         a.UpdatedDate
+                  FROM Assets a
+                  LEFT JOIN Rooms r ON r.RoomId = a.RoomId",
                 "SELECT * FROM Assets"
             );
         }
@@ -944,6 +957,122 @@ namespace QuanLyNhaTro.DAL
                 using (var cmd = new SqlCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue("@TenantId", tenantId);
+                    int affected = await cmd.ExecuteNonQueryAsync();
+                    return affected > 0;
+                }
+            }
+        }
+
+        #endregion
+
+        #region CRUD Contracts
+
+        public async Task<int> AddContractAsync(
+            string contractNumber,
+            int tenantId,
+            int roomId,
+            DateTime? signDate,
+            DateTime startDate,
+            DateTime endDate,
+            decimal? rentalPrice,
+            decimal? depositRequired,
+            string terms,
+            string contractPdfPath,
+            string status)
+        {
+            const string sql = @"
+                INSERT INTO Contracts
+                    (ContractNumber, TenantId, RoomId, SignDate, StartDate, EndDate, RentalPrice, DepositRequired, Terms, ContractPdfPath, Status, CreatedDate, UpdatedDate)
+                VALUES
+                    (@ContractNumber, @TenantId, @RoomId, @SignDate, @StartDate, @EndDate, @RentalPrice, @DepositRequired, @Terms, @ContractPdfPath, @Status, GETDATE(), GETDATE());
+                SELECT CAST(SCOPE_IDENTITY() AS INT);";
+
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@ContractNumber", contractNumber);
+                    cmd.Parameters.AddWithValue("@TenantId", tenantId);
+                    cmd.Parameters.AddWithValue("@RoomId", roomId);
+                    cmd.Parameters.AddWithValue("@SignDate", signDate.HasValue ? (object)signDate.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@StartDate", startDate);
+                    cmd.Parameters.AddWithValue("@EndDate", endDate);
+                    cmd.Parameters.AddWithValue("@RentalPrice", rentalPrice.HasValue ? (object)rentalPrice.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@DepositRequired", depositRequired.HasValue ? (object)depositRequired.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Terms", string.IsNullOrWhiteSpace(terms) ? (object)DBNull.Value : terms);
+                    cmd.Parameters.AddWithValue("@ContractPdfPath", string.IsNullOrWhiteSpace(contractPdfPath) ? (object)DBNull.Value : contractPdfPath);
+                    cmd.Parameters.AddWithValue("@Status", string.IsNullOrWhiteSpace(status) ? (object)DBNull.Value : status);
+
+                    var result = await cmd.ExecuteScalarAsync();
+                    return result != null ? Convert.ToInt32(result) : 0;
+                }
+            }
+        }
+
+        public async Task<bool> UpdateContractAsync(
+            int contractId,
+            string contractNumber,
+            int tenantId,
+            int roomId,
+            DateTime? signDate,
+            DateTime startDate,
+            DateTime endDate,
+            decimal? rentalPrice,
+            decimal? depositRequired,
+            string terms,
+            string contractPdfPath,
+            string status)
+        {
+            const string sql = @"
+                UPDATE Contracts SET
+                    ContractNumber = @ContractNumber,
+                    TenantId = @TenantId,
+                    RoomId = @RoomId,
+                    SignDate = @SignDate,
+                    StartDate = @StartDate,
+                    EndDate = @EndDate,
+                    RentalPrice = @RentalPrice,
+                    DepositRequired = @DepositRequired,
+                    Terms = @Terms,
+                    ContractPdfPath = @ContractPdfPath,
+                    Status = @Status,
+                    UpdatedDate = GETDATE()
+                WHERE ContractId = @ContractId";
+
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@ContractId", contractId);
+                    cmd.Parameters.AddWithValue("@ContractNumber", contractNumber);
+                    cmd.Parameters.AddWithValue("@TenantId", tenantId);
+                    cmd.Parameters.AddWithValue("@RoomId", roomId);
+                    cmd.Parameters.AddWithValue("@SignDate", signDate.HasValue ? (object)signDate.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@StartDate", startDate);
+                    cmd.Parameters.AddWithValue("@EndDate", endDate);
+                    cmd.Parameters.AddWithValue("@RentalPrice", rentalPrice.HasValue ? (object)rentalPrice.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@DepositRequired", depositRequired.HasValue ? (object)depositRequired.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Terms", string.IsNullOrWhiteSpace(terms) ? (object)DBNull.Value : terms);
+                    cmd.Parameters.AddWithValue("@ContractPdfPath", string.IsNullOrWhiteSpace(contractPdfPath) ? (object)DBNull.Value : contractPdfPath);
+                    cmd.Parameters.AddWithValue("@Status", string.IsNullOrWhiteSpace(status) ? (object)DBNull.Value : status);
+
+                    int affected = await cmd.ExecuteNonQueryAsync();
+                    return affected > 0;
+                }
+            }
+        }
+
+        public async Task<bool> DeleteContractAsync(int contractId)
+        {
+            const string sql = @"DELETE FROM Contracts WHERE ContractId = @ContractId";
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@ContractId", contractId);
                     int affected = await cmd.ExecuteNonQueryAsync();
                     return affected > 0;
                 }
