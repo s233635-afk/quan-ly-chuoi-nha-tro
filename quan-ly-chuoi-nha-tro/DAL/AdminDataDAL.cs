@@ -31,14 +31,17 @@ namespace QuanLyNhaTro.DAL
 
                 // COUNT(*) ít phụ thuộc schema; các chỉ số chi tiết sẽ try nhiều câu lệnh và fallback về 0.
                 dt.Rows[0]["TotalBranches"] = await GetScalarIntBestEffortAsync(conn,
+                    "SELECT COUNT(*) FROM Branches WHERE IsActive = 1",
                     "SELECT COUNT(*) FROM Branches",
                     "SELECT COUNT(*) FROM Branch");
 
                 dt.Rows[0]["TotalRooms"] = await GetScalarIntBestEffortAsync(conn,
+                    "SELECT COUNT(*) FROM Rooms WHERE IsActive = 1",
                     "SELECT COUNT(*) FROM Rooms",
                     "SELECT COUNT(*) FROM Room");
 
                 dt.Rows[0]["TotalTenants"] = await GetScalarIntBestEffortAsync(conn,
+                    "SELECT COUNT(*) FROM Tenants WHERE IsActive = 1",
                     "SELECT COUNT(*) FROM Tenants",
                     "SELECT COUNT(*) FROM Tenant");
 

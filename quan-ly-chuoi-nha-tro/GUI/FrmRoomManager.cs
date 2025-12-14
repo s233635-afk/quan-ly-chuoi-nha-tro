@@ -42,7 +42,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void InitializeComponent()
         {
-            Text = "Quản lý Phòng";
+            Text = "Quản lý phòng";
             StartPosition = FormStartPosition.CenterParent;
             Width = 1200;
             Height = 650;
@@ -99,7 +99,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             _cboActive = new ComboBox { Width = 150, DropDownStyle = ComboBoxStyle.DropDownList };
             _cboActive.Items.AddRange(new object[] { "Tất cả", "Đang hoạt động", "Đã tắt" });
-            _cboActive.SelectedIndex = 0;
+            _cboActive.SelectedIndex = 1;
             _cboActive.SelectedIndexChanged += (s, e) => ApplyFilter();
 
             _lblCount = new Label { AutoSize = true, Text = "Tổng: 0" };
@@ -321,28 +321,28 @@ namespace quan_ly_chuoi_nha_tro.GUI
             SetHeader("CreatedDate", "Tạo lúc");
             SetHeader("UpdatedDate", "Cập nhật");
 
+            HideIfExists("RoomId");
             HideIfExists("BranchId");
             HideIfExists("SectionId");
             HideIfExists("RoomTypeId");
             HideIfExists("CurrentStatusId");
             HideIfExists("Floor");
             HideIfExists("Area");
+            HideIfExists("CreatedDate");
+            HideIfExists("UpdatedDate");
 
             FormatMoney("RoomPrice");
             FormatDateTime("CreatedDate");
             FormatDateTime("UpdatedDate");
 
             SetDisplayOrder(
-                "RoomId",
                 "RoomNumber",
                 "BranchName",
                 "SectionName",
                 "RoomTypeName",
                 "RoomPrice",
                 "StatusName",
-                "IsActive",
-                "CreatedDate",
-                "UpdatedDate"
+                "IsActive"
             );
         }
 

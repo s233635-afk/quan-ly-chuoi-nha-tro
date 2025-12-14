@@ -2,6 +2,7 @@ using System;
 using System.Data;
 using System.Data.SqlClient;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace QuanLyNhaTro.DAL
 {
@@ -20,12 +21,10 @@ namespace QuanLyNhaTro.DAL
                 {
                     await conn.OpenAsync();
 
-                    bool hasManager = await BranchHasManagerNameAsync(conn);
-                    string managerSelect = hasManager ? "ManagerName" : "CAST(NULL AS NVARCHAR(200)) AS ManagerName";
+                    var columns = await GetBranchSelectableColumnsAsync(conn);
 
-                    string sql = $@"SELECT BranchId, BranchCode, BranchName, Address, Phone, {managerSelect}, 
-                                   IsActive, CreatedDate, UpdatedDate
-                                   FROM Branches 
+                    string sql = $@"SELECT {string.Join(", ", columns)}
+                                   FROM Branches
                                    ORDER BY BranchName ASC";
 
                     using (var cmd = new SqlCommand(sql, conn))
@@ -58,12 +57,10 @@ namespace QuanLyNhaTro.DAL
                 {
                     await conn.OpenAsync();
 
-                    bool hasManager = await BranchHasManagerNameAsync(conn);
-                    string managerSelect = hasManager ? "ManagerName" : "CAST(NULL AS NVARCHAR(200)) AS ManagerName";
+                    var columns = await GetBranchSelectableColumnsAsync(conn);
 
-                    string sql = $@"SELECT BranchId, BranchCode, BranchName, Address, Phone, {managerSelect}, 
-                                   IsActive, CreatedDate, UpdatedDate 
-                                   FROM Branches 
+                    string sql = $@"SELECT {string.Join(", ", columns)}
+                                   FROM Branches
                                    WHERE BranchId = @id";
 
                     using (var cmd = new SqlCommand(sql, conn))
@@ -88,8 +85,15 @@ namespace QuanLyNhaTro.DAL
         /// <summary>
         /// Thêm chi nhánh mới
         /// </summary>
-        public async Task<bool> AddBranchAsync(string branchCode, string branchName, string address, 
-            string phone, string managerName, bool isActive)
+        public async Task<bool> AddBranchAsync(
+            string branchCode,
+            string branchName,
+            string address,
+            string phone,
+            string hotline,
+            string operatingHours,
+            string description,
+            bool isActive)
         {
             using (var conn = new SqlConnection(connectionString))
             {
@@ -97,15 +101,38 @@ namespace QuanLyNhaTro.DAL
                 {
                     await conn.OpenAsync();
 
-                    bool hasManager = await BranchHasManagerNameAsync(conn);
+                    bool hasHotline = await HasColumnAsync(conn, "Branches", "Hotline");
+                    bool hasOperatingHours = await HasColumnAsync(conn, "Branches", "OperatingHours");
+                    bool hasDescription = await HasColumnAsync(conn, "Branches", "Description");
 
-                    string sql = hasManager
-                        ? @"INSERT INTO Branches (BranchCode, BranchName, Address, Phone, ManagerName, 
-                                   IsActive, CreatedDate, UpdatedDate) 
-                                   VALUES (@code, @name, @addr, @phone, @manager, @active, GETDATE(), GETDATE())"
-                        : @"INSERT INTO Branches (BranchCode, BranchName, Address, Phone, 
-                                   IsActive, CreatedDate, UpdatedDate) 
-                                   VALUES (@code, @name, @addr, @phone, @active, GETDATE(), GETDATE())";
+                    var cols = new List<string> { "BranchCode", "BranchName", "Address", "Phone" };
+                    var vals = new List<string> { "@code", "@name", "@addr", "@phone" };
+
+                    if (hasHotline)
+                    {
+                        cols.Add("Hotline");
+                        vals.Add("@hotline");
+                    }
+                    if (hasOperatingHours)
+                    {
+                        cols.Add("OperatingHours");
+                        vals.Add("@hours");
+                    }
+                    if (hasDescription)
+                    {
+                        cols.Add("Description");
+                        vals.Add("@desc");
+                    }
+
+                    cols.Add("IsActive");
+                    vals.Add("@active");
+                    cols.Add("CreatedDate");
+                    vals.Add("GETDATE()");
+                    cols.Add("UpdatedDate");
+                    vals.Add("GETDATE()");
+
+                    string sql = $@"INSERT INTO Branches ({string.Join(", ", cols)})
+                                   VALUES ({string.Join(", ", vals)})";
 
                     using (var cmd = new SqlCommand(sql, conn))
                     {
@@ -113,10 +140,9 @@ namespace QuanLyNhaTro.DAL
                         cmd.Parameters.AddWithValue("@name", branchName);
                         cmd.Parameters.AddWithValue("@addr", string.IsNullOrEmpty(address) ? DBNull.Value : (object)address);
                         cmd.Parameters.AddWithValue("@phone", string.IsNullOrEmpty(phone) ? DBNull.Value : (object)phone);
-                        if (hasManager)
-                        {
-                            cmd.Parameters.AddWithValue("@manager", string.IsNullOrEmpty(managerName) ? DBNull.Value : (object)managerName);
-                        }
+                        if (hasHotline) cmd.Parameters.AddWithValue("@hotline", string.IsNullOrEmpty(hotline) ? DBNull.Value : (object)hotline);
+                        if (hasOperatingHours) cmd.Parameters.AddWithValue("@hours", string.IsNullOrEmpty(operatingHours) ? DBNull.Value : (object)operatingHours);
+                        if (hasDescription) cmd.Parameters.AddWithValue("@desc", string.IsNullOrEmpty(description) ? DBNull.Value : (object)description);
                         cmd.Parameters.AddWithValue("@active", isActive ? 1 : 0);
 
                         int result = await cmd.ExecuteNonQueryAsync();
@@ -140,8 +166,16 @@ namespace QuanLyNhaTro.DAL
         /// <summary>
         /// Cập nhật chi nhánh
         /// </summary>
-        public async Task<bool> UpdateBranchAsync(int branchId, string branchCode, string branchName, 
-            string address, string phone, string managerName, bool isActive)
+        public async Task<bool> UpdateBranchAsync(
+            int branchId,
+            string branchCode,
+            string branchName,
+            string address,
+            string phone,
+            string hotline,
+            string operatingHours,
+            string description,
+            bool isActive)
         {
             using (var conn = new SqlConnection(connectionString))
             {
@@ -149,16 +183,24 @@ namespace QuanLyNhaTro.DAL
                 {
                     await conn.OpenAsync();
 
-                    bool hasManager = await BranchHasManagerNameAsync(conn);
+                    bool hasHotline = await HasColumnAsync(conn, "Branches", "Hotline");
+                    bool hasOperatingHours = await HasColumnAsync(conn, "Branches", "OperatingHours");
+                    bool hasDescription = await HasColumnAsync(conn, "Branches", "Description");
 
-                    string sql = hasManager
-                        ? @"UPDATE Branches SET BranchCode = @code, BranchName = @name, 
-                                   Address = @addr, Phone = @phone, ManagerName = @manager, 
-                                   IsActive = @active, UpdatedDate = GETDATE() 
-                                   WHERE BranchId = @id"
-                        : @"UPDATE Branches SET BranchCode = @code, BranchName = @name, 
-                                   Address = @addr, Phone = @phone, 
-                                   IsActive = @active, UpdatedDate = GETDATE() 
+                    var sets = new List<string>
+                    {
+                        "BranchCode = @code",
+                        "BranchName = @name",
+                        "Address = @addr",
+                        "Phone = @phone"
+                    };
+                    if (hasHotline) sets.Add("Hotline = @hotline");
+                    if (hasOperatingHours) sets.Add("OperatingHours = @hours");
+                    if (hasDescription) sets.Add("Description = @desc");
+                    sets.Add("IsActive = @active");
+                    sets.Add("UpdatedDate = GETDATE()");
+
+                    string sql = $@"UPDATE Branches SET {string.Join(", ", sets)}
                                    WHERE BranchId = @id";
 
                     using (var cmd = new SqlCommand(sql, conn))
@@ -168,10 +210,9 @@ namespace QuanLyNhaTro.DAL
                         cmd.Parameters.AddWithValue("@name", branchName);
                         cmd.Parameters.AddWithValue("@addr", string.IsNullOrEmpty(address) ? DBNull.Value : (object)address);
                         cmd.Parameters.AddWithValue("@phone", string.IsNullOrEmpty(phone) ? DBNull.Value : (object)phone);
-                        if (hasManager)
-                        {
-                            cmd.Parameters.AddWithValue("@manager", string.IsNullOrEmpty(managerName) ? DBNull.Value : (object)managerName);
-                        }
+                        if (hasHotline) cmd.Parameters.AddWithValue("@hotline", string.IsNullOrEmpty(hotline) ? DBNull.Value : (object)hotline);
+                        if (hasOperatingHours) cmd.Parameters.AddWithValue("@hours", string.IsNullOrEmpty(operatingHours) ? DBNull.Value : (object)operatingHours);
+                        if (hasDescription) cmd.Parameters.AddWithValue("@desc", string.IsNullOrEmpty(description) ? DBNull.Value : (object)description);
                         cmd.Parameters.AddWithValue("@active", isActive ? 1 : 0);
 
                         int result = await cmd.ExecuteNonQueryAsync();
@@ -244,12 +285,36 @@ namespace QuanLyNhaTro.DAL
         }
 
         /// <summary>
-        /// Kiểm tra cột ManagerName tồn tại để tránh lỗi trên DB cũ
+        /// Danh sách cột chi nhánh theo schema hiện tại (để tương thích DB cũ/mới).
         /// </summary>
-        private async Task<bool> BranchHasManagerNameAsync(SqlConnection conn)
+        private async Task<List<string>> GetBranchSelectableColumnsAsync(SqlConnection conn)
         {
-            using (var cmd = new SqlCommand("SELECT CASE WHEN COL_LENGTH('Branches','ManagerName') IS NULL THEN 0 ELSE 1 END", conn))
+            var cols = new List<string>
             {
+                "BranchId",
+                "BranchCode",
+                "BranchName",
+                "Address",
+                "Phone"
+            };
+
+            if (await HasColumnAsync(conn, "Branches", "Hotline")) cols.Add("Hotline");
+            if (await HasColumnAsync(conn, "Branches", "OperatingHours")) cols.Add("OperatingHours");
+            if (await HasColumnAsync(conn, "Branches", "Description")) cols.Add("Description");
+
+            cols.Add("IsActive");
+            cols.Add("CreatedDate");
+            cols.Add("UpdatedDate");
+
+            return cols;
+        }
+
+        private async Task<bool> HasColumnAsync(SqlConnection conn, string tableName, string columnName)
+        {
+            using (var cmd = new SqlCommand("SELECT CASE WHEN COL_LENGTH(@t, @c) IS NULL THEN 0 ELSE 1 END", conn))
+            {
+                cmd.Parameters.AddWithValue("@t", tableName);
+                cmd.Parameters.AddWithValue("@c", columnName);
                 var result = await cmd.ExecuteScalarAsync();
                 return result != null && Convert.ToInt32(result) == 1;
             }

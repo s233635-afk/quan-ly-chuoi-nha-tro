@@ -98,7 +98,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.btnNavOverview.Name = "btnNavOverview";
             this.btnNavOverview.Size = new System.Drawing.Size(180, 42);
             this.btnNavOverview.TabIndex = 6;
-            this.btnNavOverview.Text = "📊 Tổng quan";
+            this.btnNavOverview.Text = "Tổng quan";
             this.btnNavOverview.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.btnNavOverview.UseVisualStyleBackColor = false;
             this.btnNavOverview.Click += new System.EventHandler(this.btnOverview_Click);
@@ -114,7 +114,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.btnNavBranch.Name = "btnNavBranch";
             this.btnNavBranch.Size = new System.Drawing.Size(180, 42);
             this.btnNavBranch.TabIndex = 0;
-            this.btnNavBranch.Text = "📍 Chi nhánh";
+            this.btnNavBranch.Text = "Chi nhánh";
             this.btnNavBranch.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.btnNavBranch.UseVisualStyleBackColor = false;
             this.btnNavBranch.Click += new System.EventHandler(this.btnBranch_Click);
@@ -130,7 +130,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.btnNavRoom.Name = "btnNavRoom";
             this.btnNavRoom.Size = new System.Drawing.Size(180, 42);
             this.btnNavRoom.TabIndex = 1;
-            this.btnNavRoom.Text = "🏠 Phòng";
+            this.btnNavRoom.Text = "Phòng";
             this.btnNavRoom.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.btnNavRoom.UseVisualStyleBackColor = false;
             this.btnNavRoom.Click += new System.EventHandler(this.btnRoom_Click);
@@ -146,7 +146,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.btnNavStaff.Name = "btnNavStaff";
             this.btnNavStaff.Size = new System.Drawing.Size(180, 42);
             this.btnNavStaff.TabIndex = 12;
-            this.btnNavStaff.Text = "👤 Nhân viên";
+            this.btnNavStaff.Text = "Nhân viên";
             this.btnNavStaff.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.btnNavStaff.UseVisualStyleBackColor = false;
             this.btnNavStaff.Click += new System.EventHandler(this.btnStaff_Click);
@@ -162,7 +162,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.btnNavTenant.Name = "btnNavTenant";
             this.btnNavTenant.Size = new System.Drawing.Size(180, 42);
             this.btnNavTenant.TabIndex = 2;
-            this.btnNavTenant.Text = "👥 Khách thuê";
+            this.btnNavTenant.Text = "Khách thuê";
             this.btnNavTenant.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.btnNavTenant.UseVisualStyleBackColor = false;
             this.btnNavTenant.Click += new System.EventHandler(this.btnTenant_Click);
@@ -178,7 +178,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.btnNavContract.Name = "btnNavContract";
             this.btnNavContract.Size = new System.Drawing.Size(180, 42);
             this.btnNavContract.TabIndex = 3;
-            this.btnNavContract.Text = "📄 Hợp đồng";
+            this.btnNavContract.Text = "Hợp đồng";
             this.btnNavContract.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.btnNavContract.UseVisualStyleBackColor = false;
             this.btnNavContract.Click += new System.EventHandler(this.btnContract_Click);
@@ -194,7 +194,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.btnNavDeposit.Name = "btnNavDeposit";
             this.btnNavDeposit.Size = new System.Drawing.Size(180, 42);
             this.btnNavDeposit.TabIndex = 4;
-            this.btnNavDeposit.Text = "💰 Đặt cọc";
+            this.btnNavDeposit.Text = "Đặt cọc";
             this.btnNavDeposit.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.btnNavDeposit.UseVisualStyleBackColor = false;
             this.btnNavDeposit.Click += new System.EventHandler(this.btnDeposit_Click);
@@ -210,7 +210,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.btnNavUtility.Name = "btnNavUtility";
             this.btnNavUtility.Size = new System.Drawing.Size(180, 42);
             this.btnNavUtility.TabIndex = 5;
-            this.btnNavUtility.Text = "⚡ Điện/Nước/DV";
+            this.btnNavUtility.Text = "Điện/Nước/DV";
             this.btnNavUtility.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.btnNavUtility.UseVisualStyleBackColor = false;
             this.btnNavUtility.Click += new System.EventHandler(this.btnUtility_Click);
@@ -226,7 +226,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.btnNavInvoice.Name = "btnNavInvoice";
             this.btnNavInvoice.Size = new System.Drawing.Size(180, 42);
             this.btnNavInvoice.TabIndex = 6;
-            this.btnNavInvoice.Text = "💳 Hóa đơn";
+            this.btnNavInvoice.Text = "Hóa đơn";
             this.btnNavInvoice.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.btnNavInvoice.UseVisualStyleBackColor = false;
             this.btnNavInvoice.Click += new System.EventHandler(this.btnInvoice_Click);
@@ -242,7 +242,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.btnNavReport.Name = "btnNavReport";
             this.btnNavReport.Size = new System.Drawing.Size(180, 42);
             this.btnNavReport.TabIndex = 13;
-            this.btnNavReport.Text = "📊 Báo cáo";
+            this.btnNavReport.Text = "Báo cáo";
             this.btnNavReport.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.btnNavReport.UseVisualStyleBackColor = false;
             this.btnNavReport.Click += new System.EventHandler(this.btnReport_Click);
@@ -258,7 +258,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.btnNavPayment.Name = "btnNavPayment";
             this.btnNavPayment.Size = new System.Drawing.Size(180, 42);
             this.btnNavPayment.TabIndex = 7;
-            this.btnNavPayment.Text = "💵 Thanh toán";
+            this.btnNavPayment.Text = "Thanh toán";
             this.btnNavPayment.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.btnNavPayment.UseVisualStyleBackColor = false;
             this.btnNavPayment.Click += new System.EventHandler(this.btnPayment_Click);
@@ -274,7 +274,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.btnNavMaintenance.Name = "btnNavMaintenance";
             this.btnNavMaintenance.Size = new System.Drawing.Size(180, 42);
             this.btnNavMaintenance.TabIndex = 8;
-            this.btnNavMaintenance.Text = "🔧 Bảo trì";
+            this.btnNavMaintenance.Text = "Bảo trì";
             this.btnNavMaintenance.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.btnNavMaintenance.UseVisualStyleBackColor = false;
             this.btnNavMaintenance.Click += new System.EventHandler(this.btnMaintenance_Click);
@@ -290,7 +290,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.btnNavAsset.Name = "btnNavAsset";
             this.btnNavAsset.Size = new System.Drawing.Size(180, 42);
             this.btnNavAsset.TabIndex = 9;
-            this.btnNavAsset.Text = "📦 Tài sản";
+            this.btnNavAsset.Text = "Tài sản";
             this.btnNavAsset.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.btnNavAsset.UseVisualStyleBackColor = false;
             this.btnNavAsset.Click += new System.EventHandler(this.btnAsset_Click);
@@ -306,7 +306,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.btnNavNotification.Name = "btnNavNotification";
             this.btnNavNotification.Size = new System.Drawing.Size(180, 42);
             this.btnNavNotification.TabIndex = 10;
-            this.btnNavNotification.Text = "🔔 Thông báo";
+            this.btnNavNotification.Text = "Thông báo";
             this.btnNavNotification.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.btnNavNotification.UseVisualStyleBackColor = false;
             this.btnNavNotification.Click += new System.EventHandler(this.btnNotification_Click);
@@ -431,7 +431,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.lblWelcome.Name = "lblWelcome";
             this.lblWelcome.Size = new System.Drawing.Size(220, 37);
             this.lblWelcome.TabIndex = 0;
-            this.lblWelcome.Text = "👋 Admin Dashboard";
+            this.lblWelcome.Text = "Admin Dashboard";
 
             // btnLogout
             this.btnLogout.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));

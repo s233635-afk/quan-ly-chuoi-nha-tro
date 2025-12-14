@@ -324,6 +324,7 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="GUI\UiKit.cs" />
+    <Compile Include="GUI\TextFixer.cs" />
     <Compile Include="GUI\FrmBranchSectionManager.cs">
       <SubType>Form</SubType>
     </Compile>

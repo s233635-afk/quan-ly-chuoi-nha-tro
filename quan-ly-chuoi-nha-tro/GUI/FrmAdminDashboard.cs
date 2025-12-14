@@ -35,9 +35,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 return;
             }
 
-            this.Text = $"Admin Dashboard - {currentUser}";
+            this.Text = $"Bảng điều khiển Admin - {currentUser}";
             this.WindowState = FormWindowState.Maximized;
-            lblWelcome.Text = $"👋 Xin chào Admin: {currentUser}";
+            lblWelcome.Text = $"Xin chào Admin: {currentUser}";
             lblUser.Text = $"Admin: {currentUser}";
             lblPlaceholder.Text = defaultPlaceholderText;
             await ShowOverviewAsync();
@@ -108,15 +108,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             var metrics = new[]
             {
-                new StatMetric("🏢 Chi nhánh", totalBranches.ToString("N0"), "Tổng số chi nhánh", Color.FromArgb(0, 122, 204), (EventHandler)btnBranch_Click),
-                new StatMetric("🏠 Phòng", totalRooms.ToString("N0"), "Tổng số phòng", Color.FromArgb(0, 150, 136), (EventHandler)btnRoom_Click),
-                new StatMetric("👥 Khách thuê", totalTenants.ToString("N0"), "Tổng khách thuê", Color.FromArgb(63, 81, 181), (EventHandler)btnTenant_Click),
-                new StatMetric("📄 Hợp đồng", totalContracts.ToString("N0"), "Tổng hợp đồng", Color.FromArgb(103, 58, 183), (EventHandler)btnContract_Click),
-                new StatMetric("🧾 Hóa đơn", totalInvoices.ToString("N0"), $"Còn nợ: {outstandingCount:N0}", Color.FromArgb(255, 152, 0), (EventHandler)btnInvoice_Click),
-                new StatMetric("💸 Công nợ", outstandingAmount.ToString("N0"), "Tổng tiền còn nợ", Color.FromArgb(244, 67, 54), (EventHandler)btnInvoice_Click),
-                new StatMetric("💰 Đặt cọc", depositAmount.ToString("N0"), $"Phiếu cọc: {totalDeposits:N0}", Color.FromArgb(33, 150, 243), (EventHandler)btnDeposit_Click),
-                new StatMetric("💵 Thu tháng này", paymentsThisMonth.ToString("N0"), "Tổng tiền đã thu", Color.FromArgb(76, 175, 80), (EventHandler)btnPayment_Click),
-                new StatMetric("🔧 Bảo trì", openMaintenance.ToString("N0"), "Yêu cầu đang mở", Color.FromArgb(156, 39, 176), (EventHandler)btnMaintenance_Click),
+                new StatMetric("Chi nhánh", totalBranches.ToString("N0"), "Tổng số chi nhánh", Color.FromArgb(0, 122, 204), (EventHandler)btnBranch_Click),
+                new StatMetric("Phòng", totalRooms.ToString("N0"), "Tổng số phòng", Color.FromArgb(0, 150, 136), (EventHandler)btnRoom_Click),
+                new StatMetric("Khách thuê", totalTenants.ToString("N0"), "Tổng khách thuê", Color.FromArgb(63, 81, 181), (EventHandler)btnTenant_Click),
+                new StatMetric("Hợp đồng", totalContracts.ToString("N0"), "Tổng hợp đồng", Color.FromArgb(103, 58, 183), (EventHandler)btnContract_Click),
+                new StatMetric("Hóa đơn", totalInvoices.ToString("N0"), $"Còn nợ: {outstandingCount:N0}", Color.FromArgb(255, 152, 0), (EventHandler)btnInvoice_Click),
+                new StatMetric("Công nợ", outstandingAmount.ToString("N0"), "Tổng tiền còn nợ", Color.FromArgb(244, 67, 54), (EventHandler)btnInvoice_Click),
+                new StatMetric("Đặt cọc", depositAmount.ToString("N0"), $"Phiếu cọc: {totalDeposits:N0}", Color.FromArgb(33, 150, 243), (EventHandler)btnDeposit_Click),
+                new StatMetric("Thu tháng này", paymentsThisMonth.ToString("N0"), "Tổng tiền đã thu", Color.FromArgb(76, 175, 80), (EventHandler)btnPayment_Click),
+                new StatMetric("Bảo trì", openMaintenance.ToString("N0"), "Yêu cầu đang mở", Color.FromArgb(156, 39, 176), (EventHandler)btnMaintenance_Click),
             };
 
             int colCount = tableLayoutPanel1.ColumnCount;
@@ -285,7 +285,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 tableLayoutPanel1.Visible = true;
                 lblPlaceholder.Visible = false;
                 pnlModuleHost.Visible = false;
-                lblWelcome.Text = $"👋 Xin chào Admin: {currentUser}";
+                lblWelcome.Text = $"Xin chào Admin: {currentUser}";
             }
             catch (Exception ex)
             {
@@ -293,7 +293,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 pnlModuleHost.Visible = false;
                 lblPlaceholder.Text = "Không thể tải thống kê tổng quan.\n\n" + ex.Message;
                 lblPlaceholder.Visible = true;
-                lblWelcome.Text = $"👋 Xin chào Admin: {currentUser}";
+                lblWelcome.Text = $"Xin chào Admin: {currentUser}";
             }
         }
 
@@ -341,72 +341,72 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void btnBranch_Click(object sender, EventArgs e)
         {
-            LoadModuleSafe(() => new FrmBranch(), "📍 Quản lý Chi nhánh");
+            LoadModuleSafe(() => new FrmBranch(), "Quản lý chi nhánh");
         }
 
         private void btnRoom_Click(object sender, EventArgs e)
         {
-            LoadModuleSafe(() => new FrmRoomManager(), "🏠 Quản lý Phòng");
+            LoadModuleSafe(() => new FrmRoomManager(), "Quản lý phòng");
         }
 
         private void btnStaff_Click(object sender, EventArgs e)
         {
-            LoadModuleSafe(() => new FrmStaffManager(), "👤 Quản lý Nhân viên");
+            LoadModuleSafe(() => new FrmStaffManager(), "Quản lý nhân viên");
         }
 
         private void btnTenant_Click(object sender, EventArgs e)
         {
-            LoadModuleSafe(() => new FrmTenantManager(), "👥 Quản lý Khách thuê");
+            LoadModuleSafe(() => new FrmTenantManager(), "Quản lý khách thuê");
         }
 
         private void btnContract_Click(object sender, EventArgs e)
         {
-            LoadModuleSafe(() => new FrmContractManager(), "📄 Quản lý Hợp đồng");
+            LoadModuleSafe(() => new FrmContractManager(), "Quản lý hợp đồng");
         }
 
         private void btnDeposit_Click(object sender, EventArgs e)
         {
-            LoadModuleSafe(() => new FrmDepositManager(), "💰 Đặt phòng & Cọc");
+            LoadModuleSafe(() => new FrmDepositManager(), "Đặt phòng & đặt cọc");
         }
 
         private void btnPayment_Click(object sender, EventArgs e)
         {
-            LoadModuleSafe(() => new FrmPaymentManager(adminDataBLL), "💳 Thanh toán");
+            LoadModuleSafe(() => new FrmPaymentManager(adminDataBLL), "Thanh toán");
         }
 
         private void btnUtility_Click(object sender, EventArgs e)
         {
-            LoadModuleSafe(() => new FrmUtilityManager(), "⚡ Điện - Nước - Dịch vụ");
+            LoadModuleSafe(() => new FrmUtilityManager(), "Điện - Nước - Dịch vụ");
         }
 
         private void btnInvoice_Click(object sender, EventArgs e)
         {
-            LoadModuleSafe(() => new FrmInvoiceManager(), "💳 Hóa đơn & Thanh toán");
+            LoadModuleSafe(() => new FrmInvoiceManager(), "Hóa đơn & thanh toán");
         }
 
         private void btnMaintenance_Click(object sender, EventArgs e)
         {
-            LoadModuleSafe(() => new FrmMaintenanceManager(), "🔧 Bảo trì & Sự cố");
+            LoadModuleSafe(() => new FrmMaintenanceManager(), "Bảo trì & sự cố");
         }
 
         private void btnAsset_Click(object sender, EventArgs e)
         {
-            LoadModuleSafe(() => new FrmAssetManager(), "📦 Quản lý Tài sản");
+            LoadModuleSafe(() => new FrmAssetManager(), "Quản lý tài sản");
         }
 
         private void btnReport_Click(object sender, EventArgs e)
         {
-            LoadModuleSafe(() => new FrmReportManager(adminDataBLL), "📊 Báo cáo & Thống kê");
+            LoadModuleSafe(() => new FrmReportManager(adminDataBLL), "Báo cáo & thống kê");
         }
 
         private void btnNotification_Click(object sender, EventArgs e)
         {
-            LoadModuleSafe(() => new FrmNotificationManager(), "🔔 Thông báo & Nhắc lịch");
+            LoadModuleSafe(() => new FrmNotificationManager(), "Thông báo & nhắc lịch");
         }
 
         private void btnSettings_Click(object sender, EventArgs e)
         {
-            LoadModuleSafe(() => new FrmSystemSettingsManager(), "⚙️ Cấu hình Hệ thống");
+            LoadModuleSafe(() => new FrmSystemSettingsManager(), "Cấu hình hệ thống");
         }
 
         private void btnLogout_Click(object sender, EventArgs e)

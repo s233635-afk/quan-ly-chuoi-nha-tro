@@ -348,8 +348,8 @@ INSERT INTO RoomStatuses (StatusName, Description) VALUES
 
 -- Insert Branches
 INSERT INTO Branches (BranchCode, BranchName, Address, Phone, Hotline, OperatingHours) VALUES
-(N'HN01', N'Chi nhánh Cần Thơ 1', N'123 Ninh Kiều, Cần Thơ', N'0243123456', N'1900123456', N'08:00-17:00'),
-(N'HN02', N'Chi nhánh Cần Thơ 2', N'456 Ninh Kiều, Cần Thơ', N'0243654321', N'1900654321', N'08:00-17:00');
+(N'CT01', N'Chi nhánh Cần Thơ 1', N'123 Ninh Kiều, Cần Thơ', N'0243123456', N'1900123456', N'08:00-17:00'),
+(N'CT02', N'Chi nhánh Cần Thơ 2', N'456 Ninh Kiều, Cần Thơ', N'0243654321', N'1900654321', N'08:00-17:00');
 -- Insert BranchSections
 INSERT INTO BranchSections (BranchId, SectionCode, SectionName) VALUES
 (1, N'A', N'Dãy A'),

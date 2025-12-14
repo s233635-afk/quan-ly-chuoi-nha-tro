@@ -25,12 +25,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (branchId > 0)
             {
-                this.Text = "Sửa Chi Nhánh";
+                this.Text = "Sửa chi nhánh";
                 await LoadBranchData();
             }
             else
             {
-                this.Text = "Thêm Chi Nhánh Mới";
+                this.Text = "Thêm chi nhánh mới";
                 btnDelete.Visible = false;
             }
         }
@@ -44,10 +44,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 {
                     var row = dt.Rows[0];
                     txtCode.Text = row["BranchCode"].ToString();
-                    txtName.Text = row["BranchName"].ToString();
-                    txtAddress.Text = row["Address"].ToString();
+                    txtName.Text = TextFixer.FixUtf8Mojibake(row["BranchName"].ToString());
+                    txtAddress.Text = TextFixer.FixUtf8Mojibake(row["Address"].ToString());
                     txtPhone.Text = row["Phone"].ToString();
-                    txtManager.Text = row["ManagerName"] == DBNull.Value ? string.Empty : row["ManagerName"].ToString();
+                    txtHotline.Text = row.Table.Columns.Contains("Hotline") && row["Hotline"] != DBNull.Value ? row["Hotline"].ToString() : string.Empty;
+                    txtHours.Text = row.Table.Columns.Contains("OperatingHours") && row["OperatingHours"] != DBNull.Value ? row["OperatingHours"].ToString() : string.Empty;
+                    txtDescription.Text = row.Table.Columns.Contains("Description") && row["Description"] != DBNull.Value ? TextFixer.FixUtf8Mojibake(row["Description"].ToString()) : string.Empty;
                     chkActive.Checked = row["IsActive"] != DBNull.Value && Convert.ToInt32(row["IsActive"]) == 1;
                 }
             }
@@ -73,7 +75,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
                         txtName.Text.Trim(),
                         txtAddress.Text.Trim(),
                         txtPhone.Text.Trim(),
-                        txtManager.Text.Trim(),
+                        txtHotline.Text.Trim(),
+                        txtHours.Text.Trim(),
+                        txtDescription.Text.Trim(),
                         chkActive.Checked
                     );
                     MessageBox.Show("Cập nhật chi nhánh thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -86,7 +90,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
                         txtName.Text.Trim(),
                         txtAddress.Text.Trim(),
                         txtPhone.Text.Trim(),
-                        txtManager.Text.Trim(),
+                        txtHotline.Text.Trim(),
+                        txtHours.Text.Trim(),
+                        txtDescription.Text.Trim(),
                         chkActive.Checked
                     );
                     MessageBox.Show("Thêm chi nhánh mới thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -143,29 +149,39 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 return false;
             }
 
-            if (string.IsNullOrWhiteSpace(txtAddress.Text))
-            {
-                MessageBox.Show("Địa chỉ không được để trống!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                txtAddress.Focus();
-                return false;
-            }
-
-            if (string.IsNullOrWhiteSpace(txtPhone.Text))
-            {
-                MessageBox.Show("Số điện thoại không được để trống!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                txtPhone.Focus();
-                return false;
-            }
-
             if (txtCode.Text.Length > 20)
             {
                 MessageBox.Show("Mã chi nhánh không được vượt quá 20 ký tự!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return false;
             }
 
-            if (txtName.Text.Length > 100)
+            if (txtName.Text.Length > 255)
             {
-                MessageBox.Show("Tên chi nhánh không được vượt quá 100 ký tự!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Tên chi nhánh không được vượt quá 255 ký tự!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            if (txtPhone.Text.Length > 20)
+            {
+                MessageBox.Show("Số điện thoại không được vượt quá 20 ký tự!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            if (txtHotline.Text.Length > 20)
+            {
+                MessageBox.Show("Hotline không được vượt quá 20 ký tự!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            if (txtHours.Text.Length > 100)
+            {
+                MessageBox.Show("Giờ hoạt động không được vượt quá 100 ký tự!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            if (txtDescription.Text.Length > 500)
+            {
+                MessageBox.Show("Mô tả không được vượt quá 500 ký tự!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return false;
             }
 
