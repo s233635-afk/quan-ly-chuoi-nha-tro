@@ -106,13 +106,21 @@ namespace QuanLyNhaTro.DAL
 
         public async Task<bool> RegisterUserAsync(string username, string password, string fullName)
         {
+            return await RegisterUserAsync(username, password, fullName, null, null);
+        }
+
+        public async Task<bool> RegisterUserAsync(string username, string password, string fullName, string email, string phone)
+        {
             using (var conn = new SqlConnection(connectionString))
             {
                 try
                 {
                     await OpenConnectionWithTimeoutAsync(conn);
 
-                    string sql = "INSERT INTO Users (Username, Password, FullName) VALUES (@user, @pass, @name)";
+                    const int defaultRoleId = 2; // Staff
+                    string sql =
+                        "INSERT INTO Users (Username, Password, Email, FullName, Phone, RoleId, BranchId, IsActive) " +
+                        "VALUES (@user, @pass, @email, @name, @phone, @roleId, NULL, 1)";
 
                     using (var cmd = new SqlCommand(sql, conn))
                     {
@@ -120,6 +128,9 @@ namespace QuanLyNhaTro.DAL
                         cmd.Parameters.AddWithValue("@user", username);
                         cmd.Parameters.AddWithValue("@pass", password);
                         cmd.Parameters.AddWithValue("@name", fullName);
+                        cmd.Parameters.AddWithValue("@email", string.IsNullOrWhiteSpace(email) ? (object)DBNull.Value : email);
+                        cmd.Parameters.AddWithValue("@phone", string.IsNullOrWhiteSpace(phone) ? (object)DBNull.Value : phone);
+                        cmd.Parameters.AddWithValue("@roleId", defaultRoleId);
 
                         int result = await cmd.ExecuteNonQueryAsync();
                         return result > 0;
@@ -153,7 +164,7 @@ namespace QuanLyNhaTro.DAL
                 {
                     await OpenConnectionWithTimeoutAsync(conn);
 
-                    string sql = "SELECT FullName FROM Users WHERE Username = @user AND Password = @pass";
+                    string sql = "SELECT FullName FROM Users WHERE Username = @user AND Password = @pass AND IsActive = 1";
 
                     using (var cmd = new SqlCommand(sql, conn))
                     {
@@ -163,6 +174,51 @@ namespace QuanLyNhaTro.DAL
 
                         var result = await cmd.ExecuteScalarAsync();
                         return result?.ToString();
+                    }
+                }
+                catch (TaskCanceledException ex)
+                {
+                    throw CreateTimeoutException("kết nối database", ex);
+                }
+                catch (SqlException ex) when (ex.Number == -2)
+                {
+                    throw CreateTimeoutException("thực thi truy vấn database", ex);
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception("Lỗi kết nối database: " + ex.Message);
+                }
+            }
+        }
+
+        public async Task<bool> ResetPasswordAsync(string username, string fullName, string email, string phone, string newPassword)
+        {
+            using (var conn = new SqlConnection(connectionString))
+            {
+                try
+                {
+                    await OpenConnectionWithTimeoutAsync(conn);
+
+                    string sql =
+                        "UPDATE Users " +
+                        "SET Password = @pass, UpdatedDate = GETDATE() " +
+                        "WHERE Username = @user AND IsActive = 1 " +
+                        "AND (@fullName IS NULL OR FullName = @fullName) " +
+                        "AND (@email IS NULL OR Email = @email) " +
+                        "AND (@phone IS NULL OR Phone = @phone)";
+
+                    using (var cmd = new SqlCommand(sql, conn))
+                    {
+                        cmd.CommandTimeout = commandTimeoutSeconds;
+
+                        cmd.Parameters.AddWithValue("@user", username);
+                        cmd.Parameters.AddWithValue("@pass", newPassword);
+                        cmd.Parameters.AddWithValue("@fullName", string.IsNullOrWhiteSpace(fullName) ? (object)DBNull.Value : fullName);
+                        cmd.Parameters.AddWithValue("@email", string.IsNullOrWhiteSpace(email) ? (object)DBNull.Value : email);
+                        cmd.Parameters.AddWithValue("@phone", string.IsNullOrWhiteSpace(phone) ? (object)DBNull.Value : phone);
+
+                        int affected = await cmd.ExecuteNonQueryAsync();
+                        return affected > 0;
                     }
                 }
                 catch (TaskCanceledException ex)

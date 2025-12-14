@@ -17,6 +17,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private DataTable _readingTable;
         private DataTable _typeTable;
         private DataTable _branchTable;
+        private System.Collections.Generic.HashSet<int> _allowedBranchIds;
 
         private TabControl _tabs;
         private DataGridView _gridReadings;
@@ -177,7 +178,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             try
             {
-                var dt = await _bll.GetBranchesAsync();
+                var dt = AdminBranchScope.Apply(await _bll.GetBranchesAsync());
+                TextFixer.FixDataTable(dt, "BranchCode", "BranchName");
+                _allowedBranchIds = AdminBranchScope.GetAllowedBranchIds(dt);
                 _branchTable = new DataTable();
                 _branchTable.Columns.Add("BranchId", typeof(int));
                 _branchTable.Columns.Add("BranchDisplay", typeof(string));
@@ -214,6 +217,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             try
             {
                 _readingTable = await _bll.GetUtilitiesAsync();
+                TextFixer.FixDataTable(_readingTable, "RoomNumber", "UtilityName", "UtilityCode", "Notes");
+                _readingTable = AdminBranchScope.FilterByBranchIds(_readingTable, _allowedBranchIds);
                 _gridReadings.DataSource = _readingTable;
                 ApplyReadingsGridPresentation();
                 ApplyReadingsFilter();
@@ -343,7 +348,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             using (var frm = new FrmUtilityReadingEditor(_bll))
             {
                 if (frm.ShowDialog(this) == DialogResult.OK)
+                {
                     await LoadReadingsAsync();
+                    AdminEvents.NotifyDataChanged();
+                }
             }
         }
 
@@ -359,7 +367,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             using (var frm = new FrmUtilityReadingEditor(_bll, row))
             {
                 if (frm.ShowDialog(this) == DialogResult.OK)
+                {
                     await LoadReadingsAsync();
+                    AdminEvents.NotifyDataChanged();
+                }
             }
         }
 
@@ -380,6 +391,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 await _bll.DeleteUtilityReadingAsync(id);
                 await LoadReadingsAsync();
+                AdminEvents.NotifyDataChanged();
             }
             catch (Exception ex)
             {
@@ -585,4 +597,3 @@ namespace quan_ly_chuoi_nha_tro.GUI
         }
     }
 }
-

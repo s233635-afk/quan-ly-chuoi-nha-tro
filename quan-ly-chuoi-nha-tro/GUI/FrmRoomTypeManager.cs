@@ -31,7 +31,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void InitializeComponent()
         {
-            Text = "Quản lý Loại phòng";
+            Text = "Quản lý loại phòng";
             StartPosition = FormStartPosition.CenterParent;
             Width = 1100;
             Height = 650;
@@ -67,6 +67,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnEdit = UiKit.MakeButton("Sửa", UiKit.Primary, (s, e) => EditSelected(), 92);
             _btnDelete = UiKit.MakeButton("Xóa", UiKit.Danger, async (s, e) => await DeleteSelectedAsync(), 92);
             _btnRefresh = UiKit.MakeButton("Tải lại", UiKit.Primary, async (s, e) => await LoadDataAsync(), 92);
+
+            // DB final chỉ dùng 3 loại phòng: phòng đơn/đôi/cao cấp.
+            _btnAdd.Visible = false;
+            _btnAdd.Enabled = false;
+            _btnDelete.Visible = false;
+            _btnDelete.Enabled = false;
 
             var top = new Panel { Dock = DockStyle.Top, Height = 64, Padding = new Padding(12, 10, 12, 10), BackColor = Color.White };
             var actions = new FlowLayoutPanel
@@ -122,7 +128,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             try
             {
-                _raw = await _bll.GetRoomTypesAsync();
+                _raw = RoomTypeCatalog.FilterToCanonicalTypes(await _bll.GetRoomTypesAsync());
                 _grid.DataSource = _raw;
                 ApplyGridPresentation();
                 ApplyFilter();
@@ -269,4 +275,3 @@ namespace quan_ly_chuoi_nha_tro.GUI
         }
     }
 }
-

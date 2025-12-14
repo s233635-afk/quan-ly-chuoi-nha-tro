@@ -21,7 +21,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.pnlLeft = new System.Windows.Forms.Panel();
             this.lnkRegister = new System.Windows.Forms.LinkLabel();
             this.lnkForgot = new System.Windows.Forms.LinkLabel();
-            this.chkRemember = new System.Windows.Forms.CheckBox();
+            this.chkShowPassword = new System.Windows.Forms.CheckBox();
             this.btnLogin = new System.Windows.Forms.Button();
             this.pnlPassBox = new System.Windows.Forms.Panel();
             this.lblPassIcon = new System.Windows.Forms.Label();
@@ -84,7 +84,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.pnlLeft.BackColor = System.Drawing.Color.White;
             this.pnlLeft.Controls.Add(this.lnkRegister);
             this.pnlLeft.Controls.Add(this.lnkForgot);
-            this.pnlLeft.Controls.Add(this.chkRemember);
+            this.pnlLeft.Controls.Add(this.chkShowPassword);
             this.pnlLeft.Controls.Add(this.btnLogin);
             this.pnlLeft.Controls.Add(this.pnlPassBox);
             this.pnlLeft.Controls.Add(this.pnlUserBox);
@@ -125,16 +125,16 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.lnkForgot.Text = "Quên mật khẩu?";
             this.lnkForgot.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.lnkForgot_LinkClicked);
             // 
-            // chkRemember
+            // chkShowPassword
             // 
-            this.chkRemember.AutoSize = true;
-            this.chkRemember.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(80)))), ((int)(((byte)(80)))), ((int)(((byte)(80)))));
-            this.chkRemember.Location = new System.Drawing.Point(47, 251);
-            this.chkRemember.Name = "chkRemember";
-            this.chkRemember.Size = new System.Drawing.Size(88, 21);
-            this.chkRemember.TabIndex = 6;
-            this.chkRemember.Text = "Ghi nhớ";
-            this.chkRemember.UseVisualStyleBackColor = true;
+            this.chkShowPassword.AutoSize = true;
+            this.chkShowPassword.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(80)))), ((int)(((byte)(80)))), ((int)(((byte)(80)))));
+            this.chkShowPassword.Location = new System.Drawing.Point(47, 251);
+            this.chkShowPassword.Name = "chkShowPassword";
+            this.chkShowPassword.Size = new System.Drawing.Size(105, 21);
+            this.chkShowPassword.TabIndex = 6;
+            this.chkShowPassword.Text = "Hiện mật khẩu";
+            this.chkShowPassword.UseVisualStyleBackColor = true;
             // 
             // btnLogin
             // 
@@ -312,7 +312,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private System.Windows.Forms.Panel pnlPassBox;
         private System.Windows.Forms.Label lblPassIcon;
         private System.Windows.Forms.TextBox txtPass;
-        private System.Windows.Forms.CheckBox chkRemember;
+        private System.Windows.Forms.CheckBox chkShowPassword;
         private System.Windows.Forms.LinkLabel lnkForgot;
         private System.Windows.Forms.LinkLabel lnkRegister;
         private System.Windows.Forms.Button btnLogin;

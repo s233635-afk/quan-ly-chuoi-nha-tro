@@ -16,6 +16,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private readonly AdminDataBLL _bll = new AdminDataBLL();
         private readonly int? _branchId;
+        private System.Collections.Generic.HashSet<int> _allowedBranchIds;
         private DataTable _table;
 
         private DataGridView _grid;
@@ -149,7 +150,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
             try
             {
                 _table = await _bll.GetInvoicesViewAsync();
-                _table = FilterByBranch(_table, _branchId);
+                if (_branchId.HasValue)
+                {
+                    _table = FilterByBranch(_table, _branchId);
+                }
+                else
+                {
+                    await EnsureAllowedBranchScopeAsync();
+                    _table = AdminBranchScope.FilterByBranchIds(_table, _allowedBranchIds);
+                }
                 _grid.DataSource = _table;
                 ApplyFilter();
                 AutoFormatGrid();
@@ -256,7 +265,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             using (var frm = new FrmInvoiceEditor(_bll))
             {
                 if (frm.ShowDialog(this) == DialogResult.OK)
+                {
                     _ = LoadDataAsync();
+                    AdminEvents.NotifyDataChanged();
+                }
             }
         }
 
@@ -272,7 +284,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             using (var frm = new FrmInvoiceEditor(_bll, row))
             {
                 if (frm.ShowDialog(this) == DialogResult.OK)
+                {
                     _ = LoadDataAsync();
+                    AdminEvents.NotifyDataChanged();
+                }
             }
         }
 
@@ -300,6 +315,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 await _bll.DeleteInvoiceAsync(invoiceId, deletePaymentsFirst: hasPayment);
                 await LoadDataAsync();
+                AdminEvents.NotifyDataChanged();
             }
             catch (Exception ex)
             {
@@ -326,7 +342,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             using (var frm = new FrmPaymentEditor(_bll, row))
             {
                 if (frm.ShowDialog(this) == DialogResult.OK)
+                {
                     _ = LoadDataAsync();
+                    AdminEvents.NotifyDataChanged();
+                }
             }
         }
 
@@ -355,12 +374,27 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 {
                     int created = await _bll.GenerateMonthlyInvoicesAsync(dlg.SelectedYear, dlg.SelectedMonth, DateTime.Today, dlg.DueDay);
                     await LoadDataAsync();
+                    AdminEvents.NotifyDataChanged();
                     MessageBox.Show($"Đã tạo {created} hóa đơn cho {dlg.SelectedMonth:00}/{dlg.SelectedYear}.", "Hoàn tất", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch (Exception ex)
                 {
                     MessageBox.Show("Lỗi tạo hóa đơn tháng: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
+            }
+        }
+
+        private async System.Threading.Tasks.Task EnsureAllowedBranchScopeAsync()
+        {
+            if (_allowedBranchIds != null && _allowedBranchIds.Count > 0) return;
+            try
+            {
+                var branches = AdminBranchScope.Apply(await _bll.GetBranchesAsync());
+                _allowedBranchIds = AdminBranchScope.GetAllowedBranchIds(branches);
+            }
+            catch
+            {
+                _allowedBranchIds = new System.Collections.Generic.HashSet<int>();
             }
         }
 

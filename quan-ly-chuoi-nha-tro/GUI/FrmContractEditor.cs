@@ -11,7 +11,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
     {
         private readonly AdminDataBLL _bll;
         private readonly DataRow _existing;
-        private readonly bool _demoMode;
 
         private TextBox txtContractNumber;
         private ComboBox cboTenant;
@@ -43,11 +42,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
         public string ContractPdfPath { get; private set; }
         public string Status { get; private set; }
 
-        public FrmContractEditor(AdminDataBLL bll, DataRow existing = null, bool demoMode = false)
+        public FrmContractEditor(AdminDataBLL bll, DataRow existing = null)
         {
             _bll = bll;
             _existing = existing;
-            _demoMode = demoMode;
 
             InitializeComponent();
             this.Load += async (s, e) => await LoadLookupAsync();
@@ -207,43 +205,23 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.Controls.Add(pnlBottom);
         }
 
-        private static DataTable BuildDemoTenants()
-        {
-            var dt = new DataTable();
-            dt.Columns.Add("TenantId", typeof(int));
-            dt.Columns.Add("FullName", typeof(string));
-            dt.Rows.Add(1, "Nguyễn Văn A");
-            dt.Rows.Add(2, "Trần Thị B");
-            dt.Rows.Add(3, "Lê Văn C");
-            return dt;
-        }
-
-        private static DataTable BuildDemoRooms()
-        {
-            var dt = new DataTable();
-            dt.Columns.Add("RoomId", typeof(int));
-            dt.Columns.Add("RoomNumber", typeof(string));
-            dt.Columns.Add("RoomPrice", typeof(decimal));
-            dt.Rows.Add(101, "P101", 3000000m);
-            dt.Rows.Add(102, "P102", 3500000m);
-            dt.Rows.Add(201, "P201", 4000000m);
-            return dt;
-        }
-
         private async System.Threading.Tasks.Task LoadLookupAsync()
         {
             try
             {
-                if (_demoMode || _bll == null)
+                if (_bll == null)
                 {
-                    _tenantTable = BuildDemoTenants();
-                    _roomTable = BuildDemoRooms();
+                    MessageBox.Show("Thiếu kết nối dữ liệu (AdminDataBLL).", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    DialogResult = DialogResult.Cancel;
+                    return;
                 }
-                else
-                {
-                    _tenantTable = await _bll.GetTenantsAsync();
-                    _roomTable = await _bll.GetRoomsAsync();
-                }
+
+                _tenantTable = await _bll.GetTenantsAsync();
+                _roomTable = await _bll.GetRoomsAsync();
+
+                var branches = AdminBranchScope.Apply(await _bll.GetBranchesAsync());
+                var allowedIds = AdminBranchScope.GetAllowedBranchIds(branches);
+                _roomTable = AdminBranchScope.FilterByBranchIds(_roomTable, allowedIds);
 
                 cboTenant.DataSource = _tenantTable;
                 cboTenant.DisplayMember = _tenantTable.Columns.Contains("FullName") ? "FullName" : _tenantTable.Columns[0].ColumnName;
@@ -366,9 +344,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
             ContractPdfPath = (txtPdfPath.Text ?? string.Empty).Trim();
             Status = string.IsNullOrWhiteSpace(cboStatus.Text) ? "Active" : cboStatus.Text;
 
-            if (_demoMode || _bll == null)
+            if (_bll == null)
             {
-                this.DialogResult = DialogResult.OK;
+                MessageBox.Show("Thiếu kết nối dữ liệu (AdminDataBLL).", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 

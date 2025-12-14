@@ -17,12 +17,16 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private AdminDataBLL adminDataBLL = new AdminDataBLL();
         private Form currentModule;
         private readonly string defaultPlaceholderText = "Chọn chức năng ở thanh bên hoặc nhấn \"Tổng quan\" để xem thống kê nhanh.";
+        private bool _overviewDirty = true;
+        private Button _activeNavButton;
 
         public FrmAdminDashboard(string username, int userId)
         {
             InitializeComponent();
             currentUser = username;
             currentUserId = userId;
+            AdminEvents.DataChanged += HandleAdminDataChanged;
+            ApplyNavStyling();
         }
 
         private async void FrmAdminDashboard_Load(object sender, EventArgs e)
@@ -40,7 +44,54 @@ namespace quan_ly_chuoi_nha_tro.GUI
             lblWelcome.Text = $"Xin chào Admin: {currentUser}";
             lblUser.Text = $"Admin: {currentUser}";
             lblPlaceholder.Text = defaultPlaceholderText;
+            SetActiveNav(btnNavOverview);
             await ShowOverviewAsync();
+        }
+
+        private void ApplyNavStyling()
+        {
+            StyleNavButton(btnNavOverview);
+            StyleNavButton(btnNavBranch);
+            StyleNavButton(btnNavRoom);
+            StyleNavButton(btnNavStaff);
+            StyleNavButton(btnNavTenant);
+            StyleNavButton(btnNavContract);
+            StyleNavButton(btnNavDeposit);
+            StyleNavButton(btnNavUtility);
+            StyleNavButton(btnNavInvoice);
+            StyleNavButton(btnNavReport);
+            StyleNavButton(btnNavPayment);
+            StyleNavButton(btnNavMaintenance);
+            StyleNavButton(btnNavAsset);
+            StyleNavButton(btnNavNotification);
+            StyleNavButton(btnNavSettings);
+
+            btnLogout.FlatAppearance.BorderSize = 0;
+            btnLogout.FlatAppearance.MouseOverBackColor = ControlPaint.Dark(btnLogout.BackColor);
+        }
+
+        private void StyleNavButton(Button btn)
+        {
+            if (btn == null) return;
+            btn.FlatAppearance.BorderSize = 0;
+            btn.FlatAppearance.MouseOverBackColor = ControlPaint.Dark(btn.BackColor);
+            btn.FlatAppearance.MouseDownBackColor = ControlPaint.DarkDark(btn.BackColor);
+            btn.Cursor = Cursors.Hand;
+        }
+
+        private void SetActiveNav(Button btn)
+        {
+            if (btn == null) return;
+
+            if (_activeNavButton != null && !_activeNavButton.IsDisposed)
+            {
+                _activeNavButton.BackColor = Color.FromArgb(0, 122, 204);
+                _activeNavButton.ForeColor = Color.White;
+            }
+
+            _activeNavButton = btn;
+            _activeNavButton.BackColor = Color.FromArgb(0, 90, 170);
+            _activeNavButton.ForeColor = Color.White;
         }
 
         /// <summary>
@@ -286,6 +337,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 lblPlaceholder.Visible = false;
                 pnlModuleHost.Visible = false;
                 lblWelcome.Text = $"Xin chào Admin: {currentUser}";
+                _overviewDirty = false;
             }
             catch (Exception ex)
             {
@@ -294,6 +346,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 lblPlaceholder.Text = "Không thể tải thống kê tổng quan.\n\n" + ex.Message;
                 lblPlaceholder.Visible = true;
                 lblWelcome.Text = $"Xin chào Admin: {currentUser}";
+            }
+        }
+
+        private void HandleAdminDataChanged()
+        {
+            _overviewDirty = true;
+            if (tableLayoutPanel1.Visible && IsHandleCreated)
+            {
+                BeginInvoke(new Action(() => { _ = ShowOverviewAsync(); }));
             }
         }
 
@@ -314,6 +375,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
+            AdminEvents.DataChanged -= HandleAdminDataChanged;
             ClearCurrentModule();
             base.OnFormClosing(e);
         }
@@ -322,6 +384,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private async void btnOverview_Click(object sender, EventArgs e)
         {
+            SetActiveNav(btnNavOverview);
+            if (!_overviewDirty && tableLayoutPanel1.Visible && currentModule == null)
+                return;
             lblPlaceholder.Text = defaultPlaceholderText;
             await ShowOverviewAsync();
         }
@@ -341,71 +406,85 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void btnBranch_Click(object sender, EventArgs e)
         {
+            SetActiveNav(btnNavBranch);
             LoadModuleSafe(() => new FrmBranch(), "Quản lý chi nhánh");
         }
 
         private void btnRoom_Click(object sender, EventArgs e)
         {
+            SetActiveNav(btnNavRoom);
             LoadModuleSafe(() => new FrmRoomManager(), "Quản lý phòng");
         }
 
         private void btnStaff_Click(object sender, EventArgs e)
         {
+            SetActiveNav(btnNavStaff);
             LoadModuleSafe(() => new FrmStaffManager(), "Quản lý nhân viên");
         }
 
         private void btnTenant_Click(object sender, EventArgs e)
         {
+            SetActiveNav(btnNavTenant);
             LoadModuleSafe(() => new FrmTenantManager(), "Quản lý khách thuê");
         }
 
         private void btnContract_Click(object sender, EventArgs e)
         {
+            SetActiveNav(btnNavContract);
             LoadModuleSafe(() => new FrmContractManager(), "Quản lý hợp đồng");
         }
 
         private void btnDeposit_Click(object sender, EventArgs e)
         {
+            SetActiveNav(btnNavDeposit);
             LoadModuleSafe(() => new FrmDepositManager(), "Đặt phòng & đặt cọc");
         }
 
         private void btnPayment_Click(object sender, EventArgs e)
         {
+            SetActiveNav(btnNavPayment);
             LoadModuleSafe(() => new FrmPaymentManager(adminDataBLL), "Thanh toán");
         }
 
         private void btnUtility_Click(object sender, EventArgs e)
         {
+            SetActiveNav(btnNavUtility);
             LoadModuleSafe(() => new FrmUtilityManager(), "Điện - Nước - Dịch vụ");
         }
 
         private void btnInvoice_Click(object sender, EventArgs e)
         {
+            SetActiveNav(btnNavInvoice);
             LoadModuleSafe(() => new FrmInvoiceManager(), "Hóa đơn & thanh toán");
         }
 
         private void btnMaintenance_Click(object sender, EventArgs e)
         {
+            SetActiveNav(btnNavMaintenance);
             LoadModuleSafe(() => new FrmMaintenanceManager(), "Bảo trì & sự cố");
         }
 
         private void btnAsset_Click(object sender, EventArgs e)
         {
+            SetActiveNav(btnNavAsset);
             LoadModuleSafe(() => new FrmAssetManager(), "Quản lý tài sản");
         }
 
         private void btnReport_Click(object sender, EventArgs e)
         {
+            SetActiveNav(btnNavReport);
             LoadModuleSafe(() => new FrmReportManager(adminDataBLL), "Báo cáo & thống kê");
         }
 
         private void btnNotification_Click(object sender, EventArgs e)
         {
+            SetActiveNav(btnNavNotification);
             LoadModuleSafe(() => new FrmNotificationManager(), "Thông báo & nhắc lịch");
         }
 
         private void btnSettings_Click(object sender, EventArgs e)
         {
+            SetActiveNav(btnNavSettings);
             LoadModuleSafe(() => new FrmSystemSettingsManager(), "Cấu hình hệ thống");
         }
 

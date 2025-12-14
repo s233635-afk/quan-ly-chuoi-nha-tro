@@ -15,6 +15,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private DataTable _rawTable;
         private DataTable _branchTable;
+        private System.Collections.Generic.HashSet<int> _allowedBranchIds;
 
         private DataGridView _grid;
         private TextBox _txtSearch;
@@ -110,6 +111,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 await LoadBranchesAsync();
                 _rawTable = await _bll.GetMaintenanceAsync();
+                TextFixer.FixDataTable(_rawTable, "RoomNumber", "IssueDescription", "Priority", "Status", "Notes");
+                _rawTable = AdminBranchScope.FilterByBranchIds(_rawTable, _allowedBranchIds);
                 _grid.DataSource = _rawTable;
                 ApplyGridPresentation();
                 ApplyFilter();
@@ -124,7 +127,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             try
             {
-                var dt = await _bll.GetBranchesAsync();
+                var dt = AdminBranchScope.Apply(await _bll.GetBranchesAsync());
+                TextFixer.FixDataTable(dt, "BranchCode", "BranchName");
+                _allowedBranchIds = AdminBranchScope.GetAllowedBranchIds(dt);
                 _branchTable = new DataTable();
                 _branchTable.Columns.Add("BranchId", typeof(int));
                 _branchTable.Columns.Add("BranchDisplay", typeof(string));
@@ -235,7 +240,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             using (var frm = new FrmMaintenanceEditor(_bll))
             {
                 if (frm.ShowDialog(this) == DialogResult.OK)
+                {
                     await LoadAsync();
+                    AdminEvents.NotifyDataChanged();
+                }
             }
         }
 
@@ -251,7 +259,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             using (var frm = new FrmMaintenanceEditor(_bll, row))
             {
                 if (frm.ShowDialog(this) == DialogResult.OK)
+                {
                     await LoadAsync();
+                    AdminEvents.NotifyDataChanged();
+                }
             }
         }
 
@@ -274,6 +285,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 await _bll.DeleteMaintenanceTicketAsync(id);
                 await LoadAsync();
+                AdminEvents.NotifyDataChanged();
             }
             catch (Exception ex)
             {
@@ -319,6 +331,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     ReadString(row, "Notes"));
 
                 await LoadAsync();
+                AdminEvents.NotifyDataChanged();
             }
             catch (Exception ex)
             {
@@ -472,4 +485,3 @@ namespace quan_ly_chuoi_nha_tro.GUI
         }
     }
 }
-

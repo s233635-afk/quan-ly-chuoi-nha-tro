@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
-using System.IO;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
 
@@ -66,7 +65,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _userPlaceholderLabel = SetupOverlayPlaceholder(txtUser, pnlUserBox, UserPlaceholder, isPassword: false);
             _passPlaceholderLabel = SetupOverlayPlaceholder(txtPass, pnlPassBox, PassPlaceholder, isPassword: true);
 
-            TryLoadRememberedUsername();
+            if (chkShowPassword != null)
+            {
+                chkShowPassword.Checked = false;
+                chkShowPassword.CheckedChanged += (s, e) =>
+                {
+                    txtPass.UseSystemPasswordChar = !chkShowPassword.Checked;
+                    UpdateOverlayPlaceholderVisibility(_passPlaceholderLabel, txtPass);
+                };
+            }
 
             txtUser.Focus();
         }
@@ -90,8 +97,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 string fullName = await userBLL.DangNhap(user, pass);
                 var access = await userBLL.GetUserAccessAsync(user);
                 int roleId = access.RoleId;
-
-                SaveRememberedUsername(user);
 
                 MessageBox.Show($"Xin chào {fullName}!", "Đăng nhập thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
@@ -235,65 +240,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
 
             placeholderLabel.Visible = string.IsNullOrEmpty(textBox.Text);
-        }
-
-        private string GetRememberPath()
-        {
-            try
-            {
-                return Path.Combine(Application.UserAppDataPath, "remember_user.txt");
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        private void TryLoadRememberedUsername()
-        {
-            var path = GetRememberPath();
-            if (string.IsNullOrWhiteSpace(path)) return;
-            if (!File.Exists(path)) return;
-
-            try
-            {
-                var user = File.ReadAllText(path).Trim();
-                if (!string.IsNullOrWhiteSpace(user))
-                {
-                    chkRemember.Checked = true;
-                    txtUser.Text = user;
-                    txtUser.ForeColor = Color.FromArgb(33, 37, 41);
-                    UpdateOverlayPlaceholderVisibility(_userPlaceholderLabel, txtUser);
-                }
-            }
-            catch
-            {
-                // ignore
-            }
-        }
-
-        private void SaveRememberedUsername(string username)
-        {
-            var path = GetRememberPath();
-            if (string.IsNullOrWhiteSpace(path)) return;
-
-            try
-            {
-                if (chkRemember != null && chkRemember.Checked)
-                {
-                    Directory.CreateDirectory(Path.GetDirectoryName(path));
-                    File.WriteAllText(path, username ?? string.Empty);
-                }
-                else
-                {
-                    if (File.Exists(path))
-                        File.Delete(path);
-                }
-            }
-            catch
-            {
-                // ignore
-            }
         }
 
         private void pnlContainer_Paint(object sender, PaintEventArgs e)
@@ -475,7 +421,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void lnkForgot_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            MessageBox.Show("Vui lòng liên hệ quản trị viên để đặt lại mật khẩu.", "Quên mật khẩu", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            using (var frm = new FrmForgotPassword())
+            {
+                frm.ShowDialog(this);
+            }
         }
 
         private void lnkRegister_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)

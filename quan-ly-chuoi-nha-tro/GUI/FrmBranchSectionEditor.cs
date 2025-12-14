@@ -123,7 +123,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             try
             {
-                _branches = await _bll.GetBranchesAsync();
+                _branches = AdminBranchScope.Apply(await _bll.GetBranchesAsync());
                 if (_branches == null)
                     _branches = new DataTable();
 
@@ -131,6 +131,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 if (!dt.Columns.Contains("BranchDisplay"))
                     dt.Columns.Add("BranchDisplay", typeof(string));
 
+                TextFixer.FixDataTable(dt, "BranchCode", "BranchName");
                 foreach (DataRow r in dt.Rows)
                 {
                     string code = dt.Columns.Contains("BranchCode") ? r["BranchCode"]?.ToString() : null;
@@ -221,4 +222,3 @@ namespace quan_ly_chuoi_nha_tro.GUI
         }
     }
 }
-

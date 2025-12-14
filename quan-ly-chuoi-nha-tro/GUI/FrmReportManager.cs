@@ -13,6 +13,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private const string SearchPlaceholder = "Tìm nhanh (mọi cột)...";
 
         private readonly AdminDataBLL _bll;
+        private System.Collections.Generic.HashSet<int> _allowedBranchIds;
 
         private ComboBox _cboSource;
         private TextBox _txtSearch;
@@ -129,6 +130,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
             try
             {
                 _raw = await LoadSelectedAsync();
+                await EnsureAllowedBranchScopeAsync();
+                if (_raw != null && _raw.Columns.Contains("BranchId"))
+                    _raw = AdminBranchScope.FilterByBranchIds(_raw, _allowedBranchIds);
                 _grid.DataSource = _raw;
                 _lblCount.Text = $"Tổng: {_raw?.Rows.Count ?? 0}";
                 ApplyFilter();
@@ -136,6 +140,20 @@ namespace quan_ly_chuoi_nha_tro.GUI
             catch (Exception ex)
             {
                 MessageBox.Show("Lỗi tải báo cáo: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private async System.Threading.Tasks.Task EnsureAllowedBranchScopeAsync()
+        {
+            if (_allowedBranchIds != null && _allowedBranchIds.Count > 0) return;
+            try
+            {
+                var branches = AdminBranchScope.Apply(await _bll.GetBranchesAsync());
+                _allowedBranchIds = AdminBranchScope.GetAllowedBranchIds(branches);
+            }
+            catch
+            {
+                _allowedBranchIds = new System.Collections.Generic.HashSet<int>();
             }
         }
 
@@ -256,4 +274,3 @@ namespace quan_ly_chuoi_nha_tro.GUI
         }
     }
 }
-

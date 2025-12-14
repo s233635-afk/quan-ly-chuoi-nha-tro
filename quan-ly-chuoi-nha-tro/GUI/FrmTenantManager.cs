@@ -305,7 +305,40 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 _tenantTable = await _bll.GetTenantsAsync();
                 _dependentTable = await _bll.GetDependentsAsync();
-                _historyTable = await _bll.GetTenantHistoryAsync();
+                var fullHistory = await _bll.GetTenantHistoryAsync();
+
+                // Scope theo 2 chi nhánh admin (CT01,CT02 theo DB). Tenants không có BranchId nên lọc qua lịch sử phòng.
+                var branches = AdminBranchScope.Apply(await _bll.GetBranchesAsync());
+                var allowedIds = AdminBranchScope.GetAllowedBranchIds(branches);
+
+                _historyTable = AdminBranchScope.FilterByBranchIds(fullHistory, allowedIds);
+
+                if (allowedIds.Count > 0 && _tenantTable != null && _tenantTable.Columns.Contains("TenantId") && fullHistory != null && fullHistory.Columns.Contains("TenantId") && fullHistory.Columns.Contains("BranchId"))
+                {
+                    var tenantInAllowed = _historyTable.AsEnumerable()
+                        .Where(r => int.TryParse(r["TenantId"]?.ToString(), out _))
+                        .Select(r => Convert.ToInt32(r["TenantId"]))
+                        .ToHashSet();
+
+                    var tenantInOther = fullHistory.AsEnumerable()
+                        .Where(r =>
+                        {
+                            if (!int.TryParse(r["TenantId"]?.ToString(), out _)) return false;
+                            if (!int.TryParse(r["BranchId"]?.ToString(), out var bid)) return false;
+                            return bid > 0 && !allowedIds.Contains(bid);
+                        })
+                        .Select(r => Convert.ToInt32(r["TenantId"]))
+                        .ToHashSet();
+
+                    var filteredTenants = _tenantTable.Clone();
+                    foreach (DataRow r in _tenantTable.Rows)
+                    {
+                        if (!int.TryParse(r["TenantId"]?.ToString(), out var tid) || tid <= 0) continue;
+                        if (tenantInAllowed.Contains(tid) || !tenantInOther.Contains(tid))
+                            filteredTenants.ImportRow(r);
+                    }
+                    _tenantTable = filteredTenants;
+                }
 
                 _gridTenants.DataSource = _tenantTable;
                 _gridDependents.DataSource = _dependentTable;
@@ -384,6 +417,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             HideIfExists(_gridHistory, "TenantId");
             HideIfExists(_gridHistory, "RoomId");
+            HideIfExists(_gridHistory, "BranchId");
             FormatDate(_gridHistory, "CheckInDate");
             FormatDate(_gridHistory, "CheckOutDate");
             FormatDateTime(_gridHistory, "CreatedDate");

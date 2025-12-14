@@ -1,6 +1,8 @@
 using System;
+using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace QuanLyNhaTro.DAL
@@ -29,51 +31,111 @@ namespace QuanLyNhaTro.DAL
             {
                 await conn.OpenAsync();
 
+                var allowed = ReadAdminAllowedBranchCodes();
+                int[] scopedBranchIds = allowed.Length > 0 ? await ResolveScopedBranchIdsAsync(conn, allowed) : Array.Empty<int>();
+                string branchIdInList = scopedBranchIds.Length > 0 ? string.Join(",", scopedBranchIds) : null;
+
+                int maxRooms = ReadAdminMaxRooms();
+                string roomIdSubquery = null;
+                if (maxRooms > 0)
+                {
+                    // Chỉ giới hạn khi có scope chi nhánh rõ ràng (để tránh đếm 0 do config sai).
+                    string where = "WHERE IsActive = 1";
+                    if (branchIdInList != null)
+                        where += $" AND BranchId IN ({branchIdInList})";
+                    roomIdSubquery = $"SELECT TOP ({maxRooms}) RoomId FROM Rooms {where} ORDER BY RoomNumber, RoomId";
+                }
+
                 // COUNT(*) ít phụ thuộc schema; các chỉ số chi tiết sẽ try nhiều câu lệnh và fallback về 0.
                 dt.Rows[0]["TotalBranches"] = await GetScalarIntBestEffortAsync(conn,
+                    branchIdInList != null ? $"SELECT COUNT(*) FROM Branches WHERE IsActive = 1 AND BranchId IN ({branchIdInList})" : null,
                     "SELECT COUNT(*) FROM Branches WHERE IsActive = 1",
                     "SELECT COUNT(*) FROM Branches",
                     "SELECT COUNT(*) FROM Branch");
 
                 dt.Rows[0]["TotalRooms"] = await GetScalarIntBestEffortAsync(conn,
+                    roomIdSubquery != null ? $"SELECT COUNT(*) FROM ({roomIdSubquery}) x" : (branchIdInList != null ? $"SELECT COUNT(*) FROM Rooms WHERE IsActive = 1 AND BranchId IN ({branchIdInList})" : null),
                     "SELECT COUNT(*) FROM Rooms WHERE IsActive = 1",
                     "SELECT COUNT(*) FROM Rooms",
                     "SELECT COUNT(*) FROM Room");
 
                 dt.Rows[0]["TotalTenants"] = await GetScalarIntBestEffortAsync(conn,
+                    branchIdInList != null ? $@"SELECT COUNT(DISTINCT t.TenantId)
+                      FROM Tenants t
+                      INNER JOIN Contracts c ON c.TenantId = t.TenantId
+                      INNER JOIN Rooms r ON r.RoomId = c.RoomId
+                      WHERE t.IsActive = 1
+                        AND r.BranchId IN ({branchIdInList})
+                        {(roomIdSubquery != null ? $"AND r.RoomId IN ({roomIdSubquery})" : string.Empty)}" : null,
                     "SELECT COUNT(*) FROM Tenants WHERE IsActive = 1",
                     "SELECT COUNT(*) FROM Tenants",
                     "SELECT COUNT(*) FROM Tenant");
 
                 dt.Rows[0]["TotalContracts"] = await GetScalarIntBestEffortAsync(conn,
+                    branchIdInList != null ? $@"SELECT COUNT(*) FROM Contracts c
+                      INNER JOIN Rooms r ON r.RoomId = c.RoomId
+                      WHERE r.BranchId IN ({branchIdInList})
+                        {(roomIdSubquery != null ? $"AND r.RoomId IN ({roomIdSubquery})" : string.Empty)}" : null,
                     "SELECT COUNT(*) FROM Contracts",
                     "SELECT COUNT(*) FROM Contract");
 
                 dt.Rows[0]["TotalInvoices"] = await GetScalarIntBestEffortAsync(conn,
+                    branchIdInList != null ? $@"SELECT COUNT(*) FROM Invoices i
+                      INNER JOIN Rooms r ON r.RoomId = i.RoomId
+                      WHERE r.BranchId IN ({branchIdInList})
+                        {(roomIdSubquery != null ? $"AND r.RoomId IN ({roomIdSubquery})" : string.Empty)}" : null,
                     "SELECT COUNT(*) FROM Invoices",
                     "SELECT COUNT(*) FROM Invoice");
 
                 // Hóa đơn còn nợ (ưu tiên RemainingAmount, fallback theo status)
                 dt.Rows[0]["OutstandingInvoiceCount"] = await GetScalarIntBestEffortAsync(conn,
+                    branchIdInList != null ? $@"SELECT COUNT(*) FROM Invoices i
+                      INNER JOIN Rooms r ON r.RoomId = i.RoomId
+                      WHERE i.RemainingAmount > 0
+                        AND r.BranchId IN ({branchIdInList})
+                        {(roomIdSubquery != null ? $"AND r.RoomId IN ({roomIdSubquery})" : string.Empty)}" : null,
                     "SELECT COUNT(*) FROM Invoices WHERE RemainingAmount > 0",
                     "SELECT COUNT(*) FROM Invoices WHERE (TotalAmount - ISNULL(PaidAmount,0)) > 0",
                     "SELECT COUNT(*) FROM Invoices WHERE Status IN (0, 'Unpaid', 'UNPAID', N'Chưa thanh toán', N'Chua thanh toan')");
 
                 dt.Rows[0]["OutstandingAmount"] = await GetScalarDecimalBestEffortAsync(conn,
+                    branchIdInList != null ? $@"SELECT CAST(ISNULL(SUM(i.RemainingAmount),0) AS DECIMAL(18,2))
+                      FROM Invoices i
+                      INNER JOIN Rooms r ON r.RoomId = i.RoomId
+                      WHERE i.RemainingAmount > 0
+                        AND r.BranchId IN ({branchIdInList})
+                        {(roomIdSubquery != null ? $"AND r.RoomId IN ({roomIdSubquery})" : string.Empty)}" : null,
                     "SELECT CAST(ISNULL(SUM(RemainingAmount),0) AS DECIMAL(18,2)) FROM Invoices WHERE RemainingAmount > 0",
                     "SELECT CAST(ISNULL(SUM(TotalAmount - ISNULL(PaidAmount,0)),0) AS DECIMAL(18,2)) FROM Invoices WHERE (TotalAmount - ISNULL(PaidAmount,0)) > 0");
 
                 // Đặt cọc (DepositAmount hoặc Amount)
                 dt.Rows[0]["TotalDeposits"] = await GetScalarIntBestEffortAsync(conn,
+                    branchIdInList != null ? $@"SELECT COUNT(*) FROM Deposits d
+                      INNER JOIN Rooms r ON r.RoomId = d.RoomId
+                      WHERE r.BranchId IN ({branchIdInList})
+                        {(roomIdSubquery != null ? $"AND r.RoomId IN ({roomIdSubquery})" : string.Empty)}" : null,
                     "SELECT COUNT(*) FROM Deposits",
                     "SELECT COUNT(*) FROM Deposit");
 
                 dt.Rows[0]["DepositAmount"] = await GetScalarDecimalBestEffortAsync(conn,
+                    branchIdInList != null ? $@"SELECT CAST(ISNULL(SUM(d.DepositAmount),0) AS DECIMAL(18,2))
+                      FROM Deposits d
+                      INNER JOIN Rooms r ON r.RoomId = d.RoomId
+                      WHERE r.BranchId IN ({branchIdInList})
+                        {(roomIdSubquery != null ? $"AND r.RoomId IN ({roomIdSubquery})" : string.Empty)}" : null,
                     "SELECT CAST(ISNULL(SUM(DepositAmount),0) AS DECIMAL(18,2)) FROM Deposits",
                     "SELECT CAST(ISNULL(SUM(Amount),0) AS DECIMAL(18,2)) FROM Deposits");
 
                 // Thanh toán tháng này
                 dt.Rows[0]["PaymentsThisMonth"] = await GetScalarDecimalBestEffortAsync(conn,
+                    branchIdInList != null ? $@"SELECT CAST(ISNULL(SUM(p.PaymentAmount),0) AS DECIMAL(18,2))
+                      FROM Payments p
+                      INNER JOIN Invoices i ON i.InvoiceId = p.InvoiceId
+                      INNER JOIN Rooms r ON r.RoomId = i.RoomId
+                      WHERE p.PaymentDate >= DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1)
+                        AND p.PaymentDate < DATEADD(MONTH, 1, DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1))
+                        AND r.BranchId IN ({branchIdInList})
+                        {(roomIdSubquery != null ? $"AND r.RoomId IN ({roomIdSubquery})" : string.Empty)}" : null,
                     @"SELECT CAST(ISNULL(SUM(PaymentAmount),0) AS DECIMAL(18,2)) 
                       FROM Payments 
                       WHERE PaymentDate >= DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1)
@@ -85,6 +147,11 @@ namespace QuanLyNhaTro.DAL
 
                 // Bảo trì mở (MaintenanceTickets hoặc MaintenanceRecords)
                 dt.Rows[0]["OpenMaintenance"] = await GetScalarIntBestEffortAsync(conn,
+                    branchIdInList != null ? $@"SELECT COUNT(*) FROM MaintenanceTickets t
+                      INNER JOIN Rooms r ON r.RoomId = t.RoomId
+                      WHERE t.Status NOT IN ('Done','DONE',N'Hoàn tất',N'Hoan tat',2)
+                        AND r.BranchId IN ({branchIdInList})
+                        {(roomIdSubquery != null ? $"AND r.RoomId IN ({roomIdSubquery})" : string.Empty)}" : null,
                     "SELECT COUNT(*) FROM MaintenanceTickets WHERE Status NOT IN ('Done','DONE',N'Hoàn tất',N'Hoan tat',2)",
                     "SELECT COUNT(*) FROM MaintenanceTickets",
                     "SELECT COUNT(*) FROM MaintenanceRecords WHERE Status NOT IN (2, 'Done','DONE',N'Hoàn tất',N'Hoan tat')",
@@ -95,6 +162,80 @@ namespace QuanLyNhaTro.DAL
         }
 
         #endregion
+
+        private static async Task<int[]> ResolveScopedBranchIdsAsync(SqlConnection conn, string[] allowedCodes)
+        {
+            if (conn == null) throw new ArgumentNullException(nameof(conn));
+            if (allowedCodes == null || allowedCodes.Length == 0) return Array.Empty<int>();
+
+            // 1) try by BranchCode from config
+            try
+            {
+                string inList = BuildNvarcharInList(allowedCodes);
+                using (var cmd = new SqlCommand($"SELECT BranchId FROM Branches WHERE IsActive = 1 AND BranchCode IN ({inList}) ORDER BY BranchId", conn))
+                {
+                    var list = new System.Collections.Generic.List<int>();
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            if (!reader.IsDBNull(0))
+                                list.Add(Convert.ToInt32(reader.GetValue(0)));
+                        }
+                    }
+                    if (list.Count > 0) return list.ToArray();
+                }
+            }
+            catch
+            {
+                // ignore
+            }
+
+            // 2) fallback by name contains "Cần Thơ"/"Can Tho"
+            try
+            {
+                using (var cmd = new SqlCommand(
+                    "SELECT TOP 2 BranchId FROM Branches WHERE IsActive = 1 AND (BranchName LIKE N'%Cần Thơ%' OR BranchName LIKE N'%Can Tho%') ORDER BY BranchId", conn))
+                {
+                    var list = new System.Collections.Generic.List<int>();
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            if (!reader.IsDBNull(0))
+                                list.Add(Convert.ToInt32(reader.GetValue(0)));
+                        }
+                    }
+                    if (list.Count > 0) return list.ToArray();
+                }
+            }
+            catch
+            {
+                // ignore
+            }
+
+            // 3) last resort: take first 2 active branches
+            try
+            {
+                using (var cmd = new SqlCommand("SELECT TOP 2 BranchId FROM Branches WHERE IsActive = 1 ORDER BY BranchId", conn))
+                {
+                    var list = new System.Collections.Generic.List<int>();
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            if (!reader.IsDBNull(0))
+                                list.Add(Convert.ToInt32(reader.GetValue(0)));
+                        }
+                    }
+                    return list.ToArray();
+                }
+            }
+            catch
+            {
+                return Array.Empty<int>();
+            }
+        }
 
         private async Task<DataTable> GetTableAsync(string sql, Action<SqlCommand> parameterize = null)
         {
@@ -148,6 +289,7 @@ namespace QuanLyNhaTro.DAL
         {
             foreach (var sql in sqlAttempts)
             {
+                if (string.IsNullOrWhiteSpace(sql)) continue;
                 try
                 {
                     using (var cmd = new SqlCommand(sql, conn))
@@ -170,6 +312,7 @@ namespace QuanLyNhaTro.DAL
         {
             foreach (var sql in sqlAttempts)
             {
+                if (string.IsNullOrWhiteSpace(sql)) continue;
                 try
                 {
                     using (var cmd = new SqlCommand(sql, conn))
@@ -186,6 +329,41 @@ namespace QuanLyNhaTro.DAL
             }
 
             return 0m;
+        }
+
+        private static string[] ReadAdminAllowedBranchCodes()
+        {
+            string raw = null;
+            try { raw = ConfigurationManager.AppSettings["AdminAllowedBranchCodes"]; } catch { }
+
+            // Missing key => default 2 chi nhánh Cần Thơ.
+            if (raw == null) raw = "CT01,CT02";
+
+            // Present-but-empty => no scope.
+            if (string.IsNullOrWhiteSpace(raw)) return Array.Empty<string>();
+
+            return raw
+                .Split(new[] { ',', ';', '|' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(s => s.Trim())
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+
+        private static int ReadAdminMaxRooms()
+        {
+            string raw = null;
+            try { raw = ConfigurationManager.AppSettings["AdminMaxRooms"]; } catch { }
+
+            if (string.IsNullOrWhiteSpace(raw)) return 0;
+            if (!int.TryParse(raw.Trim(), out var limit)) return 0;
+            return limit > 0 ? limit : 0;
+        }
+
+        private static string BuildNvarcharInList(string[] values)
+        {
+            if (values == null || values.Length == 0) return "N''";
+            return string.Join(",", values.Select(v => "N'" + (v ?? string.Empty).Replace("'", "''") + "'"));
         }
 
         #region Rooms CRUD

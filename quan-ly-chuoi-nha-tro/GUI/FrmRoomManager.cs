@@ -10,6 +10,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
     public class FrmRoomManager : Form
     {
         private const string SearchPlaceholder = "Tìm theo số phòng/chi nhánh/trạng thái...";
+        private readonly int _maxRooms;
 
         private readonly AdminDataBLL _bll = new AdminDataBLL();
 
@@ -34,9 +35,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private DataTable _branchTable;
         private DataTable _statusTable;
+        private DataTable _typeTable;
+        private System.Collections.Generic.Dictionary<int, string> _roomTypeNameById;
 
         public FrmRoomManager()
         {
+            _maxRooms = AdminScopeConfig.MaxRooms;
             InitializeComponent();
         }
 
@@ -70,6 +74,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(232, 244, 252);
             _grid.DefaultCellStyle.SelectionForeColor = Color.Black;
             _grid.CellFormatting += Grid_CellFormatting;
+            _grid.CellClick += Grid_CellClick;
             _grid.DoubleClick += async (s, e) => await EditSelectedAsync();
 
             _txtSearch = new TextBox { Width = 280 };
@@ -244,6 +249,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 await LoadLookupsAsync();
                 _rawTable = await _bll.GetRoomsAsync();
+                ApplyAdminBranchScopeToRooms();
+                TextFixer.FixDataTable(_rawTable, "BranchName", "SectionName", "RoomTypeName", "StatusName");
+                ApplyRoomTypeDisplayNormalization();
+                NormalizeAndLimitRooms();
                 _grid.DataSource = _rawTable;
                 ApplyGridPresentation();
                 ApplyFilter();
@@ -256,8 +265,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private async System.Threading.Tasks.Task LoadLookupsAsync()
         {
-            _branchTable = await _bll.GetBranchesAsync();
+            _branchTable = AdminBranchScope.Apply(await _bll.GetBranchesAsync());
             _statusTable = await _bll.GetRoomStatusesAsync();
+            _typeTable = await _bll.GetRoomTypesAsync();
+
+            BuildRoomTypeNameMap();
+            TextFixer.FixDataTable(_branchTable, "BranchCode", "BranchName");
+            TextFixer.FixDataTable(_statusTable, "StatusName", "Description");
 
             var branches = _branchTable?.Copy();
             if (branches != null && !branches.Columns.Contains("BranchDisplay"))
@@ -306,6 +320,76 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _cboStatus.DataSource = statusSelect;
             _cboStatus.DisplayMember = "StatusName";
             _cboStatus.ValueMember = "StatusId";
+        }
+
+        private void BuildRoomTypeNameMap()
+        {
+            _roomTypeNameById = new System.Collections.Generic.Dictionary<int, string>();
+            if (_typeTable == null || !_typeTable.Columns.Contains("RoomTypeId") || !_typeTable.Columns.Contains("RoomTypeName"))
+                return;
+
+            TextFixer.FixDataTable(_typeTable, "RoomTypeName", "Amenities", "Description");
+
+            foreach (DataRow r in _typeTable.Rows)
+            {
+                if (!int.TryParse(r["RoomTypeId"]?.ToString(), out var id) || id <= 0) continue;
+                string name = RoomTypeCatalog.Canonicalize(r["RoomTypeName"]?.ToString());
+                if (string.IsNullOrWhiteSpace(name)) continue;
+                if (!_roomTypeNameById.ContainsKey(id))
+                    _roomTypeNameById[id] = name;
+            }
+        }
+
+        private void ApplyRoomTypeDisplayNormalization()
+        {
+            if (_rawTable == null || !_rawTable.Columns.Contains("RoomTypeName")) return;
+            if (_roomTypeNameById == null || _roomTypeNameById.Count == 0)
+            {
+                RoomTypeCatalog.CanonicalizeRoomTypeColumn(_rawTable, "RoomTypeName");
+                return;
+            }
+
+            foreach (DataRow r in _rawTable.Rows)
+            {
+                int typeId = 0;
+                if (_rawTable.Columns.Contains("RoomTypeId"))
+                    int.TryParse(r["RoomTypeId"]?.ToString(), out typeId);
+
+                if (typeId > 0 && _roomTypeNameById.TryGetValue(typeId, out var mapped))
+                {
+                    r["RoomTypeName"] = mapped;
+                }
+                else
+                {
+                    var raw = r["RoomTypeName"]?.ToString();
+                    r["RoomTypeName"] = RoomTypeCatalog.Canonicalize(raw);
+                }
+            }
+        }
+
+        private void ApplyAdminBranchScopeToRooms()
+        {
+            if (!AdminBranchScope.IsEnabled) return;
+            if (_rawTable == null || !_rawTable.Columns.Contains("BranchId")) return;
+            if (_branchTable == null || !_branchTable.Columns.Contains("BranchId")) return;
+
+            var allowedIds = _branchTable.AsEnumerable()
+                .Select(r => r["BranchId"]?.ToString())
+                .Where(s => int.TryParse(s, out _))
+                .Select(int.Parse)
+                .ToHashSet();
+
+            if (allowedIds.Count == 0) return;
+
+            var filtered = _rawTable.Clone();
+            foreach (DataRow r in _rawTable.Rows)
+            {
+                if (!int.TryParse(r["BranchId"]?.ToString(), out var bid)) continue;
+                if (!allowedIds.Contains(bid)) continue;
+                filtered.ImportRow(r);
+            }
+
+            _rawTable = filtered;
         }
 
         private void ApplyGridPresentation()
@@ -387,22 +471,70 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     Contains(r, "RoomId", keyword));
             }
 
+            var materialized = rows.ToList();
+            int totalCount = materialized.Count;
+
             var filtered = _rawTable.Clone();
-            foreach (var r in rows)
+            foreach (var r in materialized)
                 filtered.ImportRow(r);
 
             _grid.DataSource = filtered;
             ApplyGridPresentation();
 
-            _lblCount.Text = $"Tổng: {filtered.Rows.Count}";
-            UpdateSummary(filtered);
+            _lblCount.Text = $"Tổng: {totalCount:N0}";
+            UpdateSummary(materialized);
         }
 
-        private void UpdateSummary(DataTable table)
+        private void NormalizeAndLimitRooms()
+        {
+            if (_rawTable == null) return;
+            if (!_rawTable.Columns.Contains("RoomNumber")) return;
+
+            bool hasBranchId = _rawTable.Columns.Contains("BranchId");
+
+            var rows = _rawTable.AsEnumerable()
+                .Where(r =>
+                {
+                    string number = r["RoomNumber"]?.ToString();
+                    return !string.IsNullOrWhiteSpace(number);
+                });
+
+            var unique = rows
+                .GroupBy(r =>
+                {
+                    string number = (r["RoomNumber"]?.ToString() ?? string.Empty).Trim();
+                    if (!hasBranchId) return number;
+                    string bid = r["BranchId"]?.ToString() ?? string.Empty;
+                    return bid + "|" + number;
+                }, System.StringComparer.OrdinalIgnoreCase)
+                .Select(g =>
+                {
+                    return g
+                        .OrderByDescending(r => TryReadBool(r, "IsActive") ?? true)
+                        .ThenByDescending(r => ReadInt(r, "RoomId"))
+                        .First();
+                });
+
+            System.Collections.Generic.IEnumerable<DataRow> ordered = unique
+                .OrderBy(r => r.Table.Columns.Contains("BranchName") ? (r["BranchName"]?.ToString() ?? string.Empty) : string.Empty)
+                .ThenBy(r => (r["RoomNumber"]?.ToString() ?? string.Empty));
+
+            if (_maxRooms > 0)
+                ordered = ordered.Take(_maxRooms);
+
+            var dt = _rawTable.Clone();
+            foreach (var r in ordered)
+                dt.ImportRow(r);
+
+            _rawTable = dt;
+        }
+
+        private void UpdateSummary(System.Collections.Generic.List<DataRow> rows)
         {
             int vacant = 0, occupied = 0, maintenance = 0;
-            foreach (DataRow r in table.Rows)
+            foreach (DataRow r in rows ?? new System.Collections.Generic.List<DataRow>())
             {
+                var table = r.Table;
                 string statusName = table.Columns.Contains("StatusName") ? r["StatusName"]?.ToString() : null;
                 int statusId = table.Columns.Contains("CurrentStatusId") && int.TryParse(r["CurrentStatusId"]?.ToString(), out var sid) ? sid : 0;
 
@@ -436,7 +568,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             using (var frm = new FrmRoomEditor(_bll))
             {
                 if (frm.ShowDialog(this) == DialogResult.OK)
+                {
                     await LoadDataAsync();
+                    AdminEvents.NotifyDataChanged();
+                }
             }
         }
 
@@ -452,7 +587,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             using (var frm = new FrmRoomEditor(_bll, row))
             {
                 if (frm.ShowDialog(this) == DialogResult.OK)
+                {
                     await LoadDataAsync();
+                    AdminEvents.NotifyDataChanged();
+                }
             }
         }
 
@@ -480,6 +618,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 await _bll.DeleteRoomAsync(id);
                 await LoadDataAsync();
+                AdminEvents.NotifyDataChanged();
             }
             catch (Exception ex)
             {
@@ -515,6 +654,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 await UpdateRoomFromRowAsync(row, isActive: next);
                 await LoadDataAsync();
+                AdminEvents.NotifyDataChanged();
             }
             catch (Exception ex)
             {
@@ -547,6 +687,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 await UpdateRoomFromRowAsync(row, statusId: newStatusId);
                 await LoadDataAsync();
+                AdminEvents.NotifyDataChanged();
             }
             catch (Exception ex)
             {
@@ -571,7 +712,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             await _bll.UpdateRoomAsync(id, roomNumber, branchId, sectionId, roomTypeId, price, currentStatusId, floor, area, active);
         }
 
-        private static void Grid_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
+        private void Grid_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
         {
             var grid = sender as DataGridView;
             if (grid == null) return;
@@ -579,6 +720,26 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             var col = grid.Columns[e.ColumnIndex];
             if (col == null) return;
+
+            if (col.Name == "RoomTypeName" && e.Value != null)
+            {
+                int typeId = 0;
+                try
+                {
+                    typeId = Convert.ToInt32(grid.Rows[e.RowIndex].Cells["RoomTypeId"]?.Value);
+                }
+                catch { }
+
+                string display = null;
+                if (typeId > 0 && _roomTypeNameById != null)
+                    _roomTypeNameById.TryGetValue(typeId, out display);
+
+                if (string.IsNullOrWhiteSpace(display))
+                    display = RoomTypeCatalog.Canonicalize(e.Value.ToString());
+
+                e.Value = display;
+                e.FormattingApplied = true;
+            }
 
             if (col.Name == "StatusName" && e.Value != null)
             {
@@ -602,6 +763,32 @@ namespace quan_ly_chuoi_nha_tro.GUI
                         e.CellStyle.ForeColor = Color.FromArgb(211, 47, 47);
                 }
                 catch { }
+            }
+        }
+
+        private async void Grid_CellClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.ColumnIndex < 0) return;
+            var col = _grid.Columns[e.ColumnIndex];
+            if (col == null) return;
+
+            if (col.Name != "IsActive") return;
+
+            var row = (_grid.Rows[e.RowIndex].DataBoundItem as DataRowView)?.Row;
+            if (row == null) return;
+
+            bool current = false;
+            try { current = Convert.ToBoolean(row["IsActive"]); } catch { }
+
+            try
+            {
+                await UpdateRoomFromRowAsync(row, isActive: !current);
+                await LoadDataAsync();
+                AdminEvents.NotifyDataChanged();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi bật/tắt: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

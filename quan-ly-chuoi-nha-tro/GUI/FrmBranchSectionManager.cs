@@ -136,8 +136,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             try
             {
-                _branches = await _bll.GetBranchesAsync();
+                _branches = AdminBranchScope.Apply(await _bll.GetBranchesAsync());
+                TextFixer.FixDataTable(_branches, "BranchCode", "BranchName");
+
                 _raw = await _bll.GetBranchSectionsAsync();
+                TextFixer.FixDataTable(_raw, "SectionCode", "SectionName", "Description");
+
+                var allowedIds = AdminBranchScope.GetAllowedBranchIds(_branches);
+                _raw = AdminBranchScope.FilterByBranchIds(_raw, allowedIds);
                 EnrichBranchName(_raw, _branches);
                 BindBranchFilter();
                 _grid.DataSource = _raw;
@@ -259,7 +265,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             using (var frm = new FrmBranchSectionEditor(_bll, null, preset))
             {
                 if (frm.ShowDialog(this) == DialogResult.OK)
+                {
                     _ = LoadDataAsync();
+                    AdminEvents.NotifyDataChanged();
+                }
             }
         }
 
@@ -275,7 +284,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             using (var frm = new FrmBranchSectionEditor(_bll, row))
             {
                 if (frm.ShowDialog(this) == DialogResult.OK)
+                {
                     _ = LoadDataAsync();
+                    AdminEvents.NotifyDataChanged();
+                }
             }
         }
 
@@ -298,6 +310,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 await _bll.DeleteBranchSectionAsync(id);
                 await LoadDataAsync();
+                AdminEvents.NotifyDataChanged();
             }
             catch (Exception ex)
             {
@@ -350,4 +363,3 @@ namespace quan_ly_chuoi_nha_tro.GUI
         }
     }
 }
-

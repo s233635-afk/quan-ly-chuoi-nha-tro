@@ -109,6 +109,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 await LoadBranchesAsync();
                 _rawTable = await _bll.GetAssetsAsync();
+                ApplyAdminBranchScopeToAssets();
+                TextFixer.FixDataTable(_rawTable, "AssetName", "Category", "Condition", "Description", "RoomNumber");
                 _grid.DataSource = _rawTable;
                 ApplyGridPresentation();
                 ApplyFilter();
@@ -123,7 +125,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             try
             {
-                var dt = await _bll.GetBranchesAsync();
+                var dt = AdminBranchScope.Apply(await _bll.GetBranchesAsync());
+                TextFixer.FixDataTable(dt, "BranchName");
                 _branchTable = new DataTable();
                 _branchTable.Columns.Add("BranchId", typeof(int));
                 _branchTable.Columns.Add("BranchDisplay", typeof(string));
@@ -153,6 +156,30 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 _cboBranch.Items.Add("Tất cả");
                 _cboBranch.SelectedIndex = 0;
             }
+        }
+
+        private void ApplyAdminBranchScopeToAssets()
+        {
+            if (!AdminBranchScope.IsEnabled) return;
+            if (_rawTable == null || !_rawTable.Columns.Contains("BranchId")) return;
+            if (_branchTable == null || !_branchTable.Columns.Contains("BranchId")) return;
+
+            var allowed = _branchTable.AsEnumerable()
+                .Select(r => r["BranchId"]?.ToString())
+                .Where(s => int.TryParse(s, out var id) && id > 0)
+                .Select(int.Parse)
+                .ToHashSet();
+
+            if (allowed.Count == 0) return;
+
+            var filtered = _rawTable.Clone();
+            foreach (DataRow r in _rawTable.Rows)
+            {
+                if (!int.TryParse(r["BranchId"]?.ToString(), out var bid)) continue;
+                if (!allowed.Contains(bid)) continue;
+                filtered.ImportRow(r);
+            }
+            _rawTable = filtered;
         }
 
         private void ApplyGridPresentation()
@@ -243,7 +270,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             using (var frm = new FrmAssetEditor(_bll))
             {
                 if (frm.ShowDialog(this) == DialogResult.OK)
+                {
                     await LoadAsync();
+                    AdminEvents.NotifyDataChanged();
+                }
             }
         }
 
@@ -259,7 +289,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             using (var frm = new FrmAssetEditor(_bll, row))
             {
                 if (frm.ShowDialog(this) == DialogResult.OK)
+                {
                     await LoadAsync();
+                    AdminEvents.NotifyDataChanged();
+                }
             }
         }
 
@@ -282,6 +315,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 await _bll.DeleteAssetAsync(id);
                 await LoadAsync();
+                AdminEvents.NotifyDataChanged();
             }
             catch (Exception ex)
             {
@@ -323,6 +357,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     next);
 
                 await LoadAsync();
+                AdminEvents.NotifyDataChanged();
             }
             catch (Exception ex)
             {
@@ -531,4 +566,3 @@ namespace quan_ly_chuoi_nha_tro.GUI
         }
     }
 }
-

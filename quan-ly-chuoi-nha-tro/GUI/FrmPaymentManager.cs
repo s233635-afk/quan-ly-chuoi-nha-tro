@@ -17,6 +17,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private readonly int? _invoiceId;
         private readonly string _invoiceNumber;
         private readonly int? _branchId;
+        private HashSet<int> _allowedBranchIds;
 
         private DataTable _rawTable;
 
@@ -31,7 +32,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Button _btnAdd;
         private Button _btnEdit;
         private Button _btnDelete;
-        private Button _btnSample;
         private Button _btnRefresh;
 
         public FrmPaymentManager(AdminDataBLL bll, int? invoiceId = null, string invoiceNumber = null, int? branchId = null)
@@ -109,7 +109,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnAdd = MakeButton("Thu tiền", Color.FromArgb(46, 125, 50), async (s, e) => await AddNewAsync());
             _btnEdit = MakeButton("Sửa", Color.FromArgb(0, 122, 204), async (s, e) => await EditSelectedAsync());
             _btnDelete = MakeButton("Xóa", Color.FromArgb(211, 47, 47), async (s, e) => await DeleteSelectedAsync());
-            _btnSample = MakeButton("Dữ liệu mẫu", Color.FromArgb(103, 58, 183), async (s, e) => await SeedSampleAsync());
             _btnRefresh = MakeButton("Tải lại", Color.FromArgb(0, 122, 204), async (s, e) => await LoadDataAsync());
 
             var top = new Panel { Dock = DockStyle.Top, Height = 64, Padding = new Padding(12, 10, 12, 10), BackColor = Color.White };
@@ -125,7 +124,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             actions.Controls.Add(_btnAdd);
             actions.Controls.Add(_btnEdit);
             actions.Controls.Add(_btnDelete);
-            actions.Controls.Add(_btnSample);
             actions.Controls.Add(_btnRefresh);
 
             var searchHost = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent };
@@ -209,22 +207,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 if (_invoiceId.HasValue)
                     await EnrichPaymentsAsync(_rawTable);
 
-                _rawTable = FilterByBranch(_rawTable, _branchId);
+                if (_branchId.HasValue)
+                {
+                    _rawTable = FilterByBranch(_rawTable, _branchId);
+                }
+                else
+                {
+                    await EnsureAllowedBranchScopeAsync();
+                    _rawTable = AdminBranchScope.FilterByBranchIds(_rawTable, _allowedBranchIds);
+                }
 
                 _grid.DataSource = _rawTable;
                 ApplyGridPresentation();
                 ApplyFilter();
-
-                if (_rawTable.Rows.Count == 0 && !_invoiceId.HasValue)
-                {
-                    var result = MessageBox.Show(
-                        "Chưa có dữ liệu thanh toán. Tạo nhanh dữ liệu mẫu để dùng thử?",
-                        "Gợi ý",
-                        MessageBoxButtons.YesNo,
-                        MessageBoxIcon.Question);
-                    if (result == DialogResult.Yes)
-                        await SeedSampleAsync();
-                }
             }
             catch (Exception ex)
             {
@@ -386,7 +381,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 using (var frm = new FrmPaymentEditor(_bll, invoiceRow))
                 {
                     if (frm.ShowDialog(this) == DialogResult.OK)
+                    {
                         await LoadDataAsync();
+                        AdminEvents.NotifyDataChanged();
+                    }
                 }
             }
             catch (Exception ex)
@@ -416,6 +414,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             if (_branchId.HasValue && invTable.Columns.Contains("BranchId"))
                 selectable = selectable.Where(r => int.TryParse(r["BranchId"]?.ToString(), out var b) && b == _branchId.Value).ToList();
+            else if (invTable.Columns.Contains("BranchId"))
+            {
+                await EnsureAllowedBranchScopeAsync();
+                if (_allowedBranchIds != null && _allowedBranchIds.Count > 0)
+                    selectable = selectable.Where(r => int.TryParse(r["BranchId"]?.ToString(), out var b) && _allowedBranchIds.Contains(b)).ToList();
+            }
 
             if (selectable.Count == 0) return null;
 
@@ -461,7 +465,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             using (var frm = new FrmPaymentEditor(_bll, invoiceRow, rawRow))
             {
                 if (frm.ShowDialog(this) == DialogResult.OK)
+                {
                     await LoadDataAsync();
+                    AdminEvents.NotifyDataChanged();
+                }
             }
         }
 
@@ -488,6 +495,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 await _bll.DeletePaymentAsync(paymentId);
                 await LoadDataAsync();
+                AdminEvents.NotifyDataChanged();
             }
             catch (Exception ex)
             {
@@ -495,49 +503,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
         }
 
-        private async Task SeedSampleAsync()
+        private async Task EnsureAllowedBranchScopeAsync()
         {
-            if (_invoiceId.HasValue)
-            {
-                MessageBox.Show("Màn này đang lọc theo hóa đơn, không tạo mẫu ở đây. Hãy mở Thanh toán tổng và bấm 'Dữ liệu mẫu'.",
-                    "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
+            if (_branchId.HasValue) return;
+            if (_allowedBranchIds != null && _allowedBranchIds.Count > 0) return;
 
             try
             {
-                var invTable = await _bll.GetInvoicesViewAsync();
-                var selectable = invTable.AsEnumerable()
-                    .Where(r => ReadDecimal(r, "RemainingAmount") > 0)
-                    .ToList();
-
-                if (selectable.Count == 0)
-                {
-                    MessageBox.Show("Không có hóa đơn còn nợ để tạo thanh toán mẫu.", "Thông báo",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    return;
-                }
-
-                int count = 0;
-                var rnd = new Random();
-                for (int i = 0; i < Math.Min(3, selectable.Count); i++)
-                {
-                    var inv = selectable[i];
-                    int invoiceId = Convert.ToInt32(inv["InvoiceId"]);
-                    decimal remaining = ReadDecimal(inv, "RemainingAmount");
-                    decimal amount = Math.Max(1, Math.Min(remaining, remaining * (decimal)(0.3 + rnd.NextDouble() * 0.6)));
-                    amount = Math.Round(amount, 0);
-                    string method = i % 2 == 0 ? "Cash" : "Transfer";
-                    await _bll.AddPaymentAsync(invoiceId, DateTime.Today.AddDays(-i), amount, method, null, "Dữ liệu mẫu");
-                    count++;
-                }
-
-                MessageBox.Show($"Đã tạo {count} thanh toán mẫu.", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                await LoadDataAsync();
+                var branches = AdminBranchScope.Apply(await _bll.GetBranchesAsync());
+                _allowedBranchIds = AdminBranchScope.GetAllowedBranchIds(branches);
             }
-            catch (Exception ex)
+            catch
             {
-                MessageBox.Show("Lỗi tạo dữ liệu mẫu: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                _allowedBranchIds = new HashSet<int>();
             }
         }
 

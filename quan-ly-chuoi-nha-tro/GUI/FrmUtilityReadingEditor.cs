@@ -230,6 +230,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             try
             {
                 var dt = await _bll.GetRoomsAsync();
+
+                var branches = AdminBranchScope.Apply(await _bll.GetBranchesAsync());
+                var allowedIds = AdminBranchScope.GetAllowedBranchIds(branches);
+                dt = AdminBranchScope.FilterByBranchIds(dt, allowedIds);
+                TextFixer.FixDataTable(dt, "RoomNumber", "BranchName", "StatusName");
+
                 _roomTable = new DataTable();
                 _roomTable.Columns.Add("RoomId", typeof(int));
                 _roomTable.Columns.Add("RoomDisplay", typeof(string));
