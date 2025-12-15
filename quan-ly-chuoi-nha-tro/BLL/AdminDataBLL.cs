@@ -187,7 +187,8 @@ namespace QuanLyNhaTro.BLL
             int? currentStatusId,
             int? floor,
             decimal? area,
-            bool? isActive)
+            bool? isActive,
+            int? occupants = null)
         {
             if (roomId <= 0)
                 throw new Exception("ID phòng không hợp lệ.");
@@ -203,7 +204,7 @@ namespace QuanLyNhaTro.BLL
             if (!currentStatusId.HasValue || currentStatusId.Value <= 0)
                 currentStatusId = 1;
 
-            return await dbHelper.UpdateRoomAsync(roomId, roomNumber.Trim(), branchId, sectionId, roomTypeId, roomPrice, currentStatusId, floor, area, isActive);
+            return await dbHelper.UpdateRoomAsync(roomId, roomNumber.Trim(), branchId, sectionId, roomTypeId, roomPrice, currentStatusId, floor, area, isActive, occupants);
         }
 
         public Task<bool> DeleteRoomAsync(int roomId) => dbHelper.DeleteRoomAsync(roomId);
@@ -298,3 +299,4 @@ namespace QuanLyNhaTro.BLL
         #endregion
     }
 }
+

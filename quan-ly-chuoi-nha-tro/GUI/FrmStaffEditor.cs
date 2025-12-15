@@ -105,7 +105,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             pnlBody.Controls.Add(MakeInput(txtEmail, top));
             top += line;
 
-            pnlBody.Controls.Add(MakeLabel("SĐT", top));
+            pnlBody.Controls.Add(MakeLabel("Số điện thoại", top));
             pnlBody.Controls.Add(MakeInput(txtPhone, top));
             top += line;
 
@@ -188,7 +188,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 _branchTable = new DataTable();
                 _branchTable.Columns.Add("BranchId", typeof(int));
                 _branchTable.Columns.Add("BranchName", typeof(string));
-                _branchTable.Rows.Add(0, "— Không chọn —");
+                _branchTable.Rows.Add(0, "Không chọn");
 
                 if (dt != null && dt.Columns.Contains("BranchId") && dt.Columns.Contains("BranchName"))
                 {
@@ -209,7 +209,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             catch
             {
                 cboBranch.Items.Clear();
-                cboBranch.Items.Add("— Không chọn —");
+                cboBranch.Items.Add("Không chọn");
                 cboBranch.SelectedIndex = 0;
             }
         }

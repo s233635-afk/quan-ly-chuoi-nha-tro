@@ -2,74 +2,64 @@ using System;
 using System.Data;
 using System.Drawing;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
+    /// <summary>
+    /// Màn hình quản lý khách thuê cho nhân viên.
+    /// </summary>
     public class FrmTenantManager : Form
     {
-        private const string SearchPlaceholder = "Tìm theo họ tên/cccd/sđt/email...";
+        private const string SearchPlaceholder = "Tìm tên/CCCD/SĐT...";
 
-        private readonly AdminDataBLL _bll = new AdminDataBLL();
+        private readonly AdminDataBLL _bll;
+        private readonly int? _branchId;
 
-        private DataTable _tenantTable;
-        private DataTable _dependentTable;
-        private DataTable _historyTable;
+        private DataTable _tenants;
+        private DataTable _dependents;
+        private DataTable _history;
+        private DataTable _rooms;
 
-        private SplitContainer _split;
-        private bool _splitInitialized;
-
-        private DataGridView _gridTenants;
-        private DataGridView _gridDependents;
-        private DataGridView _gridHistory;
+        private DataGridView _dgvTenants;
+        private DataGridView _dgvDependents;
+        private DataGridView _dgvHistory;
 
         private TextBox _txtSearch;
-        private ComboBox _cboActive;
-        private Label _lblCount;
+        private Label _lblTotal;
 
-        private Button _btnAdd;
-        private Button _btnEdit;
-        private Button _btnDelete;
-        private Button _btnToggleActive;
-        private Button _btnRefresh;
-
-        private Button _btnDepAdd;
-        private Button _btnDepEdit;
-        private Button _btnDepDelete;
-
-        private Button _btnHisAdd;
-        private Button _btnHisEdit;
-        private Button _btnHisDelete;
-        private Button _btnHisCheckout;
-
-        public FrmTenantManager()
+        public FrmTenantManager(AdminDataBLL bll, int? branchId = null)
         {
+            _bll = bll ?? new AdminDataBLL();
+            _branchId = branchId;
             InitializeComponent();
+        }
+
+        public FrmTenantManager() : this(new AdminDataBLL(), null)
+        {
         }
 
         private void InitializeComponent()
         {
-            Text = "Quản lý Khách thuê";
+            Text = "Quản lý khách thuê";
             StartPosition = FormStartPosition.CenterParent;
-            Width = 1280;
-            Height = 720;
-            BackColor = Color.FromArgb(245, 247, 250);
+            BackColor = Color.FromArgb(240, 242, 245);
+            Font = new Font("Segoe UI", 10F);
+            Width = 1100;
+            Height = 650;
 
-            _gridTenants = MakeGrid();
-            _gridTenants.Dock = DockStyle.Fill;
-            _gridTenants.DoubleClick += async (s, e) => await EditSelectedTenantAsync();
-            _gridTenants.SelectionChanged += (s, e) => ApplyTenantDetailsFilter();
+            var toolbar = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 70,
+                Padding = new Padding(12, 10, 12, 10),
+                BackColor = Color.White
+            };
 
-            _gridDependents = MakeGrid();
-            _gridDependents.Dock = DockStyle.Fill;
-            _gridDependents.DoubleClick += async (s, e) => await EditSelectedDependentAsync();
-
-            _gridHistory = MakeGrid();
-            _gridHistory.Dock = DockStyle.Fill;
-            _gridHistory.DoubleClick += async (s, e) => await EditSelectedHistoryAsync();
-
-            _txtSearch = new TextBox { Width = 320, ForeColor = Color.Gray, Text = SearchPlaceholder };
+            var searchLabel = new Label { Text = "Tìm:", AutoSize = true, Margin = new Padding(0, 8, 6, 0) };
+            _txtSearch = new TextBox { Width = 260, Text = SearchPlaceholder, ForeColor = Color.Gray, Margin = new Padding(0, 4, 12, 0) };
             _txtSearch.GotFocus += (s, e) =>
             {
                 if (_txtSearch.Text == SearchPlaceholder)
@@ -86,791 +76,322 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     _txtSearch.ForeColor = Color.Gray;
                 }
             };
-            _txtSearch.TextChanged += (s, e) => ApplyTenantFilter();
+            _txtSearch.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) ApplySearch(); };
 
-            _cboActive = new ComboBox { Width = 150, DropDownStyle = ComboBoxStyle.DropDownList };
-            _cboActive.Items.AddRange(new object[] { "Tất cả", "Đang hoạt động", "Đã tắt" });
-            _cboActive.SelectedIndex = 0;
-            _cboActive.SelectedIndexChanged += (s, e) => ApplyTenantFilter();
+            var btnSearch = MakeButton("Tìm", Color.FromArgb(0, 122, 204), (s, e) => ApplySearch());
+            var btnAdd = MakeButton("Thêm", Color.FromArgb(0, 122, 204), (s, e) => AddTenant());
+            var btnEdit = MakeButton("Sửa", Color.FromArgb(0, 122, 204), (s, e) => EditTenant());
+            var btnDelete = MakeButton("Xóa", Color.FromArgb(211, 47, 47), (s, e) => DeleteTenant());
+            var btnRefresh = MakeButton("Làm mới", Color.FromArgb(40, 167, 69), async (s, e) => await LoadDataAsync());
 
-            _lblCount = new Label { AutoSize = true, Text = "Tổng: 0", Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+            _lblTotal = new Label { Text = "Tổng: 0", AutoSize = true, Font = new Font("Segoe UI", 10, FontStyle.Bold), ForeColor = Color.FromArgb(0, 122, 204), Margin = new Padding(12, 8, 0, 0) };
 
-            _btnAdd = MakeButton("Thêm", Color.FromArgb(0, 122, 204), async (s, e) => await AddTenantAsync());
-            _btnEdit = MakeButton("Sửa", Color.FromArgb(0, 122, 204), async (s, e) => await EditSelectedTenantAsync());
-            _btnDelete = MakeButton("Xóa", Color.FromArgb(211, 47, 47), async (s, e) => await DeleteSelectedTenantAsync());
-            _btnToggleActive = MakeButton("Bật/Tắt", Color.FromArgb(103, 58, 183), async (s, e) => await ToggleTenantActiveAsync());
-            _btnRefresh = MakeButton("Tải lại", Color.FromArgb(0, 122, 204), async (s, e) => await LoadAllAsync());
-
-            var top = new Panel { Dock = DockStyle.Top, Height = 64, Padding = new Padding(12, 10, 12, 10), BackColor = Color.White };
             var actions = new FlowLayoutPanel
             {
-                Dock = DockStyle.Left,
-                AutoSize = true,
-                WrapContents = false,
+                Dock = DockStyle.Fill,
                 FlowDirection = FlowDirection.LeftToRight,
-                BackColor = Color.Transparent
-            };
-            actions.Controls.Add(_btnAdd);
-            actions.Controls.Add(_btnEdit);
-            actions.Controls.Add(_btnDelete);
-            actions.Controls.Add(_btnToggleActive);
-            actions.Controls.Add(_btnRefresh);
-
-            var filters = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Right,
-                AutoSize = true,
                 WrapContents = false,
-                FlowDirection = FlowDirection.LeftToRight,
-                BackColor = Color.Transparent,
-                Padding = new Padding(0, 6, 0, 0)
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink
             };
-            filters.Controls.Add(new Label { Text = "Tìm:", AutoSize = true, Margin = new Padding(0, 6, 6, 0) });
-            filters.Controls.Add(_txtSearch);
-            filters.Controls.Add(new Label { Text = "Trạng thái:", AutoSize = true, Margin = new Padding(12, 6, 6, 0) });
-            filters.Controls.Add(_cboActive);
-            filters.Controls.Add(new Label { Text = "  ", AutoSize = true });
-            filters.Controls.Add(_lblCount);
+            actions.Controls.Add(searchLabel);
+            actions.Controls.Add(_txtSearch);
+            actions.Controls.Add(btnSearch);
+            actions.Controls.Add(btnAdd);
+            actions.Controls.Add(btnEdit);
+            actions.Controls.Add(btnDelete);
+            actions.Controls.Add(btnRefresh);
+            actions.Controls.Add(_lblTotal);
 
-            top.Controls.Add(actions);
-            top.Controls.Add(filters);
+            toolbar.Controls.Add(actions);
 
-            var tabs = new TabControl { Dock = DockStyle.Fill };
-            tabs.TabPages.Add(new TabPage("Người ở chung") { Padding = new Padding(0) });
-            tabs.TabPages.Add(new TabPage("Lịch sử phòng") { Padding = new Padding(0) });
-
-            var depTop = MakeSubTop(out _btnDepAdd, out _btnDepEdit, out _btnDepDelete,
-                async (s, e) => await AddDependentAsync(),
-                async (s, e) => await EditSelectedDependentAsync(),
-                async (s, e) => await DeleteSelectedDependentAsync());
-            tabs.TabPages[0].Controls.Add(_gridDependents);
-            tabs.TabPages[0].Controls.Add(depTop);
-
-            var hisTop = MakeSubTop(out _btnHisAdd, out _btnHisEdit, out _btnHisDelete,
-                async (s, e) => await AddHistoryAsync(),
-                async (s, e) => await EditSelectedHistoryAsync(),
-                async (s, e) => await DeleteSelectedHistoryAsync());
-            _btnHisCheckout = MakeSmallButton("Check-out", Color.FromArgb(255, 152, 0), async (s, e) => await CheckoutSelectedHistoryAsync());
-            hisTop.Controls.Add(_btnHisCheckout);
-            _btnHisCheckout.Location = new Point(hisTop.Width - _btnHisCheckout.Width - 12, 10);
-            hisTop.Resize += (s, e) => _btnHisCheckout.Location = new Point(hisTop.Width - _btnHisCheckout.Width - 12, 10);
-            tabs.TabPages[1].Controls.Add(_gridHistory);
-            tabs.TabPages[1].Controls.Add(hisTop);
-
-            _split = new SplitContainer
+            var tab = new TabControl
             {
                 Dock = DockStyle.Fill,
-                Orientation = Orientation.Vertical,
-                BackColor = Color.FromArgb(245, 247, 250),
-                // Không set MinSize ở đây vì lúc khởi tạo control có thể chưa có Width -> dễ throw SplitterDistance invalid.
-                Panel1MinSize = 0,
-                Panel2MinSize = 0
+                BackColor = Color.White
             };
-            _split.Panel1.Padding = new Padding(12, 0, 6, 12);
-            _split.Panel2.Padding = new Padding(6, 0, 12, 12);
 
-            var pnlTenants = new Panel { Dock = DockStyle.Fill, BackColor = Color.White };
-            pnlTenants.Controls.Add(_gridTenants);
-            _split.Panel1.Controls.Add(pnlTenants);
+            // Tenants tab
+            _dgvTenants = CreateGrid();
+            var tabTenants = new TabPage("Khách thuê") { BackColor = Color.FromArgb(240, 242, 245), Padding = new Padding(10) };
+            tabTenants.Controls.Add(_dgvTenants);
+            tab.TabPages.Add(tabTenants);
 
-            var pnlRight = new Panel { Dock = DockStyle.Fill, BackColor = Color.White };
-            pnlRight.Controls.Add(tabs);
-            _split.Panel2.Controls.Add(pnlRight);
+            // Dependents tab
+            _dgvDependents = CreateGrid();
+            var tabDependents = new TabPage("Người ở cùng") { BackColor = Color.FromArgb(240, 242, 245), Padding = new Padding(10) };
+            tabDependents.Controls.Add(_dgvDependents);
+            tab.TabPages.Add(tabDependents);
 
-            Controls.Add(_split);
-            Controls.Add(top);
+            // History tab
+            _dgvHistory = CreateGrid();
+            var tabHistory = new TabPage("Lịch sử phòng") { BackColor = Color.FromArgb(240, 242, 245), Padding = new Padding(10) };
+            tabHistory.Controls.Add(_dgvHistory);
+            tab.TabPages.Add(tabHistory);
 
-            Load += async (s, e) => await LoadAllAsync();
-            Layout += (s, e) => EnsureSplitterInitialized();
-            Resize += (s, e) => ClampSplitterDistance();
+            Controls.Add(tab);
+            Controls.Add(toolbar);
+
+            Load += async (s, e) => await LoadDataAsync();
         }
 
-        private void EnsureSplitterInitialized()
+        private DataGridView CreateGrid()
         {
-            if (_splitInitialized) return;
-            if (_split == null || _split.IsDisposed) return;
-            if (_split.Width <= 0) return;
-
-            // Set min sizes sau khi control đã được layout để tránh lỗi SplitterDistance invalid.
-            SafeSetMinSizes(420, 320);
-
-            // ưu tiên panel trái ~60%, nhưng luôn clamp để không lỗi.
-            int desired = (int)Math.Round(_split.Width * 0.60);
-            SafeSetSplitterDistance(desired);
-            _splitInitialized = true;
-        }
-
-        private void ClampSplitterDistance()
-        {
-            if (_split == null || _split.IsDisposed) return;
-            if (_split.Width <= 0) return;
-            SafeSetSplitterDistance(_split.SplitterDistance);
-        }
-
-        private void SafeSetMinSizes(int panel1Min, int panel2Min)
-        {
-            if (_split == null || _split.IsDisposed) return;
-            try
+            var grid = new DataGridView
             {
-                _split.Panel1MinSize = Math.Max(0, panel1Min);
-                _split.Panel2MinSize = Math.Max(0, panel2Min);
-            }
-            catch
-            {
-                try
-                {
-                    _split.Panel1MinSize = 0;
-                    _split.Panel2MinSize = 0;
-                }
-                catch
-                {
-                    // ignore
-                }
-            }
-        }
-
-        private void SafeSetSplitterDistance(int desired)
-        {
-            if (_split == null || _split.IsDisposed) return;
-
-            // Nếu width quá nhỏ để thỏa min size, nới min size để UI vẫn hiển thị thay vì crash.
-            int min = _split.Panel1MinSize;
-            int max = _split.Width - _split.Panel2MinSize;
-            if (max < min)
-            {
-                _split.Panel1MinSize = 0;
-                _split.Panel2MinSize = 0;
-                min = 0;
-                max = Math.Max(0, _split.Width - 1);
-            }
-
-            int clamped = Math.Max(min, Math.Min(max, desired));
-            try
-            {
-                if (_split.SplitterDistance != clamped)
-                    _split.SplitterDistance = clamped;
-            }
-            catch
-            {
-                // ignore: chỉ để tránh crash khi WinForms đang layout
-            }
-        }
-
-        private static DataGridView MakeGrid()
-        {
-            var g = new DataGridView
-            {
+                Dock = DockStyle.Fill,
                 ReadOnly = true,
+                AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
                 MultiSelect = false,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                AllowUserToAddRows = false,
-                AllowUserToDeleteRows = false,
-                RowHeadersVisible = false,
                 BackgroundColor = Color.White,
                 BorderStyle = BorderStyle.None
             };
-
-            g.EnableHeadersVisualStyles = false;
-            g.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(0, 120, 215);
-            g.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            g.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
-            g.DefaultCellStyle.Font = new Font("Segoe UI", 10, FontStyle.Regular);
-            g.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 249, 255);
-            g.DefaultCellStyle.SelectionBackColor = Color.FromArgb(232, 244, 252);
-            g.DefaultCellStyle.SelectionForeColor = Color.Black;
-            return g;
+            return grid;
         }
 
-        private static Panel MakeSubTop(out Button add, out Button edit, out Button del,
-            EventHandler onAdd, EventHandler onEdit, EventHandler onDelete)
+        private Button MakeButton(string text, Color backColor, EventHandler onClick)
         {
-            var top = new Panel { Dock = DockStyle.Top, Height = 52, Padding = new Padding(12, 9, 12, 9), BackColor = Color.White };
-            add = MakeSmallButton("Thêm", Color.FromArgb(0, 122, 204), onAdd);
-            edit = MakeSmallButton("Sửa", Color.FromArgb(0, 122, 204), onEdit);
-            del = MakeSmallButton("Xóa", Color.FromArgb(211, 47, 47), onDelete);
-
-            top.Controls.Add(add);
-            top.Controls.Add(edit);
-            top.Controls.Add(del);
-            add.Location = new Point(12, 10);
-            edit.Location = new Point(add.Right + 8, 10);
-            del.Location = new Point(edit.Right + 8, 10);
-            return top;
+            var btn = new Button
+            {
+                Text = text,
+                Width = 90,
+                Height = 32,
+                BackColor = backColor,
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Margin = new Padding(0, 4, 8, 0),
+                Cursor = Cursors.Hand
+            };
+            btn.FlatAppearance.BorderSize = 0;
+            btn.Click += onClick;
+            return btn;
         }
 
-        private async System.Threading.Tasks.Task LoadAllAsync()
+        private async Task LoadDataAsync()
         {
             try
             {
-                _tenantTable = await _bll.GetTenantsAsync();
-                _dependentTable = await _bll.GetDependentsAsync();
-                _historyTable = await _bll.GetTenantHistoryAsync();
+                Cursor = Cursors.WaitCursor;
 
-                _gridTenants.DataSource = _tenantTable;
-                _gridDependents.DataSource = _dependentTable;
-                _gridHistory.DataSource = _historyTable;
+                _tenants = await _bll.GetTenantsAsync() ?? new DataTable();
+                _dependents = await _bll.GetDependentsAsync() ?? new DataTable();
+                _history = await _bll.GetTenantHistoryAsync() ?? new DataTable();
+                _rooms = await _bll.GetRoomsAsync() ?? new DataTable();
 
-                ApplyTenantGridPresentation();
-                ApplyDependentGridPresentation();
-                ApplyHistoryGridPresentation();
+                if (_branchId.HasValue && _tenants.Columns.Contains("BranchId"))
+                {
+                    var filtered = _tenants.AsEnumerable()
+                        .Where(r => int.TryParse(r["BranchId"]?.ToString(), out var bid) && bid == _branchId.Value);
+                    _tenants = filtered.Any() ? filtered.CopyToDataTable() : _tenants.Clone();
+                }
 
-                ApplyTenantFilter();
-                ApplyTenantDetailsFilter();
+                PopulateRoomNumbers();
+
+                _dgvTenants.DataSource = _tenants;
+                _dgvDependents.DataSource = _dependents;
+                _dgvHistory.DataSource = _history;
+
+                if (_dgvTenants.Columns.Contains("TenantId"))
+                    _dgvTenants.Columns["TenantId"].Visible = false;
+                if (_dgvDependents.Columns.Contains("TenantId"))
+                    _dgvDependents.Columns["TenantId"].Visible = false;
+                if (_dgvHistory.Columns.Contains("TenantId"))
+                    _dgvHistory.Columns["TenantId"].Visible = false;
+                if (_dgvHistory.Columns.Contains("RoomId"))
+                    _dgvHistory.Columns["RoomId"].Visible = false;
+
+                _lblTotal.Text = $"Tổng: {_tenants.Rows.Count}";
+                ApplySearch();
+                ConfigureDependentsGrid();
+                ConfigureHistoryGrid();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi tải dữ liệu khách thuê: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Lỗi tải dữ liệu khách thuê: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-        }
-
-        private void ApplyTenantGridPresentation()
-        {
-            SetHeader(_gridTenants, "TenantId", "ID");
-            SetHeader(_gridTenants, "FullName", "Họ tên");
-            SetHeader(_gridTenants, "IdentityCard", "CCCD");
-            SetHeader(_gridTenants, "PhoneNumber", "SĐT");
-            SetHeader(_gridTenants, "Email", "Email");
-            SetHeader(_gridTenants, "BirthDate", "Ngày sinh");
-            SetHeader(_gridTenants, "Address", "Địa chỉ");
-            SetHeader(_gridTenants, "TemporaryRegistration", "Tạm trú");
-            SetHeader(_gridTenants, "TemporaryRegistrationDate", "Ngày đăng ký");
-            SetHeader(_gridTenants, "TemporaryRegistrationExpiry", "Hết hạn");
-            SetHeader(_gridTenants, "IsActive", "Kích hoạt");
-            SetHeader(_gridTenants, "CreatedDate", "Tạo lúc");
-            SetHeader(_gridTenants, "UpdatedDate", "Cập nhật");
-
-            FormatDate(_gridTenants, "BirthDate");
-            FormatDate(_gridTenants, "TemporaryRegistrationDate");
-            FormatDate(_gridTenants, "TemporaryRegistrationExpiry");
-            FormatDateTime(_gridTenants, "CreatedDate");
-            FormatDateTime(_gridTenants, "UpdatedDate");
-
-            SetDisplayOrder(_gridTenants,
-                "TenantId", "FullName", "IdentityCard", "PhoneNumber", "Email",
-                "BirthDate", "TemporaryRegistration", "TemporaryRegistrationDate", "TemporaryRegistrationExpiry",
-                "IsActive", "CreatedDate", "UpdatedDate", "Address");
-
-            if (_gridTenants.Columns.Contains("Address"))
-                _gridTenants.Columns["Address"].FillWeight = 170;
-        }
-
-        private void ApplyDependentGridPresentation()
-        {
-            SetHeader(_gridDependents, "DependentId", "ID");
-            SetHeader(_gridDependents, "TenantId", "TenantId");
-            SetHeader(_gridDependents, "FullName", "Họ tên");
-            SetHeader(_gridDependents, "Relationship", "Quan hệ");
-            SetHeader(_gridDependents, "PhoneNumber", "SĐT");
-            SetHeader(_gridDependents, "CreatedDate", "Tạo lúc");
-
-            HideIfExists(_gridDependents, "TenantId");
-            FormatDateTime(_gridDependents, "CreatedDate");
-
-            SetDisplayOrder(_gridDependents, "DependentId", "FullName", "Relationship", "PhoneNumber", "CreatedDate");
-        }
-
-        private void ApplyHistoryGridPresentation()
-        {
-            SetHeader(_gridHistory, "HistoryId", "ID");
-            SetHeader(_gridHistory, "TenantId", "TenantId");
-            SetHeader(_gridHistory, "RoomId", "RoomId");
-            SetHeader(_gridHistory, "RoomNumber", "Phòng");
-            SetHeader(_gridHistory, "CheckInDate", "Ngày vào");
-            SetHeader(_gridHistory, "CheckOutDate", "Ngày ra");
-            SetHeader(_gridHistory, "Status", "Trạng thái");
-            SetHeader(_gridHistory, "Notes", "Ghi chú");
-            SetHeader(_gridHistory, "CreatedDate", "Tạo lúc");
-
-            HideIfExists(_gridHistory, "TenantId");
-            HideIfExists(_gridHistory, "RoomId");
-            FormatDate(_gridHistory, "CheckInDate");
-            FormatDate(_gridHistory, "CheckOutDate");
-            FormatDateTime(_gridHistory, "CreatedDate");
-
-            SetDisplayOrder(_gridHistory, "HistoryId", "RoomNumber", "CheckInDate", "CheckOutDate", "Status", "Notes", "CreatedDate");
-        }
-
-        private void ApplyTenantFilter()
-        {
-            if (_tenantTable == null) return;
-
-            string rawKeyword = (_txtSearch.Text ?? string.Empty).Trim();
-            if (rawKeyword == SearchPlaceholder) rawKeyword = string.Empty;
-            string keyword = rawKeyword.ToLowerInvariant();
-
-            int activeChoice = _cboActive.SelectedIndex; // 0 all, 1 active, 2 inactive
-            var rows = _tenantTable.AsEnumerable();
-
-            if (activeChoice != 0 && _tenantTable.Columns.Contains("IsActive"))
+            finally
             {
-                bool want = activeChoice == 1;
-                rows = rows.Where(r =>
-                {
-                    if (r["IsActive"] == DBNull.Value) return false;
-                    try { return Convert.ToBoolean(r["IsActive"]) == want; } catch { return false; }
-                });
+                Cursor = Cursors.Default;
             }
+        }
 
+        private void ApplySearch()
+        {
+            if (_tenants == null) return;
+
+            string keyword = (_txtSearch.Text ?? string.Empty).Trim();
+            if (keyword == SearchPlaceholder) keyword = string.Empty;
+
+            var view = new DataView(_tenants);
             if (!string.IsNullOrWhiteSpace(keyword))
             {
-                rows = rows.Where(r =>
-                    Contains(r, "FullName", keyword) ||
-                    Contains(r, "IdentityCard", keyword) ||
-                    Contains(r, "PhoneNumber", keyword) ||
-                    Contains(r, "Email", keyword));
+                var escaped = keyword.Replace("'", "''");
+                view.RowFilter = $"Convert(FullName, 'System.String') LIKE '%{escaped}%' OR Convert(IdentityCard, 'System.String') LIKE '%{escaped}%' OR Convert(PhoneNumber, 'System.String') LIKE '%{escaped}%'";
             }
-
-            var filtered = rows.Any() ? rows.CopyToDataTable() : _tenantTable.Clone();
-            _gridTenants.DataSource = filtered;
-            _lblCount.Text = $"Tổng: {filtered.Rows.Count}";
-        }
-
-        private void ApplyTenantDetailsFilter()
-        {
-            int tenantId = GetSelectedTenantId();
-            bool hasTenant = tenantId > 0;
-
-            SetEnabledDependentButtons(hasTenant);
-            SetEnabledHistoryButtons(hasTenant);
-
-            if (_dependentTable != null)
+            else
             {
-                var view = _dependentTable.DefaultView;
-                view.RowFilter = hasTenant ? $"TenantId = {tenantId}" : "1=0";
-                _gridDependents.DataSource = view;
+                view.RowFilter = string.Empty;
             }
 
-            if (_historyTable != null)
-            {
-                var view = _historyTable.DefaultView;
-                view.RowFilter = hasTenant ? $"TenantId = {tenantId}" : "1=0";
-                _gridHistory.DataSource = view;
-            }
+            _dgvTenants.DataSource = view;
+            _lblTotal.Text = $"Tổng: {view.Count}";
+            ConfigureTenantGrid();
         }
 
-        private void SetEnabledDependentButtons(bool enabled)
+        private DataRowView GetSelectedTenant()
         {
-            _btnDepAdd.Enabled = enabled;
-            _btnDepEdit.Enabled = enabled;
-            _btnDepDelete.Enabled = enabled;
+            return _dgvTenants.CurrentRow?.DataBoundItem as DataRowView;
         }
 
-        private void SetEnabledHistoryButtons(bool enabled)
-        {
-            _btnHisAdd.Enabled = enabled;
-            _btnHisEdit.Enabled = enabled;
-            _btnHisDelete.Enabled = enabled;
-            _btnHisCheckout.Enabled = enabled;
-        }
-
-        private int GetSelectedTenantId()
-        {
-            var row = GetCurrentRow(_gridTenants);
-            if (row == null) return 0;
-            return ReadInt(row, "TenantId");
-        }
-
-        private async System.Threading.Tasks.Task AddTenantAsync()
+        private async void AddTenant()
         {
             using (var frm = new FrmTenantEditor(_bll))
             {
                 if (frm.ShowDialog(this) == DialogResult.OK)
-                    await LoadAllAsync();
+                    await LoadDataAsync();
             }
         }
 
-        private async System.Threading.Tasks.Task EditSelectedTenantAsync()
+        private async void EditTenant()
         {
-            var row = GetCurrentRow(_gridTenants);
+            var row = GetSelectedTenant();
             if (row == null)
             {
-                MessageBox.Show("Chọn một khách thuê để sửa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Chọn khách thuê trước.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
-            using (var frm = new FrmTenantEditor(_bll, row))
+            using (var frm = new FrmTenantEditor(_bll, row.Row))
             {
                 if (frm.ShowDialog(this) == DialogResult.OK)
-                    await LoadAllAsync();
+                    await LoadDataAsync();
             }
         }
 
-        private async System.Threading.Tasks.Task DeleteSelectedTenantAsync()
+        private async void DeleteTenant()
         {
-            var row = GetCurrentRow(_gridTenants);
+            var row = GetSelectedTenant();
             if (row == null)
             {
-                MessageBox.Show("Chọn một khách thuê để xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Chọn khách thuê trước.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
-            int id = ReadInt(row, "TenantId");
-            string name = ReadString(row, "FullName") ?? id.ToString();
+            int tenantId = int.TryParse(row["TenantId"]?.ToString(), out var id) ? id : 0;
+            string name = row["FullName"]?.ToString() ?? tenantId.ToString();
+            if (tenantId <= 0)
+            {
+                MessageBox.Show("Không xác định được TenantId.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
 
-            if (MessageBox.Show($"Xóa khách thuê \"{name}\"?\n(Phụ thuộc/hợp đồng liên quan có thể khiến xóa thất bại)", "Xác nhận",
-                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+            if (MessageBox.Show($"Xóa khách thuê \"{name}\"?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                 return;
 
             try
             {
-                await _bll.DeleteTenantAsync(id);
-                await LoadAllAsync();
+                await _bll.DeleteTenantAsync(tenantId);
+                await LoadDataAsync();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi xóa khách thuê: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Lỗi xóa khách thuê: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private async System.Threading.Tasks.Task ToggleTenantActiveAsync()
+        private void PopulateRoomNumbers()
         {
-            var row = GetCurrentRow(_gridTenants);
-            if (row == null)
+            if (_tenants == null) return;
+
+            if (!_tenants.Columns.Contains("RoomNumber"))
+                _tenants.Columns.Add("RoomNumber", typeof(string));
+
+            var roomLookup = _rooms?.AsEnumerable()
+                .Where(r => _rooms.Columns.Contains("RoomId") && r["RoomId"] != DBNull.Value)
+                .ToDictionary(r => Convert.ToInt32(r["RoomId"]), r => r["RoomNumber"]?.ToString() ?? string.Empty)
+                ?? new System.Collections.Generic.Dictionary<int, string>();
+
+            foreach (DataRow tenant in _tenants.Rows)
             {
-                MessageBox.Show("Chọn một khách thuê để bật/tắt.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
+                int tenantId = int.TryParse(tenant["TenantId"]?.ToString(), out var id) ? id : 0;
+                if (tenantId <= 0) continue;
 
-            int id = ReadInt(row, "TenantId");
-            string name = ReadString(row, "FullName") ?? id.ToString();
-            bool current = TryReadBool(row, "IsActive") ?? true;
-            bool next = !current;
+                var historyRows = _history?.AsEnumerable()
+                    .Where(r => int.TryParse(r["TenantId"]?.ToString(), out var tid) && tid == tenantId)
+                    .ToList();
+                if (historyRows == null || historyRows.Count == 0) continue;
 
-            if (MessageBox.Show($"Chuyển \"{name}\" sang {(next ? "Đang hoạt động" : "Đã tắt")}?", "Xác nhận",
-                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                return;
+                DataRow latest = historyRows
+                    .Where(r => string.IsNullOrWhiteSpace(r["CheckOutDate"]?.ToString()))
+                    .OrderByDescending(r => ParseDate(r["CheckInDate"]))
+                    .FirstOrDefault()
+                    ?? historyRows.OrderByDescending(r => ParseDate(r["CheckInDate"])).FirstOrDefault();
 
-            try
-            {
-                await _bll.UpdateTenantAsync(
-                    id,
-                    ReadString(row, "FullName"),
-                    ReadString(row, "IdentityCard"),
-                    ReadString(row, "PhoneNumber"),
-                    ReadString(row, "Email"),
-                    TryReadDate(row, "BirthDate"),
-                    ReadString(row, "Address"),
-                    ReadString(row, "TemporaryRegistration"),
-                    TryReadDate(row, "TemporaryRegistrationDate"),
-                    TryReadDate(row, "TemporaryRegistrationExpiry"),
-                    next);
-
-                await LoadAllAsync();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Lỗi cập nhật trạng thái: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private async System.Threading.Tasks.Task AddDependentAsync()
-        {
-            int tenantId = GetSelectedTenantId();
-            if (tenantId <= 0) return;
-
-            using (var frm = new FrmDependentEditor(_bll, tenantId))
-            {
-                if (frm.ShowDialog(this) == DialogResult.OK)
-                    await LoadAllAsync();
-            }
-        }
-
-        private async System.Threading.Tasks.Task EditSelectedDependentAsync()
-        {
-            int tenantId = GetSelectedTenantId();
-            if (tenantId <= 0) return;
-
-            var row = GetCurrentRow(_gridDependents);
-            if (row == null)
-            {
-                MessageBox.Show("Chọn một người ở chung để sửa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            using (var frm = new FrmDependentEditor(_bll, tenantId, row))
-            {
-                if (frm.ShowDialog(this) == DialogResult.OK)
-                    await LoadAllAsync();
-            }
-        }
-
-        private async System.Threading.Tasks.Task DeleteSelectedDependentAsync()
-        {
-            var row = GetCurrentRow(_gridDependents);
-            if (row == null)
-            {
-                MessageBox.Show("Chọn một người ở chung để xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            int id = ReadInt(row, "DependentId");
-            string name = ReadString(row, "FullName") ?? id.ToString();
-
-            if (MessageBox.Show($"Xóa người ở chung \"{name}\"?", "Xác nhận",
-                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                return;
-
-            try
-            {
-                await _bll.DeleteDependentAsync(id);
-                await LoadAllAsync();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Lỗi xóa người ở chung: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private async System.Threading.Tasks.Task AddHistoryAsync()
-        {
-            int tenantId = GetSelectedTenantId();
-            if (tenantId <= 0) return;
-
-            using (var frm = new FrmTenantHistoryEditor(_bll, tenantId))
-            {
-                if (frm.ShowDialog(this) == DialogResult.OK)
-                    await LoadAllAsync();
-            }
-        }
-
-        private async System.Threading.Tasks.Task EditSelectedHistoryAsync()
-        {
-            int tenantId = GetSelectedTenantId();
-            if (tenantId <= 0) return;
-
-            var row = GetCurrentRow(_gridHistory);
-            if (row == null)
-            {
-                MessageBox.Show("Chọn một dòng lịch sử để sửa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            using (var frm = new FrmTenantHistoryEditor(_bll, tenantId, row))
-            {
-                if (frm.ShowDialog(this) == DialogResult.OK)
-                    await LoadAllAsync();
-            }
-        }
-
-        private async System.Threading.Tasks.Task DeleteSelectedHistoryAsync()
-        {
-            var row = GetCurrentRow(_gridHistory);
-            if (row == null)
-            {
-                MessageBox.Show("Chọn một dòng lịch sử để xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            int id = ReadInt(row, "HistoryId");
-            if (MessageBox.Show($"Xóa lịch sử ID {id}?", "Xác nhận",
-                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                return;
-
-            try
-            {
-                await _bll.DeleteTenantHistoryAsync(id);
-                await LoadAllAsync();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Lỗi xóa lịch sử: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private async System.Threading.Tasks.Task CheckoutSelectedHistoryAsync()
-        {
-            var row = GetCurrentRow(_gridHistory);
-            if (row == null)
-            {
-                MessageBox.Show("Chọn một dòng lịch sử để check-out.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            int historyId = ReadInt(row, "HistoryId");
-            int roomId = ReadInt(row, "RoomId");
-            DateTime? checkIn = TryReadDate(row, "CheckInDate");
-            DateTime? checkOut = TryReadDate(row, "CheckOutDate");
-
-            if (checkIn == null)
-            {
-                MessageBox.Show("Dòng lịch sử thiếu ngày vào.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            if (checkOut != null)
-            {
-                MessageBox.Show("Dòng lịch sử này đã có ngày ra.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            if (MessageBox.Show("Xác nhận check-out (ngày ra = hôm nay, trạng thái = Completed)?", "Xác nhận",
-                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                return;
-
-            try
-            {
-                await _bll.UpdateTenantHistoryAsync(
-                    historyId,
-                    roomId,
-                    checkIn.Value,
-                    DateTime.Today,
-                    "Completed",
-                    ReadString(row, "Notes"));
-
-                await LoadAllAsync();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Lỗi check-out: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private static DataRow GetCurrentRow(DataGridView grid)
-        {
-            if (grid?.CurrentRow == null || grid.CurrentRow.DataBoundItem == null) return null;
-            if (grid.CurrentRow.DataBoundItem is DataRowView drv) return drv.Row;
-            return null;
-        }
-
-        private static void SetHeader(DataGridView grid, string columnName, string headerText)
-        {
-            if (grid.Columns.Contains(columnName))
-                grid.Columns[columnName].HeaderText = headerText;
-        }
-
-        private static void HideIfExists(DataGridView grid, string columnName)
-        {
-            if (grid.Columns.Contains(columnName))
-                grid.Columns[columnName].Visible = false;
-        }
-
-        private static void FormatDate(DataGridView grid, string columnName)
-        {
-            if (grid.Columns.Contains(columnName))
-                grid.Columns[columnName].DefaultCellStyle.Format = "dd/MM/yyyy";
-        }
-
-        private static void FormatDateTime(DataGridView grid, string columnName)
-        {
-            if (grid.Columns.Contains(columnName))
-                grid.Columns[columnName].DefaultCellStyle.Format = "dd/MM/yyyy HH:mm";
-        }
-
-        private static void SetDisplayOrder(DataGridView grid, params string[] order)
-        {
-            int index = 0;
-            foreach (var name in order)
-            {
-                if (grid.Columns.Contains(name))
+                if (latest != null && int.TryParse(latest["RoomId"]?.ToString(), out var rid) && roomLookup.TryGetValue(rid, out var roomNo))
                 {
-                    grid.Columns[name].DisplayIndex = index;
-                    index++;
+                    tenant["RoomNumber"] = roomNo;
                 }
             }
         }
 
-        private static Button MakeButton(string text, Color backColor, EventHandler onClick)
+        private DateTime ParseDate(object value)
         {
-            var b = new Button
-            {
-                Text = text,
-                Width = 96,
-                Height = 34,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = backColor,
-                ForeColor = Color.White,
-                Margin = new Padding(0, 0, 8, 0)
-            };
-            b.FlatAppearance.BorderSize = 0;
-            b.Click += onClick;
-            return b;
+            if (value == null) return DateTime.MinValue;
+            return DateTime.TryParse(value.ToString(), out var dt) ? dt : DateTime.MinValue;
         }
 
-        private static Button MakeSmallButton(string text, Color backColor, EventHandler onClick)
+        private void ConfigureTenantGrid()
         {
-            var b = new Button
-            {
-                Text = text,
-                Width = 92,
-                Height = 32,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = backColor,
-                ForeColor = Color.White
-            };
-            b.FlatAppearance.BorderSize = 0;
-            b.Click += onClick;
-            return b;
+            if (_dgvTenants?.Columns == null) return;
+
+            SetHeader(_dgvTenants, "FullName", "Họ tên", 0);
+            SetHeader(_dgvTenants, "IdentityCard", "CCCD/CMND", 1);
+            SetHeader(_dgvTenants, "PhoneNumber", "SĐT", 2);
+            SetHeader(_dgvTenants, "Email", "Email", 3);
+            SetHeader(_dgvTenants, "BirthDate", "Ngày sinh", 4);
+            SetHeader(_dgvTenants, "Address", "Địa chỉ", 5);
+            SetHeader(_dgvTenants, "RoomNumber", "Số phòng", 6);
+            SetHeader(_dgvTenants, "TemporaryRegistration", "Tạm trú", 7);
+            SetHeader(_dgvTenants, "TemporaryRegistrationDate", "Tạm trú từ", 8);
+            SetHeader(_dgvTenants, "TemporaryRegistrationExpiry", "Tạm trú đến", 9);
+            SetHeader(_dgvTenants, "IsActive", "Kích hoạt", 10);
+            SetHeader(_dgvTenants, "CreatedDate", "Ngày tạo", 11);
+            SetHeader(_dgvTenants, "UpdatedDate", "Cập nhật", 12);
+            if (_dgvTenants.Columns.Contains("BranchId")) _dgvTenants.Columns["BranchId"].Visible = false;
         }
 
-        private static bool Contains(DataRow row, string column, string keywordLower)
+        private void ConfigureDependentsGrid()
         {
-            if (row?.Table == null || !row.Table.Columns.Contains(column)) return false;
-            var v = row[column];
-            if (v == null || v == DBNull.Value) return false;
-            return v.ToString().ToLowerInvariant().Contains(keywordLower);
+            if (_dgvDependents?.Columns == null) return;
+            if (_dgvDependents.Columns.Contains("DependentId")) _dgvDependents.Columns["DependentId"].Visible = false;
+            SetHeader(_dgvDependents, "FullName", "Họ tên");
+            SetHeader(_dgvDependents, "Relationship", "Quan hệ");
+            SetHeader(_dgvDependents, "PhoneNumber", "SĐT");
+            SetHeader(_dgvDependents, "CreatedDate", "Ngày tạo");
         }
 
-        private static string ReadString(DataRow row, params string[] cols)
+        private void ConfigureHistoryGrid()
         {
-            foreach (var c in cols)
-            {
-                if (row.Table.Columns.Contains(c))
-                {
-                    var v = row[c];
-                    if (v != null && v != DBNull.Value) return v.ToString();
-                }
-            }
-            return null;
+            if (_dgvHistory?.Columns == null) return;
+            if (_dgvHistory.Columns.Contains("HistoryId")) _dgvHistory.Columns["HistoryId"].Visible = false;
+            SetHeader(_dgvHistory, "RoomId", "Mã phòng", visible: false);
+            SetHeader(_dgvHistory, "CheckInDate", "Ngày vào");
+            SetHeader(_dgvHistory, "CheckOutDate", "Ngày ra");
+            SetHeader(_dgvHistory, "Status", "Trạng thái");
+            SetHeader(_dgvHistory, "Notes", "Ghi chú");
+            SetHeader(_dgvHistory, "CreatedDate", "Ngày tạo");
         }
 
-        private static int ReadInt(DataRow row, params string[] cols)
+        private void SetHeader(DataGridView grid, string columnName, string header, int? displayIndex = null, bool visible = true)
         {
-            foreach (var c in cols)
-            {
-                if (row.Table.Columns.Contains(c))
-                {
-                    var v = row[c];
-                    if (v == null || v == DBNull.Value) continue;
-                    if (int.TryParse(v.ToString(), out var i)) return i;
-                    try { return Convert.ToInt32(v); } catch { }
-                }
-            }
-            return 0;
-        }
-
-        private static bool? TryReadBool(DataRow row, params string[] cols)
-        {
-            foreach (var c in cols)
-            {
-                if (row.Table.Columns.Contains(c))
-                {
-                    var v = row[c];
-                    if (v == null || v == DBNull.Value) continue;
-                    if (bool.TryParse(v.ToString(), out var b)) return b;
-                    try { return Convert.ToBoolean(v); } catch { }
-                }
-            }
-            return null;
-        }
-
-        private static DateTime? TryReadDate(DataRow row, params string[] cols)
-        {
-            foreach (var c in cols)
-            {
-                if (row.Table.Columns.Contains(c))
-                {
-                    var v = row[c];
-                    if (v == null || v == DBNull.Value) continue;
-                    if (DateTime.TryParse(v.ToString(), out var d)) return d.Date;
-                    try
-                    {
-                        if (v is DateTime dt) return dt.Date;
-                    }
-                    catch { }
-                }
-            }
-            return null;
+            if (!grid.Columns.Contains(columnName)) return;
+            var col = grid.Columns[columnName];
+            col.HeaderText = header;
+            col.Visible = visible;
+            if (displayIndex.HasValue) col.DisplayIndex = displayIndex.Value;
         }
     }
 }

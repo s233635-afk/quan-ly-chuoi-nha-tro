@@ -1,6 +1,7 @@
 using System;
 using System.Data;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
 
@@ -17,12 +18,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private TextBox txtEmail;
         private DateTimePicker dtBirth;
         private TextBox txtAddress;
+        private ComboBox cboRoom;
         private TextBox txtTempReg;
         private DateTimePicker dtTempFrom;
         private DateTimePicker dtTempTo;
         private CheckBox chkActive;
         private Button btnSave;
         private Button btnCancel;
+        private DataTable _rooms;
 
         public int? SavedTenantId { get; private set; }
 
@@ -31,7 +34,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _bll = bll;
             _existingRow = existingRow;
             InitializeComponent();
-            Load += (s, e) => LoadExisting();
+            Load += async (s, e) =>
+            {
+                await LoadRoomsAsync();
+                LoadExisting();
+            };
         }
 
         private void InitializeComponent()
@@ -87,6 +94,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             txtEmail = new TextBox();
             dtBirth = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true };
             txtAddress = new TextBox { Multiline = true, Height = 70, ScrollBars = ScrollBars.Vertical };
+            cboRoom = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
             txtTempReg = new TextBox();
             dtTempFrom = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true };
             dtTempTo = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true };
@@ -115,6 +123,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             pnlBody.Controls.Add(MakeLabel("Địa chỉ", top));
             pnlBody.Controls.Add(MakeInput(txtAddress, top));
             top += 80;
+
+            pnlBody.Controls.Add(MakeLabel("Số phòng", top));
+            pnlBody.Controls.Add(MakeInput(cboRoom, top));
+            top += line;
 
             pnlBody.Controls.Add(MakeLabel("Tạm trú tại", top));
             pnlBody.Controls.Add(MakeInput(txtTempReg, top));
@@ -196,6 +208,21 @@ namespace quan_ly_chuoi_nha_tro.GUI
             txtAddress.Text = _existingRow.Table.Columns.Contains("Address") ? _existingRow["Address"]?.ToString() : string.Empty;
             txtTempReg.Text = _existingRow.Table.Columns.Contains("TemporaryRegistration") ? _existingRow["TemporaryRegistration"]?.ToString() : string.Empty;
 
+            if (_existingRow.Table.Columns.Contains("CurrentRoomId") && int.TryParse(_existingRow["CurrentRoomId"]?.ToString(), out var rid))
+            {
+                if (cboRoom.Items.Count > 0)
+                    cboRoom.SelectedValue = rid;
+            }
+            else if (_existingRow.Table.Columns.Contains("RoomNumber"))
+            {
+                var roomNo = _existingRow["RoomNumber"]?.ToString();
+                if (!string.IsNullOrWhiteSpace(roomNo) && _rooms != null && _rooms.Columns.Contains("RoomNumber"))
+                {
+                    var row = _rooms.AsEnumerable().FirstOrDefault(r => string.Equals(r["RoomNumber"]?.ToString(), roomNo, StringComparison.OrdinalIgnoreCase));
+                    if (row != null) cboRoom.SelectedValue = Convert.ToInt32(row["RoomId"]);
+                }
+            }
+
             if (_existingRow.Table.Columns.Contains("TemporaryRegistrationDate") && DateTime.TryParse(_existingRow["TemporaryRegistrationDate"]?.ToString(), out var t1))
             {
                 dtTempFrom.Value = t1;
@@ -224,6 +251,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             try
             {
+                int? selectedRoomId = cboRoom.SelectedValue is int v && v > 0 ? v : (int?)null;
                 if (_existingRow == null)
                 {
                     var newId = await _bll.AddTenantAsync(
@@ -239,6 +267,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                         chkActive.Checked
                     );
                     SavedTenantId = newId;
+                    await UpdateTenantRoomAsync(newId, selectedRoomId);
                 }
                 else
                 {
@@ -257,6 +286,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                         chkActive.Checked
                     );
                     SavedTenantId = id;
+                    await UpdateTenantRoomAsync(id, selectedRoomId);
                 }
 
                 DialogResult = DialogResult.OK;
@@ -266,6 +296,59 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 MessageBox.Show("Lỗi lưu khách thuê: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+        private async System.Threading.Tasks.Task LoadRoomsAsync()
+        {
+            _rooms = await _bll.GetRoomsAsync() ?? new DataTable();
+            if (_existingRow != null && _existingRow.Table.Columns.Contains("BranchId") && _rooms.Columns.Contains("BranchId"))
+            {
+                if (int.TryParse(_existingRow["BranchId"]?.ToString(), out var bid))
+                {
+                    var filtered = _rooms.AsEnumerable().Where(r => int.TryParse(r["BranchId"]?.ToString(), out var rb) && rb == bid);
+                    _rooms = filtered.Any() ? filtered.CopyToDataTable() : _rooms.Clone();
+                }
+            }
+
+            if (_rooms.Rows.Count > 0 && _rooms.Columns.Contains("RoomNumber"))
+            {
+                var limited = _rooms.AsEnumerable()
+                    .OrderBy(r => r["RoomNumber"]?.ToString())
+                    .Take(20);
+                _rooms = limited.Any() ? limited.CopyToDataTable() : _rooms.Clone();
+            }
+
+            cboRoom.DataSource = _rooms;
+            cboRoom.DisplayMember = "RoomNumber";
+            cboRoom.ValueMember = "RoomId";
+            cboRoom.SelectedIndex = _rooms.Rows.Count > 0 ? 0 : -1;
+        }
+
+        private async System.Threading.Tasks.Task UpdateTenantRoomAsync(int tenantId, int? roomId)
+        {
+            if (tenantId <= 0 || !roomId.HasValue || roomId.Value <= 0) return;
+
+            var history = await _bll.GetTenantHistoryAsync() ?? new DataTable();
+            var records = history.AsEnumerable()
+                .Where(r => int.TryParse(r["TenantId"]?.ToString(), out var tid) && tid == tenantId)
+                .ToList();
+
+            var open = records
+                .FirstOrDefault(r => string.IsNullOrWhiteSpace(r["CheckOutDate"]?.ToString()));
+
+            if (open != null && int.TryParse(open["RoomId"]?.ToString(), out var currentRoomId))
+            {
+                if (currentRoomId == roomId.Value) return;
+                int historyId = int.TryParse(open["HistoryId"]?.ToString(), out var hid) ? hid : 0;
+                DateTime checkIn = DateTime.TryParse(open["CheckInDate"]?.ToString(), out var ci) ? ci : DateTime.Today;
+                DateTime? checkOut = DateTime.TryParse(open["CheckOutDate"]?.ToString(), out var co) ? co : (DateTime?)null;
+                string status = open.Table.Columns.Contains("Status") ? open["Status"]?.ToString() : "Active";
+                string notes = open.Table.Columns.Contains("Notes") ? open["Notes"]?.ToString() : "Cập nhật phòng";
+                await _bll.UpdateTenantHistoryAsync(historyId, roomId.Value, checkIn, checkOut, status, notes);
+            }
+            else
+            {
+                await _bll.AddTenantHistoryAsync(tenantId, roomId.Value, DateTime.Today, null, "Active", "Cập nhật phòng");
+            }
+        }
     }
 }
-

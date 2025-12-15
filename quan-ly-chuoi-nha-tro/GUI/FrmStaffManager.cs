@@ -9,7 +9,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 {
     public class FrmStaffManager : Form
     {
-        private const string SearchPlaceholder = "Tìm theo tài khoản/họ tên/email/sđt...";
+        private const string SearchPlaceholder = "Tìm theo tài khoản/họ tên/email/số điện thoại...";
 
         private readonly AdminDataBLL _bll = new AdminDataBLL();
 
@@ -523,4 +523,3 @@ namespace quan_ly_chuoi_nha_tro.GUI
         }
     }
 }
-

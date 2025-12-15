@@ -1,79 +1,79 @@
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
+    /// <summary>
+    /// Màn hình quản lý phòng cho nhân viên (xem, lọc, đổi trạng thái, xem chi tiết).
+    /// </summary>
     public class FrmRoomManager : Form
     {
-        private const string SearchPlaceholder = "Tìm theo số phòng/chi nhánh/trạng thái...";
+        private const string SearchPlaceholder = "Tìm theo số phòng/loại...";
 
-        private readonly AdminDataBLL _bll = new AdminDataBLL();
+        private readonly AdminDataBLL _bll;
+        private readonly int? _branchId;
 
-        private DataTable _rawTable;
+        private DataTable _rooms;
+        private DataTable _statuses;
+        private DataTable _roomTypes;
+        private DataTable _tenantHistory;
 
         private DataGridView _grid;
-        private TextBox _txtSearch;
-        private ComboBox _cboBranch;
         private ComboBox _cboStatus;
-        private ComboBox _cboActive;
-        private Label _lblCount;
+        private TextBox _txtSearch;
         private Label _lblSummary;
 
-        private Button _btnAdd;
-        private Button _btnEdit;
-        private Button _btnDelete;
-        private Button _btnToggleActive;
-        private Button _btnSetStatus;
+        private Button _btnSearch;
         private Button _btnRefresh;
-        private Button _btnCatalog;
-        private ContextMenuStrip _catalogMenu;
+        private Button _btnChangeStatus;
+        private Button _btnEdit;
 
-        private DataTable _branchTable;
-        private DataTable _statusTable;
-
-        public FrmRoomManager()
+        public FrmRoomManager(AdminDataBLL bll, int? branchId = null)
         {
+            _bll = bll ?? new AdminDataBLL();
+            _branchId = branchId;
             InitializeComponent();
+        }
+
+        public FrmRoomManager() : this(new AdminDataBLL(), null)
+        {
         }
 
         private void InitializeComponent()
         {
+            AutoScroll = true;
             Text = "Quản lý phòng";
             StartPosition = FormStartPosition.CenterParent;
-            Width = 1200;
+            BackColor = Color.FromArgb(240, 242, 245);
+            Font = new Font("Segoe UI", 10F);
+            Width = 1100;
             Height = 650;
-            BackColor = Color.FromArgb(245, 247, 250);
 
-            _grid = new DataGridView
+            var toolbar = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 76,
+                Padding = new Padding(12, 10, 12, 10),
+                BackColor = Color.White
+            };
+
+            var filters = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                ReadOnly = true,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                MultiSelect = false,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                AllowUserToAddRows = false,
-                AllowUserToDeleteRows = false,
-                RowHeadersVisible = false,
-                BackgroundColor = Color.White,
-                BorderStyle = BorderStyle.None
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink
             };
-            _grid.EnableHeadersVisualStyles = false;
-            _grid.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(0, 120, 215);
-            _grid.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            _grid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
-            _grid.DefaultCellStyle.Font = new Font("Segoe UI", 10, FontStyle.Regular);
-            _grid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 249, 255);
-            _grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(232, 244, 252);
-            _grid.DefaultCellStyle.SelectionForeColor = Color.Black;
-            _grid.CellFormatting += Grid_CellFormatting;
-            _grid.DoubleClick += async (s, e) => await EditSelectedAsync();
 
-            _txtSearch = new TextBox { Width = 280 };
-            _txtSearch.TextChanged += (s, e) => ApplyFilter();
+            var lblSearch = new Label { Text = "Tìm kiếm:", AutoSize = true, Margin = new Padding(0, 8, 6, 0) };
+            _txtSearch = new TextBox { Width = 240, ForeColor = Color.Gray, Text = SearchPlaceholder, Margin = new Padding(0, 4, 12, 0) };
             _txtSearch.GotFocus += (s, e) =>
             {
                 if (_txtSearch.Text == SearchPlaceholder)
@@ -90,714 +90,760 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     _txtSearch.ForeColor = Color.Gray;
                 }
             };
+            _txtSearch.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) ApplyFilter(); };
 
-            _cboBranch = new ComboBox { Width = 220, DropDownStyle = ComboBoxStyle.DropDownList };
-            _cboBranch.SelectedIndexChanged += (s, e) => ApplyFilter();
-
-            _cboStatus = new ComboBox { Width = 200, DropDownStyle = ComboBoxStyle.DropDownList };
+            var lblStatus = new Label { Text = "Trạng thái:", AutoSize = true, Margin = new Padding(0, 8, 6, 0) };
+            _cboStatus = new ComboBox { Width = 170, DropDownStyle = ComboBoxStyle.DropDownList, Margin = new Padding(0, 4, 12, 0) };
             _cboStatus.SelectedIndexChanged += (s, e) => ApplyFilter();
 
-            _cboActive = new ComboBox { Width = 150, DropDownStyle = ComboBoxStyle.DropDownList };
-            _cboActive.Items.AddRange(new object[] { "Tất cả", "Đang hoạt động", "Đã tắt" });
-            _cboActive.SelectedIndex = 1;
-            _cboActive.SelectedIndexChanged += (s, e) => ApplyFilter();
-
-            _lblCount = new Label { AutoSize = true, Text = "Tổng: 0" };
-            _lblSummary = new Label { AutoSize = true, Text = "Trống: 0 | Đang ở: 0 | Bảo trì: 0", ForeColor = Color.FromArgb(70, 70, 70) };
-
-            _btnAdd = MakeButton("Thêm", Color.FromArgb(0, 122, 204), async (s, e) => await AddNewAsync());
-            _btnEdit = MakeButton("Sửa", Color.FromArgb(0, 122, 204), async (s, e) => await EditSelectedAsync());
-            _btnDelete = MakeButton("Xóa", Color.FromArgb(211, 47, 47), async (s, e) => await DeleteSelectedAsync());
-            _btnSetStatus = MakeButton("Đổi trạng thái", Color.FromArgb(255, 152, 0), async (s, e) => await ChangeStatusAsync());
-            _btnToggleActive = MakeButton("Bật/Tắt", Color.FromArgb(103, 58, 183), async (s, e) => await ToggleActiveAsync());
-            _btnRefresh = MakeButton("Tải lại", Color.FromArgb(0, 122, 204), async (s, e) => await LoadDataAsync());
-
-            var top = new Panel { Dock = DockStyle.Top, Height = 64, Padding = new Padding(12, 10, 12, 10), BackColor = Color.White };
-
-            var actions = new FlowLayoutPanel
+            _btnSearch = new Button
             {
-                Dock = DockStyle.Left,
-                AutoSize = true,
-                WrapContents = false,
+                Text = "Tìm",
+                Width = 80,
+                Height = 32,
+                BackColor = Color.FromArgb(0, 122, 204),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Margin = new Padding(0, 4, 8, 0)
+            };
+            _btnSearch.FlatAppearance.BorderSize = 0;
+            _btnSearch.Click += (s, e) => ApplyFilter();
+
+            _btnRefresh = new Button
+            {
+                Text = "Làm mới",
+                Width = 90,
+                Height = 32,
+                BackColor = Color.FromArgb(40, 167, 69),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Margin = new Padding(0, 4, 8, 0)
+            };
+            _btnRefresh.FlatAppearance.BorderSize = 0;
+            _btnRefresh.Click += async (s, e) => await LoadRoomsAsync();
+
+            _btnChangeStatus = new Button
+            {
+                Text = "Đổi trạng thái",
+                Width = 120,
+                Height = 32,
+                BackColor = Color.FromArgb(255, 193, 7),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Margin = new Padding(0, 4, 8, 0)
+            };
+            _btnChangeStatus.FlatAppearance.BorderSize = 0;
+            _btnChangeStatus.Click += (s, e) => ChangeRoomStatus();
+
+            _btnEdit = new Button
+            {
+                Text = "Chỉnh sửa",
+                Width = 90,
+                Height = 32,
+                BackColor = Color.FromArgb(111, 66, 193),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Margin = new Padding(0, 4, 8, 0)
+            };
+            _btnEdit.FlatAppearance.BorderSize = 0;
+            _btnEdit.Click += (s, e) => EditCurrentRoom();
+
+            filters.Controls.Add(lblSearch);
+            filters.Controls.Add(_txtSearch);
+            filters.Controls.Add(lblStatus);
+            filters.Controls.Add(_cboStatus);
+            filters.Controls.Add(_btnSearch);
+            filters.Controls.Add(_btnRefresh);
+            filters.Controls.Add(_btnChangeStatus);
+            filters.Controls.Add(_btnEdit);
+
+            var stats = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Right,
                 FlowDirection = FlowDirection.LeftToRight,
-                BackColor = Color.Transparent
+                WrapContents = false,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Padding = new Padding(0, 6, 0, 0)
             };
-            actions.Controls.Add(_btnAdd);
-            actions.Controls.Add(_btnEdit);
-            actions.Controls.Add(_btnDelete);
-            actions.Controls.Add(_btnSetStatus);
-            actions.Controls.Add(_btnToggleActive);
-            actions.Controls.Add(_btnRefresh);
-
-            _catalogMenu = BuildCatalogMenu();
-            _btnCatalog = MakeButton("Danh mục ▾", Color.FromArgb(103, 58, 183), (s, e) =>
+            _lblSummary = new Label
             {
-                _catalogMenu.Show(_btnCatalog, new Point(0, _btnCatalog.Height));
-            });
-            actions.Controls.Add(_btnCatalog);
-
-            var filterHost = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent };
-            var pnlSearch = new Panel
-            {
-                BackColor = Color.FromArgb(245, 247, 250),
-                Height = 34,
-                Width = 300,
-                Padding = new Padding(10, 7, 10, 7)
+                Text = "Đang ở/Tổng: 0/0",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 122, 204)
             };
-            _txtSearch.BorderStyle = BorderStyle.None;
-            _txtSearch.Parent = pnlSearch;
-            _txtSearch.Location = new Point(2, 6);
-            _txtSearch.Width = pnlSearch.Width - 16;
-            pnlSearch.Resize += (s, e) => _txtSearch.Width = pnlSearch.Width - 16;
-            _txtSearch.Text = SearchPlaceholder;
-            _txtSearch.ForeColor = Color.Gray;
+            stats.Controls.Add(_lblSummary);
 
-            var lblSearch = new Label { Text = "Tìm:", AutoSize = true, Location = new Point(0, 9), ForeColor = Color.FromArgb(70, 70, 70) };
-            pnlSearch.Location = new Point(lblSearch.Right + 6, 10);
+            toolbar.Controls.Add(stats);
+            toolbar.Controls.Add(filters);
 
-            var lblBranch = new Label { Text = "Chi nhánh:", AutoSize = true, ForeColor = Color.FromArgb(70, 70, 70) };
-            lblBranch.Location = new Point(pnlSearch.Right + 14, 9);
-            _cboBranch.Location = new Point(lblBranch.Right + 6, 6);
-
-            var lblStatus = new Label { Text = "Trạng thái:", AutoSize = true, ForeColor = Color.FromArgb(70, 70, 70) };
-            lblStatus.Location = new Point(_cboBranch.Right + 14, 9);
-            _cboStatus.Location = new Point(lblStatus.Right + 6, 6);
-
-            var lblActive = new Label { Text = "Kích hoạt:", AutoSize = true, ForeColor = Color.FromArgb(70, 70, 70) };
-            lblActive.Location = new Point(_cboStatus.Right + 14, 9);
-            _cboActive.Location = new Point(lblActive.Right + 6, 6);
-
-            filterHost.Controls.Add(lblSearch);
-            filterHost.Controls.Add(pnlSearch);
-            filterHost.Controls.Add(lblBranch);
-            filterHost.Controls.Add(_cboBranch);
-            filterHost.Controls.Add(lblStatus);
-            filterHost.Controls.Add(_cboStatus);
-            filterHost.Controls.Add(lblActive);
-            filterHost.Controls.Add(_cboActive);
-
-            filterHost.Resize += (s, e) =>
+            _grid = new DataGridView
             {
-                pnlSearch.Location = new Point(lblSearch.Right + 6, 10);
-                lblBranch.Location = new Point(pnlSearch.Right + 14, 9);
-                _cboBranch.Location = new Point(lblBranch.Right + 6, 6);
-                lblStatus.Location = new Point(_cboBranch.Right + 14, 9);
-                _cboStatus.Location = new Point(lblStatus.Right + 6, 6);
-                lblActive.Location = new Point(_cboStatus.Right + 14, 9);
-                _cboActive.Location = new Point(lblActive.Right + 6, 6);
+                Dock = DockStyle.Fill,
+                ReadOnly = true,
+                AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                MultiSelect = false,
+                AutoGenerateColumns = false,
+                RowHeadersVisible = false,
+                BackgroundColor = Color.White,
+                BorderStyle = BorderStyle.None,
+                ScrollBars = ScrollBars.Both,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
             };
+            _grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            _grid.CellDoubleClick += (s, e) => ShowRoomInfo();
 
-            var summary = new Panel { Dock = DockStyle.Right, Width = 320, BackColor = Color.Transparent };
-            _lblCount.Location = new Point(0, 6);
-            _lblCount.Font = new Font("Segoe UI", 10, FontStyle.Bold);
-            _lblSummary.Location = new Point(0, 28);
-            summary.Controls.Add(_lblCount);
-            summary.Controls.Add(_lblSummary);
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "OrderNo", DataPropertyName = "OrderNo", HeaderText = "STT", FillWeight = 40 });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "RoomId", DataPropertyName = "RoomId", Visible = false });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "RoomNumber", DataPropertyName = "RoomNumber", HeaderText = "Số phòng", FillWeight = 90 });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "TypeName", DataPropertyName = "TypeName", HeaderText = "Loại phòng", FillWeight = 140 });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "RoomPrice", DataPropertyName = "RoomPrice", HeaderText = "Giá/Tháng", FillWeight = 110, DefaultCellStyle = new DataGridViewCellStyle { Format = "N0", Alignment = DataGridViewContentAlignment.MiddleRight } });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "StatusName", DataPropertyName = "StatusName", HeaderText = "Trạng thái", FillWeight = 100 });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Occupants", DataPropertyName = "Occupants", HeaderText = "Số người", FillWeight = 80, DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter } });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Area", DataPropertyName = "Area", HeaderText = "Diện tích", FillWeight = 80, DefaultCellStyle = new DataGridViewCellStyle { Format = "0.00", Alignment = DataGridViewContentAlignment.MiddleRight } });
 
-            top.Controls.Add(filterHost);
-            top.Controls.Add(summary);
-            top.Controls.Add(actions);
+            Controls.Add(_grid);
+            Controls.Add(toolbar);
 
-            var gridHost = new Panel { Dock = DockStyle.Fill, Padding = new Padding(12), BackColor = BackColor };
-            gridHost.Controls.Add(_grid);
-
-            Controls.Add(gridHost);
-            Controls.Add(top);
-
-            Load += async (s, e) => await LoadDataAsync();
+            Load += async (s, e) => await LoadRoomsAsync();
         }
 
-        private ContextMenuStrip BuildCatalogMenu()
-        {
-            var menu = new ContextMenuStrip();
-
-            var miSection = new ToolStripMenuItem("Khu/Dãy (BranchSections)");
-            miSection.Click += (s, e) =>
-            {
-                using (var frm = new FrmBranchSectionManager())
-                    frm.ShowDialog(this);
-            };
-
-            var miRoomType = new ToolStripMenuItem("Loại phòng (RoomTypes)");
-            miRoomType.Click += (s, e) =>
-            {
-                using (var frm = new FrmRoomTypeManager())
-                    frm.ShowDialog(this);
-            };
-
-            var miStatus = new ToolStripMenuItem("Trạng thái phòng (RoomStatuses)");
-            miStatus.Click += (s, e) =>
-            {
-                using (var frm = new FrmRoomStatusManager())
-                    frm.ShowDialog(this);
-            };
-
-            menu.Items.Add(miSection);
-            menu.Items.Add(miRoomType);
-            menu.Items.Add(miStatus);
-            return menu;
-        }
-
-        private async System.Threading.Tasks.Task LoadDataAsync()
+        private async Task LoadRoomsAsync()
         {
             try
             {
-                await LoadLookupsAsync();
-                _rawTable = await _bll.GetRoomsAsync();
-                _grid.DataSource = _rawTable;
-                ApplyGridPresentation();
+                Cursor = Cursors.WaitCursor;
+
+                _rooms = await _bll.GetRoomsAsync() ?? new DataTable();
+                _statuses = await _bll.GetRoomStatusesAsync() ?? new DataTable();
+                _roomTypes = await _bll.GetRoomTypesAsync() ?? new DataTable();
+                _tenantHistory = await _bll.GetTenantHistoryAsync() ?? new DataTable();
+
+                if (_branchId.HasValue && _rooms.Columns.Contains("BranchId"))
+                {
+                    var filtered = _rooms.AsEnumerable()
+                        .Where(r => int.TryParse(r["BranchId"]?.ToString(), out var bid) && bid == _branchId.Value);
+                    _rooms = filtered.Any() ? filtered.CopyToDataTable() : _rooms.Clone();
+                }
+
+                EnsureDisplayColumns();
+                PopulateOccupancy();
+                PopulateStatusFilter();
+
+                _grid.DataSource = _rooms;
                 ApplyFilter();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi tải phòng: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Lỗi tải phòng: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                Cursor = Cursors.Default;
             }
         }
 
-        private async System.Threading.Tasks.Task LoadLookupsAsync()
+        private void EnsureDisplayColumns()
         {
-            _branchTable = await _bll.GetBranchesAsync();
-            _statusTable = await _bll.GetRoomStatusesAsync();
+            if (_rooms == null) return;
 
-            var branches = _branchTable?.Copy();
-            if (branches != null && !branches.Columns.Contains("BranchDisplay"))
-                branches.Columns.Add("BranchDisplay", typeof(string));
-            if (branches != null)
+            if (!_rooms.Columns.Contains("TypeName"))
+                _rooms.Columns.Add("TypeName", typeof(string));
+            if (!_rooms.Columns.Contains("StatusName"))
+                _rooms.Columns.Add("StatusName", typeof(string));
+            if (!_rooms.Columns.Contains("Occupants"))
+                _rooms.Columns.Add("Occupants", typeof(int));
+
+            var typeLookup = _roomTypes?.AsEnumerable()
+                .Where(r => _roomTypes.Columns.Contains("RoomTypeId"))
+                .ToDictionary(r => r["RoomTypeId"], r => SafeToString(r, "RoomTypeName"));
+
+            var statusLookup = _statuses?.AsEnumerable()
+                .Where(r => _statuses.Columns.Contains("StatusId"))
+                .ToDictionary(r => r["StatusId"], r => SafeToString(r, "StatusName"));
+
+            foreach (DataRow row in _rooms.Rows)
             {
-                foreach (DataRow r in branches.Rows)
+                if (typeLookup != null && _rooms.Columns.Contains("RoomTypeId") && typeLookup.TryGetValue(row["RoomTypeId"], out var typeName))
+                    row["TypeName"] = typeName;
+                if (statusLookup != null && _rooms.Columns.Contains("CurrentStatusId") && statusLookup.TryGetValue(row["CurrentStatusId"], out var statusName))
+                    row["StatusName"] = statusName;
+            }
+        }
+
+        private void PopulateOccupancy()
+        {
+            if (_rooms == null) return;
+
+            var activeByRoom = new Dictionary<int, int>();
+            if (_tenantHistory != null && _tenantHistory.Rows.Count > 0 && _tenantHistory.Columns.Contains("RoomId"))
+            {
+                foreach (DataRow r in _tenantHistory.Rows)
                 {
-                    string code = branches.Columns.Contains("BranchCode") ? r["BranchCode"]?.ToString() : null;
-                    string name = branches.Columns.Contains("BranchName") ? r["BranchName"]?.ToString() : null;
-                    string id = branches.Columns.Contains("BranchId") ? r["BranchId"]?.ToString() : null;
-                    r["BranchDisplay"] = $"{code} - {name}".Trim(' ', '-');
-                    if (string.IsNullOrWhiteSpace(r["BranchDisplay"]?.ToString()))
-                        r["BranchDisplay"] = "Chi nhánh " + id;
+                    if (!int.TryParse(r["RoomId"]?.ToString(), out var rid)) continue;
+
+                    // xem là active nếu chưa checkout hoặc status chứa "Active" (không phân biệt hoa thường)
+                    bool isActive = string.IsNullOrWhiteSpace(r.Table.Columns.Contains("CheckOutDate") ? r["CheckOutDate"]?.ToString() : null);
+                    if (!isActive && r.Table.Columns.Contains("Status"))
+                    {
+                        var statusText = r["Status"]?.ToString() ?? string.Empty;
+                        isActive = statusText.IndexOf("active", StringComparison.OrdinalIgnoreCase) >= 0
+                                   || statusText.IndexOf("đang", StringComparison.OrdinalIgnoreCase) >= 0;
+                    }
+
+                    if (!isActive) continue;
+                    activeByRoom[rid] = activeByRoom.TryGetValue(rid, out var count) ? count + 1 : 1;
                 }
             }
 
-            var branchSelect = new DataTable();
-            branchSelect.Columns.Add("BranchId", typeof(int));
-            branchSelect.Columns.Add("BranchDisplay", typeof(string));
-            branchSelect.Rows.Add(0, "Tất cả");
-            if (branches != null && branches.Columns.Contains("BranchId"))
-            {
-                foreach (DataRow r in branches.Rows)
-                {
-                    if (!int.TryParse(r["BranchId"]?.ToString(), out var bid)) continue;
-                    branchSelect.Rows.Add(bid, r["BranchDisplay"]?.ToString());
-                }
-            }
-            _cboBranch.DataSource = branchSelect;
-            _cboBranch.DisplayMember = "BranchDisplay";
-            _cboBranch.ValueMember = "BranchId";
+            if (activeByRoom.Count == 0) return;
 
-            var statusSelect = new DataTable();
-            statusSelect.Columns.Add("StatusId", typeof(int));
-            statusSelect.Columns.Add("StatusName", typeof(string));
-            statusSelect.Rows.Add(0, "Tất cả");
-            if (_statusTable != null && _statusTable.Columns.Contains("StatusId"))
+            foreach (DataRow row in _rooms.Rows)
             {
-                foreach (DataRow r in _statusTable.Rows)
+                if (!int.TryParse(row["RoomId"]?.ToString(), out var rid)) continue;
+                var current = 0;
+                if (row.Table.Columns.Contains("Occupants") && int.TryParse(row["Occupants"]?.ToString(), out var stored))
+                    current = stored;
+                row["Occupants"] = activeByRoom.TryGetValue(rid, out var count) ? count : current;
+            }
+        }
+
+        private void PopulateStatusFilter()
+        {
+            var dt = new DataTable();
+            dt.Columns.Add("StatusId", typeof(int));
+            dt.Columns.Add("StatusName", typeof(string));
+            dt.Rows.Add(0, "Tất cả");
+
+            if (_statuses != null && _statuses.Columns.Contains("StatusId"))
+            {
+                foreach (DataRow r in _statuses.Rows)
                 {
-                    if (!int.TryParse(r["StatusId"]?.ToString(), out var sid)) continue;
-                    statusSelect.Rows.Add(sid, r["StatusName"]?.ToString());
+                    if (!int.TryParse(r["StatusId"]?.ToString(), out var id)) continue;
+                    dt.Rows.Add(id, SafeToString(r, "StatusName"));
                 }
             }
-            _cboStatus.DataSource = statusSelect;
+
+            _cboStatus.DataSource = dt;
             _cboStatus.DisplayMember = "StatusName";
             _cboStatus.ValueMember = "StatusId";
-        }
-
-        private void ApplyGridPresentation()
-        {
-            SetHeader("RoomId", "ID");
-            SetHeader("RoomNumber", "Số phòng");
-            SetHeader("BranchName", "Chi nhánh");
-            SetHeader("SectionName", "Khu/Dãy");
-            SetHeader("RoomTypeName", "Loại phòng");
-            SetHeader("RoomPrice", "Giá phòng");
-            SetHeader("StatusName", "Trạng thái");
-            SetHeader("IsActive", "Kích hoạt");
-            SetHeader("CreatedDate", "Tạo lúc");
-            SetHeader("UpdatedDate", "Cập nhật");
-
-            HideIfExists("RoomId");
-            HideIfExists("BranchId");
-            HideIfExists("SectionId");
-            HideIfExists("RoomTypeId");
-            HideIfExists("CurrentStatusId");
-            HideIfExists("Floor");
-            HideIfExists("Area");
-            HideIfExists("CreatedDate");
-            HideIfExists("UpdatedDate");
-
-            FormatMoney("RoomPrice");
-            FormatDateTime("CreatedDate");
-            FormatDateTime("UpdatedDate");
-
-            SetDisplayOrder(
-                "RoomNumber",
-                "BranchName",
-                "SectionName",
-                "RoomTypeName",
-                "RoomPrice",
-                "StatusName",
-                "IsActive"
-            );
+            _cboStatus.SelectedIndex = 0;
         }
 
         private void ApplyFilter()
         {
-            if (_rawTable == null) return;
+            if (_rooms == null) return;
 
-            string rawKeyword = (_txtSearch.Text ?? string.Empty).Trim();
-            if (rawKeyword == SearchPlaceholder) rawKeyword = string.Empty;
-            string keyword = rawKeyword.ToLowerInvariant();
+            var view = new DataView(_rooms);
+            var filters = new List<string>();
+            bool hasStatusColumn = _rooms.Columns.Contains("CurrentStatusId");
 
-            int branchId = _cboBranch.SelectedValue is int b ? b : 0;
-            int statusId = _cboStatus.SelectedValue is int s ? s : 0;
-            int activeChoice = _cboActive.SelectedIndex; // 0 all, 1 active, 2 inactive
-
-            var rows = _rawTable.AsEnumerable();
-
-            if (branchId > 0 && _rawTable.Columns.Contains("BranchId"))
-                rows = rows.Where(r => int.TryParse(r["BranchId"]?.ToString(), out var bid) && bid == branchId);
-
-            if (statusId > 0 && _rawTable.Columns.Contains("CurrentStatusId"))
-                rows = rows.Where(r => int.TryParse(r["CurrentStatusId"]?.ToString(), out var sid) && sid == statusId);
-
-            if (activeChoice != 0 && _rawTable.Columns.Contains("IsActive"))
+            var raw = (_txtSearch.Text ?? string.Empty).Trim();
+            if (raw == SearchPlaceholder) raw = string.Empty;
+            if (!string.IsNullOrWhiteSpace(raw))
             {
-                bool wantActive = activeChoice == 1;
-                rows = rows.Where(r =>
-                {
-                    if (r["IsActive"] == DBNull.Value) return false;
-                    try { return Convert.ToBoolean(r["IsActive"]) == wantActive; } catch { return false; }
-                });
+                var escaped = raw.Replace("'", "''");
+                filters.Add($"Convert(RoomNumber, 'System.String') LIKE '%{escaped}%' OR Convert(TypeName, 'System.String') LIKE '%{escaped}%'");
             }
 
-            if (!string.IsNullOrWhiteSpace(keyword))
+            if (hasStatusColumn && _cboStatus.SelectedValue is int statusId && statusId > 0)
+                filters.Add($"Convert(CurrentStatusId, 'System.Int32') = {statusId}");
+
+            view.RowFilter = filters.Count > 0 ? string.Join(" AND ", filters) : string.Empty;
+
+            // Chỉ hiển thị tối đa 20 phòng để tránh danh sách quá dài
+            var filteredTable = view.ToTable();
+            var aRooms = filteredTable.AsEnumerable()
+                .Where(r => SafeToString(r, "RoomNumber")?.StartsWith("A", StringComparison.OrdinalIgnoreCase) == true)
+                .OrderBy(r => SafeToString(r, "RoomNumber"))
+                .Take(10)
+                .ToList();
+            var bRooms = filteredTable.AsEnumerable()
+                .Where(r => SafeToString(r, "RoomNumber")?.StartsWith("B", StringComparison.OrdinalIgnoreCase) == true)
+                .OrderBy(r => SafeToString(r, "RoomNumber"))
+                .Take(10)
+                .ToList();
+
+            // A ở trên, B ở dưới, giữ nguyên giới hạn 10 mỗi nhóm
+            var selected = aRooms.Concat(bRooms).ToList();
+
+            var displayTable = filteredTable.Clone();
+            if (!displayTable.Columns.Contains("OrderNo"))
+                displayTable.Columns.Add("OrderNo", typeof(int));
+            displayTable.Columns["OrderNo"].SetOrdinal(0);
+
+            int order = 1;
+            foreach (var row in selected)
             {
-                rows = rows.Where(r =>
-                    Contains(r, "RoomNumber", keyword) ||
-                    Contains(r, "BranchName", keyword) ||
-                    Contains(r, "SectionName", keyword) ||
-                    Contains(r, "RoomTypeName", keyword) ||
-                    Contains(r, "StatusName", keyword) ||
-                    Contains(r, "RoomId", keyword));
+                var newRow = displayTable.NewRow();
+                foreach (DataColumn col in filteredTable.Columns)
+                    newRow[col.ColumnName] = row[col];
+                newRow["OrderNo"] = order++;
+                displayTable.Rows.Add(newRow);
             }
 
-            var filtered = _rawTable.Clone();
-            foreach (var r in rows)
-                filtered.ImportRow(r);
-
-            _grid.DataSource = filtered;
-            ApplyGridPresentation();
-
-            _lblCount.Text = $"Tổng: {filtered.Rows.Count}";
-            UpdateSummary(filtered);
+            _grid.DataSource = displayTable;
+            UpdateStats(displayTable);
         }
 
-        private void UpdateSummary(DataTable table)
+        private void UpdateStats(DataTable table)
         {
-            int vacant = 0, occupied = 0, maintenance = 0;
-            foreach (DataRow r in table.Rows)
-            {
-                string statusName = table.Columns.Contains("StatusName") ? r["StatusName"]?.ToString() : null;
-                int statusId = table.Columns.Contains("CurrentStatusId") && int.TryParse(r["CurrentStatusId"]?.ToString(), out var sid) ? sid : 0;
+            int total = table?.Rows.Count ?? 0;
+            int occupied = 0;
 
-                if (!string.IsNullOrWhiteSpace(statusName))
-                {
-                    var s = statusName.ToLowerInvariant();
-                    if (s.Contains("trống") || s.Contains("trong") || s.Contains("vacant")) vacant++;
-                    else if (s.Contains("bảo trì") || s.Contains("bao tri") || s.Contains("maint")) maintenance++;
-                    else occupied++;
-                }
-                else
-                {
-                    if (statusId == 1) vacant++;
-                    else if (statusId == 4) maintenance++;
-                    else if (statusId > 0) occupied++;
-                }
+            if (table != null)
+            {
+                occupied = table.AsEnumerable()
+                    .Count(r => (r["StatusName"]?.ToString() ?? string.Empty)
+                        .IndexOf("đang", StringComparison.OrdinalIgnoreCase) >= 0);
             }
 
-            _lblSummary.Text = $"Trống: {vacant:N0} | Đang ở: {occupied:N0} | Bảo trì: {maintenance:N0}";
+            _lblSummary.Text = $"Đang ở/Tổng: {occupied}/{total}";
         }
 
-        private DataRow GetCurrentRow()
+        private DataRowView GetCurrentRow()
         {
-            if (_grid.CurrentRow == null || _grid.CurrentRow.DataBoundItem == null) return null;
-            if (_grid.CurrentRow.DataBoundItem is DataRowView drv) return drv.Row;
-            return null;
+            return _grid.CurrentRow?.DataBoundItem as DataRowView;
         }
 
-        private async System.Threading.Tasks.Task AddNewAsync()
+        private async void ChangeRoomStatus()
         {
-            using (var frm = new FrmRoomEditor(_bll))
+            var rowView = GetCurrentRow();
+            if (rowView == null)
             {
-                if (frm.ShowDialog(this) == DialogResult.OK)
-                    await LoadDataAsync();
-            }
-        }
-
-        private async System.Threading.Tasks.Task EditSelectedAsync()
-        {
-            var row = GetCurrentRow();
-            if (row == null)
-            {
-                MessageBox.Show("Chọn một dòng để sửa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Chọn một phòng trước.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
-            using (var frm = new FrmRoomEditor(_bll, row))
+            if (!int.TryParse(rowView["RoomId"]?.ToString(), out var roomId) || roomId <= 0)
             {
-                if (frm.ShowDialog(this) == DialogResult.OK)
-                    await LoadDataAsync();
-            }
-        }
-
-        private async System.Threading.Tasks.Task DeleteSelectedAsync()
-        {
-            var row = GetCurrentRow();
-            if (row == null)
-            {
-                MessageBox.Show("Chọn một dòng để xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Không xác định được phòng.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
-            int id = ReadInt(row, "RoomId", "RoomID", "Id");
-            string number = ReadString(row, "RoomNumber") ?? id.ToString();
-            if (id <= 0)
+            using (var dlg = new Form())
             {
-                MessageBox.Show("Không xác định được RoomId để xóa.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
+                dlg.Text = "Đổi trạng thái phòng";
+                dlg.StartPosition = FormStartPosition.CenterParent;
+                dlg.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dlg.MaximizeBox = false;
+                dlg.MinimizeBox = false;
+                dlg.Size = new Size(420, 180);
+                dlg.BackColor = Color.White;
+                dlg.Font = Font;
 
-            if (MessageBox.Show($"Xóa/Vô hiệu hóa phòng \"{number}\" (ID {id})?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                return;
-
-            try
-            {
-                await _bll.DeleteRoomAsync(id);
-                await LoadDataAsync();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Lỗi xóa phòng: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private async System.Threading.Tasks.Task ToggleActiveAsync()
-        {
-            var row = GetCurrentRow();
-            if (row == null)
-            {
-                MessageBox.Show("Chọn một phòng để bật/tắt.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            int id = ReadInt(row, "RoomId");
-            if (id <= 0)
-            {
-                MessageBox.Show("Không xác định được RoomId.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
-            bool isActive = TryReadBool(row, "IsActive") ?? true;
-            bool next = !isActive;
-
-            string roomNumber = ReadString(row, "RoomNumber") ?? id.ToString();
-            if (MessageBox.Show($"Chuyển phòng \"{roomNumber}\" sang {(next ? "Đang hoạt động" : "Đã tắt")}?", "Xác nhận",
-                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                return;
-
-            try
-            {
-                await UpdateRoomFromRowAsync(row, isActive: next);
-                await LoadDataAsync();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Lỗi cập nhật: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private async System.Threading.Tasks.Task ChangeStatusAsync()
-        {
-            var row = GetCurrentRow();
-            if (row == null)
-            {
-                MessageBox.Show("Chọn một phòng để đổi trạng thái.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            int id = ReadInt(row, "RoomId");
-            if (id <= 0)
-            {
-                MessageBox.Show("Không xác định được RoomId.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
-            var dlg = new StatusPickerDialog(_statusTable);
-            if (dlg.ShowDialog(this) != DialogResult.OK) return;
-            int newStatusId = dlg.SelectedStatusId;
-            if (newStatusId <= 0) return;
-
-            try
-            {
-                await UpdateRoomFromRowAsync(row, statusId: newStatusId);
-                await LoadDataAsync();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Lỗi đổi trạng thái: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private async System.Threading.Tasks.Task UpdateRoomFromRowAsync(DataRow row, int? statusId = null, bool? isActive = null)
-        {
-            int id = ReadInt(row, "RoomId");
-            string roomNumber = ReadString(row, "RoomNumber");
-            int branchId = ReadInt(row, "BranchId");
-
-            int? sectionId = TryReadIntNullable(row, "SectionId");
-            int? roomTypeId = TryReadIntNullable(row, "RoomTypeId");
-            int? currentStatusId = statusId ?? TryReadIntNullable(row, "CurrentStatusId");
-            int? floor = TryReadIntNullable(row, "Floor");
-            decimal? area = TryReadDecimalNullable(row, "Area");
-            decimal? price = TryReadDecimalNullable(row, "RoomPrice");
-            bool? active = isActive ?? TryReadBool(row, "IsActive");
-
-            await _bll.UpdateRoomAsync(id, roomNumber, branchId, sectionId, roomTypeId, price, currentStatusId, floor, area, active);
-        }
-
-        private static void Grid_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
-        {
-            var grid = sender as DataGridView;
-            if (grid == null) return;
-            if (e.RowIndex < 0 || e.ColumnIndex < 0) return;
-
-            var col = grid.Columns[e.ColumnIndex];
-            if (col == null) return;
-
-            if (col.Name == "StatusName" && e.Value != null)
-            {
-                string s = e.Value.ToString().ToLowerInvariant();
-                if (s.Contains("trống") || s.Contains("trong") || s.Contains("vacant"))
-                    e.CellStyle.ForeColor = Color.FromArgb(46, 125, 50);
-                else if (s.Contains("bảo trì") || s.Contains("bao tri") || s.Contains("maint"))
-                    e.CellStyle.ForeColor = Color.FromArgb(156, 39, 176);
-                else if (s.Contains("cọc") || s.Contains("coc"))
-                    e.CellStyle.ForeColor = Color.FromArgb(255, 152, 0);
-                else
-                    e.CellStyle.ForeColor = Color.FromArgb(33, 150, 243);
-            }
-
-            if (col.Name == "IsActive" && e.Value != null)
-            {
-                try
+                var lbl = new Label { Text = "Trạng thái mới:", AutoSize = true, Location = new Point(16, 22) };
+                var cbo = new ComboBox
                 {
-                    bool act = Convert.ToBoolean(e.Value);
-                    if (!act)
-                        e.CellStyle.ForeColor = Color.FromArgb(211, 47, 47);
-                }
-                catch { }
-            }
-        }
+                    DropDownStyle = ComboBoxStyle.DropDownList,
+                    Width = 360,
+                    Location = new Point(16, 50),
+                    DataSource = _statuses?.Copy(),
+                    DisplayMember = "StatusName",
+                    ValueMember = "StatusId"
+                };
 
-        private static Button MakeButton(string text, Color backColor, EventHandler onClick)
-        {
-            var b = new Button
-            {
-                Text = text,
-                Width = 96,
-                Height = 34,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = backColor,
-                ForeColor = Color.White,
-                Margin = new Padding(0, 0, 8, 0)
-            };
-            b.FlatAppearance.BorderSize = 0;
-            b.Click += onClick;
-            return b;
-        }
-
-        private void SetHeader(string columnName, string headerText)
-        {
-            if (_grid.Columns.Contains(columnName))
-                _grid.Columns[columnName].HeaderText = headerText;
-        }
-
-        private void HideIfExists(string columnName)
-        {
-            if (_grid.Columns.Contains(columnName))
-                _grid.Columns[columnName].Visible = false;
-        }
-
-        private void FormatMoney(string columnName)
-        {
-            if (_grid.Columns.Contains(columnName))
-                _grid.Columns[columnName].DefaultCellStyle.Format = "N0";
-        }
-
-        private void FormatDateTime(string columnName)
-        {
-            if (_grid.Columns.Contains(columnName))
-                _grid.Columns[columnName].DefaultCellStyle.Format = "dd/MM/yyyy HH:mm";
-        }
-
-        private void SetDisplayOrder(params string[] order)
-        {
-            int index = 0;
-            foreach (var name in order)
-            {
-                if (_grid.Columns.Contains(name))
+                var btnOk = new Button
                 {
-                    _grid.Columns[name].DisplayIndex = index;
-                    index++;
-                }
-            }
-        }
+                    Text = "Cập nhật",
+                    DialogResult = DialogResult.OK,
+                    Width = 110,
+                    Height = 32,
+                    BackColor = Color.FromArgb(0, 122, 204),
+                    ForeColor = Color.White,
+                    FlatStyle = FlatStyle.Flat,
+                    Location = new Point(170, 100)
+                };
+                btnOk.FlatAppearance.BorderSize = 0;
 
-        private static bool Contains(DataRow row, string column, string keywordLower)
-        {
-            if (row?.Table == null || !row.Table.Columns.Contains(column)) return false;
-            var v = row[column];
-            if (v == null || v == DBNull.Value) return false;
-            return v.ToString().ToLowerInvariant().Contains(keywordLower);
-        }
-
-        private static string ReadString(DataRow row, params string[] cols)
-        {
-            foreach (var c in cols)
-            {
-                if (row.Table.Columns.Contains(c))
+                var btnCancel = new Button
                 {
-                    var v = row[c];
-                    if (v != null && v != DBNull.Value) return v.ToString();
-                }
-            }
-            return null;
-        }
+                    Text = "Hủy",
+                    DialogResult = DialogResult.Cancel,
+                    Width = 90,
+                    Height = 32,
+                    Location = new Point(290, 100)
+                };
 
-        private static int ReadInt(DataRow row, params string[] cols)
-        {
-            foreach (var c in cols)
-            {
-                if (row.Table.Columns.Contains(c))
+                dlg.Controls.Add(lbl);
+                dlg.Controls.Add(cbo);
+                dlg.Controls.Add(btnOk);
+                dlg.Controls.Add(btnCancel);
+                dlg.AcceptButton = btnOk;
+                dlg.CancelButton = btnCancel;
+
+                if (dlg.ShowDialog(this) == DialogResult.OK && cbo.SelectedValue != null)
                 {
-                    var v = row[c];
-                    if (v == null || v == DBNull.Value) continue;
-                    if (int.TryParse(v.ToString(), out var i)) return i;
-                    try { return Convert.ToInt32(v); } catch { }
-                }
-            }
-            return 0;
-        }
-
-        private static int? TryReadIntNullable(DataRow row, params string[] cols)
-        {
-            int i = ReadInt(row, cols);
-            return i > 0 ? (int?)i : null;
-        }
-
-        private static decimal? TryReadDecimalNullable(DataRow row, params string[] cols)
-        {
-            foreach (var c in cols)
-            {
-                if (row.Table.Columns.Contains(c))
-                {
-                    var v = row[c];
-                    if (v == null || v == DBNull.Value) continue;
-                    if (decimal.TryParse(v.ToString(), out var d)) return d;
-                    try { return Convert.ToDecimal(v); } catch { }
-                }
-            }
-            return null;
-        }
-
-        private static bool? TryReadBool(DataRow row, params string[] cols)
-        {
-            foreach (var c in cols)
-            {
-                if (row.Table.Columns.Contains(c))
-                {
-                    var v = row[c];
-                    if (v == null || v == DBNull.Value) continue;
-                    if (bool.TryParse(v.ToString(), out var b)) return b;
-                    try { return Convert.ToBoolean(v); } catch { }
-                }
-            }
-            return null;
-        }
-
-        private class StatusPickerDialog : Form
-        {
-            private ComboBox _cbo;
-            private Button _btnOk;
-            private Button _btnCancel;
-            public int SelectedStatusId { get; private set; }
-
-            public StatusPickerDialog(DataTable statusTable)
-            {
-                InitializeComponent();
-
-                var src = new DataTable();
-                src.Columns.Add("StatusId", typeof(int));
-                src.Columns.Add("StatusName", typeof(string));
-                if (statusTable != null && statusTable.Columns.Contains("StatusId"))
-                {
-                    foreach (DataRow r in statusTable.Rows)
+                    try
                     {
-                        if (!int.TryParse(r["StatusId"]?.ToString(), out var id)) continue;
-                        src.Rows.Add(id, r["StatusName"]?.ToString());
+                        int newStatusId = Convert.ToInt32(cbo.SelectedValue);
+                        await UpdateRoomStatusAsync(rowView, roomId, newStatusId);
+                        await LoadRoomsAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Lỗi cập nhật: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
+            }
+        }
 
-                _cbo.DataSource = src;
-                _cbo.DisplayMember = "StatusName";
-                _cbo.ValueMember = "StatusId";
+        private void ShowRoomInfo()
+        {
+            var rowView = GetCurrentRow();
+            if (rowView == null)
+            {
+                MessageBox.Show("Chọn một phòng trước.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using (var dlg = new Form())
+            {
+                dlg.Text = "Thông tin phòng";
+                dlg.StartPosition = FormStartPosition.CenterParent;
+                dlg.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dlg.MaximizeBox = false;
+                dlg.MinimizeBox = false;
+                dlg.Size = new Size(420, 300);
+                dlg.BackColor = Color.White;
+                dlg.Font = Font;
+
+                int y = 18;
+                int xLabel = 18;
+                int xValue = 140;
+                int line = 26;
+
+                dlg.Controls.Add(MakeLabel("Số phòng:", xLabel, y));
+                dlg.Controls.Add(MakeValueLabel(SafeToString(rowView.Row, "RoomNumber"), xValue, y));
+                y += line;
+                dlg.Controls.Add(MakeLabel("Loại phòng:", xLabel, y));
+                dlg.Controls.Add(MakeValueLabel(SafeToString(rowView.Row, "TypeName"), xValue, y));
+                y += line;
+                dlg.Controls.Add(MakeLabel("Trạng thái:", xLabel, y));
+                dlg.Controls.Add(MakeValueLabel(SafeToString(rowView.Row, "StatusName"), xValue, y));
+                y += line;
+                dlg.Controls.Add(MakeLabel("Số người:", xLabel, y));
+                dlg.Controls.Add(MakeValueLabel(TryGetInt(rowView, "Occupants").ToString(), xValue, y));
+                y += line;
+                dlg.Controls.Add(MakeLabel("Giá/Tháng:", xLabel, y));
+                dlg.Controls.Add(MakeValueLabel(TryGetDecimal(rowView, "RoomPrice")?.ToString("N0") ?? "-", xValue, y));
+                y += line;
+                dlg.Controls.Add(MakeLabel("Diện tích:", xLabel, y));
+                dlg.Controls.Add(MakeValueLabel(TryGetDecimal(rowView, "Area")?.ToString("0.##") ?? "-", xValue, y));
+
+                var btnEdit = new Button
+                {
+                    Text = "Chỉnh sửa",
+                    Width = 100,
+                    Height = 30,
+                    DialogResult = DialogResult.OK,
+                    BackColor = Color.FromArgb(0, 122, 204),
+                    ForeColor = Color.White,
+                    FlatStyle = FlatStyle.Flat,
+                    Location = new Point(dlg.ClientSize.Width - 220, dlg.ClientSize.Height - 60),
+                    Anchor = AnchorStyles.Bottom | AnchorStyles.Right
+                };
+                btnEdit.FlatAppearance.BorderSize = 0;
+
+                var btnClose = new Button
+                {
+                    Text = "Đóng",
+                    Width = 80,
+                    Height = 30,
+                    DialogResult = DialogResult.Cancel,
+                    Location = new Point(dlg.ClientSize.Width - 110, dlg.ClientSize.Height - 60),
+                    Anchor = AnchorStyles.Bottom | AnchorStyles.Right
+                };
+
+                dlg.Controls.Add(btnEdit);
+                dlg.Controls.Add(btnClose);
+                dlg.AcceptButton = btnClose;
+                dlg.CancelButton = btnClose;
+
+                if (dlg.ShowDialog(this) == DialogResult.OK)
+                {
+                    EditCurrentRoom(rowView);
+                }
+            }
+        }
+
+        private Label MakeLabel(string text, int x, int y)
+        {
+            return new Label { Text = text, AutoSize = true, Location = new Point(x, y) };
+        }
+
+        private Label MakeValueLabel(string text, int x, int y)
+        {
+            return new Label { Text = text, AutoSize = true, Location = new Point(x, y), ForeColor = Color.FromArgb(50, 50, 50) };
+        }
+
+        private async void EditCurrentRoom(DataRowView rowView = null)
+        {
+            if (rowView == null)
+                rowView = GetCurrentRow();
+            if (rowView == null)
+            {
+                MessageBox.Show("Chọn một phòng trước.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using (var dlg = new RoomEditDialog(rowView, _roomTypes, _statuses))
+            {
+                if (dlg.ShowDialog(this) != DialogResult.OK) return;
+
+                try
+                {
+                    string roomNumber = rowView["RoomNumber"]?.ToString() ?? string.Empty;
+                    int roomId = TryGetInt(rowView, "RoomId");
+                    int branchId = TryGetInt(rowView, "BranchId");
+                    int? sectionId = TryGetNullableInt(rowView, "SectionId");
+                    int? roomTypeId = dlg.SelectedRoomTypeId ?? TryGetNullableInt(rowView, "RoomTypeId");
+                    decimal? price = dlg.RoomPrice ?? TryGetDecimal(rowView, "RoomPrice");
+                    int? statusId = dlg.SelectedStatusId ?? TryGetNullableInt(rowView, "CurrentStatusId");
+                    int? floor = TryGetNullableInt(rowView, "Floor");
+                    decimal? area = dlg.Area ?? TryGetDecimal(rowView, "Area");
+                    bool? isActive = dlg.IsActive ?? TryGetBool(rowView, "IsActive");
+                    int occupants = dlg.OccupantCount ?? TryGetInt(rowView, "Occupants");
+
+                    await _bll.UpdateRoomAsync(roomId, roomNumber, branchId, sectionId, roomTypeId, price, statusId, floor, area, isActive, occupants);
+                    await LoadRoomsAsync();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Lỗi cập nhật phòng: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+
+        private async Task UpdateRoomStatusAsync(DataRowView row, int roomId, int newStatusId)
+        {
+            string roomNumber = row["RoomNumber"]?.ToString() ?? string.Empty;
+            int branchId = TryGetInt(row, "BranchId");
+            int? sectionId = TryGetNullableInt(row, "SectionId");
+            int? roomTypeId = TryGetNullableInt(row, "RoomTypeId");
+            decimal? price = TryGetDecimal(row, "RoomPrice");
+            int? floor = TryGetNullableInt(row, "Floor");
+            decimal? area = TryGetDecimal(row, "Area");
+            bool? isActive = TryGetBool(row, "IsActive");
+
+            await _bll.UpdateRoomAsync(roomId, roomNumber, branchId, sectionId, roomTypeId, price, newStatusId, floor, area, isActive, TryGetInt(row, "Occupants"));
+        }
+
+        private static int TryGetInt(DataRowView row, string column)
+        {
+            if (row == null || !row.Row.Table.Columns.Contains(column)) return 0;
+            return int.TryParse(row[column]?.ToString(), out var val) ? val : 0;
+        }
+
+        private static int? TryGetNullableInt(DataRowView row, string column)
+        {
+            if (row == null || !row.Row.Table.Columns.Contains(column)) return null;
+            return int.TryParse(row[column]?.ToString(), out var val) ? (int?)val : null;
+        }
+
+        private static decimal? TryGetDecimal(DataRowView row, string column)
+        {
+            if (row == null || !row.Row.Table.Columns.Contains(column)) return null;
+            return decimal.TryParse(row[column]?.ToString(), out var val) ? (decimal?)val : null;
+        }
+
+        private static bool? TryGetBool(DataRowView row, string column)
+        {
+            if (row == null || !row.Row.Table.Columns.Contains(column)) return null;
+            return bool.TryParse(row[column]?.ToString(), out var val) ? (bool?)val : null;
+        }
+
+        private class RoomEditDialog : Form
+        {
+            private readonly DataRowView _row;
+            private readonly DataTable _roomTypes;
+            private readonly DataTable _statuses;
+
+            private ComboBox _cboRoomType;
+            private ComboBox _cboStatus;
+            private Label _lblPrice;
+            private TextBox _txtArea;
+            private NumericUpDown _numOccupants;
+            private CheckBox _chkActive;
+
+            public int? SelectedRoomTypeId => _cboRoomType.SelectedValue is int v ? v : (int?)null;
+            public int? SelectedStatusId => _cboStatus.SelectedValue is int v ? v : (int?)null;
+            // Không cho sửa giá, luôn null để giữ nguyên giá gốc
+            public decimal? RoomPrice => null;
+            public int? OccupantCount => (int)_numOccupants.Value;
+            public decimal? Area => decimal.TryParse(_txtArea.Text.Replace(",", ""), out var d) ? d : (decimal?)null;
+            public bool? IsActive => _chkActive.Checked;
+
+            public RoomEditDialog(DataRowView row, DataTable roomTypes, DataTable statuses)
+            {
+                _row = row;
+                _roomTypes = roomTypes;
+                _statuses = statuses;
+
+                InitializeComponent();
+                LoadData();
             }
 
             private void InitializeComponent()
             {
-                Text = "Đổi trạng thái phòng";
+                Text = "Chỉnh sửa phòng";
                 StartPosition = FormStartPosition.CenterParent;
                 FormBorderStyle = FormBorderStyle.FixedDialog;
                 MaximizeBox = false;
                 MinimizeBox = false;
-                ClientSize = new Size(520, 150);
+                ClientSize = new Size(420, 300);
                 BackColor = Color.White;
 
-                var lbl = new Label { Text = "Chọn trạng thái:", AutoSize = true, Location = new Point(18, 22) };
-                _cbo = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 470, Location = new Point(18, 48) };
-
-                _btnOk = new Button { Text = "Cập nhật", Width = 110, Height = 32, Location = new Point(280, 96) };
-                _btnCancel = new Button { Text = "Hủy", Width = 90, Height = 32, Location = new Point(400, 96) };
-
-                _btnOk.FlatStyle = FlatStyle.Flat;
-                _btnOk.FlatAppearance.BorderSize = 0;
-                _btnOk.BackColor = Color.FromArgb(0, 122, 204);
-                _btnOk.ForeColor = Color.White;
-                _btnCancel.FlatStyle = FlatStyle.Flat;
-                _btnCancel.FlatAppearance.BorderSize = 1;
-
-                _btnOk.Click += (s, e) =>
+                var lblRoom = new Label { Text = "Số phòng:", AutoSize = true, Location = new Point(18, 18) };
+                var txtRoom = new TextBox
                 {
-                    if (_cbo.SelectedValue is int id && id > 0)
-                        SelectedStatusId = id;
-                    DialogResult = SelectedStatusId > 0 ? DialogResult.OK : DialogResult.Cancel;
+                    ReadOnly = true,
+                    Width = 140,
+                    Location = new Point(120, 14),
+                    Text = _row["RoomNumber"]?.ToString() ?? string.Empty
                 };
-                _btnCancel.Click += (s, e) => DialogResult = DialogResult.Cancel;
 
-                Controls.Add(lbl);
-                Controls.Add(_cbo);
-                Controls.Add(_btnOk);
-                Controls.Add(_btnCancel);
+                var lblType = new Label { Text = "Loại phòng:", AutoSize = true, Location = new Point(18, 56) };
+                _cboRoomType = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 260, Location = new Point(120, 52) };
 
-                AcceptButton = _btnOk;
-                CancelButton = _btnCancel;
+                var lblStatus = new Label { Text = "Trạng thái:", AutoSize = true, Location = new Point(18, 94) };
+                _cboStatus = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 260, Location = new Point(120, 90) };
+
+                var lblOccupants = new Label { Text = "Số người:", AutoSize = true, Location = new Point(18, 132) };
+                _numOccupants = new NumericUpDown { Minimum = 0, Maximum = 50, Width = 120, Location = new Point(120, 128) };
+
+                var lblPrice = new Label { Text = "Giá/Tháng:", AutoSize = true, Location = new Point(18, 166) };
+                _lblPrice = new Label { AutoSize = true, Location = new Point(120, 166), ForeColor = Color.FromArgb(70, 70, 70) };
+
+                var lblArea = new Label { Text = "Diện tích (m²):", AutoSize = true, Location = new Point(18, 202) };
+                _txtArea = new TextBox { Width = 260, Location = new Point(120, 198) };
+
+                _chkActive = new CheckBox { Text = "Kích hoạt", AutoSize = true, Location = new Point(120, 226) };
+
+                var btnOk = new Button
+                {
+                    Text = "Cập nhật",
+                    Width = 100,
+                    Height = 30,
+                    Location = new Point(200, 248),
+                    BackColor = Color.FromArgb(0, 122, 204),
+                    ForeColor = Color.White,
+                    FlatStyle = FlatStyle.Flat,
+                    DialogResult = DialogResult.OK
+                };
+                btnOk.FlatAppearance.BorderSize = 0;
+
+                var btnCancel = new Button
+                {
+                    Text = "Hủy",
+                    Width = 80,
+                    Height = 30,
+                    Location = new Point(310, 248),
+                    DialogResult = DialogResult.Cancel
+                };
+
+                Controls.Add(lblRoom);
+                Controls.Add(txtRoom);
+                Controls.Add(lblType);
+                Controls.Add(_cboRoomType);
+                Controls.Add(lblStatus);
+                Controls.Add(_cboStatus);
+                Controls.Add(lblOccupants);
+                Controls.Add(_numOccupants);
+                Controls.Add(lblPrice);
+                Controls.Add(_lblPrice);
+                Controls.Add(lblArea);
+                Controls.Add(_txtArea);
+                Controls.Add(_chkActive);
+                Controls.Add(btnOk);
+                Controls.Add(btnCancel);
+
+                AcceptButton = btnOk;
+                CancelButton = btnCancel;
             }
+
+            private void LoadData()
+            {
+                // room types
+                var roomTypeSrc = new DataTable();
+                roomTypeSrc.Columns.Add("RoomTypeId", typeof(int));
+                roomTypeSrc.Columns.Add("RoomTypeName", typeof(string));
+                if (_roomTypes != null && _roomTypes.Columns.Contains("RoomTypeId"))
+                {
+                    foreach (DataRow r in _roomTypes.Rows)
+                    {
+                        if (!int.TryParse(r["RoomTypeId"]?.ToString(), out var id)) continue;
+                        roomTypeSrc.Rows.Add(id, r["RoomTypeName"]?.ToString());
+                    }
+                }
+                _cboRoomType.DataSource = roomTypeSrc;
+                _cboRoomType.DisplayMember = "RoomTypeName";
+                _cboRoomType.ValueMember = "RoomTypeId";
+
+                // statuses
+                var statusSrc = new DataTable();
+                statusSrc.Columns.Add("StatusId", typeof(int));
+                statusSrc.Columns.Add("StatusName", typeof(string));
+                if (_statuses != null && _statuses.Columns.Contains("StatusId"))
+                {
+                    foreach (DataRow r in _statuses.Rows)
+                    {
+                        if (!int.TryParse(r["StatusId"]?.ToString(), out var id)) continue;
+                        statusSrc.Rows.Add(id, r["StatusName"]?.ToString());
+                    }
+                }
+                _cboStatus.DataSource = statusSrc;
+                _cboStatus.DisplayMember = "StatusName";
+                _cboStatus.ValueMember = "StatusId";
+
+                // set current values
+                int? typeId = TryReadInt(_row, "RoomTypeId");
+                if (typeId.HasValue) _cboRoomType.SelectedValue = typeId.Value;
+
+                int? statusId = TryReadInt(_row, "CurrentStatusId");
+                if (statusId.HasValue) _cboStatus.SelectedValue = statusId.Value;
+
+                
+                int occupants = TryReadInt(_row, "Occupants") ?? 0;
+                _numOccupants.Value = Math.Max(_numOccupants.Minimum, Math.Min(_numOccupants.Maximum, occupants));
+
+decimal? price = TryReadDecimal(_row, "RoomPrice");
+                _lblPrice.Text = price.HasValue ? price.Value.ToString("N0") : "KhÃ´ng xÃ¡c Ä‘á»‹nh";
+
+                decimal? area = TryReadDecimal(_row, "Area");
+                if (area.HasValue) _txtArea.Text = area.Value.ToString("0.##");
+
+                bool? active = TryReadBool(_row, "IsActive");
+                _chkActive.Checked = active ?? true;
+            }
+
+            private static int? TryReadInt(DataRowView row, string column)
+            {
+                if (row == null || !row.Row.Table.Columns.Contains(column)) return null;
+                return int.TryParse(row[column]?.ToString(), out var val) ? (int?)val : null;
+            }
+
+            private static decimal? TryReadDecimal(DataRowView row, string column)
+            {
+                if (row == null || !row.Row.Table.Columns.Contains(column)) return null;
+                return decimal.TryParse(row[column]?.ToString(), out var val) ? (decimal?)val : null;
+            }
+
+            private static bool? TryReadBool(DataRowView row, string column)
+            {
+                if (row == null || !row.Row.Table.Columns.Contains(column)) return null;
+                return bool.TryParse(row[column]?.ToString(), out var val) ? (bool?)val : null;
+            }
+        }
+
+        private static string SafeToString(DataRow row, string column)
+        {
+            if (row?.Table == null || !row.Table.Columns.Contains(column)) return null;
+            var v = row[column];
+            return v == null || v == DBNull.Value ? null : v.ToString();
         }
     }
 }

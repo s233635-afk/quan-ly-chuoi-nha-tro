@@ -412,7 +412,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 else
                 {
                     int id = _existingRow.Table.Columns.Contains("RoomId") ? Convert.ToInt32(_existingRow["RoomId"]) : 0;
-                    await _bll.UpdateRoomAsync(id, roomNumber, branchId, sectionId, roomTypeId, price, statusId, floor, area, isActive);
+                    await _bll.UpdateRoomAsync(id, roomNumber, branchId, sectionId, roomTypeId, price, statusId, floor, area, isActive, null);
                     SavedRoomId = id;
                 }
 
@@ -425,3 +425,4 @@ namespace quan_ly_chuoi_nha_tro.GUI
         }
     }
 }
+

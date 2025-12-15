@@ -374,7 +374,8 @@ namespace QuanLyNhaTro.DAL
             int? currentStatusId,
             int? floor,
             decimal? area,
-            bool? isActive)
+            bool? isActive,
+            int? occupants = null)
         {
             if (!await TableExistsAsync("Rooms"))
                 throw new Exception("Bảng Rooms không tồn tại.");
@@ -397,6 +398,7 @@ namespace QuanLyNhaTro.DAL
                 bool hasStatus = await ColumnExistsAsync(conn, tbl, "Status");
                 bool hasFloor = await ColumnExistsAsync(conn, tbl, "Floor");
                 bool hasArea = await ColumnExistsAsync(conn, tbl, "Area");
+                bool hasOccupants = await ColumnExistsAsync(conn, tbl, "Occupants");
                 bool hasIsActive = await ColumnExistsAsync(conn, tbl, "IsActive");
                 bool hasUpdatedDate = await ColumnExistsAsync(conn, tbl, "UpdatedDate");
 
@@ -420,6 +422,7 @@ namespace QuanLyNhaTro.DAL
 
                 if (hasFloor) sets.Add("Floor = @Floor");
                 if (hasArea) sets.Add("Area = @Area");
+                if (hasOccupants) sets.Add("Occupants = @Occupants");
                 if (hasIsActive) sets.Add("IsActive = @IsActive");
                 if (hasUpdatedDate) sets.Add("UpdatedDate = GETDATE()");
 
@@ -439,6 +442,7 @@ namespace QuanLyNhaTro.DAL
                     if (hasCurrentStatusId || hasStatus) cmd.Parameters.AddWithValue("@CurrentStatusId", currentStatusId.HasValue ? (object)currentStatusId.Value : DBNull.Value);
                     if (hasFloor) cmd.Parameters.AddWithValue("@Floor", floor.HasValue ? (object)floor.Value : DBNull.Value);
                     if (hasArea) cmd.Parameters.AddWithValue("@Area", area.HasValue ? (object)area.Value : DBNull.Value);
+                    if (hasOccupants) cmd.Parameters.AddWithValue("@Occupants", occupants.HasValue ? (object)occupants.Value : DBNull.Value);
                     if (hasIsActive) cmd.Parameters.AddWithValue("@IsActive", isActive.HasValue ? (object)isActive.Value : (object)true);
 
                     int affected = await cmd.ExecuteNonQueryAsync();
