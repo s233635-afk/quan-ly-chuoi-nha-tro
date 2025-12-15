@@ -39,6 +39,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 return;
             }
 
+            // Chế độ Admin-only: ẩn module quản lý nhân viên & các màn Staff
+            if (btnNavStaff != null)
+                btnNavStaff.Visible = false;
+
             this.Text = $"Bảng điều khiển Admin - {currentUser}";
             this.WindowState = FormWindowState.Maximized;
             lblWelcome.Text = $"Xin chào Admin: {currentUser}";

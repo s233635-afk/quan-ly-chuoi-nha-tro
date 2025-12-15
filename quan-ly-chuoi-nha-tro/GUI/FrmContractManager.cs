@@ -75,7 +75,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _txtSearch.TextChanged += (s, e) => ApplyFilter();
 
             _cboStatus = new ComboBox { Width = 160, DropDownStyle = ComboBoxStyle.DropDownList };
-            _cboStatus.Items.AddRange(new object[] { "Tất cả", "Active", "Extended", "Terminated", "Expired", "Pending" });
+            _cboStatus.Items.AddRange(new object[] { "Tất cả", "Active", "Extended", "Terminated", "Expired" });
             _cboStatus.SelectedIndex = 0;
             _cboStatus.SelectedIndexChanged += (s, e) => ApplyFilter();
 

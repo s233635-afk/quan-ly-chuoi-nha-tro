@@ -1,8 +1,8 @@
 # Quản Lý Chuỗi Nhà Trọ - Admin Dashboard
 
-Ứng dụng WinForms quản lý chuỗi nhà trọ toàn diện với 13 tính năng Admin + 8 tính năng Nhân Viên
+Ứng dụng WinForms quản lý chuỗi nhà trọ toàn diện theo chế độ **Admin-only** (chỉ tài khoản Admin đăng nhập và sử dụng).
 
-## 🎯 Tính Năng Admin (13 mô-đun)
+## 🎯 Tính Năng Admin (12 mô-đun)
 
 1. **🏢 Quản Lý Chi Nhánh** - HOÀN THÀNH ✅
    - Thêm, sửa, xóa chi nhánh
@@ -14,52 +14,38 @@
    - Quản lý loại phòng, trạng thái phòng, khu/Block (BranchSection)
    - Thiết lập giá/diện tích/tầng
 
-3. **👥 Quản Lý Nhân Viên** - HOÀN THÀNH ✅
-   - CRUD nhân viên (Role Staff) + gán chi nhánh
-   - Bật/tắt tài khoản, đổi mật khẩu
-
-4. **🧑 Quản Lý Khách Thuê** - HOÀN THÀNH ✅
+3. **🧑 Quản Lý Khách Thuê** - HOÀN THÀNH ✅
    - CRUD khách thuê + bật/tắt hoạt động
    - Quản lý người phụ thuộc + lịch sử ở phòng
+   - Lưu đường dẫn ảnh CCCD mặt trước/mặt sau (FrontIdPhoto/BackIdPhoto)
 
-5. **📜 Quản Lý Hợp Đồng** - HOÀN THÀNH ✅
+4. **📜 Quản Lý Hợp Đồng** - HOÀN THÀNH ✅
    - CRUD hợp đồng, trạng thái hợp đồng, ngày bắt đầu/kết thúc
 
-6. **💰 Quản Lý Ký Cược** - HOÀN THÀNH ✅
+5. **💰 Quản Lý Ký Cược** - HOÀN THÀNH ✅
    - CRUD phiếu cọc theo hợp đồng/khách/phòng
 
-7. **💡 Quản Lý Tiện Ích** - HOÀN THÀNH ✅
+6. **💡 Quản Lý Tiện Ích** - HOÀN THÀNH ✅
    - CRUD loại tiện ích + nhập chỉ số (UtilityReadings)
 
-8. **🧾 Quản Lý Hóa Đơn** - HOÀN THÀNH ✅
+7. **🧾 Quản Lý Hóa Đơn** - HOÀN THÀNH ✅
    - CRUD hóa đơn + xem công nợ
    - Tạo hóa đơn tháng (GenerateMonthlyInvoices)
 
-9. **🔧 Quản Lý Bảo Trì** - HOÀN THÀNH ✅
+8. **🔧 Quản Lý Bảo Trì** - HOÀN THÀNH ✅
    - CRUD ticket bảo trì/sự cố + trạng thái/ưu tiên/phân công
 
-10. **🏠 Quản Lý Tài Sản** - HOÀN THÀNH ✅
+9. **🏠 Quản Lý Tài Sản** - HOÀN THÀNH ✅
     - CRUD tài sản theo phòng + số lượng/tình trạng/giá trị
 
-11. **📊 Báo Cáo & Thống Kê** - HOÀN THÀNH ✅
+10. **📊 Báo Cáo & Thống Kê** - HOÀN THÀNH ✅
     - Màn xem dữ liệu (DataViewer) cho hóa đơn/thống kê nhanh
 
-12. **📢 Quản Lý Thông Báo** - HOÀN THÀNH ✅
+11. **📢 Quản Lý Thông Báo** - HOÀN THÀNH ✅
     - CRUD thông báo + lịch sử gửi
 
-13. **⚙️ Cài Đặt Hệ Thống** - HOÀN THÀNH ✅
+12. **⚙️ Cài Đặt Hệ Thống** - HOÀN THÀNH ✅
     - CRUD cấu hình hệ thống (SystemSettings)
-
-## 📋 Tính Năng Nhân Viên (8 mô-đun)
-
-1. **Tổng quan** - Thống kê nhanh theo chi nhánh
-2. **Phòng** - Xem danh sách phòng theo chi nhánh
-3. **Khách thuê** - Quản lý/tra cứu khách thuê
-4. **Hợp đồng** - Quản lý hợp đồng theo chi nhánh
-5. **Đặt cọc** - Quản lý phiếu cọc theo chi nhánh
-6. **Hóa đơn & Thanh toán** - Tra cứu hóa đơn, ghi nhận thanh toán
-7. **Bảo trì / Tài sản** - Tra cứu yêu cầu bảo trì và tài sản phòng
-8. **Báo cáo** - Xem dữ liệu tổng hợp (DataViewer)
 
 ## 🏗️ Kiến Trúc 3-Tier
 
@@ -79,12 +65,10 @@ SQL Server Database
 quan-ly-chuoi-nha-tro/
 ├── GUI/
 │   ├── FrmLogin.cs            (Đăng nhập)
-│   ├── FrmRegister.cs         (Đăng ký)
+│   ├── FrmRegister.cs         (Đăng ký - hiện đang tắt trong chế độ Admin-only)
 │   ├── FrmAdminDashboard.cs   (Bảng điều khiển Admin) ✅
-│   ├── FrmStaffDashboard.cs   (Bảng điều khiển Nhân viên) ✅
 │   ├── FrmBranch.cs / FrmBranchDetail.cs ✅
 │   ├── FrmRoomManager.cs / FrmRoomEditor.cs ✅
-│   ├── FrmStaffManager.cs / FrmStaffEditor.cs ✅
 │   ├── FrmTenantManager.cs / FrmTenantEditor.cs ✅
 │   ├── FrmContractManager.cs / FrmContractEditor.cs ✅
 │   ├── FrmDepositManager.cs / FrmDepositEditor.cs ✅
@@ -98,11 +82,11 @@ quan-ly-chuoi-nha-tro/
 ├── BLL/
 │   ├── UserBLL.cs            (Xử lý người dùng)
 │   ├── BranchBLL.cs          (Xử lý chi nhánh) ✅
-│   └── AdminDataBLL.cs       (CRUD các module Admin/Staff) ✅
+│   └── AdminDataBLL.cs       (CRUD các module Admin) ✅
 ├── DAL/
 │   ├── DatabaseHelper.cs     (Kết nối database) ✅
 │   ├── BranchDAL.cs          (Truy vấn chi nhánh) ✅
-│   └── AdminDataDAL.cs       (Truy vấn các module Admin/Staff) ✅
+│   └── AdminDataDAL.cs       (Truy vấn các module Admin) ✅
 └── Properties/
     └── AssemblyInfo.cs
 ```
@@ -132,8 +116,7 @@ Scripts:
 ## 🔐 Role-Based Access Control
 
 ```
-RoleId = 1: Admin (Truy cập tất cả)
-RoleId = 2: Staff (Xem báo cáo, ghi nhận)
+RoleId = 1: Admin (Truy cập tất cả - app chỉ cho phép role này đăng nhập)
 ```
 
 ## 🚀 Cách Chạy
@@ -217,7 +200,7 @@ Run file `sample_data.sql` để load dữ liệu test.
 ## 🎨 UI/UX Features
 
 - **Modern Theme**: Dark header, light content
-- **Responsive Grid Layout**: 2 cột × 7 hàng (13 modules)
+- **Responsive Grid Layout**: 2 cột × 7 hàng (12 modules)
 - **Emoji Icons**: Visual representation
 - **Hover Effects**: Color change on interaction
 - **Modal Dialogs**: Dialog cho Add/Edit
@@ -234,16 +217,7 @@ Run file `sample_data.sql` để load dữ liệu test.
 
 ## 🚧 Next Steps
 
-- [ ] Room Management Module
-- [ ] Staff Management Module
-- [ ] Tenant Management Module
-- [ ] Contract Management Module
-- [ ] Invoice & Payment Module
-- [ ] Maintenance Module
-- [ ] Asset Management Module
-- [ ] Reporting & Statistics
-- [ ] Notification System
-- [ ] System Settings
+- (Admin-only) Hoàn thiện dần theo nhu cầu thực tế.
 
 ## 👨‍💻 Developer Notes
 

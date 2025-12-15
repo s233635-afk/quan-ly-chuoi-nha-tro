@@ -107,7 +107,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             numRental = new NumericUpDown { Minimum = 0, Maximum = 100000000000, DecimalPlaces = 0, ThousandsSeparator = true };
             numDeposit = new NumericUpDown { Minimum = 0, Maximum = 100000000000, DecimalPlaces = 0, ThousandsSeparator = true };
             cboStatus = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
-            cboStatus.Items.AddRange(new object[] { "Active", "Extended", "Terminated", "Expired", "Pending" });
+            cboStatus.Items.AddRange(new object[] { "Active", "Extended", "Terminated", "Expired" });
 
             txtPdfPath = new TextBox();
             btnBrowsePdf = new Button { Text = "Chọn...", Width = 80, Height = 26 };

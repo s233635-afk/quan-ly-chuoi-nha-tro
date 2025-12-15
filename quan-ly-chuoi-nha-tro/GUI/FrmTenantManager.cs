@@ -384,6 +384,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 "BirthDate", "TemporaryRegistration", "TemporaryRegistrationDate", "TemporaryRegistrationExpiry",
                 "IsActive", "CreatedDate", "UpdatedDate", "Address");
 
+            HideIfExists(_gridTenants, "FrontIdPhoto");
+            HideIfExists(_gridTenants, "BackIdPhoto");
+
             if (_gridTenants.Columns.Contains("Address"))
                 _gridTenants.Columns["Address"].FillWeight = 170;
         }
@@ -588,7 +591,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     ReadString(row, "TemporaryRegistration"),
                     TryReadDate(row, "TemporaryRegistrationDate"),
                     TryReadDate(row, "TemporaryRegistrationExpiry"),
-                    next);
+                    next,
+                    ReadString(row, "FrontIdPhoto"),
+                    ReadString(row, "BackIdPhoto"));
 
                 await LoadAllAsync();
             }

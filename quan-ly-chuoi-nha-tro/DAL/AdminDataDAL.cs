@@ -1342,6 +1342,8 @@ namespace QuanLyNhaTro.DAL
                          Email,
                          BirthDate,
                          Address,
+                         FrontIdPhoto,
+                         BackIdPhoto,
                          TemporaryRegistration,
                          TemporaryRegistrationDate,
                          TemporaryRegistrationExpiry,
@@ -2202,32 +2204,68 @@ namespace QuanLyNhaTro.DAL
         #region CRUD Tenants
 
         public async Task<int> AddTenantAsync(string fullName, string identityCard, string phoneNumber, string email,
-            DateTime? birthDate, string address, string tempReg, DateTime? tempRegDate, DateTime? tempRegExpiry, bool isActive)
+            DateTime? birthDate, string address, string tempReg, DateTime? tempRegDate, DateTime? tempRegExpiry, bool isActive,
+            string frontIdPhoto = null, string backIdPhoto = null)
         {
-            const string sql = @"
-                INSERT INTO Tenants
-                    (FullName, IdentityCard, PhoneNumber, Email, BirthDate, Address,
-                     TemporaryRegistration, TemporaryRegistrationDate, TemporaryRegistrationExpiry, IsActive, CreatedDate, UpdatedDate)
-                VALUES
-                    (@FullName, @IdentityCard, @PhoneNumber, @Email, @BirthDate, @Address,
-                     @TempReg, @TempRegDate, @TempRegExpiry, @IsActive, GETDATE(), GETDATE());
-                SELECT CAST(SCOPE_IDENTITY() AS INT);";
-
             using (var conn = new SqlConnection(connectionString))
             {
                 await conn.OpenAsync();
+
+                string tbl = "Tenants";
+                bool hasFullName = await ColumnExistsAsync(conn, tbl, "FullName");
+                bool hasIdentity = await ColumnExistsAsync(conn, tbl, "IdentityCard");
+                bool hasPhone = await ColumnExistsAsync(conn, tbl, "PhoneNumber");
+                bool hasEmail = await ColumnExistsAsync(conn, tbl, "Email");
+                bool hasBirth = await ColumnExistsAsync(conn, tbl, "BirthDate");
+                bool hasAddress = await ColumnExistsAsync(conn, tbl, "Address");
+                bool hasFront = await ColumnExistsAsync(conn, tbl, "FrontIdPhoto");
+                bool hasBack = await ColumnExistsAsync(conn, tbl, "BackIdPhoto");
+                bool hasTemp = await ColumnExistsAsync(conn, tbl, "TemporaryRegistration");
+                bool hasTempDate = await ColumnExistsAsync(conn, tbl, "TemporaryRegistrationDate");
+                bool hasTempExp = await ColumnExistsAsync(conn, tbl, "TemporaryRegistrationExpiry");
+                bool hasActive = await ColumnExistsAsync(conn, tbl, "IsActive");
+                bool hasCreated = await ColumnExistsAsync(conn, tbl, "CreatedDate");
+                bool hasUpdated = await ColumnExistsAsync(conn, tbl, "UpdatedDate");
+
+                if (!hasFullName)
+                    throw new Exception("Schema Tenants không hợp lệ (thiếu cột FullName).");
+
+                var cols = new System.Collections.Generic.List<string>();
+                var vals = new System.Collections.Generic.List<string>();
+
+                if (hasFullName) { cols.Add("FullName"); vals.Add("@FullName"); }
+                if (hasIdentity) { cols.Add("IdentityCard"); vals.Add("@IdentityCard"); }
+                if (hasPhone) { cols.Add("PhoneNumber"); vals.Add("@PhoneNumber"); }
+                if (hasEmail) { cols.Add("Email"); vals.Add("@Email"); }
+                if (hasBirth) { cols.Add("BirthDate"); vals.Add("@BirthDate"); }
+                if (hasAddress) { cols.Add("Address"); vals.Add("@Address"); }
+                if (hasFront) { cols.Add("FrontIdPhoto"); vals.Add("@FrontIdPhoto"); }
+                if (hasBack) { cols.Add("BackIdPhoto"); vals.Add("@BackIdPhoto"); }
+                if (hasTemp) { cols.Add("TemporaryRegistration"); vals.Add("@TempReg"); }
+                if (hasTempDate) { cols.Add("TemporaryRegistrationDate"); vals.Add("@TempRegDate"); }
+                if (hasTempExp) { cols.Add("TemporaryRegistrationExpiry"); vals.Add("@TempRegExpiry"); }
+                if (hasActive) { cols.Add("IsActive"); vals.Add("@IsActive"); }
+                if (hasCreated) { cols.Add("CreatedDate"); vals.Add("GETDATE()"); }
+                if (hasUpdated) { cols.Add("UpdatedDate"); vals.Add("GETDATE()"); }
+
+                string sql = $@"INSERT INTO {tbl} ({string.Join(", ", cols)})
+                                VALUES ({string.Join(", ", vals)});
+                                SELECT CAST(SCOPE_IDENTITY() AS INT);";
+
                 using (var cmd = new SqlCommand(sql, conn))
                 {
-                    cmd.Parameters.AddWithValue("@FullName", fullName);
-                    cmd.Parameters.AddWithValue("@IdentityCard", string.IsNullOrWhiteSpace(identityCard) ? (object)DBNull.Value : identityCard);
-                    cmd.Parameters.AddWithValue("@PhoneNumber", string.IsNullOrWhiteSpace(phoneNumber) ? (object)DBNull.Value : phoneNumber);
-                    cmd.Parameters.AddWithValue("@Email", string.IsNullOrWhiteSpace(email) ? (object)DBNull.Value : email);
-                    cmd.Parameters.AddWithValue("@BirthDate", birthDate.HasValue ? (object)birthDate.Value : DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Address", string.IsNullOrWhiteSpace(address) ? (object)DBNull.Value : address);
-                    cmd.Parameters.AddWithValue("@TempReg", string.IsNullOrWhiteSpace(tempReg) ? (object)DBNull.Value : tempReg);
-                    cmd.Parameters.AddWithValue("@TempRegDate", tempRegDate.HasValue ? (object)tempRegDate.Value : DBNull.Value);
-                    cmd.Parameters.AddWithValue("@TempRegExpiry", tempRegExpiry.HasValue ? (object)tempRegExpiry.Value : DBNull.Value);
-                    cmd.Parameters.AddWithValue("@IsActive", isActive);
+                    if (hasFullName) cmd.Parameters.AddWithValue("@FullName", fullName);
+                    if (hasIdentity) cmd.Parameters.AddWithValue("@IdentityCard", string.IsNullOrWhiteSpace(identityCard) ? (object)DBNull.Value : identityCard);
+                    if (hasPhone) cmd.Parameters.AddWithValue("@PhoneNumber", string.IsNullOrWhiteSpace(phoneNumber) ? (object)DBNull.Value : phoneNumber);
+                    if (hasEmail) cmd.Parameters.AddWithValue("@Email", string.IsNullOrWhiteSpace(email) ? (object)DBNull.Value : email);
+                    if (hasBirth) cmd.Parameters.AddWithValue("@BirthDate", birthDate.HasValue ? (object)birthDate.Value : DBNull.Value);
+                    if (hasAddress) cmd.Parameters.AddWithValue("@Address", string.IsNullOrWhiteSpace(address) ? (object)DBNull.Value : address);
+                    if (hasFront) cmd.Parameters.AddWithValue("@FrontIdPhoto", string.IsNullOrWhiteSpace(frontIdPhoto) ? (object)DBNull.Value : frontIdPhoto);
+                    if (hasBack) cmd.Parameters.AddWithValue("@BackIdPhoto", string.IsNullOrWhiteSpace(backIdPhoto) ? (object)DBNull.Value : backIdPhoto);
+                    if (hasTemp) cmd.Parameters.AddWithValue("@TempReg", string.IsNullOrWhiteSpace(tempReg) ? (object)DBNull.Value : tempReg);
+                    if (hasTempDate) cmd.Parameters.AddWithValue("@TempRegDate", tempRegDate.HasValue ? (object)tempRegDate.Value : DBNull.Value);
+                    if (hasTempExp) cmd.Parameters.AddWithValue("@TempRegExpiry", tempRegExpiry.HasValue ? (object)tempRegExpiry.Value : DBNull.Value);
+                    if (hasActive) cmd.Parameters.AddWithValue("@IsActive", isActive);
 
                     var result = await cmd.ExecuteScalarAsync();
                     return result != null ? Convert.ToInt32(result) : 0;
@@ -2236,39 +2274,63 @@ namespace QuanLyNhaTro.DAL
         }
 
         public async Task<bool> UpdateTenantAsync(int tenantId, string fullName, string identityCard, string phoneNumber, string email,
-            DateTime? birthDate, string address, string tempReg, DateTime? tempRegDate, DateTime? tempRegExpiry, bool isActive)
+            DateTime? birthDate, string address, string tempReg, DateTime? tempRegDate, DateTime? tempRegExpiry, bool isActive,
+            string frontIdPhoto = null, string backIdPhoto = null)
         {
-            const string sql = @"
-                UPDATE Tenants SET
-                    FullName = @FullName,
-                    IdentityCard = @IdentityCard,
-                    PhoneNumber = @PhoneNumber,
-                    Email = @Email,
-                    BirthDate = @BirthDate,
-                    Address = @Address,
-                    TemporaryRegistration = @TempReg,
-                    TemporaryRegistrationDate = @TempRegDate,
-                    TemporaryRegistrationExpiry = @TempRegExpiry,
-                    IsActive = @IsActive,
-                    UpdatedDate = GETDATE()
-                WHERE TenantId = @TenantId";
-
             using (var conn = new SqlConnection(connectionString))
             {
                 await conn.OpenAsync();
+
+                string tbl = "Tenants";
+                bool hasFullName = await ColumnExistsAsync(conn, tbl, "FullName");
+                bool hasIdentity = await ColumnExistsAsync(conn, tbl, "IdentityCard");
+                bool hasPhone = await ColumnExistsAsync(conn, tbl, "PhoneNumber");
+                bool hasEmail = await ColumnExistsAsync(conn, tbl, "Email");
+                bool hasBirth = await ColumnExistsAsync(conn, tbl, "BirthDate");
+                bool hasAddress = await ColumnExistsAsync(conn, tbl, "Address");
+                bool hasFront = await ColumnExistsAsync(conn, tbl, "FrontIdPhoto");
+                bool hasBack = await ColumnExistsAsync(conn, tbl, "BackIdPhoto");
+                bool hasTemp = await ColumnExistsAsync(conn, tbl, "TemporaryRegistration");
+                bool hasTempDate = await ColumnExistsAsync(conn, tbl, "TemporaryRegistrationDate");
+                bool hasTempExp = await ColumnExistsAsync(conn, tbl, "TemporaryRegistrationExpiry");
+                bool hasActive = await ColumnExistsAsync(conn, tbl, "IsActive");
+                bool hasUpdated = await ColumnExistsAsync(conn, tbl, "UpdatedDate");
+
+                if (!hasFullName)
+                    throw new Exception("Schema Tenants không hợp lệ (thiếu cột FullName).");
+
+                var sets = new System.Collections.Generic.List<string>();
+                if (hasFullName) sets.Add("FullName = @FullName");
+                if (hasIdentity) sets.Add("IdentityCard = @IdentityCard");
+                if (hasPhone) sets.Add("PhoneNumber = @PhoneNumber");
+                if (hasEmail) sets.Add("Email = @Email");
+                if (hasBirth) sets.Add("BirthDate = @BirthDate");
+                if (hasAddress) sets.Add("Address = @Address");
+                if (hasFront && frontIdPhoto != null) sets.Add("FrontIdPhoto = @FrontIdPhoto");
+                if (hasBack && backIdPhoto != null) sets.Add("BackIdPhoto = @BackIdPhoto");
+                if (hasTemp) sets.Add("TemporaryRegistration = @TempReg");
+                if (hasTempDate) sets.Add("TemporaryRegistrationDate = @TempRegDate");
+                if (hasTempExp) sets.Add("TemporaryRegistrationExpiry = @TempRegExpiry");
+                if (hasActive) sets.Add("IsActive = @IsActive");
+                if (hasUpdated) sets.Add("UpdatedDate = GETDATE()");
+
+                string sql = $@"UPDATE {tbl} SET {string.Join(", ", sets)} WHERE TenantId = @TenantId";
+
                 using (var cmd = new SqlCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue("@TenantId", tenantId);
-                    cmd.Parameters.AddWithValue("@FullName", fullName);
-                    cmd.Parameters.AddWithValue("@IdentityCard", string.IsNullOrWhiteSpace(identityCard) ? (object)DBNull.Value : identityCard);
-                    cmd.Parameters.AddWithValue("@PhoneNumber", string.IsNullOrWhiteSpace(phoneNumber) ? (object)DBNull.Value : phoneNumber);
-                    cmd.Parameters.AddWithValue("@Email", string.IsNullOrWhiteSpace(email) ? (object)DBNull.Value : email);
-                    cmd.Parameters.AddWithValue("@BirthDate", birthDate.HasValue ? (object)birthDate.Value : DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Address", string.IsNullOrWhiteSpace(address) ? (object)DBNull.Value : address);
-                    cmd.Parameters.AddWithValue("@TempReg", string.IsNullOrWhiteSpace(tempReg) ? (object)DBNull.Value : tempReg);
-                    cmd.Parameters.AddWithValue("@TempRegDate", tempRegDate.HasValue ? (object)tempRegDate.Value : DBNull.Value);
-                    cmd.Parameters.AddWithValue("@TempRegExpiry", tempRegExpiry.HasValue ? (object)tempRegExpiry.Value : DBNull.Value);
-                    cmd.Parameters.AddWithValue("@IsActive", isActive);
+                    if (hasFullName) cmd.Parameters.AddWithValue("@FullName", fullName);
+                    if (hasIdentity) cmd.Parameters.AddWithValue("@IdentityCard", string.IsNullOrWhiteSpace(identityCard) ? (object)DBNull.Value : identityCard);
+                    if (hasPhone) cmd.Parameters.AddWithValue("@PhoneNumber", string.IsNullOrWhiteSpace(phoneNumber) ? (object)DBNull.Value : phoneNumber);
+                    if (hasEmail) cmd.Parameters.AddWithValue("@Email", string.IsNullOrWhiteSpace(email) ? (object)DBNull.Value : email);
+                    if (hasBirth) cmd.Parameters.AddWithValue("@BirthDate", birthDate.HasValue ? (object)birthDate.Value : DBNull.Value);
+                    if (hasAddress) cmd.Parameters.AddWithValue("@Address", string.IsNullOrWhiteSpace(address) ? (object)DBNull.Value : address);
+                    if (hasFront && frontIdPhoto != null) cmd.Parameters.AddWithValue("@FrontIdPhoto", string.IsNullOrWhiteSpace(frontIdPhoto) ? (object)DBNull.Value : frontIdPhoto);
+                    if (hasBack && backIdPhoto != null) cmd.Parameters.AddWithValue("@BackIdPhoto", string.IsNullOrWhiteSpace(backIdPhoto) ? (object)DBNull.Value : backIdPhoto);
+                    if (hasTemp) cmd.Parameters.AddWithValue("@TempReg", string.IsNullOrWhiteSpace(tempReg) ? (object)DBNull.Value : tempReg);
+                    if (hasTempDate) cmd.Parameters.AddWithValue("@TempRegDate", tempRegDate.HasValue ? (object)tempRegDate.Value : DBNull.Value);
+                    if (hasTempExp) cmd.Parameters.AddWithValue("@TempRegExpiry", tempRegExpiry.HasValue ? (object)tempRegExpiry.Value : DBNull.Value);
+                    if (hasActive) cmd.Parameters.AddWithValue("@IsActive", isActive);
 
                     int affected = await cmd.ExecuteNonQueryAsync();
                     return affected > 0;

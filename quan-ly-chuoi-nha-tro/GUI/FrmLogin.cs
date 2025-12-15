@@ -100,24 +100,17 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                 MessageBox.Show($"Xin chào {fullName}!", "Đăng nhập thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                if (roleId == 1) // Admin
+                // Hệ thống chỉ chạy chế độ Admin (RoleId = 1)
+                if (roleId != 1)
                 {
-                    FrmAdminDashboard adminForm = new FrmAdminDashboard(user, access.UserId);
-                    Hide();
-                    adminForm.ShowDialog();
-                    Show();
+                    MessageBox.Show("Hệ thống hiện chỉ hỗ trợ tài khoản Admin (RoleId = 1).", "Không có quyền", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
                 }
-                else if (roleId == 2 || roleId == 3) // Staff/Manager
-                {
-                    FrmStaffDashboard staffForm = new FrmStaffDashboard(user, fullName, access.BranchId);
-                    Hide();
-                    staffForm.ShowDialog();
-                    Show();
-                }
-                else
-                {
-                    MessageBox.Show("Tài khoản có RoleId không được hỗ trợ: " + roleId, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                }
+
+                FrmAdminDashboard adminForm = new FrmAdminDashboard(user, access.UserId);
+                Hide();
+                adminForm.ShowDialog();
+                Show();
 
                 UpdateOverlayPlaceholderVisibility(_userPlaceholderLabel, txtUser);
                 UpdateOverlayPlaceholderVisibility(_passPlaceholderLabel, txtPass);
@@ -429,10 +422,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void lnkRegister_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            using (var frm = new FrmRegister())
-            {
-                frm.ShowDialog(this);
-            }
+            MessageBox.Show("Hệ thống chỉ sử dụng tài khoản Admin. Vui lòng liên hệ quản trị viên để cấp tài khoản.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
     }
 }

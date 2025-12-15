@@ -17,6 +17,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private TextBox txtEmail;
         private DateTimePicker dtBirth;
         private TextBox txtAddress;
+        private TextBox txtFrontIdPhoto;
+        private TextBox txtBackIdPhoto;
+        private Button btnBrowseFront;
+        private Button btnBrowseBack;
         private TextBox txtTempReg;
         private DateTimePicker dtTempFrom;
         private DateTimePicker dtTempTo;
@@ -87,6 +91,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             txtEmail = new TextBox();
             dtBirth = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true };
             txtAddress = new TextBox { Multiline = true, Height = 70, ScrollBars = ScrollBars.Vertical };
+            txtFrontIdPhoto = new TextBox();
+            txtBackIdPhoto = new TextBox();
+            btnBrowseFront = new Button { Text = "Chọn...", Width = 80, Height = 26 };
+            btnBrowseBack = new Button { Text = "Chọn...", Width = 80, Height = 26 };
+            btnBrowseFront.Click += (s, e) => BrowseFileToTextBox(txtFrontIdPhoto, "Chọn ảnh CCCD mặt trước");
+            btnBrowseBack.Click += (s, e) => BrowseFileToTextBox(txtBackIdPhoto, "Chọn ảnh CCCD mặt sau");
             txtTempReg = new TextBox();
             dtTempFrom = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true };
             dtTempTo = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true };
@@ -115,6 +125,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
             pnlBody.Controls.Add(MakeLabel("Địa chỉ", top));
             pnlBody.Controls.Add(MakeInput(txtAddress, top));
             top += 80;
+
+            pnlBody.Controls.Add(MakeLabel("Ảnh CCCD (mặt trước)", top));
+            pnlBody.Controls.Add(MakeBrowseRow(txtFrontIdPhoto, btnBrowseFront, left + labelWidth, top, inputWidth));
+            top += line;
+
+            pnlBody.Controls.Add(MakeLabel("Ảnh CCCD (mặt sau)", top));
+            pnlBody.Controls.Add(MakeBrowseRow(txtBackIdPhoto, btnBrowseBack, left + labelWidth, top, inputWidth));
+            top += line;
 
             pnlBody.Controls.Add(MakeLabel("Tạm trú tại", top));
             pnlBody.Controls.Add(MakeInput(txtTempReg, top));
@@ -194,6 +212,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             else dtBirth.Checked = false;
 
             txtAddress.Text = _existingRow.Table.Columns.Contains("Address") ? _existingRow["Address"]?.ToString() : string.Empty;
+            txtFrontIdPhoto.Text = _existingRow.Table.Columns.Contains("FrontIdPhoto") ? _existingRow["FrontIdPhoto"]?.ToString() : string.Empty;
+            txtBackIdPhoto.Text = _existingRow.Table.Columns.Contains("BackIdPhoto") ? _existingRow["BackIdPhoto"]?.ToString() : string.Empty;
             txtTempReg.Text = _existingRow.Table.Columns.Contains("TemporaryRegistration") ? _existingRow["TemporaryRegistration"]?.ToString() : string.Empty;
 
             if (_existingRow.Table.Columns.Contains("TemporaryRegistrationDate") && DateTime.TryParse(_existingRow["TemporaryRegistrationDate"]?.ToString(), out var t1))
@@ -236,7 +256,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
                         txtTempReg.Text.Trim(),
                         dtTempFrom.Checked ? (DateTime?)dtTempFrom.Value.Date : null,
                         dtTempTo.Checked ? (DateTime?)dtTempTo.Value.Date : null,
-                        chkActive.Checked
+                        chkActive.Checked,
+                        txtFrontIdPhoto.Text.Trim(),
+                        txtBackIdPhoto.Text.Trim()
                     );
                     SavedTenantId = newId;
                 }
@@ -254,7 +276,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
                         txtTempReg.Text.Trim(),
                         dtTempFrom.Checked ? (DateTime?)dtTempFrom.Value.Date : null,
                         dtTempTo.Checked ? (DateTime?)dtTempTo.Value.Date : null,
-                        chkActive.Checked
+                        chkActive.Checked,
+                        txtFrontIdPhoto.Text.Trim(),
+                        txtBackIdPhoto.Text.Trim()
                     );
                     SavedTenantId = id;
                 }
@@ -266,6 +290,30 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 MessageBox.Show("Lỗi lưu khách thuê: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+        private static Panel MakeBrowseRow(TextBox textBox, Button button, int x, int y, int width)
+        {
+            var panel = new Panel { Location = new Point(x, y), Width = width, Height = 26, BackColor = Color.Transparent };
+            textBox.Parent = panel;
+            textBox.Location = new Point(0, 0);
+            textBox.Width = Math.Max(120, width - button.Width - 10);
+            textBox.Height = 26;
+            button.Parent = panel;
+            button.Location = new Point(textBox.Right + 10, 0);
+            button.Height = 26;
+            return panel;
+        }
+
+        private static void BrowseFileToTextBox(TextBox target, string title)
+        {
+            if (target == null) return;
+            using (var ofd = new OpenFileDialog())
+            {
+                ofd.Title = title ?? "Chọn file";
+                ofd.Filter = "Tất cả file (*.*)|*.*";
+                if (ofd.ShowDialog() == DialogResult.OK)
+                    target.Text = ofd.FileName;
+            }
+        }
     }
 }
-
