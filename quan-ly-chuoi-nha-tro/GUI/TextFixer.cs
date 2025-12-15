@@ -23,6 +23,23 @@ namespace quan_ly_chuoi_nha_tro.GUI
             return input;
         }
 
+        public static string ForceFixUtf8Mojibake(string input)
+        {
+            if (string.IsNullOrEmpty(input)) return input;
+
+            string fixedText = FixUtf8Mojibake(input);
+            if (!string.Equals(fixedText, input, StringComparison.Ordinal))
+                return fixedText;
+
+            string candidate = TryRecode(input, Win1252);
+            if (IsGoodFix(input, candidate)) return candidate;
+
+            candidate = TryRecode(input, Latin1);
+            if (IsGoodFix(input, candidate)) return candidate;
+
+            return input;
+        }
+
         public static void FixDataTable(DataTable table, params string[] columns)
         {
             if (table == null || columns == null || columns.Length == 0) return;
@@ -37,6 +54,26 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                     string raw = row[column]?.ToString();
                     string fixedValue = FixUtf8Mojibake(raw);
+                    if (!string.Equals(raw, fixedValue, StringComparison.Ordinal))
+                        row[column] = fixedValue;
+                }
+            }
+        }
+
+        public static void ForceFixDataTable(DataTable table, params string[] columns)
+        {
+            if (table == null || columns == null || columns.Length == 0) return;
+
+            foreach (DataRow row in table.Rows)
+            {
+                foreach (string column in columns)
+                {
+                    if (string.IsNullOrWhiteSpace(column)) continue;
+                    if (!table.Columns.Contains(column)) continue;
+                    if (row[column] == DBNull.Value) continue;
+
+                    string raw = row[column]?.ToString();
+                    string fixedValue = ForceFixUtf8Mojibake(raw);
                     if (!string.Equals(raw, fixedValue, StringComparison.Ordinal))
                         row[column] = fixedValue;
                 }

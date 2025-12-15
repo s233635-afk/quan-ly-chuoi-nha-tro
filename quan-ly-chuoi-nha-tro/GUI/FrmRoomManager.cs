@@ -15,6 +15,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private readonly AdminDataBLL _bll = new AdminDataBLL();
 
         private DataTable _rawTable;
+        private DataTable _tenantsTable;
+        private DataTable _contractsTable;
 
         private DataGridView _grid;
         private TextBox _txtSearch;
@@ -37,6 +39,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private DataTable _statusTable;
         private DataTable _typeTable;
         private System.Collections.Generic.Dictionary<int, string> _roomTypeNameById;
+        private FrmRoomTenantQuickView _roomQuickView;
 
         public FrmRoomManager()
         {
@@ -248,9 +251,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
             try
             {
                 await LoadLookupsAsync();
-                _rawTable = await _bll.GetRoomsAsync();
+                var roomsTask = _bll.GetRoomsAsync();
+                var tenantsTask = _bll.GetTenantsAsync();
+                var contractsTask = _bll.GetContractsAsync();
+                await System.Threading.Tasks.Task.WhenAll(roomsTask, tenantsTask, contractsTask);
+
+                _rawTable = roomsTask.Result ?? new DataTable();
+                _tenantsTable = tenantsTask.Result ?? new DataTable();
+                _contractsTable = contractsTask.Result ?? new DataTable();
+
+                TextFixer.ForceFixDataTable(_tenantsTable, "FullName", "PhoneNumber", "IdentityCard", "Address", "TemporaryRegistration");
+                TextFixer.ForceFixDataTable(_contractsTable, "ContractNumber", "Status");
                 ApplyAdminBranchScopeToRooms();
-                TextFixer.FixDataTable(_rawTable, "BranchName", "SectionName", "RoomTypeName", "StatusName");
+                TextFixer.ForceFixDataTable(_rawTable, "RoomNumber", "BranchName", "SectionName", "RoomTypeName", "StatusName");
                 ApplyRoomTypeDisplayNormalization();
                 NormalizeAndLimitRooms();
                 _grid.DataSource = _rawTable;
@@ -260,6 +273,65 @@ namespace quan_ly_chuoi_nha_tro.GUI
             catch (Exception ex)
             {
                 MessageBox.Show("Lỗi tải phòng: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void ViewTenantInfo()
+        {
+            var row = GetCurrentRow();
+            if (row == null)
+            {
+                MessageBox.Show("Chọn một phòng để xem khách thuê.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            ShowRoomQuickView(row);
+        }
+
+        private async System.Threading.Tasks.Task EditTenantAsync()
+        {
+            var row = GetCurrentRow();
+            if (row == null)
+            {
+                MessageBox.Show("Chọn một phòng để sửa khách thuê.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            int roomId = ReadInt(row, "RoomId");
+            if (roomId <= 0)
+            {
+                MessageBox.Show("Không xác định được phòng.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            var contract = FindBestContractForRoom(roomId);
+            if (contract == null)
+            {
+                MessageBox.Show("Phòng này chưa có hợp đồng Active/Extended để sửa khách thuê.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            int tenantId = ReadInt(contract, "TenantId");
+            if (tenantId <= 0)
+            {
+                MessageBox.Show("Không tìm thấy khách thuê.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var tenantRow = FindById(_tenantsTable, "TenantId", tenantId);
+            if (tenantRow == null)
+            {
+                MessageBox.Show("Không tìm thấy dữ liệu khách thuê.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using (var frm = new FrmTenantEditor(_bll, tenantRow))
+            {
+                if (frm.ShowDialog(this) == DialogResult.OK)
+                {
+                    await RefreshQuickViewAsync(roomId);
+                    AdminEvents.NotifyDataChanged();
+                }
             }
         }
 
@@ -772,10 +844,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var col = _grid.Columns[e.ColumnIndex];
             if (col == null) return;
 
-            if (col.Name != "IsActive") return;
-
             var row = (_grid.Rows[e.RowIndex].DataBoundItem as DataRowView)?.Row;
             if (row == null) return;
+
+            ShowRoomQuickView(row);
+
+            if (col.Name != "IsActive") return;
 
             bool current = false;
             try { current = Convert.ToBoolean(row["IsActive"]); } catch { }
@@ -916,6 +990,86 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 }
             }
             return null;
+        }
+
+        private async System.Threading.Tasks.Task RefreshQuickViewAsync(int roomId)
+        {
+            await LoadDataAsync();
+            SelectRoomInGrid(roomId);
+            var row = GetCurrentRow();
+            if (row != null)
+                ShowRoomQuickView(row);
+        }
+
+        private void ShowRoomQuickView(DataRow roomRow)
+        {
+            if (roomRow == null) return;
+            int roomId = ReadInt(roomRow, "RoomId");
+            if (roomId <= 0) return;
+
+            var contract = FindActiveContractForRoom(roomId);
+            DataRow tenant = null;
+            if (contract != null)
+            {
+                int tenantId = ReadInt(contract, "TenantId");
+                tenant = FindById(_tenantsTable, "TenantId", tenantId);
+            }
+
+            if (_roomQuickView == null || _roomQuickView.IsDisposed)
+            {
+                _roomQuickView = new FrmRoomTenantQuickView(_bll, RefreshQuickViewAsync);
+                _roomQuickView.StartPosition = FormStartPosition.Manual;
+            }
+
+            if (!_roomQuickView.Visible)
+                _roomQuickView.Show(this);
+
+            try
+            {
+                var ownerRect = RectangleToScreen(ClientRectangle);
+                int x = Math.Max(0, ownerRect.Right - _roomQuickView.Width - 20);
+                int y = Math.Max(0, ownerRect.Top + 80);
+                _roomQuickView.Location = new Point(x, y);
+            }
+            catch { }
+
+        private void SelectRoomInGrid(int roomId)
+        {
+            if (roomId <= 0 || _grid?.Rows == null) return;
+            foreach (DataGridViewRow r in _grid.Rows)
+            {
+                if (r?.DataBoundItem is DataRowView drv)
+                {
+                    if (int.TryParse(drv.Row["RoomId"]?.ToString(), out var rid) && rid == roomId)
+                    {
+                        r.Selected = true;
+                        _grid.CurrentCell = r.Cells.Cast<DataGridViewCell>().FirstOrDefault();
+                        _grid.FirstDisplayedScrollingRowIndex = Math.Max(0, r.Index);
+                        break;
+                    }
+                }
+            }
+        }
+
+        private static DataRow FindById(DataTable table, string column, int id)
+        {
+            if (table == null || !table.Columns.Contains(column)) return null;
+            foreach (DataRow r in table.Rows)
+            {
+                if (int.TryParse(r[column]?.ToString(), out var value) && value == id)
+                    return r;
+            }
+            return null;
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            if (_roomQuickView != null && !_roomQuickView.IsDisposed)
+            {
+                try { _roomQuickView.Close(); } catch { }
+                _roomQuickView = null;
+            }
+            base.OnFormClosing(e);
         }
 
         private class StatusPickerDialog : Form

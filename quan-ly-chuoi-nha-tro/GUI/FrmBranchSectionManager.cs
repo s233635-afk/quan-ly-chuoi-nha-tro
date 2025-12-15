@@ -38,6 +38,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             Width = 1100;
             Height = 650;
             BackColor = UiKit.AppBackground;
+            Font = new Font("Segoe UI", 9, FontStyle.Regular); // Đảm bảo font hỗ trợ tiếng Việt
 
             _grid = new DataGridView
             {
@@ -54,6 +55,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
             };
             UiKit.StyleGrid(_grid);
             _grid.DoubleClick += (s, e) => EditSelected();
+            _grid.KeyDown += (s, e) =>
+            {
+                if (e.KeyCode == Keys.Delete)
+                {
+                    e.Handled = true;
+                    _ = DeleteSelectedAsync();
+                }
+                else if (e.KeyCode == Keys.Enter)
+                {
+                    e.Handled = true;
+                    EditSelected();
+                }
+            };
 
             _txtSearch = new TextBox { Width = 280 };
             var pnlSearch = UiKit.MakeSearchPanel(_txtSearch, 320, SearchPlaceholder, ApplyFilter);
@@ -88,14 +102,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
             actions.Controls.Add(_btnRefresh);
 
             var filterHost = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent };
-            var lblSearch = new Label { Text = "Tìm:", AutoSize = true, Location = new Point(0, 9), ForeColor = UiKit.MutedText };
+            var lblSearch = new Label { Text = "Tìm:", AutoSize = true, Location = new Point(0, 9), ForeColor = UiKit.MutedText, Font = new Font("Segoe UI", 9, FontStyle.Regular) };
             pnlSearch.Location = new Point(lblSearch.Right + 6, 10);
 
-            var lblBranch = new Label { Text = "Chi nhánh:", AutoSize = true, ForeColor = UiKit.MutedText };
+            var lblBranch = new Label { Text = "Chi nhánh:", AutoSize = true, ForeColor = UiKit.MutedText, Font = new Font("Segoe UI", 9, FontStyle.Regular) };
             lblBranch.Location = new Point(pnlSearch.Right + 14, 9);
             _cboBranch.Location = new Point(lblBranch.Right + 6, 6);
 
-            var lblActive = new Label { Text = "Kích hoạt:", AutoSize = true, ForeColor = UiKit.MutedText };
+            var lblActive = new Label { Text = "Kích hoạt:", AutoSize = true, ForeColor = UiKit.MutedText, Font = new Font("Segoe UI", 9, FontStyle.Regular) };
             lblActive.Location = new Point(_cboBranch.Right + 14, 9);
             _cboActive.Location = new Point(lblActive.Right + 6, 6);
 

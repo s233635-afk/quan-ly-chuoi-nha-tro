@@ -15,6 +15,7 @@ namespace QuanLyNhaTro.BLL
         public Task<DataTable> GetRoomTypesAsync() => dbHelper.GetRoomTypesAsync();
         public Task<DataTable> GetRoomStatusesAsync() => dbHelper.GetRoomStatusesAsync();
         public Task<DataTable> GetStaffAsync() => dbHelper.GetUsersByRoleAsync(2);
+        public Task<DataTable> GetUsersByBranchAsync(int branchId) => dbHelper.GetUsersByBranchAsync(branchId);
         public Task<DataTable> GetTenantsAsync() => dbHelper.GetTenantsAsync();
         public Task<DataTable> GetDependentsAsync() => dbHelper.GetDependentsAsync();
         public Task<DataTable> GetTenantHistoryAsync() => dbHelper.GetTenantHistoryAsync();

@@ -1156,6 +1156,81 @@ namespace QuanLyNhaTro.DAL
             );
         }
 
+        public async Task<DataTable> GetUsersByBranchAsync(int branchId)
+        {
+            await EnsureUsersPhoneColumnBestEffortAsync();
+
+            return await GetTableSafeAsync(
+                "Users",
+                cmd => cmd.Parameters.AddWithValue("@BranchId", branchId),
+                @"SELECT u.UserId,
+                         u.Username AS UserName,
+                         u.Email,
+                         u.FullName,
+                         u.Phone,
+                         u.RoleId,
+                         r.RoleName,
+                         u.BranchId,
+                         b.BranchName,
+                         u.IsActive,
+                         u.CreatedDate,
+                         u.UpdatedDate
+                  FROM Users u
+                  LEFT JOIN Roles r ON r.RoleId = u.RoleId
+                  LEFT JOIN Branches b ON b.BranchId = u.BranchId
+                  WHERE u.BranchId = @BranchId AND u.RoleId <> 1
+                  ORDER BY u.RoleId, u.UserId DESC",
+                // Nếu DB chưa có cột Phone, vẫn trả về cột Phone dạng NULL để UI không bị lỗi.
+                @"SELECT u.UserId,
+                         u.Username AS UserName,
+                         u.Email,
+                         u.FullName,
+                         CAST(NULL AS NVARCHAR(20)) AS Phone,
+                         u.RoleId,
+                         r.RoleName,
+                         u.BranchId,
+                         b.BranchName,
+                         u.IsActive,
+                         u.CreatedDate,
+                         u.UpdatedDate
+                  FROM Users u
+                  LEFT JOIN Roles r ON r.RoleId = u.RoleId
+                  LEFT JOIN Branches b ON b.BranchId = u.BranchId
+                  WHERE u.BranchId = @BranchId AND u.RoleId <> 1
+                  ORDER BY u.RoleId, u.UserId DESC",
+                @"SELECT UserId,
+                         Username AS UserName,
+                         Email,
+                         FullName,
+                         CAST(NULL AS NVARCHAR(20)) AS Phone,
+                         RoleId,
+                         CAST(NULL AS NVARCHAR(50)) AS RoleName,
+                         BranchId,
+                         CAST(NULL AS NVARCHAR(255)) AS BranchName,
+                         IsActive,
+                         CreatedDate,
+                         UpdatedDate
+                  FROM Users
+                  WHERE BranchId = @BranchId AND RoleId <> 1
+                  ORDER BY RoleId, UserId DESC",
+                @"SELECT UserId,
+                         UserName,
+                         Email,
+                         FullName,
+                         CAST(NULL AS NVARCHAR(20)) AS Phone,
+                         RoleId,
+                         CAST(NULL AS NVARCHAR(50)) AS RoleName,
+                         CAST(NULL AS INT) AS BranchId,
+                         CAST(NULL AS NVARCHAR(255)) AS BranchName,
+                         IsActive,
+                         CreatedDate,
+                         CAST(NULL AS DATETIME) AS UpdatedDate
+                  FROM Users
+                  WHERE RoleId <> 1
+                  ORDER BY RoleId, UserId DESC"
+            );
+        }
+
         #region CRUD Staff (RoleId = 2)
 
         public async Task<int> AddStaffUserAsync(string username, string password, string fullName, string email, string phone, int? branchId, bool isActive)

@@ -331,13 +331,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var rect = pnlRight.ClientRectangle;
             if (rect.Width <= 0 || rect.Height <= 0) return;
 
-            using (var brush = new LinearGradientBrush(rect, Color.FromArgb(0, 70, 180), Color.FromArgb(0, 173, 181), 135f))
+            // Sử dụng gradient nhẹ hơn để không bị khuất
+            using (var brush = new LinearGradientBrush(rect, Color.FromArgb(0, 100, 200), Color.FromArgb(0, 150, 200), 135f))
             {
                 g.FillRectangle(brush, rect);
             }
 
             EnsureStars(rect);
-            using (var starBrush = new SolidBrush(Color.FromArgb(220, 255, 255, 255)))
+            // Giảm độ mờ của các ngôi sao để không che khuất
+            using (var starBrush = new SolidBrush(Color.FromArgb(180, 255, 255, 255)))
             {
                 foreach (var p in _stars)
                 {
@@ -368,27 +370,29 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 path.AddLine(rect.Left, rect.Top, rect.Left, rect.Bottom);
 
                 var p1 = new Point(rect.Left, rect.Bottom);
-                var c1 = new Point(rect.Left + rect.Width / 3, rect.Bottom - rect.Height / 5);
-                var c2 = new Point(rect.Left + rect.Width / 2, rect.Top + rect.Height / 2);
-                var p2 = new Point(rect.Left + rect.Width / 5, rect.Top);
+                var c1 = new Point(rect.Left + rect.Width / 4, rect.Bottom - rect.Height / 6); // Điều chỉnh đường cong
+                var c2 = new Point(rect.Left + rect.Width / 2, rect.Top + rect.Height / 3);
+                var p2 = new Point(rect.Left + rect.Width / 6, rect.Top);
                 path.AddBezier(p1, c1, c2, p2);
                 path.CloseFigure();
 
-                using (var brush = new SolidBrush(Color.FromArgb(60, 255, 255, 255)))
+                // Tăng độ trong suốt để không che khuất
+                using (var brush = new SolidBrush(Color.FromArgb(40, 255, 255, 255)))
                 {
                     g.FillPath(brush, path);
                 }
             }
 
-            using (var pen = new Pen(Color.FromArgb(70, 255, 255, 255), 2f))
+            // Giảm độ dày và độ mờ của các đường kẻ
+            using (var pen = new Pen(Color.FromArgb(50, 255, 255, 255), 1.5f))
             {
                 pen.StartCap = LineCap.Round;
                 pen.EndCap = LineCap.Round;
-                for (int i = 0; i < 14; i++)
+                for (int i = 0; i < 10; i++) // Giảm số lượng đường kẻ
                 {
-                    int x1 = rect.Left + (rect.Width * i / 14);
-                    int y1 = rect.Top - 30;
-                    g.DrawLine(pen, x1, y1, x1 + 120, y1 + 110);
+                    int x1 = rect.Left + (rect.Width * i / 10);
+                    int y1 = rect.Top - 20;
+                    g.DrawLine(pen, x1, y1, x1 + 100, y1 + 90);
                 }
             }
         }

@@ -13,7 +13,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             if (raw == null) return null;
             if (!raw.Columns.Contains("SectionId")) return raw;
 
-            TextFixer.FixDataTable(raw, "SectionCode", "SectionName", "Description");
+            TextFixer.ForceFixDataTable(raw, "SectionCode", "SectionName", "Description");
 
             DataTable dt;
             if (branchId.HasValue && raw.Columns.Contains("BranchId"))
@@ -90,8 +90,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private static string CanonicalizeName(string code, string name)
         {
-            string fixedName = TextFixer.FixUtf8Mojibake(name)?.Trim();
-            string fixedCode = TextFixer.FixUtf8Mojibake(code)?.Trim();
+            string fixedName = TextFixer.ForceFixUtf8Mojibake(name)?.Trim();
+            string fixedCode = TextFixer.ForceFixUtf8Mojibake(code)?.Trim();
 
             if (string.IsNullOrWhiteSpace(fixedName) && string.IsNullOrWhiteSpace(fixedCode)) return fixedName;
 

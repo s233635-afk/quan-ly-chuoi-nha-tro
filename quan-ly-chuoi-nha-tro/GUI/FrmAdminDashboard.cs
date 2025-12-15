@@ -180,7 +180,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             tableLayoutPanel1.RowStyles.Clear();
             for (int i = 0; i < rowCount; i++)
             {
-                tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Absolute, 140F));
+                tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Absolute, 190F));
             }
 
             for (int i = 0; i < metrics.Length; i++)
@@ -214,17 +214,52 @@ namespace quan_ly_chuoi_nha_tro.GUI
             Panel pnl = new Panel
             {
                 Dock = DockStyle.Fill,
-                Margin = new Padding(10),
-                Padding = new Padding(14, 12, 14, 12),
+                Margin = new Padding(12),
+                Padding = new Padding(16, 14, 16, 14),
                 BackColor = Color.White,
-                BorderStyle = BorderStyle.None
+                BorderStyle = BorderStyle.None,
+                MinimumSize = new Size(0, 150)
             };
 
-            Panel accent = new Panel
+            bool isHover = false;
+            Color borderNormal = Color.FromArgb(224, 231, 240);
+            Color borderHover = Color.FromArgb(183, 210, 237);
+
+            pnl.Resize += (s, e) =>
             {
-                Dock = DockStyle.Left,
-                Width = 4,
-                BackColor = metric.AccentColor
+                int radius = 5;
+                var rect = new Rectangle(0, 0, pnl.Width, pnl.Height);
+                using (var path = new System.Drawing.Drawing2D.GraphicsPath())
+                {
+                    int d = radius * 2;
+                    path.AddArc(rect.X, rect.Y, d, d, 180, 90);
+                    path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+                    path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+                    path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
+                    path.CloseFigure();
+                    pnl.Region = new Region(path);
+                }
+                pnl.Invalidate();
+            };
+
+            pnl.Paint += (s, e) =>
+            {
+                using (var pen = new Pen(isHover ? borderHover : borderNormal, 1.6f))
+                {
+                    var rect = new Rectangle(0, 0, pnl.Width - 1, pnl.Height - 1);
+                    e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                    int radius = 5;
+                    int d = radius * 2;
+                    using (var path = new System.Drawing.Drawing2D.GraphicsPath())
+                    {
+                        path.AddArc(rect.X, rect.Y, d, d, 180, 90);
+                        path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+                        path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+                        path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
+                        path.CloseFigure();
+                        e.Graphics.DrawPath(pen, path);
+                    }
+                }
             };
 
             Label lblTitle = new Label
@@ -233,7 +268,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Font = new System.Drawing.Font("Segoe UI", 12, System.Drawing.FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 79, 159),
                 Dock = DockStyle.Top,
-                Padding = new Padding(10, 2, 0, 4)
+                Padding = new Padding(0, 2, 0, 4)
             };
 
             Label lblValue = new Label
@@ -243,7 +278,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 ForeColor = Color.FromArgb(30, 55, 90),
                 Dock = DockStyle.Top,
                 Height = 48,
-                Padding = new Padding(10, 0, 0, 0)
+                Padding = new Padding(0, 0, 0, 0)
             };
 
             Label lblSub = new Label
@@ -252,13 +287,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Font = new Font("Segoe UI", 10),
                 ForeColor = Color.FromArgb(70, 94, 120),
                 Dock = DockStyle.Fill,
-                Padding = new Padding(10, 4, 0, 0),
+                Padding = new Padding(0, 4, 0, 0),
                 AutoSize = false,
                 TextAlign = ContentAlignment.TopLeft
             };
 
             // Add theo thứ tự để Dock layout đúng (Fill trước, Top sau)
-            pnl.Controls.Add(accent);
             pnl.Controls.Add(lblSub);
             pnl.Controls.Add(lblValue);
             pnl.Controls.Add(lblTitle);
@@ -272,17 +306,18 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 lblTitle.Click += metric.ClickHandler;
                 lblValue.Click += metric.ClickHandler;
                 lblSub.Click += metric.ClickHandler;
-                accent.Click += metric.ClickHandler;
             }
             pnl.MouseEnter += (s, e) =>
             {
                 pnl.BackColor = Color.FromArgb(232, 244, 255);
-                accent.BackColor = ControlPaint.Dark(metric.AccentColor);
+                isHover = true;
+                pnl.Invalidate();
             };
             pnl.MouseLeave += (s, e) =>
             {
                 pnl.BackColor = Color.White;
-                accent.BackColor = metric.AccentColor;
+                isHover = false;
+                pnl.Invalidate();
             };
 
             tableLayoutPanel1.Controls.Add(pnl, col, row);
@@ -411,7 +446,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private void btnBranch_Click(object sender, EventArgs e)
         {
             SetActiveNav(btnNavBranch);
-            LoadModuleSafe(() => new FrmBranch(), "Quản lý chi nhánh");
+            LoadModuleSafe(() => new FrmBranchCards(), "Quản lý chi nhánh");
         }
 
         private void btnRoom_Click(object sender, EventArgs e)
