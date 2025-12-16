@@ -9,6 +9,7 @@ namespace QuanLyNhaTro.BLL
     {
         private readonly DatabaseHelper dbHelper = new DatabaseHelper();
 
+        // --- CÁC HÀM GET DATA (DANH SÁCH) ---
         public Task<DataTable> GetRoomsAsync() => dbHelper.GetRoomsAsync();
         public Task<DataTable> GetBranchesAsync() => dbHelper.GetBranchesAsync();
         public Task<DataTable> GetBranchSectionsAsync(int? branchId = null) => dbHelper.GetBranchSectionsAsync(branchId);
@@ -34,6 +35,7 @@ namespace QuanLyNhaTro.BLL
         public Task<DataTable> GetSystemSettingsAsync() => dbHelper.GetSystemSettingsAsync();
         public Task<DataTable> GetDashboardSummaryAsync() => dbHelper.GetDashboardSummaryAsync();
 
+        // --- STAFF CRUD ---
         public Task<int> AddStaffUserAsync(string username, string password, string fullName, string email, string phone, int? branchId, bool isActive)
             => dbHelper.AddStaffUserAsync(username, password, fullName, email, phone, branchId, isActive);
 
@@ -42,6 +44,7 @@ namespace QuanLyNhaTro.BLL
 
         public Task<bool> DeleteStaffUserAsync(int userId) => dbHelper.DeleteStaffUserAsync(userId);
 
+        // --- TENANT CRUD ---
         public Task<int> AddTenantAsync(string fullName, string identityCard, string phoneNumber, string email,
             DateTime? birthDate, string address, string tempReg, DateTime? tempRegDate, DateTime? tempRegExpiry, bool isActive)
             => dbHelper.AddTenantAsync(fullName, identityCard, phoneNumber, email, birthDate, address, tempReg, tempRegDate, tempRegExpiry, isActive);
@@ -62,6 +65,7 @@ namespace QuanLyNhaTro.BLL
 
         public Task<bool> DeleteTenantAsync(int tenantId) => dbHelper.DeleteTenantAsync(tenantId);
 
+        // --- DEPENDENT CRUD ---
         public Task<int> AddDependentAsync(int tenantId, string fullName, string relationship, string phoneNumber)
             => dbHelper.AddDependentAsync(tenantId, fullName, relationship, phoneNumber);
 
@@ -71,6 +75,7 @@ namespace QuanLyNhaTro.BLL
         public Task<bool> DeleteDependentAsync(int dependentId)
             => dbHelper.DeleteDependentAsync(dependentId);
 
+        // --- TENANT HISTORY CRUD ---
         public Task<int> AddTenantHistoryAsync(int tenantId, int roomId, DateTime checkInDate, DateTime? checkOutDate, string status, string notes)
             => dbHelper.AddTenantHistoryAsync(tenantId, roomId, checkInDate, checkOutDate, status, notes);
 
@@ -79,6 +84,19 @@ namespace QuanLyNhaTro.BLL
 
         public Task<bool> DeleteTenantHistoryAsync(int historyId)
             => dbHelper.DeleteTenantHistoryAsync(historyId);
+
+        // --- CONTRACT CRUD ---
+        
+        // 🔥 ĐÂY LÀ HÀM CÒN THIẾU MÀ MÌNH ĐÃ THÊM VÀO 🔥
+        public async Task<DataRow> GetContractByIdAsync(int contractId)
+        {
+            DataTable dt = await dbHelper.GetContractByIdAsync(contractId);
+            if (dt != null && dt.Rows.Count > 0)
+            {
+                return dt.Rows[0];
+            }
+            return null;
+        }
 
         public Task<int> AddContractAsync(
             string contractNumber,
@@ -111,6 +129,7 @@ namespace QuanLyNhaTro.BLL
 
         public Task<bool> DeleteContractAsync(int contractId) => dbHelper.DeleteContractAsync(contractId);
 
+        // --- DEPOSIT CRUD ---
         public Task<int> AddDepositAsync(int tenantId, int roomId, decimal depositAmount, DateTime? depositDate,
             string depositType, string status, decimal? returnedAmount, DateTime? returnedDate, string notes)
             => dbHelper.AddDepositAsync(tenantId, roomId, depositAmount, depositDate, depositType, status, returnedAmount, returnedDate, notes);
@@ -121,6 +140,7 @@ namespace QuanLyNhaTro.BLL
 
         public Task<bool> DeleteDepositAsync(int depositId) => dbHelper.DeleteDepositAsync(depositId);
 
+        // --- INVOICE CRUD ---
         public Task<int> AddInvoiceAsync(
             string invoiceNumber,
             int tenantId,
@@ -151,6 +171,10 @@ namespace QuanLyNhaTro.BLL
         public Task<bool> DeleteInvoiceAsync(int invoiceId, bool deletePaymentsFirst)
             => dbHelper.DeleteInvoiceAsync(invoiceId, deletePaymentsFirst);
 
+        public Task<int> GenerateMonthlyInvoicesAsync(int year, int month, DateTime? invoiceDate = null, int? dueDay = null)
+            => dbHelper.GenerateMonthlyInvoicesAsync(year, month, invoiceDate, dueDay);
+
+        // --- PAYMENT CRUD ---
         public Task<int> AddPaymentAsync(int invoiceId, DateTime paymentDate, decimal paymentAmount, string paymentMethod, string transactionReference, string notes)
             => dbHelper.AddPaymentAsync(invoiceId, paymentDate, paymentAmount, paymentMethod, transactionReference, notes);
 
@@ -159,9 +183,7 @@ namespace QuanLyNhaTro.BLL
 
         public Task<bool> DeletePaymentAsync(int paymentId) => dbHelper.DeletePaymentAsync(paymentId);
 
-        public Task<int> GenerateMonthlyInvoicesAsync(int year, int month, DateTime? invoiceDate = null, int? dueDay = null)
-            => dbHelper.GenerateMonthlyInvoicesAsync(year, month, invoiceDate, dueDay);
-
+        // --- ROOM CRUD ---
         public async Task<int> AddRoomAsync(
             string roomNumber,
             int branchId,
@@ -220,6 +242,7 @@ namespace QuanLyNhaTro.BLL
 
         public Task<bool> DeleteRoomAsync(int roomId) => dbHelper.DeleteRoomAsync(roomId);
 
+        // --- UTILITY TYPE CRUD ---
         public Task<int> AddUtilityTypeAsync(string utilityName, string utilityCode, string unit, bool isRecurring, decimal? defaultPrice, string description, bool isActive)
             => dbHelper.AddUtilityTypeAsync(utilityName, utilityCode, unit, isRecurring, defaultPrice, description, isActive);
 
@@ -229,6 +252,7 @@ namespace QuanLyNhaTro.BLL
         public Task<bool> DeleteUtilityTypeAsync(int utilityTypeId)
             => dbHelper.DeleteUtilityTypeAsync(utilityTypeId);
 
+        // --- UTILITY READING CRUD ---
         public Task<int> AddUtilityReadingAsync(int roomId, int utilityTypeId, DateTime? readingDate, decimal? previousReading, decimal? currentReading, decimal? usageAmount, decimal? unitPrice, decimal? totalCost, string notes)
             => dbHelper.AddUtilityReadingAsync(roomId, utilityTypeId, readingDate, previousReading, currentReading, usageAmount, unitPrice, totalCost, notes);
 
@@ -238,6 +262,7 @@ namespace QuanLyNhaTro.BLL
         public Task<bool> DeleteUtilityReadingAsync(int readingId)
             => dbHelper.DeleteUtilityReadingAsync(readingId);
 
+        // --- MAINTENANCE CRUD ---
         public Task<int> AddMaintenanceTicketAsync(string ticketNumber, int roomId, string requestorType, int? requestorId,
             string issueDescription, string priority, int? assignedToUserId, string status, DateTime? completedDate, string notes)
             => dbHelper.AddMaintenanceTicketAsync(ticketNumber, roomId, requestorType, requestorId, issueDescription, priority, assignedToUserId, status, completedDate, notes);
@@ -249,6 +274,7 @@ namespace QuanLyNhaTro.BLL
         public Task<bool> DeleteMaintenanceTicketAsync(int ticketId)
             => dbHelper.DeleteMaintenanceTicketAsync(ticketId);
 
+        // --- ASSET CRUD ---
         public Task<int> AddAssetAsync(string assetCode, string assetName, string category, int? roomId, int quantity, string condition,
             DateTime? purchaseDate, decimal? purchasePrice, string description, bool isActive)
             => dbHelper.AddAssetAsync(assetCode, assetName, category, roomId, quantity, condition, purchaseDate, purchasePrice, description, isActive);
@@ -260,6 +286,7 @@ namespace QuanLyNhaTro.BLL
         public Task<bool> DeleteAssetAsync(int assetId)
             => dbHelper.DeleteAssetAsync(assetId);
 
+        // --- NOTIFICATION CRUD ---
         public Task<int> AddNotificationAsync(int? userId, string title, string message, string status)
             => dbHelper.AddNotificationAsync(userId, title, message, status);
 
@@ -269,6 +296,7 @@ namespace QuanLyNhaTro.BLL
         public Task<bool> DeleteNotificationAsync(int notificationId)
             => dbHelper.DeleteNotificationAsync(notificationId);
 
+        // --- SYSTEM SETTINGS CRUD ---
         public Task<bool> AddSystemSettingAsync(string key, string value, string description)
             => dbHelper.AddSystemSettingAsync(key, value, description);
 
@@ -310,4 +338,3 @@ namespace QuanLyNhaTro.BLL
         #endregion
     }
 }
-
