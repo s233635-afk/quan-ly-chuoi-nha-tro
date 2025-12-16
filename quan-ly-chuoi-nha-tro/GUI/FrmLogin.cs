@@ -100,17 +100,24 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                 MessageBox.Show($"Xin chào {fullName}!", "Đăng nhập thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                // Hệ thống chỉ chạy chế độ Admin (RoleId = 1)
-                if (roleId != 1)
-                {
-                    MessageBox.Show("Hệ thống hiện chỉ hỗ trợ tài khoản Admin (RoleId = 1).", "Không có quyền", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-
-                FrmAdminDashboard adminForm = new FrmAdminDashboard(user, access.UserId);
                 Hide();
-                adminForm.ShowDialog();
-                Show();
+
+                if (roleId == 1)
+                {
+                    using (var frm = new FrmAdminDashboard(user, access.UserId))
+                    {
+                        frm.FormClosed += (s, args) => Show();
+                        frm.ShowDialog(this);
+                    }
+                }
+                else
+                {
+                    using (var frm = new FrmStaffDashboard(user, fullName, access.BranchId, access.UserId))
+                    {
+                        frm.FormClosed += (s, args) => Show();
+                        frm.ShowDialog(this);
+                    }
+                }
 
                 UpdateOverlayPlaceholderVisibility(_userPlaceholderLabel, txtUser);
                 UpdateOverlayPlaceholderVisibility(_passPlaceholderLabel, txtPass);

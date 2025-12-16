@@ -28,6 +28,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private CheckBox chkActive;
         private Button btnSave;
         private Button btnCancel;
+        private ComboBox cboRoom;
         private DataTable _rooms;
 
         public int? SavedTenantId { get; private set; }
@@ -107,6 +108,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             dtTempFrom = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true };
             dtTempTo = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true };
             chkActive = new CheckBox { Text = "Đang hoạt động", Checked = true, AutoSize = true };
+            cboRoom = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
 
             pnlBody.Controls.Add(MakeLabel("Họ tên (*)", top));
             pnlBody.Controls.Add(MakeInput(txtFullName, top));
@@ -150,6 +152,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             pnlBody.Controls.Add(MakeLabel("Hết hạn tạm trú", top));
             pnlBody.Controls.Add(MakeInput(dtTempTo, top));
+            top += line;
+
+            pnlBody.Controls.Add(MakeLabel("Phòng đang ở", top));
+            pnlBody.Controls.Add(MakeInput(cboRoom, top));
             top += line;
 
             var pnlActive = new Panel { Location = new Point(left + labelWidth, top), Width = inputWidth, Height = 26, BackColor = Color.Transparent };
@@ -338,6 +344,55 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 if (ofd.ShowDialog() == DialogResult.OK)
                     target.Text = ofd.FileName;
             }
+        }
+
+        private async System.Threading.Tasks.Task LoadRoomsAsync()
+        {
+            try
+            {
+                _rooms = await _bll.GetRoomsAsync() ?? new DataTable();
+                TextFixer.ForceFixDataTable(_rooms, "RoomNumber", "BranchName", "SectionName", "StatusName");
+
+                var filteredRows = _rooms.AsEnumerable()
+                    .Where(r =>
+                    {
+                        string status = r.Table.Columns.Contains("StatusName") ? r["StatusName"]?.ToString() : null;
+                        return string.IsNullOrWhiteSpace(status) || status.IndexOf("đang ở", StringComparison.OrdinalIgnoreCase) < 0;
+                    })
+                    .OrderBy(r => r["RoomNumber"]?.ToString())
+                    .Take(200);
+
+                var filtered = CopyRowsToTable(filteredRows, _rooms);
+
+                cboRoom.DataSource = filtered.Rows.Count > 0 ? filtered : _rooms;
+                cboRoom.DisplayMember = "RoomNumber";
+                cboRoom.ValueMember = "RoomId";
+                cboRoom.SelectedIndex = -1;
+            }
+            catch
+            {
+                cboRoom.DataSource = null;
+            }
+        }
+
+        private static System.Threading.Tasks.Task UpdateTenantRoomAsync(int? tenantId, int? roomId)
+        {
+            // TODO: Wire up tenant-room assignment when backend API is available.
+            return System.Threading.Tasks.Task.CompletedTask;
+        }
+
+        private static DataTable CopyRowsToTable(System.Collections.Generic.IEnumerable<DataRow> rows, DataTable template)
+        {
+            var table = template?.Clone() ?? new DataTable();
+            if (rows == null) return table;
+
+            foreach (var r in rows)
+            {
+                try { table.ImportRow(r); }
+                catch { }
+            }
+
+            return table;
         }
     }
 }

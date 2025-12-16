@@ -60,6 +60,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private bool _tenantVisible;
 
         private DataGridView _gridTenants;
+        private TextBox _txtTenantSearch;
+        private Label _lblTenantCount;
+        private DataTable _tenantsBranch;
         private DataGridView _gridStaff;
         private DataGridView _gridContracts;
         private DataGridView _gridDeposits;
@@ -256,7 +259,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _tabRooms.Controls.Add(_roomDetails);
 
             BuildSectionsTab();
-            _gridTenants = CreateGrid(); _gridTenants.Dock = DockStyle.Fill; _tabTenants.Controls.Add(_gridTenants);
+            BuildTenantTab();
             _gridStaff = CreateGrid(); _gridStaff.Dock = DockStyle.Fill; _gridStaff.CellFormatting += GridActiveCellFormatting; _tabStaff.Controls.Add(_gridStaff);
             _gridContracts = CreateGrid(); _gridContracts.Dock = DockStyle.Fill; _tabContracts.Controls.Add(_gridContracts);
             _gridDeposits = CreateGrid(); _gridDeposits.Dock = DockStyle.Fill; _tabDeposits.Controls.Add(_gridDeposits);
@@ -331,6 +334,66 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             _tabSections.Controls.Add(_sectionsHost);
             _tabSections.Controls.Add(_sectionsTop);
+        }
+
+        private void BuildTenantTab()
+        {
+            _tabTenants.Controls.Clear();
+            _tabTenants.BackColor = Color.White;
+
+            var top = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 62,
+                BackColor = Color.White,
+                Padding = new Padding(14, 12, 14, 10)
+            };
+            top.Controls.Add(new Panel { Dock = DockStyle.Bottom, Height = 1, BackColor = Color.FromArgb(230, 235, 240) });
+
+            var flow = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                WrapContents = false,
+                FlowDirection = FlowDirection.LeftToRight,
+                BackColor = Color.Transparent
+            };
+
+            var lblSearch = new Label
+            {
+                AutoSize = true,
+                Text = "Tìm kiếm:",
+                ForeColor = Color.FromArgb(90, 90, 90),
+                Margin = new Padding(0, 6, 6, 0)
+            };
+
+            _txtTenantSearch = new TextBox { Width = 340, Margin = new Padding(0, 2, 12, 0) };
+            _txtTenantSearch.TextChanged += (s, e) => ApplyTenantFilter();
+
+            _lblTenantCount = new Label
+            {
+                AutoSize = true,
+                Text = "Khách thuê: 0",
+                ForeColor = Color.FromArgb(90, 90, 90),
+                Margin = new Padding(0, 6, 0, 0)
+            };
+
+            flow.Controls.Add(lblSearch);
+            flow.Controls.Add(_txtTenantSearch);
+            flow.Controls.Add(_lblTenantCount);
+
+            top.Controls.Add(flow);
+
+            var host = new Panel { Dock = DockStyle.Fill, Padding = new Padding(14), BackColor = Color.White };
+
+            _gridTenants = CreateGrid();
+            _gridTenants.Dock = DockStyle.Fill;
+            _gridTenants.CellDoubleClick += GridTenants_CellDoubleClick;
+            _gridTenants.CellClick += GridTenants_CellClick;
+
+            host.Controls.Add(_gridTenants);
+
+            _tabTenants.Controls.Add(host);
+            _tabTenants.Controls.Add(top);
         }
 
         private static DataGridView CreateGrid()
@@ -452,7 +515,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 _tenantsAll = tenantsTask.Result ?? new DataTable();
                 TextFixer.ForceFixDataTable(_tenantsAll, "FullName", "Address", "TemporaryRegistration");
                 var tenantsRelated = BuildTenantsForBranch(_tenantsAll, _contractsBranch, _depositsBranch);
-                BindTenants(_gridTenants, tenantsRelated);
+                BindTenants(tenantsRelated);
 
                 BindContracts(_gridContracts, EnrichContracts(_contractsBranch, _tenantsAll, _roomsAll));
                 BindDeposits(_gridDeposits, EnrichDeposits(_depositsBranch, _tenantsAll, _roomsAll));
@@ -1221,17 +1284,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             return rows.Count();
         }
 
-        private static void BindTenants(DataGridView grid, DataTable dt)
+        private void BindTenants(DataTable dt)
         {
-            if (grid == null) return;
-            grid.DataSource = dt;
-            SetHeader(grid, "TenantId", "ID");
-            SetHeader(grid, "FullName", "Họ tên");
-            SetHeader(grid, "IdentityCard", "CCCD");
-            SetHeader(grid, "PhoneNumber", "SĐT");
-            SetHeader(grid, "TemporaryRegistration", "Tạm trú");
-            HideIfExists(grid, "FrontIdPhoto");
-            HideIfExists(grid, "BackIdPhoto");
+            _tenantsBranch = dt?.Copy() ?? new DataTable();
+            ApplyTenantFilter();
         }
 
         private static void BindStaff(DataGridView grid, DataTable dt)
@@ -1756,5 +1812,49 @@ namespace quan_ly_chuoi_nha_tro.GUI
         }
 
         private static string NullDash(string s) => string.IsNullOrWhiteSpace(s) ? "—" : s.Trim();
+
+        private void ApplyTenantFilter()
+        {
+            if (_tenantsBranch == null) return;
+
+            string searchText = _txtTenantSearch?.Text?.ToLower() ?? "";
+            var rows = _tenantsBranch.Select()
+                .Where(r => string.IsNullOrEmpty(searchText) ||
+                           (r["Name"]?.ToString() ?? "").ToLower().Contains(searchText) ||
+                           (r["Phone"]?.ToString() ?? "").ToLower().Contains(searchText) ||
+                           (r["Email"]?.ToString() ?? "").ToLower().Contains(searchText))
+                .ToArray();
+
+            var view = new DataView(_tenantsBranch);
+            view.RowFilter = string.IsNullOrEmpty(searchText) ? "" : 
+                $"Name LIKE '%{searchText}%' OR Phone LIKE '%{searchText}%' OR Email LIKE '%{searchText}%'";
+
+            _gridTenants.DataSource = view;
+            _lblTenantCount.Text = $"Khách thuê: {rows.Length}";
+        }
+
+        private void GridTenants_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0) return;
+
+            var row = _gridTenants.Rows[e.RowIndex];
+            if (row?.DataBoundItem is DataRowView drv)
+            {
+                int tenantId = TryReadInt(drv.Row, "TenantId");
+                // Open tenant editor if needed
+                // new FrmTenantEditor(tenantId).ShowDialog();
+            }
+        }
+
+        private void GridTenants_CellClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0) return;
+
+            var row = _gridTenants.Rows[e.RowIndex];
+            if (row?.DataBoundItem is DataRowView drv)
+            {
+                // Handle cell click if needed
+            }
+        }
     }
 }
