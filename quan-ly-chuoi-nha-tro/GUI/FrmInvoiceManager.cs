@@ -12,8 +12,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
 {
     public class FrmInvoiceManager : Form
     {
+        private const string SearchPlaceholder = "Tìm theo hóa đơn/khách/phòng...";
+
         private readonly AdminDataBLL _bll = new AdminDataBLL();
         private readonly int? _branchId;
+        private System.Collections.Generic.HashSet<int> _allowedBranchIds;
         private DataTable _table;
 
         private DataGridView _grid;
@@ -39,6 +42,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             StartPosition = FormStartPosition.CenterParent;
             Width = 1300;
             Height = 700;
+            BackColor = UiKit.AppBackground;
 
             _grid = new DataGridView
             {
@@ -55,9 +59,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             };
             _grid.DoubleClick += (s, e) => EditSelected();
             _grid.SelectionChanged += (s, e) => UpdateSummary();
+            UiKit.StyleGrid(_grid);
 
-            _txtSearch = new TextBox { Width = 240 };
-            _txtSearch.TextChanged += (s, e) => ApplyFilter();
+            _txtSearch = new TextBox { Width = 280 };
+            var pnlSearch = UiKit.MakeSearchPanel(_txtSearch, 320, SearchPlaceholder, ApplyFilter);
 
             _cboStatus = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 150 };
             _cboStatus.Items.AddRange(new object[] { "Tất cả", "Issued", "PartialPaid", "Paid", "Overdue" });
@@ -65,56 +70,70 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _cboStatus.SelectedIndexChanged += (s, e) => ApplyFilter();
 
             _lblCount = new Label { AutoSize = true, Text = "Tổng: 0" };
-            _lblSummary = new Label { AutoSize = true, Text = "Tổng tiền: 0 | Đã thu: 0 | Còn nợ: 0" };
+            _lblSummary = new Label { AutoSize = true, Text = "Tổng tiền: 0 | Đã thu: 0 | Còn nợ: 0", ForeColor = UiKit.MutedText };
 
-            _btnAdd = new Button { Text = "Thêm", Width = 80 };
-            _btnEdit = new Button { Text = "Sửa", Width = 80 };
-            _btnDelete = new Button { Text = "Xóa", Width = 80 };
-            _btnPay = new Button { Text = "Thu tiền", Width = 90 };
-            _btnPayments = new Button { Text = "DS thanh toán", Width = 110 };
-            _btnGenerate = new Button { Text = "Tạo hóa đơn tháng", Width = 130 };
-            _btnExport = new Button { Text = "Xuất CSV", Width = 90 };
-            _btnRefresh = new Button { Text = "Tải lại", Width = 80 };
+            _btnAdd = UiKit.MakeButton("Thêm", UiKit.Primary, (s, e) => AddNew(), 92);
+            _btnEdit = UiKit.MakeButton("Sửa", UiKit.Primary, (s, e) => EditSelected(), 92);
+            _btnDelete = UiKit.MakeButton("Xóa", UiKit.Danger, async (s, e) => await DeleteSelectedAsync(), 92);
+            _btnPay = UiKit.MakeButton("Thu tiền", UiKit.Success, (s, e) => PaySelected(), 100);
+            _btnPayments = UiKit.MakeButton("DS thanh toán", UiKit.Primary, (s, e) => ShowPayments(), 120);
+            _btnGenerate = UiKit.MakeButton("Tạo hóa đơn tháng", UiKit.Warning, async (s, e) => await GenerateMonthlyAsync(), 150);
+            _btnExport = UiKit.MakeButton("Xuất CSV", UiKit.Purple, (s, e) => ExportCsv(), 100);
+            _btnRefresh = UiKit.MakeButton("Tải lại", UiKit.Primary, async (s, e) => await LoadDataAsync(), 92);
 
-            _btnAdd.Click += (s, e) => AddNew();
-            _btnEdit.Click += (s, e) => EditSelected();
-            _btnDelete.Click += async (s, e) => await DeleteSelectedAsync();
-            _btnPay.Click += (s, e) => PaySelected();
-            _btnPayments.Click += (s, e) => ShowPayments();
-            _btnGenerate.Click += async (s, e) => await GenerateMonthlyAsync();
-            _btnExport.Click += (s, e) => ExportCsv();
-            _btnRefresh.Click += async (s, e) => await LoadDataAsync();
+            var top = new Panel { Dock = DockStyle.Top, Height = 64, Padding = new Padding(12, 10, 12, 10), BackColor = Color.White };
 
-            var top = new Panel { Dock = DockStyle.Top, Height = 70 };
-            int x = 10;
-            int y1 = 10;
-            int y2 = 40;
+            var actions = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Left,
+                AutoSize = true,
+                WrapContents = false,
+                FlowDirection = FlowDirection.LeftToRight,
+                BackColor = Color.Transparent
+            };
+            actions.Controls.Add(_btnAdd);
+            actions.Controls.Add(_btnEdit);
+            actions.Controls.Add(_btnDelete);
+            actions.Controls.Add(_btnPay);
+            actions.Controls.Add(_btnPayments);
+            actions.Controls.Add(_btnGenerate);
+            actions.Controls.Add(_btnExport);
+            actions.Controls.Add(_btnRefresh);
 
-            Place(_btnAdd, top, ref x, y1);
-            Place(_btnEdit, top, ref x, y1);
-            Place(_btnDelete, top, ref x, y1);
-            Place(_btnPay, top, ref x, y1);
-            Place(_btnPayments, top, ref x, y1);
-            Place(_btnGenerate, top, ref x, y1);
-            Place(_btnExport, top, ref x, y1);
-            Place(_btnRefresh, top, ref x, y1);
+            var filterHost = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent };
+            var lblSearch = new Label { Text = "Tìm:", AutoSize = true, Location = new Point(0, 9), ForeColor = UiKit.MutedText };
+            pnlSearch.Location = new Point(lblSearch.Right + 6, 10);
 
-            var lblSearch = new Label { Text = "Tìm:", AutoSize = true, Location = new Point(10, y2 + 4) };
-            _txtSearch.Location = new Point(45, y2);
-            var lblStatus = new Label { Text = "Trạng thái:", AutoSize = true, Location = new Point(300, y2 + 4) };
-            _cboStatus.Location = new Point(380, y2);
+            var lblStatus = new Label { Text = "Trạng thái:", AutoSize = true, ForeColor = UiKit.MutedText };
+            lblStatus.Location = new Point(pnlSearch.Right + 14, 9);
+            _cboStatus.Location = new Point(lblStatus.Right + 6, 6);
 
-            _lblCount.Location = new Point(560, y2 + 4);
-            _lblSummary.Location = new Point(700, y2 + 4);
+            filterHost.Controls.Add(lblSearch);
+            filterHost.Controls.Add(pnlSearch);
+            filterHost.Controls.Add(lblStatus);
+            filterHost.Controls.Add(_cboStatus);
+            filterHost.Resize += (s, e) =>
+            {
+                pnlSearch.Location = new Point(lblSearch.Right + 6, 10);
+                lblStatus.Location = new Point(pnlSearch.Right + 14, 9);
+                _cboStatus.Location = new Point(lblStatus.Right + 6, 6);
+            };
 
-            top.Controls.Add(lblSearch);
-            top.Controls.Add(_txtSearch);
-            top.Controls.Add(lblStatus);
-            top.Controls.Add(_cboStatus);
-            top.Controls.Add(_lblCount);
-            top.Controls.Add(_lblSummary);
+            var summary = new Panel { Dock = DockStyle.Right, Width = 420, BackColor = Color.Transparent };
+            _lblCount.Location = new Point(0, 6);
+            _lblCount.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+            _lblSummary.Location = new Point(0, 28);
+            summary.Controls.Add(_lblCount);
+            summary.Controls.Add(_lblSummary);
 
-            Controls.Add(_grid);
+            top.Controls.Add(filterHost);
+            top.Controls.Add(summary);
+            top.Controls.Add(actions);
+
+            var gridHost = new Panel { Dock = DockStyle.Fill, Padding = new Padding(12), BackColor = BackColor };
+            gridHost.Controls.Add(_grid);
+
+            Controls.Add(gridHost);
             Controls.Add(top);
             Load += async (s, e) => await LoadDataAsync();
         }
@@ -131,7 +150,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
             try
             {
                 _table = await _bll.GetInvoicesViewAsync();
-                _table = FilterByBranch(_table, _branchId);
+                if (_branchId.HasValue)
+                {
+                    _table = FilterByBranch(_table, _branchId);
+                }
+                else
+                {
+                    await EnsureAllowedBranchScopeAsync();
+                    _table = AdminBranchScope.FilterByBranchIds(_table, _allowedBranchIds);
+                }
                 _grid.DataSource = _table;
                 ApplyFilter();
                 AutoFormatGrid();
@@ -170,7 +197,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private void ApplyFilter()
         {
             if (_table == null) return;
-            var keyword = (_txtSearch.Text ?? string.Empty).Trim().Replace("'", "''");
+            var raw = (_txtSearch.Text ?? string.Empty).Trim();
+            if (raw == SearchPlaceholder) raw = string.Empty;
+            var keyword = raw.Replace("'", "''");
             var status = _cboStatus.SelectedItem?.ToString();
 
             var filters = new System.Collections.Generic.List<string>();
@@ -236,7 +265,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             using (var frm = new FrmInvoiceEditor(_bll))
             {
                 if (frm.ShowDialog(this) == DialogResult.OK)
+                {
                     _ = LoadDataAsync();
+                    AdminEvents.NotifyDataChanged();
+                }
             }
         }
 
@@ -252,7 +284,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             using (var frm = new FrmInvoiceEditor(_bll, row))
             {
                 if (frm.ShowDialog(this) == DialogResult.OK)
+                {
                     _ = LoadDataAsync();
+                    AdminEvents.NotifyDataChanged();
+                }
             }
         }
 
@@ -280,6 +315,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 await _bll.DeleteInvoiceAsync(invoiceId, deletePaymentsFirst: hasPayment);
                 await LoadDataAsync();
+                AdminEvents.NotifyDataChanged();
             }
             catch (Exception ex)
             {
@@ -306,7 +342,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             using (var frm = new FrmPaymentEditor(_bll, row))
             {
                 if (frm.ShowDialog(this) == DialogResult.OK)
+                {
                     _ = LoadDataAsync();
+                    AdminEvents.NotifyDataChanged();
+                }
             }
         }
 
@@ -335,12 +374,27 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 {
                     int created = await _bll.GenerateMonthlyInvoicesAsync(dlg.SelectedYear, dlg.SelectedMonth, DateTime.Today, dlg.DueDay);
                     await LoadDataAsync();
+                    AdminEvents.NotifyDataChanged();
                     MessageBox.Show($"Đã tạo {created} hóa đơn cho {dlg.SelectedMonth:00}/{dlg.SelectedYear}.", "Hoàn tất", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch (Exception ex)
                 {
                     MessageBox.Show("Lỗi tạo hóa đơn tháng: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
+            }
+        }
+
+        private async System.Threading.Tasks.Task EnsureAllowedBranchScopeAsync()
+        {
+            if (_allowedBranchIds != null && _allowedBranchIds.Count > 0) return;
+            try
+            {
+                var branches = AdminBranchScope.Apply(await _bll.GetBranchesAsync());
+                _allowedBranchIds = AdminBranchScope.GetAllowedBranchIds(branches);
+            }
+            catch
+            {
+                _allowedBranchIds = new System.Collections.Generic.HashSet<int>();
             }
         }
 

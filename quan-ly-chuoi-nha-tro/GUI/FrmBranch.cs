@@ -1,6 +1,7 @@
 using System;
 using System.Data;
 using System.Drawing;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
@@ -56,42 +57,49 @@ namespace quan_ly_chuoi_nha_tro.GUI
             dataGridViewBranches.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "BranchCode",
-                HeaderText = "Mã Chi Nhánh",
+                HeaderText = "Mã chi nhánh",
                 DataPropertyName = "BranchCode",
                 Width = 100
             });
             dataGridViewBranches.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "BranchName",
-                HeaderText = "Tên Chi Nhánh",
+                HeaderText = "Tên chi nhánh",
                 DataPropertyName = "BranchName",
                 Width = 200
             });
             dataGridViewBranches.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "Address",
-                HeaderText = "Địa Chỉ",
+                HeaderText = "Địa chỉ",
                 DataPropertyName = "Address",
                 Width = 250
             });
             dataGridViewBranches.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "Phone",
-                HeaderText = "Điện Thoại",
+                HeaderText = "Điện thoại",
                 DataPropertyName = "Phone",
                 Width = 120
             });
             dataGridViewBranches.Columns.Add(new DataGridViewTextBoxColumn
             {
-                Name = "ManagerName",
-                HeaderText = "Quản Lý",
-                DataPropertyName = "ManagerName",
-                Width = 160
+                Name = "Hotline",
+                HeaderText = "Hotline",
+                DataPropertyName = "Hotline",
+                Width = 120
+            });
+            dataGridViewBranches.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "OperatingHours",
+                HeaderText = "Giờ hoạt động",
+                DataPropertyName = "OperatingHours",
+                Width = 140
             });
             dataGridViewBranches.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "IsActive",
-                HeaderText = "Trạng Thái",
+                HeaderText = "Trạng thái",
                 DataPropertyName = "IsActive",
                 Width = 80
             });
@@ -103,7 +111,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             try
             {
-                dtBranches = await branchBLL.GetAllBranchesAsync();
+                var all = await branchBLL.GetAllBranchesAsync();
+                TextFixer.FixDataTable(all, "BranchName", "Address", "Description");
+                dtBranches = AdminBranchScope.Apply(all);
                 dataGridViewBranches.DataSource = dtBranches;
                 UpdateStats();
             }
@@ -119,6 +129,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             if (frm.ShowDialog() == DialogResult.OK)
             {
                 LoadBranches();
+                AdminEvents.NotifyDataChanged();
             }
         }
 
@@ -135,6 +146,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             if (frm.ShowDialog() == DialogResult.OK)
             {
                 LoadBranches();
+                AdminEvents.NotifyDataChanged();
             }
         }
 
@@ -158,6 +170,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 {
                     MessageBox.Show("Xóa chi nhánh thành công!", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     LoadBranches();
+                    AdminEvents.NotifyDataChanged();
                 }
             }
             catch (Exception ex)
@@ -183,7 +196,27 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             keyword = keyword.Replace("'", "''");
             DataView dv = new DataView(dtBranches);
-            dv.RowFilter = $"BranchName LIKE '%{keyword}%' OR BranchCode LIKE '%{keyword}%' OR ManagerName LIKE '%{keyword}%'";
+
+            string OrLike(string col)
+            {
+                if (dtBranches.Columns.Contains(col))
+                    return $"{col} LIKE '%{keyword}%'";
+                return null;
+            }
+
+            var parts = new[]
+            {
+                OrLike("BranchName"),
+                OrLike("BranchCode"),
+                OrLike("Address"),
+                OrLike("Phone"),
+                OrLike("Hotline"),
+                OrLike("OperatingHours"),
+                OrLike("Description")
+            };
+
+            string filter = string.Join(" OR ", parts.Where(p => !string.IsNullOrWhiteSpace(p)));
+            dv.RowFilter = string.IsNullOrWhiteSpace(filter) ? "1=1" : filter;
             dataGridViewBranches.DataSource = dv;
         }
 
@@ -191,12 +224,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (dataGridViewBranches.Columns[e.ColumnIndex].Name == "IsActive" && e.Value != null && e.Value != DBNull.Value)
             {
-                int val = 0;
-                int.TryParse(e.Value.ToString(), out val);
-                e.Value = val == 1 ? "Hoạt động" : "Vô hiệu";
-                e.CellStyle.ForeColor = val == 1 ? Color.FromArgb(40, 167, 69) : Color.FromArgb(220, 53, 69);
-                e.CellStyle.BackColor = val == 1 ? Color.FromArgb(232, 247, 239) : Color.FromArgb(252, 236, 238);
-                e.CellStyle.SelectionBackColor = val == 1 ? Color.FromArgb(214, 237, 223) : Color.FromArgb(244, 214, 220);
+                bool isActive = TryGetBool(e.Value, out bool b) && b;
+                e.Value = isActive ? "Hoạt động" : "Vô hiệu";
+                e.CellStyle.ForeColor = isActive ? Color.FromArgb(40, 167, 69) : Color.FromArgb(220, 53, 69);
+                e.CellStyle.BackColor = isActive ? Color.FromArgb(232, 247, 239) : Color.FromArgb(252, 236, 238);
+                e.CellStyle.SelectionBackColor = isActive ? Color.FromArgb(214, 237, 223) : Color.FromArgb(244, 214, 220);
                 e.FormattingApplied = true;
             }
         }
@@ -213,13 +245,58 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
 
             int total = dtBranches.Rows.Count;
-            int active = dtBranches.Select("IsActive = 1").Length;
-            int inactive = total - active;
+            int active = dtBranches.Rows.Cast<DataRow>().Count(r => TryGetBool(r["IsActive"], out bool b) && b);
+            int inactive = Math.Max(0, total - active);
 
             lblTotalBranches.Text = $"Tổng: {total} chi nhánh";
             lblStatTotalValue.Text = total.ToString();
             lblStatActiveValue.Text = active.ToString();
             lblStatInactiveValue.Text = inactive.ToString();
+        }
+
+        private static bool TryGetBool(object value, out bool result)
+        {
+            result = false;
+            if (value == null || value == DBNull.Value) return false;
+
+            if (value is bool b)
+            {
+                result = b;
+                return true;
+            }
+            if (value is byte by)
+            {
+                result = by != 0;
+                return true;
+            }
+            if (value is short sh)
+            {
+                result = sh != 0;
+                return true;
+            }
+            if (value is int i)
+            {
+                result = i != 0;
+                return true;
+            }
+            if (value is long l)
+            {
+                result = l != 0;
+                return true;
+            }
+
+            string s = value.ToString();
+            if (bool.TryParse(s, out bool parsedBool))
+            {
+                result = parsedBool;
+                return true;
+            }
+            if (int.TryParse(s, out int parsedInt))
+            {
+                result = parsedInt != 0;
+                return true;
+            }
+            return false;
         }
     }
 }

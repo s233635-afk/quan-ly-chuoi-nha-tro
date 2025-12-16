@@ -13,6 +13,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private readonly AdminDataBLL _bll = new AdminDataBLL();
         private readonly int? _branchId;
+        private System.Collections.Generic.HashSet<int> _allowedBranchIds;
         private DataTable _table;
         private DataGridView _grid;
         private TextBox _txtSearch;
@@ -20,7 +21,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Label _lblCount;
         private Label _lblTotal;
         private Button _btnAdd, _btnEdit, _btnDelete, _btnRefresh;
-        private Button _btnConfirm, _btnReturn, _btnSample;
+        private Button _btnConfirm, _btnReturn;
 
         public FrmDepositManager() : this(null)
         {
@@ -96,7 +97,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnDelete = MakeButton("Xóa", Color.FromArgb(211, 47, 47), async (s, e) => await DeleteSelectedAsync());
             _btnConfirm = MakeButton("Xác nhận", Color.FromArgb(46, 125, 50), async (s, e) => await MarkStatusAsync("Confirmed"));
             _btnReturn = MakeButton("Hoàn cọc", Color.FromArgb(121, 85, 72), async (s, e) => await MarkReturnedAsync());
-            _btnSample = MakeButton("Dữ liệu mẫu", Color.FromArgb(103, 58, 183), async (s, e) => await SeedSampleAsync());
             _btnRefresh = MakeButton("Tải lại", Color.FromArgb(0, 122, 204), async (s, e) => await LoadDataAsync());
 
             var top = new Panel { Dock = DockStyle.Top, Height = 64, Padding = new Padding(12, 10, 12, 10), BackColor = Color.White };
@@ -114,7 +114,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             actions.Controls.Add(_btnDelete);
             actions.Controls.Add(_btnConfirm);
             actions.Controls.Add(_btnReturn);
-            actions.Controls.Add(_btnSample);
             actions.Controls.Add(_btnRefresh);
 
             var searchHost = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent };
@@ -175,23 +174,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             try
             {
+                await EnsureAllowedBranchScopeAsync();
                 _table = await _bll.GetDepositsAsync();
-                _table = FilterByBranch(_table, _branchId);
+                _table = _branchId.HasValue ? FilterByBranch(_table, _branchId) : AdminBranchScope.FilterByBranchIds(_table, _allowedBranchIds);
                 await EnrichDepositsAsync(_table);
                 _grid.DataSource = _table;
                 ApplyGridPresentation();
                 ApplyFilter();
-
-                if (_table.Rows.Count == 0)
-                {
-                    var result = MessageBox.Show(
-                        "Chưa có dữ liệu cọc/đặt phòng. Tạo nhanh dữ liệu mẫu để dùng thử?",
-                        "Gợi ý",
-                        MessageBoxButtons.YesNo,
-                        MessageBoxIcon.Question);
-                    if (result == DialogResult.Yes)
-                        await SeedSampleAsync();
-                }
             }
             catch (Exception ex)
             {
@@ -209,7 +198,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 tenants = await _bll.GetTenantsAsync();
                 rooms = await _bll.GetRoomsAsync();
-                rooms = FilterByBranch(rooms, _branchId);
+                rooms = _branchId.HasValue ? FilterByBranch(rooms, _branchId) : AdminBranchScope.FilterByBranchIds(rooms, _allowedBranchIds);
             }
             catch
             {
@@ -341,6 +330,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 if (frm.ShowDialog(this) == DialogResult.OK)
                 {
                     _ = LoadDataAsync();
+                    AdminEvents.NotifyDataChanged();
                 }
             }
         }
@@ -359,6 +349,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 if (frm.ShowDialog(this) == DialogResult.OK)
                 {
                     _ = LoadDataAsync();
+                    AdminEvents.NotifyDataChanged();
                 }
             }
         }
@@ -379,6 +370,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 {
                     await _bll.DeleteDepositAsync(id);
                     await LoadDataAsync();
+                    AdminEvents.NotifyDataChanged();
                 }
                 catch (Exception ex)
                 {
@@ -416,6 +408,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                 await _bll.UpdateDepositAsync(id, tenantId, roomId, amount, depositDate, type, newStatus, returnedAmount, returnedDate, notes);
                 await LoadDataAsync();
+                AdminEvents.NotifyDataChanged();
             }
             catch (Exception ex)
             {
@@ -453,6 +446,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                 await _bll.UpdateDepositAsync(id, tenantId, roomId, amount, depositDate, type, "Returned", returnedAmount, returnedDate, notes);
                 await LoadDataAsync();
+                AdminEvents.NotifyDataChanged();
             }
             catch (Exception ex)
             {
@@ -460,42 +454,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
         }
 
-        private async System.Threading.Tasks.Task SeedSampleAsync()
+        private async System.Threading.Tasks.Task EnsureAllowedBranchScopeAsync()
         {
+            if (_branchId.HasValue) return;
+            if (_allowedBranchIds != null && _allowedBranchIds.Count > 0) return;
+
             try
             {
-                var tenants = await _bll.GetTenantsAsync();
-                var rooms = await _bll.GetRoomsAsync();
-                rooms = FilterByBranch(rooms, _branchId);
-
-                if (tenants.Rows.Count == 0 || rooms.Rows.Count == 0)
-                {
-                    MessageBox.Show("Cần có dữ liệu Khách thuê và Phòng trước khi tạo cọc mẫu.", "Thiếu dữ liệu",
-                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-
-                int count = 0;
-                for (int i = 0; i < 3; i++)
-                {
-                    int tenantId = Convert.ToInt32(tenants.Rows[Math.Min(i, tenants.Rows.Count - 1)]["TenantId"]);
-                    int roomId = Convert.ToInt32(rooms.Rows[Math.Min(i, rooms.Rows.Count - 1)]["RoomId"]);
-
-                    decimal amount = 1000000m + (i * 500000m);
-                    string type = i == 0 ? "Booking" : "Official";
-                    string status = i == 2 ? "Pending" : "Confirmed";
-                    DateTime? depositDate = DateTime.Today.AddDays(-i * 2);
-
-                    await _bll.AddDepositAsync(tenantId, roomId, amount, depositDate, type, status, null, null, "Dữ liệu mẫu");
-                    count++;
-                }
-
-                MessageBox.Show($"Đã tạo {count} cọc mẫu.", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                await LoadDataAsync();
+                var branches = AdminBranchScope.Apply(await _bll.GetBranchesAsync());
+                _allowedBranchIds = AdminBranchScope.GetAllowedBranchIds(branches);
             }
-            catch (Exception ex)
+            catch
             {
-                MessageBox.Show("Lỗi tạo dữ liệu mẫu: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                _allowedBranchIds = new System.Collections.Generic.HashSet<int>();
             }
         }
 

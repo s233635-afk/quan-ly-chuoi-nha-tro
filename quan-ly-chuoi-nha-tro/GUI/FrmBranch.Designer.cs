@@ -207,7 +207,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.lblTitle.Name = "lblTitle";
             this.lblTitle.Size = new System.Drawing.Size(210, 30);
             this.lblTitle.TabIndex = 0;
-            this.lblTitle.Text = "Quản trị Chi Nhánh";
+            this.lblTitle.Text = "Quản lý chi nhánh";
             // 
             // tableLayoutPanelMain
             // 
@@ -390,7 +390,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.Controls.Add(this.tableLayoutPanelMain);
             this.Name = "FrmBranch";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
-            this.Text = "Quản Lý Chi Nhánh";
+            this.Text = "Quản lý chi nhánh";
             this.Load += new System.EventHandler(this.FrmBranch_Load);
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewBranches)).EndInit();
             this.pnlHeader.ResumeLayout(false);

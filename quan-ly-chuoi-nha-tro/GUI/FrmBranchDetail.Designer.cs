@@ -23,8 +23,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.txtAddress = new System.Windows.Forms.TextBox();
             this.lblPhone = new System.Windows.Forms.Label();
             this.txtPhone = new System.Windows.Forms.TextBox();
-            this.lblManager = new System.Windows.Forms.Label();
-            this.txtManager = new System.Windows.Forms.TextBox();
+            this.lblHotline = new System.Windows.Forms.Label();
+            this.txtHotline = new System.Windows.Forms.TextBox();
+            this.lblHours = new System.Windows.Forms.Label();
+            this.txtHours = new System.Windows.Forms.TextBox();
+            this.lblDescription = new System.Windows.Forms.Label();
+            this.txtDescription = new System.Windows.Forms.TextBox();
             this.chkActive = new System.Windows.Forms.CheckBox();
             this.btnSave = new System.Windows.Forms.Button();
             this.btnCancel = new System.Windows.Forms.Button();
@@ -38,8 +42,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             // pnlForm
             this.pnlForm.BackColor = System.Drawing.Color.White;
             this.pnlForm.Controls.Add(this.chkActive);
-            this.pnlForm.Controls.Add(this.lblManager);
-            this.pnlForm.Controls.Add(this.txtManager);
+            this.pnlForm.Controls.Add(this.lblDescription);
+            this.pnlForm.Controls.Add(this.txtDescription);
+            this.pnlForm.Controls.Add(this.lblHours);
+            this.pnlForm.Controls.Add(this.txtHours);
+            this.pnlForm.Controls.Add(this.lblHotline);
+            this.pnlForm.Controls.Add(this.txtHotline);
             this.pnlForm.Controls.Add(this.lblPhone);
             this.pnlForm.Controls.Add(this.txtPhone);
             this.pnlForm.Controls.Add(this.lblAddress);
@@ -51,7 +59,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.pnlForm.Dock = System.Windows.Forms.DockStyle.Fill;
             this.pnlForm.Name = "pnlForm";
             this.pnlForm.Padding = new System.Windows.Forms.Padding(20);
-            this.pnlForm.Size = new System.Drawing.Size(500, 400);
+            this.pnlForm.Size = new System.Drawing.Size(520, 500);
             this.pnlForm.TabIndex = 0;
 
             // lblCode
@@ -61,7 +69,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.lblCode.Name = "lblCode";
             this.lblCode.Size = new System.Drawing.Size(72, 19);
             this.lblCode.TabIndex = 0;
-            this.lblCode.Text = "Mã Chi Nhánh";
+            this.lblCode.Text = "Mã chi nhánh";
 
             // txtCode
             this.txtCode.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
@@ -69,7 +77,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.txtCode.Location = new System.Drawing.Point(20, 42);
             this.txtCode.MaxLength = 20;
             this.txtCode.Name = "txtCode";
-            this.txtCode.Size = new System.Drawing.Size(460, 25);
+            this.txtCode.Size = new System.Drawing.Size(480, 25);
             this.txtCode.TabIndex = 1;
 
             // lblName
@@ -79,15 +87,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.lblName.Name = "lblName";
             this.lblName.Size = new System.Drawing.Size(86, 19);
             this.lblName.TabIndex = 2;
-            this.lblName.Text = "Tên Chi Nhánh";
+            this.lblName.Text = "Tên chi nhánh";
 
             // txtName
             this.txtName.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.txtName.Font = new System.Drawing.Font("Segoe UI", 10F);
             this.txtName.Location = new System.Drawing.Point(20, 97);
-            this.txtName.MaxLength = 100;
+            this.txtName.MaxLength = 255;
             this.txtName.Name = "txtName";
-            this.txtName.Size = new System.Drawing.Size(460, 25);
+            this.txtName.Size = new System.Drawing.Size(480, 25);
             this.txtName.TabIndex = 3;
 
             // lblAddress
@@ -97,16 +105,16 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.lblAddress.Name = "lblAddress";
             this.lblAddress.Size = new System.Drawing.Size(47, 19);
             this.lblAddress.TabIndex = 4;
-            this.lblAddress.Text = "Địa Chỉ";
+            this.lblAddress.Text = "Địa chỉ";
 
             // txtAddress
             this.txtAddress.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.txtAddress.Font = new System.Drawing.Font("Segoe UI", 10F);
             this.txtAddress.Location = new System.Drawing.Point(20, 152);
-            this.txtAddress.MaxLength = 200;
+            this.txtAddress.MaxLength = 500;
             this.txtAddress.Multiline = true;
             this.txtAddress.Name = "txtAddress";
-            this.txtAddress.Size = new System.Drawing.Size(460, 50);
+            this.txtAddress.Size = new System.Drawing.Size(480, 50);
             this.txtAddress.TabIndex = 5;
 
             // lblPhone
@@ -116,7 +124,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.lblPhone.Name = "lblPhone";
             this.lblPhone.Size = new System.Drawing.Size(74, 19);
             this.lblPhone.TabIndex = 6;
-            this.lblPhone.Text = "Điện Thoại";
+            this.lblPhone.Text = "Điện thoại";
 
             // txtPhone
             this.txtPhone.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
@@ -124,37 +132,75 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.txtPhone.Location = new System.Drawing.Point(20, 232);
             this.txtPhone.MaxLength = 20;
             this.txtPhone.Name = "txtPhone";
-            this.txtPhone.Size = new System.Drawing.Size(460, 25);
+            this.txtPhone.Size = new System.Drawing.Size(480, 25);
             this.txtPhone.TabIndex = 7;
 
-            // lblManager
-            this.lblManager.AutoSize = true;
-            this.lblManager.Font = new System.Drawing.Font("Segoe UI", 10F);
-            this.lblManager.Location = new System.Drawing.Point(20, 265);
-            this.lblManager.Name = "lblManager";
-            this.lblManager.Size = new System.Drawing.Size(67, 19);
-            this.lblManager.TabIndex = 8;
-            this.lblManager.Text = "Quản Lý";
+            // lblHotline
+            this.lblHotline.AutoSize = true;
+            this.lblHotline.Font = new System.Drawing.Font("Segoe UI", 10F);
+            this.lblHotline.Location = new System.Drawing.Point(20, 265);
+            this.lblHotline.Name = "lblHotline";
+            this.lblHotline.Size = new System.Drawing.Size(52, 19);
+            this.lblHotline.TabIndex = 8;
+            this.lblHotline.Text = "Hotline";
 
-            // txtManager
-            this.txtManager.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.txtManager.Font = new System.Drawing.Font("Segoe UI", 10F);
-            this.txtManager.Location = new System.Drawing.Point(20, 287);
-            this.txtManager.MaxLength = 100;
-            this.txtManager.Name = "txtManager";
-            this.txtManager.Size = new System.Drawing.Size(460, 25);
-            this.txtManager.TabIndex = 9;
+            // txtHotline
+            this.txtHotline.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.txtHotline.Font = new System.Drawing.Font("Segoe UI", 10F);
+            this.txtHotline.Location = new System.Drawing.Point(20, 287);
+            this.txtHotline.MaxLength = 20;
+            this.txtHotline.Name = "txtHotline";
+            this.txtHotline.Size = new System.Drawing.Size(480, 25);
+            this.txtHotline.TabIndex = 9;
+
+            // lblHours
+            this.lblHours.AutoSize = true;
+            this.lblHours.Font = new System.Drawing.Font("Segoe UI", 10F);
+            this.lblHours.Location = new System.Drawing.Point(20, 320);
+            this.lblHours.Name = "lblHours";
+            this.lblHours.Size = new System.Drawing.Size(98, 19);
+            this.lblHours.TabIndex = 10;
+            this.lblHours.Text = "Giờ hoạt động";
+
+            // txtHours
+            this.txtHours.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.txtHours.Font = new System.Drawing.Font("Segoe UI", 10F);
+            this.txtHours.Location = new System.Drawing.Point(20, 342);
+            this.txtHours.MaxLength = 100;
+            this.txtHours.Name = "txtHours";
+            this.txtHours.Size = new System.Drawing.Size(480, 25);
+            this.txtHours.TabIndex = 11;
+
+            // lblDescription
+            this.lblDescription.AutoSize = true;
+            this.lblDescription.Font = new System.Drawing.Font("Segoe UI", 10F);
+            this.lblDescription.Location = new System.Drawing.Point(20, 375);
+            this.lblDescription.Name = "lblDescription";
+            this.lblDescription.Size = new System.Drawing.Size(43, 19);
+            this.lblDescription.TabIndex = 12;
+            this.lblDescription.Text = "Mô tả";
+
+            // txtDescription
+            this.txtDescription.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.txtDescription.Font = new System.Drawing.Font("Segoe UI", 10F);
+            this.txtDescription.Location = new System.Drawing.Point(20, 397);
+            this.txtDescription.MaxLength = 500;
+            this.txtDescription.Multiline = true;
+            this.txtDescription.Name = "txtDescription";
+            this.txtDescription.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
+            this.txtDescription.Size = new System.Drawing.Size(480, 60);
+            this.txtDescription.TabIndex = 13;
 
             // chkActive
             this.chkActive.AutoSize = true;
             this.chkActive.Checked = true;
             this.chkActive.CheckState = System.Windows.Forms.CheckState.Checked;
             this.chkActive.Font = new System.Drawing.Font("Segoe UI", 10F);
-            this.chkActive.Location = new System.Drawing.Point(20, 325);
+            this.chkActive.Location = new System.Drawing.Point(20, 465);
             this.chkActive.Name = "chkActive";
             this.chkActive.Size = new System.Drawing.Size(84, 23);
-            this.chkActive.TabIndex = 10;
-            this.chkActive.Text = "Hoạt Động";
+            this.chkActive.TabIndex = 14;
+            this.chkActive.Text = "Hoạt động";
             this.chkActive.UseVisualStyleBackColor = true;
 
             // pnlButtons
@@ -164,7 +210,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.pnlButtons.Controls.Add(this.btnSave);
             this.pnlButtons.Dock = System.Windows.Forms.DockStyle.Bottom;
             this.pnlButtons.Name = "pnlButtons";
-            this.pnlButtons.Size = new System.Drawing.Size(500, 60);
+            this.pnlButtons.Size = new System.Drawing.Size(520, 60);
             this.pnlButtons.TabIndex = 1;
 
             // btnSave
@@ -172,7 +218,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.btnSave.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnSave.Font = new System.Drawing.Font("Segoe UI", 10F);
             this.btnSave.ForeColor = System.Drawing.Color.White;
-            this.btnSave.Location = new System.Drawing.Point(320, 12);
+            this.btnSave.Location = new System.Drawing.Point(340, 12);
             this.btnSave.Name = "btnSave";
             this.btnSave.Size = new System.Drawing.Size(75, 35);
             this.btnSave.TabIndex = 11;
@@ -185,7 +231,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.btnCancel.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnCancel.Font = new System.Drawing.Font("Segoe UI", 10F);
             this.btnCancel.ForeColor = System.Drawing.Color.White;
-            this.btnCancel.Location = new System.Drawing.Point(405, 12);
+            this.btnCancel.Location = new System.Drawing.Point(425, 12);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(75, 35);
             this.btnCancel.TabIndex = 12;
@@ -209,7 +255,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             // FrmBranchDetail
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(500, 400);
+            this.ClientSize = new System.Drawing.Size(520, 560);
             this.Controls.Add(this.pnlForm);
             this.Controls.Add(this.pnlButtons);
             this.Name = "FrmBranchDetail";
@@ -230,8 +276,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private System.Windows.Forms.TextBox txtAddress;
         private System.Windows.Forms.Label lblPhone;
         private System.Windows.Forms.TextBox txtPhone;
-        private System.Windows.Forms.Label lblManager;
-        private System.Windows.Forms.TextBox txtManager;
+        private System.Windows.Forms.Label lblHotline;
+        private System.Windows.Forms.TextBox txtHotline;
+        private System.Windows.Forms.Label lblHours;
+        private System.Windows.Forms.TextBox txtHours;
+        private System.Windows.Forms.Label lblDescription;
+        private System.Windows.Forms.TextBox txtDescription;
         private System.Windows.Forms.CheckBox chkActive;
         private System.Windows.Forms.Button btnSave;
         private System.Windows.Forms.Button btnCancel;

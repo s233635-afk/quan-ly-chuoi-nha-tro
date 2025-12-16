@@ -1,82 +1,51 @@
 # Quản Lý Chuỗi Nhà Trọ - Admin Dashboard
 
-Ứng dụng WinForms quản lý chuỗi nhà trọ toàn diện với 13 tính năng Admin + 8 tính năng Nhân Viên
+Ứng dụng WinForms quản lý chuỗi nhà trọ toàn diện theo chế độ **Admin-only** (chỉ tài khoản Admin đăng nhập và sử dụng).
 
-## 🎯 Tính Năng Admin (13 mô-đun)
+## 🎯 Tính Năng Admin (12 mô-đun)
 
 1. **🏢 Quản Lý Chi Nhánh** - HOÀN THÀNH ✅
    - Thêm, sửa, xóa chi nhánh
    - Quản lý thông tin chi nhánh (địa chỉ, điện thoại, quản lý)
    - Trạng thái hoạt động
 
-2. **🚪 Quản Lý Phòng** - Coming Soon...
-   - Thêm/sửa/xóa phòng
-   - Loại phòng (Studio, 1 phòng ngủ, 2 phòng ngủ...)
-   - Diện tích, giá thuê, tiện ích
+2. **🚪 Quản Lý Phòng** - HOÀN THÀNH ✅
+   - CRUD phòng + lọc theo chi nhánh/trạng thái/kích hoạt
+   - Quản lý loại phòng, trạng thái phòng, khu/Block (BranchSection)
+   - Thiết lập giá/diện tích/tầng
 
-3. **👥 Quản Lý Nhân Viên** - Coming Soon...
-   - Tuyển dụng nhân viên
-   - Phân công công việc
-   - Xem lịch sử giao dịch
+3. **🧑 Quản Lý Khách Thuê** - HOÀN THÀNH ✅
+   - CRUD khách thuê + bật/tắt hoạt động
+   - Quản lý người phụ thuộc + lịch sử ở phòng
+   - Lưu đường dẫn ảnh CCCD mặt trước/mặt sau (FrontIdPhoto/BackIdPhoto)
 
-4. **🧑 Quản Lý Khách Thuê** - Coming Soon...
-   - Chi tiết khách (CMND, ngày sinh, liên lạc)
-   - Lịch sử thuê, từng phòng
+4. **📜 Quản Lý Hợp Đồng** - HOÀN THÀNH ✅
+   - CRUD hợp đồng, trạng thái hợp đồng, ngày bắt đầu/kết thúc
 
-5. **📜 Quản Lý Hợp Đồng** - Coming Soon...
-   - Ký hợp đồng mới
-   - Xem hợp đồng hiện tại
-   - Xuất PDF
+5. **💰 Quản Lý Ký Cược** - HOÀN THÀNH ✅
+   - CRUD phiếu cọc theo hợp đồng/khách/phòng
 
-6. **💰 Quản Lý Ký Cược** - Coming Soon...
-   - Tiền ký cược khách
-   - Lịch sử hoàn cọc
+6. **💡 Quản Lý Tiện Ích** - HOÀN THÀNH ✅
+   - CRUD loại tiện ích + nhập chỉ số (UtilityReadings)
 
-7. **💡 Quản Lý Tiện Ích** - Coming Soon...
-   - Điện, nước, gas
-   - Giá tiện ích
-   - Tính toán tự động
+7. **🧾 Quản Lý Hóa Đơn** - HOÀN THÀNH ✅
+   - CRUD hóa đơn + xem công nợ
+   - Tạo hóa đơn tháng (GenerateMonthlyInvoices)
 
-8. **🧾 Quản Lý Hóa Đơn** - Coming Soon...
-   - Phát hành hóa đơn
-   - Theo dõi thanh toán
-   - Báo cáo nợ
+8. **🔧 Quản Lý Bảo Trì** - HOÀN THÀNH ✅
+   - CRUD ticket bảo trì/sự cố + trạng thái/ưu tiên/phân công
 
-9. **🔧 Quản Lý Bảo Trì** - Coming Soon...
-   - Báo cáo hỏng hóc
-   - Lịch bảo trì
-   - Theo dõi tình trạng
+9. **🏠 Quản Lý Tài Sản** - HOÀN THÀNH ✅
+    - CRUD tài sản theo phòng + số lượng/tình trạng/giá trị
 
-10. **🏠 Quản Lý Tài Sản** - Coming Soon...
-    - Danh sách tài sản
-    - Tình trạng tài sản
-    - Giá trị tài sản
+10. **📊 Báo Cáo & Thống Kê** - HOÀN THÀNH ✅
+    - Màn xem dữ liệu (DataViewer) cho hóa đơn/thống kê nhanh
 
-11. **📊 Báo Cáo & Thống Kê** - Coming Soon...
-    - Doanh thu
-    - Chiếm dụng phòng
-    - Chi phí
+11. **📢 Quản Lý Thông Báo** - HOÀN THÀNH ✅
+    - CRUD thông báo + lịch sử gửi
 
-12. **📢 Quản Lý Thông Báo** - Coming Soon...
-    - Gửi thông báo khách
-    - Gửi thông báo nhân viên
-    - Lịch sử
-
-13. **⚙️ Cài Đặt Hệ Thống** - Coming Soon...
-    - Cấu hình hệ thống
-    - Quản lý tài khoản
-    - Phân quyền
-
-## 📋 Tính Năng Nhân Viên (8 mô-đun)
-
-1. **Xem Danh Sách Phòng** - Xem phòng được giao
-2. **Quản Lý Khách Thuê** - Xem/cập nhật thông tin khách
-3. **Lịch Sử Thanh Toán** - Xem ghi nhận thanh toán
-4. **In Hóa Đơn** - In hóa đơn cho khách
-5. **Báo Cáo Hỏng Hóc** - Ghi nhận sự cố
-6. **Theo Dõi Bảo Trì** - Xem tiến độ bảo trì
-7. **Xuất PDF Hợp Đồng** - In bản sao hợp đồng
-8. **Thông Báo** - Nhận thông báo từ hệ thống
+12. **⚙️ Cài Đặt Hệ Thống** - HOÀN THÀNH ✅
+    - CRUD cấu hình hệ thống (SystemSettings)
 
 ## 🏗️ Kiến Trúc 3-Tier
 
@@ -96,16 +65,28 @@ SQL Server Database
 quan-ly-chuoi-nha-tro/
 ├── GUI/
 │   ├── FrmLogin.cs            (Đăng nhập)
-│   ├── FrmRegister.cs         (Đăng ký)
+│   ├── FrmRegister.cs         (Đăng ký - hiện đang tắt trong chế độ Admin-only)
 │   ├── FrmAdminDashboard.cs   (Bảng điều khiển Admin) ✅
-│   ├── FrmBranch.cs           (Quản lý chi nhánh) ✅
-│   └── FrmBranchDetail.cs     (Chi tiết chi nhánh) ✅
+│   ├── FrmBranch.cs / FrmBranchDetail.cs ✅
+│   ├── FrmRoomManager.cs / FrmRoomEditor.cs ✅
+│   ├── FrmTenantManager.cs / FrmTenantEditor.cs ✅
+│   ├── FrmContractManager.cs / FrmContractEditor.cs ✅
+│   ├── FrmDepositManager.cs / FrmDepositEditor.cs ✅
+│   ├── FrmInvoiceManager.cs / FrmInvoiceEditor.cs ✅
+│   ├── FrmPaymentManager.cs / FrmPaymentEditor.cs ✅
+│   ├── FrmUtilityManager.cs / FrmUtilityTypeEditor.cs / FrmUtilityReadingEditor.cs ✅
+│   ├── FrmMaintenanceManager.cs / FrmMaintenanceEditor.cs ✅
+│   ├── FrmAssetManager.cs / FrmAssetEditor.cs ✅
+│   ├── FrmNotificationManager.cs / FrmNotificationEditor.cs ✅
+│   └── FrmSystemSettingsManager.cs / FrmSystemSettingEditor.cs ✅
 ├── BLL/
 │   ├── UserBLL.cs            (Xử lý người dùng)
-│   └── BranchBLL.cs          (Xử lý chi nhánh) ✅
+│   ├── BranchBLL.cs          (Xử lý chi nhánh) ✅
+│   └── AdminDataBLL.cs       (CRUD các module Admin) ✅
 ├── DAL/
 │   ├── DatabaseHelper.cs     (Kết nối database) ✅
-│   └── BranchDAL.cs          (Truy vấn chi nhánh) ✅
+│   ├── BranchDAL.cs          (Truy vấn chi nhánh) ✅
+│   └── AdminDataDAL.cs       (Truy vấn các module Admin) ✅
 └── Properties/
     └── AssemblyInfo.cs
 ```
@@ -117,39 +98,47 @@ quan-ly-chuoi-nha-tro/
 - Database: `db_ac1f11_quanlynhatro`
 - User: `db_ac1f11_quanlynhatro_admin`
 
-**18 Bảng**:
-- Users, Roles, Branches, Rooms, Tenants
-- Contracts, Deposits, Invoices, Payments
-- MaintenanceRecords, Utilities, Assets
-- Notifications, SystemSettings, AuditLogs
-- RoomUtilities, TenantHistories, TransactionLogs
+Scripts:
+- `Database/setup_database_final.sql` (schema)
+- `sample_data.sql` (dữ liệu mẫu)
+
+**Các bảng chính (20 bảng)**:
+- Roles, Users
+- Branches, BranchSections
+- RoomTypes, RoomStatuses, Rooms
+- Tenants, Dependents, TenantRoomHistory
+- Deposits, Contracts
+- UtilityTypes, UtilityReadings
+- Invoices, Payments
+- MaintenanceTickets, Assets
+- Notifications, SystemSettings
 
 ## 🔐 Role-Based Access Control
 
 ```
-RoleId = 1: Admin (Truy cập tất cả)
-RoleId = 2: Staff (Xem báo cáo, ghi nhận)
+RoleId = 1: Admin (Truy cập tất cả - app chỉ cho phép role này đăng nhập)
 ```
 
 ## 🚀 Cách Chạy
 
-### 1. Khôi phục Database Sample Data
+### 1. Tạo schema + dữ liệu mẫu
 
 ```sql
--- Thực thi file sample_data.sql trên SQL Server
+-- 1) Chạy Database/setup_database_final.sql
+-- 2) Chạy sample_data.sql
 -- Đã có sẵn: admin / 123456
 ```
 
 ### 2. Build Project
 
 ```powershell
-cd quan-ly-chuoi-nha-tro
-dotnet build
+dotnet build .\\quan-ly-chuoi-nha-tro.sln
 ```
 
 ### 3. Chạy Application
 
 ```powershell
+cd .\\quan-ly-chuoi-nha-tro
 dotnet run
 ```
 
@@ -178,9 +167,7 @@ Run file `sample_data.sql` để load dữ liệu test.
 - Windows OS
 
 ### Packages
-- MySqlConnector 2.5.0
-- ServiceStack.OrmLite 10.0.2
-- System.Data.SqlClient (built-in)
+- Xem `quan-ly-chuoi-nha-tro/packages.config` và `quan-ly-chuoi-nha-tro/quan-ly-chuoi-nha-tro.csproj`
 
 ## 📊 Tính Năng Chi Tiết - Chi Nhánh ✅
 
@@ -213,7 +200,7 @@ Run file `sample_data.sql` để load dữ liệu test.
 ## 🎨 UI/UX Features
 
 - **Modern Theme**: Dark header, light content
-- **Responsive Grid Layout**: 2 cột × 7 hàng (13 modules)
+- **Responsive Grid Layout**: 2 cột × 7 hàng (12 modules)
 - **Emoji Icons**: Visual representation
 - **Hover Effects**: Color change on interaction
 - **Modal Dialogs**: Dialog cho Add/Edit
@@ -230,16 +217,7 @@ Run file `sample_data.sql` để load dữ liệu test.
 
 ## 🚧 Next Steps
 
-- [ ] Room Management Module
-- [ ] Staff Management Module
-- [ ] Tenant Management Module
-- [ ] Contract Management Module
-- [ ] Invoice & Payment Module
-- [ ] Maintenance Module
-- [ ] Asset Management Module
-- [ ] Reporting & Statistics
-- [ ] Notification System
-- [ ] System Settings
+- (Admin-only) Hoàn thiện dần theo nhu cầu thực tế.
 
 ## 👨‍💻 Developer Notes
 

@@ -188,6 +188,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 _tenantTable = t1.Result;
                 _roomTable = t2.Result;
 
+                var branches = AdminBranchScope.Apply(await _bll.GetBranchesAsync());
+                var allowedIds = AdminBranchScope.GetAllowedBranchIds(branches);
+                _roomTable = AdminBranchScope.FilterByBranchIds(_roomTable, allowedIds);
+                TextFixer.FixDataTable(_roomTable, "RoomNumber", "BranchName", "StatusName");
+
                 cboTenant.DataSource = _tenantTable;
                 cboTenant.DisplayMember = _tenantTable.Columns.Contains("FullName") ? "FullName" : _tenantTable.Columns[0].ColumnName;
                 cboTenant.ValueMember = _tenantTable.Columns.Contains("TenantId") ? "TenantId" : _tenantTable.Columns[0].ColumnName;
@@ -337,4 +342,3 @@ namespace quan_ly_chuoi_nha_tro.GUI
         }
     }
 }
-
