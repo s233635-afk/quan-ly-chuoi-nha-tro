@@ -86,6 +86,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void InitializeComponent()
         {
+            this.SuspendLayout();
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             Text = "Quản lý chuỗi nhà trọ - Nhân viên";
             WindowState = FormWindowState.Maximized;
             BackColor = Color.FromArgb(240, 242, 245);
@@ -132,12 +134,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnMaintenance = CreateSidebarButton("Bảo trì");
             _btnAsset = CreateSidebarButton("Tài sản");
             _btnReport = CreateSidebarButton("Báo cáo");
-            _btnLogout = CreateSidebarButton("Đăng xuất");
 
             menu.Controls.AddRange(new Control[]
             {
                 _btnStaffOverview, _btnOverview, _btnRoom, _btnTenant, _btnDeposit, _btnUtility,
-                _btnInvoice, _btnPayment, _btnMaintenance, _btnAsset, _btnReport, _btnLogout
+                _btnInvoice, _btnPayment, _btnMaintenance, _btnAsset, _btnReport
             });
 
             _sidebar.Controls.Add(menu);
@@ -179,8 +180,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 AutoSize = true,
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 122, 204),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                Location = new Point(600, 16)
+                Location = new Point(300, 12)
             };
 
             _lblBranch = new Label
@@ -188,18 +188,36 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Text = "Chi nhánh",
                 AutoSize = true,
                 ForeColor = Color.FromArgb(90, 90, 90),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                Location = new Point(600, 40)
+                Location = new Point(300, 34)
             };
+
+            _btnLogout = new Button
+            {
+                Text = "Đăng xuất",
+                Width = 92,
+                Height = 36,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                BackColor = Color.FromArgb(0, 122, 204),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 10F),
+                FlatStyle = FlatStyle.Flat
+            };
+            _btnLogout.FlatAppearance.BorderSize = 0;
+            _btnLogout.Click += BtnLogout_Click;
 
             _header.Controls.Add(_lblHeader);
             _header.Controls.Add(_btnRefreshOverview);
             _header.Controls.Add(_lblUser);
             _header.Controls.Add(_lblBranch);
+            _header.Controls.Add(_btnLogout);
             _header.Resize += (s, e) =>
             {
-                _lblUser.Left = _header.Width - _lblUser.Width - 16;
-                _lblBranch.Left = _header.Width - _lblBranch.Width - 16;
+                // Center user and branch info horizontally
+                _lblUser.Left = (_header.Width / 2) - (_lblUser.Width / 2) - 100;
+                _lblBranch.Left = (_header.Width / 2) - (_lblBranch.Width / 2) - 100;
+                // Right align logout button and center vertically
+                _btnLogout.Left = _header.Width - _btnLogout.Width - 16;
+                _btnLogout.Top = (_header.Height - _btnLogout.Height) / 2;
                 _btnRefreshOverview.Top = _lblHeader.Top + 3;
             };
 
@@ -236,7 +254,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnMaintenance.Click += (s, e) => ShowModule(new FrmMaintenanceManager(), "Bảo trì", _btnMaintenance);
             _btnAsset.Click += (s, e) => ShowModule(new FrmAssetManager(), "Tài sản", _btnAsset);
             _btnReport.Click += (s, e) => ShowModule(new FrmReportManager(new AdminDataBLL()), "Báo cáo", _btnReport);
-            _btnLogout.Click += BtnLogout_Click;
+            
+            this.ResumeLayout(false);
         }
 
         private Button CreateSidebarButton(string text)
@@ -273,10 +292,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private void UpdateHeaderInfo()
         {
             _lblUser.Text = $"Người dùng: {_fullName}";
-            _lblUser.Left = _header.Width - _lblUser.Width - 16;
+            _lblUser.Left = (_header.Width / 2) - (_lblUser.Width / 2) - 100;
 
             _lblBranch.Text = _branchId.HasValue ? $"Chi nhánh: {_branchId.Value}" : "Tất cả chi nhánh";
-            _lblBranch.Left = _header.Width - _lblBranch.Width - 16;
+            _lblBranch.Left = (_header.Width / 2) - (_lblBranch.Width / 2) - 100;
         }
 
         private async Task ShowOverviewAsync()

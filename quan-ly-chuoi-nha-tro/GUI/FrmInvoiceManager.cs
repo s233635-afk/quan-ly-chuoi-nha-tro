@@ -50,9 +50,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 ReadOnly = true,
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
                 MultiSelect = false,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells,
                 AllowUserToAddRows = false,
                 AllowUserToDeleteRows = false,
+                AllowUserToResizeColumns = true,
                 RowHeadersVisible = false,
                 BackgroundColor = Color.White,
                 BorderStyle = BorderStyle.None
@@ -119,20 +120,29 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 _cboStatus.Location = new Point(lblStatus.Right + 6, 6);
             };
 
-            var summary = new Panel { Dock = DockStyle.Right, Width = 420, BackColor = Color.Transparent };
+            top.Controls.Add(filterHost);
+            top.Controls.Add(actions);
+
+            // Bottom panel for summary
+            var bottom = new Panel { Dock = DockStyle.Bottom, Height = 50, Padding = new Padding(12, 10, 12, 10), BackColor = Color.White };
+            bottom.Paint += (s, e) => 
+            {
+                using (var pen = new Pen(Color.FromArgb(200, 200, 200), 1))
+                {
+                    e.Graphics.DrawLine(pen, 0, 0, bottom.Width, 0);
+                }
+            };
             _lblCount.Location = new Point(0, 6);
             _lblCount.Font = new Font("Segoe UI", 10, FontStyle.Bold);
             _lblSummary.Location = new Point(0, 28);
-            summary.Controls.Add(_lblCount);
-            summary.Controls.Add(_lblSummary);
-
-            top.Controls.Add(filterHost);
-            top.Controls.Add(summary);
-            top.Controls.Add(actions);
+            _lblSummary.Font = new Font("Segoe UI", 9);
+            bottom.Controls.Add(_lblCount);
+            bottom.Controls.Add(_lblSummary);
 
             var gridHost = new Panel { Dock = DockStyle.Fill, Padding = new Padding(12), BackColor = BackColor };
             gridHost.Controls.Add(_grid);
 
+            Controls.Add(bottom);
             Controls.Add(gridHost);
             Controls.Add(top);
             Load += async (s, e) => await LoadDataAsync();
@@ -186,12 +196,53 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void AutoFormatGrid()
         {
-            if (_grid.Columns.Contains("TotalAmount"))
-                _grid.Columns["TotalAmount"].DefaultCellStyle.Format = "N0";
-            if (_grid.Columns.Contains("PaidAmount"))
-                _grid.Columns["PaidAmount"].DefaultCellStyle.Format = "N0";
-            if (_grid.Columns.Contains("RemainingAmount"))
-                _grid.Columns["RemainingAmount"].DefaultCellStyle.Format = "N0";
+            // Cấu hình HeaderText tiếng Việt
+            var columnMapping = new System.Collections.Generic.Dictionary<string, string>
+            {
+                { "InvoiceId", "Mã hóa đơn" },
+                { "InvoiceNumber", "Số hóa đơn" },
+                { "TenantId", "Mã khách" },
+                { "TenantName", "Khách thuê" },
+                { "RoomId", "Mã phòng" },
+                { "RoomNumber", "Số phòng" },
+                { "BranchId", "Chi nhánh" },
+                { "InvoiceDate", "Ngày lập" },
+                { "FromDate", "Từ ngày" },
+                { "ToDate", "Đến ngày" },
+                { "RentalCost", "Tiền phòng" },
+                { "UtilityCost", "Tiền dịch vụ" },
+                { "OtherCost", "Chi phí khác" },
+                { "TotalAmount", "Tổng tiền" },
+                { "PaidAmount", "Đã thu" },
+                { "RemainingAmount", "Còn nợ" },
+                { "Status", "Trạng thái" },
+                { "DueDate", "Hạn thanh toán" },
+                { "CreatedDate", "Ngày tạo" },
+                { "UpdatedDate", "Cập nhật" }
+            };
+
+            foreach (DataGridViewColumn col in _grid.Columns)
+            {
+                if (columnMapping.ContainsKey(col.Name))
+                {
+                    col.HeaderText = columnMapping[col.Name];
+                }
+
+                // Format số tiền
+                if (col.Name == "RentalCost" || col.Name == "UtilityCost" || col.Name == "OtherCost" || 
+                    col.Name == "TotalAmount" || col.Name == "PaidAmount" || col.Name == "RemainingAmount")
+                {
+                    col.DefaultCellStyle.Format = "N0";
+                    col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+                }
+
+                // Format ngày tháng
+                if (col.Name.Contains("Date"))
+                {
+                    col.DefaultCellStyle.Format = "dd/MM/yyyy";
+                    col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                }
+            }
         }
 
         private void ApplyFilter()
