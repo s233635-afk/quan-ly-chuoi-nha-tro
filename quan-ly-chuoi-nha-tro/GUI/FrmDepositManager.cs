@@ -55,6 +55,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 BorderStyle = BorderStyle.None
             };
             _grid.DoubleClick += (s, e) => EditSelected();
+            _grid.CellClick += (s, e) => ShowTenantQuickInfo(e.RowIndex, e.ColumnIndex);
             _grid.EnableHeadersVisualStyles = false;
             _grid.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(0, 120, 215);
             _grid.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
@@ -553,5 +554,28 @@ namespace quan_ly_chuoi_nha_tro.GUI
             else if (string.Equals(status, "Cancelled", StringComparison.OrdinalIgnoreCase))
                 e.CellStyle.ForeColor = Color.FromArgb(211, 47, 47);
         }
+
+        private void ShowTenantQuickInfo(int rowIndex, int columnIndex)
+        {
+            if (rowIndex < 0 || _grid.Rows.Count <= rowIndex) return;
+
+            var row = GetCurrentRow();
+            if (row == null || !row.Table.Columns.Contains("TenantId")) return;
+
+            if (!int.TryParse(row["TenantId"]?.ToString(), out var tenantId)) return;
+
+            try
+            {
+                using (var frm = new FrmTenantQuickInfo(_bll, tenantId))
+                {
+                    frm.ShowDialog(this);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi hiển thị thông tin khách: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
     }
 }
+
