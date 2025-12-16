@@ -63,7 +63,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private TextBox _txtTenantSearch;
         private Label _lblTenantCount;
         private DataTable _tenantsBranch;
-        private FrmTenantQuickView _tenantQuickView;
         private DataGridView _gridStaff;
         private DataGridView _gridContracts;
         private DataGridView _gridDeposits;
@@ -1813,5 +1812,49 @@ namespace quan_ly_chuoi_nha_tro.GUI
         }
 
         private static string NullDash(string s) => string.IsNullOrWhiteSpace(s) ? "—" : s.Trim();
+
+        private void ApplyTenantFilter()
+        {
+            if (_tenantsBranch == null) return;
+
+            string searchText = _txtTenantSearch?.Text?.ToLower() ?? "";
+            var rows = _tenantsBranch.Select()
+                .Where(r => string.IsNullOrEmpty(searchText) ||
+                           (r["Name"]?.ToString() ?? "").ToLower().Contains(searchText) ||
+                           (r["Phone"]?.ToString() ?? "").ToLower().Contains(searchText) ||
+                           (r["Email"]?.ToString() ?? "").ToLower().Contains(searchText))
+                .ToArray();
+
+            var view = new DataView(_tenantsBranch);
+            view.RowFilter = string.IsNullOrEmpty(searchText) ? "" : 
+                $"Name LIKE '%{searchText}%' OR Phone LIKE '%{searchText}%' OR Email LIKE '%{searchText}%'";
+
+            _gridTenants.DataSource = view;
+            _lblTenantCount.Text = $"Khách thuê: {rows.Length}";
+        }
+
+        private void GridTenants_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0) return;
+
+            var row = _gridTenants.Rows[e.RowIndex];
+            if (row?.DataBoundItem is DataRowView drv)
+            {
+                int tenantId = TryReadInt(drv.Row, "TenantId");
+                // Open tenant editor if needed
+                // new FrmTenantEditor(tenantId).ShowDialog();
+            }
+        }
+
+        private void GridTenants_CellClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0) return;
+
+            var row = _gridTenants.Rows[e.RowIndex];
+            if (row?.DataBoundItem is DataRowView drv)
+            {
+                // Handle cell click if needed
+            }
+        }
     }
 }
