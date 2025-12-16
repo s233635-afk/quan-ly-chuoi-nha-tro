@@ -1,5 +1,6 @@
 using System;
 using System.Configuration;
+using System.Data;
 using System.Data.SqlClient;
 using System.Threading;
 using System.Threading.Tasks;
@@ -312,6 +313,42 @@ namespace QuanLyNhaTro.DAL
                     throw new Exception("Lỗi lấy thông tin truy cập: " + ex.Message);
                 }
             }
+        }
+
+        public async Task<DataTable> GetContractByIdAsync(int contractId)
+        {
+            var table = new DataTable();
+            using (var conn = new SqlConnection(connectionString))
+            {
+                try
+                {
+                    await OpenConnectionWithTimeoutAsync(conn);
+                    const string sql = "SELECT TOP 1 * FROM Contracts WHERE ContractId = @id";
+                    using (var cmd = new SqlCommand(sql, conn))
+                    {
+                        cmd.CommandTimeout = commandTimeoutSeconds;
+                        cmd.Parameters.AddWithValue("@id", contractId);
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            table.Load(reader);
+                        }
+                    }
+                }
+                catch (TaskCanceledException ex)
+                {
+                    throw CreateTimeoutException("kết nối database", ex);
+                }
+                catch (SqlException ex) when (ex.Number == -2)
+                {
+                    throw CreateTimeoutException("thực thi truy vấn database", ex);
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception("Lỗi lấy hợp đồng: " + ex.Message);
+                }
+            }
+
+            return table;
         }
     }
 }

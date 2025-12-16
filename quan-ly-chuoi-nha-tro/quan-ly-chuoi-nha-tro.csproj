@@ -345,6 +345,10 @@
     <Compile Include="GUI\FrmRoomManager.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="GUI\FrmRoomDetailForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GUI\DataSyncManager.cs" />
     <Compile Include="GUI\UiKit.cs" />
     <Compile Include="GUI\AdminBranchScope.cs" />
     <Compile Include="GUI\AdminEvents.cs" />

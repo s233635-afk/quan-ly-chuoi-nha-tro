@@ -44,12 +44,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private TabPage _tabAssets;
 
         private Panel _overviewInfo;
-        private DataGridView _gridOverviewRooms;
-        private Label _lblOverviewRooms;
-        private Label _lblOverviewStaff;
         private FlowLayoutPanel _overviewStaffPreview;
 
         private DataGridView _gridRooms;
+        private FlowLayoutPanel _roomCardsHost;
         private Panel _roomDetails;
         private Label _lblRoomTitle;
         private Label _lblRoomInfo;
@@ -58,11 +56,31 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Label _lblTenantInfo;
         private int _selectedRoomId;
         private bool _tenantVisible;
+        private DataTable _contractsAll;
+        private DataTable _tenantsHistoryAll;
 
-        private DataGridView _gridTenants;
+        private FlowLayoutPanel _tenantCardsHost;
+        private Panel _tenantDetailPanel;
         private TextBox _txtTenantSearch;
         private Label _lblTenantCount;
         private DataTable _tenantsBranch;
+        private Label _lblTenantDetailTitle;
+        private TextBox _txtTenantFullName;
+        private TextBox _txtTenantIdentity;
+        private TextBox _txtTenantPhone;
+        private TextBox _txtTenantEmail;
+        private DateTimePicker _dtTenantBirth;
+        private TextBox _txtTenantAddress;
+        private TextBox _txtTenantTempReg;
+        private DateTimePicker _dtTenantTempFrom;
+        private DateTimePicker _dtTenantTempTo;
+        private TextBox _txtTenantFrontId;
+        private TextBox _txtTenantBackId;
+        private CheckBox _chkTenantActive;
+        private Button _btnTenantSave;
+        private DataRow _selectedTenantRow;
+        private Control _selectedTenantCard;
+        private int _selectedTenantId;
         private DataGridView _gridStaff;
         private DataGridView _gridContracts;
         private DataGridView _gridDeposits;
@@ -210,17 +228,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _tabs.TabPages.AddRange(new[] { _tabOverview, _tabRooms, _tabSections, _tabTenants, _tabStaff, _tabContracts, _tabDeposits, _tabInvoices, _tabPayments, _tabUtilities, _tabMaintenance, _tabAssets });
             foreach (TabPage p in _tabs.TabPages) p.BackColor = Color.White;
 
-            _overviewInfo = new Panel { Dock = DockStyle.Top, Height = 320, BackColor = Color.White, Padding = new Padding(14) };
-            _lblOverviewRooms = new Label { AutoSize = true, Text = "Phòng: 0", ForeColor = Color.FromArgb(90, 90, 90), Location = new Point(14, 142) };
-            _lblOverviewStaff = new Label { AutoSize = true, Text = "Nhân viên: 0", ForeColor = Color.FromArgb(90, 90, 90), Location = new Point(160, 142) };
-            _overviewInfo.Controls.Add(_lblOverviewRooms);
-            _overviewInfo.Controls.Add(_lblOverviewStaff);
+            _overviewInfo = new Panel { Dock = DockStyle.Top, Height = 400, BackColor = Color.White, Padding = new Padding(14), AutoScroll = true };
 
-            _gridOverviewRooms = CreateGrid();
-            _gridOverviewRooms.Dock = DockStyle.Fill;
-            _gridOverviewRooms.CellClick += (s, e) => JumpToRoomFromOverview();
-            _gridOverviewRooms.CellFormatting += GridRoomCellFormatting;
-            _tabOverview.Controls.Add(_gridOverviewRooms);
             _tabOverview.Controls.Add(_overviewInfo);
 
             _roomDetails = new Panel { Dock = DockStyle.Top, Height = RoomDetailsCollapsedHeight, BackColor = Color.White, Padding = new Padding(14) };
@@ -250,12 +259,20 @@ namespace quan_ly_chuoi_nha_tro.GUI
             roomLayout.Controls.Add(_tenantDetails, 0, 2);
             _roomDetails.Controls.Add(roomLayout);
 
-            _gridRooms = CreateGrid();
-            _gridRooms.Dock = DockStyle.Fill;
-            _gridRooms.CellClick += (s, e) => HandleRoomClickFromGrid(_gridRooms);
-            _gridRooms.CellDoubleClick += (s, e) => HandleRoomClickFromGrid(_gridRooms);
-            _gridRooms.CellFormatting += GridRoomCellFormatting;
-            _tabRooms.Controls.Add(_gridRooms);
+            _roomCardsHost = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                AutoScroll = true,
+                WrapContents = true,
+                FlowDirection = FlowDirection.LeftToRight,
+                BackColor = Color.FromArgb(245, 247, 250),
+                Padding = new Padding(16)
+            };
+
+            var roomsScrollPanel = new Panel { Dock = DockStyle.Fill, BackColor = Color.White };
+            roomsScrollPanel.Controls.Add(_roomCardsHost);
+
+            _tabRooms.Controls.Add(roomsScrollPanel);
             _tabRooms.Controls.Add(_roomDetails);
 
             BuildSectionsTab();
@@ -383,17 +400,120 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             top.Controls.Add(flow);
 
-            var host = new Panel { Dock = DockStyle.Fill, Padding = new Padding(14), BackColor = Color.White };
+            var host = new SplitContainer
+            {
+                Dock = DockStyle.Fill,
+                SplitterDistance = 400,
+                SplitterWidth = 6,
+                BackColor = Color.White
+            };
 
-            _gridTenants = CreateGrid();
-            _gridTenants.Dock = DockStyle.Fill;
-            _gridTenants.CellDoubleClick += GridTenants_CellDoubleClick;
-            _gridTenants.CellClick += GridTenants_CellClick;
+            _tenantCardsHost = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                AutoScroll = true,
+                WrapContents = true,
+                FlowDirection = FlowDirection.LeftToRight,
+                BackColor = Color.WhiteSmoke,
+                Padding = new Padding(6)
+            };
+            host.Panel1.Controls.Add(_tenantCardsHost);
 
-            host.Controls.Add(_gridTenants);
+            BuildTenantDetailsPanel();
+            host.Panel2.Controls.Add(_tenantDetailPanel);
 
             _tabTenants.Controls.Add(host);
             _tabTenants.Controls.Add(top);
+        }
+
+        private void BuildTenantDetailsPanel()
+        {
+            _tenantDetailPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White,
+                Padding = new Padding(16)
+            };
+
+            _lblTenantDetailTitle = new Label
+            {
+                AutoSize = true,
+                Text = "Chọn 1 khách thuê để xem thông tin",
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 79, 159),
+                Margin = new Padding(0, 0, 0, 12)
+            };
+            _tenantDetailPanel.Controls.Add(_lblTenantDetailTitle);
+
+            var detailLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                ColumnCount = 2,
+                RowCount = 10,
+                Padding = new Padding(0, 6, 0, 0)
+            };
+            detailLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
+            detailLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+
+            Control AddRow(string label, Control ctl)
+            {
+                var lbl = new Label
+                {
+                    Text = label,
+                    Dock = DockStyle.Fill,
+                    TextAlign = ContentAlignment.MiddleLeft,
+                    ForeColor = Color.FromArgb(70, 70, 70),
+                    Margin = new Padding(0, 4, 8, 4)
+                };
+                ctl.Dock = DockStyle.Fill;
+                ctl.Margin = new Padding(0, 4, 0, 4);
+                detailLayout.Controls.Add(lbl);
+                detailLayout.Controls.Add(ctl);
+                return ctl;
+            }
+
+            _txtTenantFullName = new TextBox();
+            _txtTenantIdentity = new TextBox();
+            _txtTenantPhone = new TextBox();
+            _txtTenantEmail = new TextBox();
+            _dtTenantBirth = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true };
+            _txtTenantAddress = new TextBox { Multiline = true, Height = 60, ScrollBars = ScrollBars.Vertical };
+            _txtTenantTempReg = new TextBox();
+            _dtTenantTempFrom = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true };
+            _dtTenantTempTo = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true };
+            _txtTenantFrontId = new TextBox();
+            _txtTenantBackId = new TextBox();
+            _chkTenantActive = new CheckBox { Text = "Đang hoạt động", AutoSize = true };
+
+            AddRow("Họ tên", _txtTenantFullName);
+            AddRow("CCCD", _txtTenantIdentity);
+            AddRow("SĐT", _txtTenantPhone);
+            AddRow("Email", _txtTenantEmail);
+            AddRow("Ngày sinh", _dtTenantBirth);
+            AddRow("Địa chỉ", _txtTenantAddress);
+            AddRow("Tạm trú tại", _txtTenantTempReg);
+            AddRow("Tạm trú từ", _dtTenantTempFrom);
+            AddRow("Tạm trú đến", _dtTenantTempTo);
+            AddRow("Ảnh CCCD (mặt trước)", _txtTenantFrontId);
+            AddRow("Ảnh CCCD (mặt sau)", _txtTenantBackId);
+            AddRow("Trạng thái", _chkTenantActive);
+
+            detailLayout.Controls.Add(new Label());
+            _btnTenantSave = new Button
+            {
+                Text = "Lưu",
+                Width = 120,
+                Height = 36,
+                BackColor = Color.FromArgb(0, 123, 255),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat
+            };
+            _btnTenantSave.FlatAppearance.BorderSize = 0;
+            _btnTenantSave.Click += async (s, e) => await SaveTenantAsync();
+            detailLayout.Controls.Add(_btnTenantSave);
+
+            _tenantDetailPanel.Controls.Add(detailLayout);
         }
 
         private static DataGridView CreateGrid()
@@ -498,9 +618,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 _roomsAll = roomsTask.Result ?? new DataTable();
                 _roomsBranch = FilterByBranchId(_roomsAll, _branchId);
                 TextFixer.ForceFixDataTable(_roomsBranch, "RoomNumber", "BranchName", "SectionName", "RoomTypeName", "StatusName");
-                BindRooms(_gridRooms, _roomsBranch);
-                BindRooms(_gridOverviewRooms, _roomsBranch);
-                _lblOverviewRooms.Text = $"Phòng: {_roomsBranch.Rows.Count:N0}";
+                RenderRoomCards(_roomsBranch);
 
                 var sections = sectionsTask.Result ?? new DataTable();
                 TextFixer.ForceFixDataTable(sections, "SectionCode", "SectionName", "Description");
@@ -606,105 +724,142 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             _overviewInfo.Controls.Clear();
 
-            var layout = new TableLayoutPanel
+            var scroll = new Panel
             {
                 Dock = DockStyle.Fill,
-                ColumnCount = 1,
-                RowCount = 4,
-                BackColor = Color.Transparent
+                AutoScroll = true,
+                BackColor = Color.White
             };
-            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 140F));
-            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
+            var content = new Panel
+            {
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                BackColor = Color.White
+            };
 
             var title = new Label
             {
                 AutoSize = true,
                 Text = "Thông tin chi nhánh",
-                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 79, 159),
-                Margin = new Padding(0, 0, 0, 6)
+                Margin = new Padding(0, 0, 0, 10),
+                Dock = DockStyle.Top
             };
 
-            var info = new Label
+            var infoPanel = new Panel
             {
-                AutoSize = true,
                 Dock = DockStyle.Top,
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Regular),
-                ForeColor = Color.FromArgb(80, 80, 80),
-                Margin = new Padding(0, 0, 0, 0)
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                BackColor = Color.FromArgb(250, 252, 255),
+                Padding = new Padding(12, 10, 12, 10),
+                Margin = new Padding(0, 0, 0, 12)
             };
-
-            string line1 = $"Mã: {NullDash(code)}   |   Tên: {NullDash(name)}";
-            string line2 = $"Địa chỉ: {NullDash(address)}";
-            string line3 = $"Điện thoại: {NullDash(phone)}   |   Hotline: {NullDash(hotline)}   |   Giờ hoạt động: {NullDash(hours)}";
-            string line4 = $"Trạng thái: {NullDash(statusText)}";
-            string line5 = string.IsNullOrWhiteSpace(desc) ? null : $"Mô tả: {desc}";
-            info.Text = string.Join("\n", new[] { line1, line2, line3, line4, line5 }.Where(x => !string.IsNullOrWhiteSpace(x)));
-
-            var staffBox = new Panel
+            infoPanel.Paint += (s, e) =>
             {
-                Dock = DockStyle.Fill,
-                BackColor = Color.FromArgb(245, 249, 255),
-                Padding = new Padding(10),
-                Margin = new Padding(0, 10, 0, 0)
-            };
-            staffBox.Paint += (s, e) =>
-            {
-                using (var pen = new Pen(Color.FromArgb(220, 230, 240)))
+                using (var pen = new Pen(Color.FromArgb(200, 220, 240), 1.5f))
                 {
-                    var rect = new Rectangle(0, 0, staffBox.Width - 1, staffBox.Height - 1);
+                    var rect = new Rectangle(0, 0, infoPanel.Width - 1, infoPanel.Height - 1);
                     e.Graphics.DrawRectangle(pen, rect);
                 }
             };
+
+            var infoContent = new Label
+            {
+                AutoSize = true,
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Regular),
+                ForeColor = Color.FromArgb(60, 60, 60),
+                Margin = new Padding(0),
+                Dock = DockStyle.Top
+            };
+
+            string line1 = $"🏢 Mã: {NullDash(code)}   |   Tên: {NullDash(name)}";
+            string line2 = $"📍 Địa chỉ: {NullDash(address)}";
+            string line3 = $"☎️ Điện thoại: {NullDash(phone)}   |   Hotline: {NullDash(hotline)}";
+            string line4 = $"🕐 Giờ hoạt động: {NullDash(hours)}";
+            string line5 = $"✓ Trạng thái: {NullDash(statusText)}";
+            string line6 = string.IsNullOrWhiteSpace(desc) ? null : $"📝 Mô tả: {desc}";
+            infoContent.Text = string.Join("\n", new[] { line1, line2, line3, line4, line5, line6 }.Where(x => !string.IsNullOrWhiteSpace(x)));
+            
+            infoPanel.Controls.Add(infoContent);
 
             var staffTitle = new Label
             {
                 AutoSize = true,
                 Text = "Nhân viên tại chi nhánh",
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 79, 159),
-                Dock = DockStyle.Top,
-                Margin = new Padding(0, 0, 0, 6)
+                Margin = new Padding(0, 12, 0, 10),
+                Dock = DockStyle.Top
             };
 
             _overviewStaffPreview = new FlowLayoutPanel
             {
-                Dock = DockStyle.Fill,
-                AutoSize = false,
-                AutoScroll = true,
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 WrapContents = true,
                 FlowDirection = FlowDirection.LeftToRight,
                 BackColor = Color.Transparent,
                 Margin = new Padding(0)
             };
 
-            staffBox.Controls.Add(_overviewStaffPreview);
-            staffBox.Controls.Add(staffTitle);
+            content.Controls.Add(_overviewStaffPreview);
+            content.Controls.Add(staffTitle);
+            content.Controls.Add(infoPanel);
+            content.Controls.Add(title);
 
-            var footer = new FlowLayoutPanel
+            scroll.Controls.Add(content);
+            _overviewInfo.Controls.Add(scroll);
+        }
+
+        private Panel BuildOverviewNotice()
+        {
+            var panel = new Panel
             {
                 Dock = DockStyle.Fill,
-                AutoSize = true,
-                WrapContents = false,
-                FlowDirection = FlowDirection.LeftToRight,
-                BackColor = Color.Transparent,
-                Margin = new Padding(0, 6, 0, 0)
+                BackColor = Color.FromArgb(249, 252, 255),
+                Padding = new Padding(14, 10, 14, 10)
             };
-            _lblOverviewRooms.Location = new Point(0, 0);
-            _lblOverviewRooms.Margin = new Padding(0, 0, 16, 0);
-            _lblOverviewStaff.Location = new Point(0, 0);
-            _lblOverviewStaff.Margin = new Padding(0, 0, 0, 0);
-            footer.Controls.Add(_lblOverviewRooms);
-            footer.Controls.Add(_lblOverviewStaff);
 
-            layout.Controls.Add(title, 0, 0);
-            layout.Controls.Add(info, 0, 1);
-            layout.Controls.Add(staffBox, 0, 2);
-            layout.Controls.Add(footer, 0, 3);
+            panel.Paint += (s, e) =>
+            {
+                using (var pen = new Pen(Color.FromArgb(225, 233, 245)))
+                {
+                    var rect = new Rectangle(0, 0, panel.Width - 1, panel.Height - 1);
+                    e.Graphics.DrawRectangle(pen, rect);
+                }
+            };
 
-            _overviewInfo.Controls.Add(layout);
+            var icon = new Label
+            {
+                AutoSize = false,
+                Width = 36,
+                Dock = DockStyle.Left,
+                Font = new Font("Segoe UI Symbol", 18f, FontStyle.Regular),
+                ForeColor = Color.FromArgb(0, 120, 215),
+                TextAlign = ContentAlignment.MiddleCenter,
+                Text = "ℹ️",
+                Margin = new Padding(0, 0, 10, 0)
+            };
+
+            var text = new Label
+            {
+                Dock = DockStyle.Fill,
+                AutoSize = false,
+                Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 79, 159),
+                Text =
+                    "Bảng phòng đã được gỡ khỏi tab Tổng quan. Vui lòng chuyển sang tab \"Phòng\" hoặc \"Khách thuê\" để xem danh sách chi tiết.",
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+
+            panel.Controls.Add(text);
+            panel.Controls.Add(icon);
+            return panel;
         }
 
         private void RenderOverviewStaffPreview(DataTable staff)
@@ -720,16 +875,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 {
                     AutoSize = true,
                     Text = "Chưa có nhân viên.",
-                    ForeColor = Color.FromArgb(90, 90, 90)
+                    ForeColor = Color.FromArgb(90, 90, 90),
+                    Margin = new Padding(0, 10, 0, 0)
                 });
                 _overviewStaffPreview.ResumeLayout();
                 return;
             }
 
-            int shown = 0;
             foreach (DataRow r in staff.Rows)
             {
-                if (shown >= 8) break;
                 string name = TextFixer.FixUtf8Mojibake(ReadString(r, "FullName"));
                 string userName = ReadString(r, "UserName");
                 string phone = ReadString(r, "Phone");
@@ -760,18 +914,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
                                 await LoadAllAsync();
                         }
                     }));
-                shown++;
-            }
-
-            if (staff.Rows.Count > shown)
-            {
-                _overviewStaffPreview.Controls.Add(new Label
-                {
-                    AutoSize = true,
-                    Text = $"+{staff.Rows.Count - shown} nhân viên khác",
-                    ForeColor = Color.FromArgb(90, 90, 90),
-                    Margin = new Padding(6, 7, 0, 0)
-                });
             }
 
             _overviewStaffPreview.ResumeLayout();
@@ -781,8 +923,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             var panel = new Panel
             {
-                Width = 360,
-                Height = 92,
+                Width = 380,
+                Height = 110,
                 BackColor = Color.White,
                 Padding = new Padding(12, 10, 12, 10),
                 Margin = new Padding(0, 0, 12, 12),
@@ -790,20 +932,34 @@ namespace quan_ly_chuoi_nha_tro.GUI
             };
             panel.Paint += (s, e) =>
             {
-                using (var pen = new Pen(Color.FromArgb(220, 230, 240)))
+                using (var pen = new Pen(Color.FromArgb(200, 220, 240), 1.5f))
                 {
                     var rect = new Rectangle(0, 0, panel.Width - 1, panel.Height - 1);
                     e.Graphics.DrawRectangle(pen, rect);
                 }
             };
 
+            var btnEdit = new Button
+            {
+                Text = "✎ Sửa",
+                Width = 60,
+                Height = 26,
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(255, 193, 7),
+                ForeColor = Color.Black,
+                Cursor = Cursors.Hand,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            btnEdit.FlatAppearance.BorderSize = 0;
+
             var status = new Label
             {
                 AutoSize = true,
-                Text = isActive ? "Hoạt động" : "Vô hiệu",
+                Text = isActive ? "✓ Hoạt động" : "✗ Vô hiệu",
                 ForeColor = isActive ? Color.FromArgb(40, 167, 69) : Color.FromArgb(220, 53, 69),
                 BackColor = isActive ? Color.FromArgb(232, 247, 239) : Color.FromArgb(252, 236, 238),
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
                 Padding = new Padding(8, 4, 8, 4),
                 Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
@@ -813,7 +969,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 AutoSize = false,
                 Dock = DockStyle.Top,
                 Height = 22,
-                Text = NullDash(fullName),
+                Text = $"👤 {NullDash(fullName)}",
                 Font = new Font("Segoe UI", 10f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 79, 159)
             };
@@ -822,9 +978,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 AutoSize = false,
                 Dock = DockStyle.Top,
-                Height = 20,
-                Text = $"Tài khoản: {NullDash(userName)}   |   SĐT: {NullDash(phone)}",
-                Font = new Font("Segoe UI", 9.2f, FontStyle.Regular),
+                Height = 18,
+                Text = $"👤 Tài khoản: {NullDash(userName)}   |   ☎️ {NullDash(phone)}",
+                Font = new Font("Segoe UI", 9f, FontStyle.Regular),
                 ForeColor = Color.FromArgb(70, 70, 70)
             };
 
@@ -832,9 +988,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 AutoSize = false,
                 Dock = DockStyle.Top,
-                Height = 20,
-                Text = $"Email: {NullDash(email)}",
-                Font = new Font("Segoe UI", 9.2f, FontStyle.Regular),
+                Height = 18,
+                Text = $"✉️ Email: {NullDash(email)}",
+                Font = new Font("Segoe UI", 9f, FontStyle.Regular),
                 ForeColor = Color.FromArgb(70, 70, 70)
             };
 
@@ -842,9 +998,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 AutoSize = false,
                 Dock = DockStyle.Top,
-                Height = 20,
-                Text = $"Vai trò: {NullDash(roleName)}",
-                Font = new Font("Segoe UI", 9.2f, FontStyle.Regular),
+                Height = 18,
+                Text = $"🎯 Vai trò: {NullDash(roleName)}",
+                Font = new Font("Segoe UI", 9f, FontStyle.Regular),
                 ForeColor = Color.FromArgb(70, 70, 70)
             };
 
@@ -852,11 +1008,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
             panel.Controls.Add(line2);
             panel.Controls.Add(line1);
             panel.Controls.Add(title);
+            panel.Controls.Add(btnEdit);
             panel.Controls.Add(status);
 
             panel.Resize += (s, e) =>
             {
-                status.Location = new Point(panel.ClientSize.Width - status.Width - 10, 10);
+                int right = panel.ClientSize.Width - 10;
+                status.Location = new Point(right - status.Width, 10);
+                btnEdit.Location = new Point(status.Left - btnEdit.Width - 6, 10);
             };
             panel.PerformLayout();
 
@@ -871,6 +1030,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     }
                 }
 
+                btnEdit.Click += DoEdit;
                 panel.DoubleClick += DoEdit;
                 title.DoubleClick += DoEdit;
                 line1.DoubleClick += DoEdit;
@@ -1324,16 +1484,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void UpdateStaffStats(DataTable staff)
         {
-            int total = staff?.Rows.Count ?? 0;
-            int active = 0;
-            if (staff != null && staff.Columns.Contains("IsActive"))
-            {
-                foreach (DataRow r in staff.Rows)
-                {
-                    try { if (Convert.ToBoolean(r["IsActive"])) active++; } catch { }
-                }
-            }
-            _lblOverviewStaff.Text = $"Nhân viên: {active}/{total}";
+            // Stats updated in RenderOverviewStaffPreview
         }
 
         private void GridActiveCellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
@@ -1359,6 +1510,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             if (grid.CurrentRow.DataBoundItem is DataRowView drv)
                 row = drv.Row;
             if (row == null) return;
+            var roomRow = row;
 
             int roomId = TryReadInt(row, "RoomId");
             if (roomId <= 0) return;
@@ -1378,24 +1530,23 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _tenantDetails.Visible = _tenantVisible;
             if (_roomDetails != null) _roomDetails.Height = _tenantVisible ? RoomDetailsExpandedHeight : RoomDetailsCollapsedHeight;
             if (_tenantVisible)
-                RenderTenantInfo(roomId);
+            {
+                var contract = FindActiveContractForRoom(roomId);
+                DataRow tenant = null;
+                if (contract != null)
+                {
+                    int tenantId = TryReadInt(contract, "TenantId");
+                    if (tenantId > 0)
+                        tenant = FindById(_tenantsAll, "TenantId", tenantId);
+                }
 
-            ShowRoomQuickView(roomId);
+                ShowRoomQuickView(roomId, roomRow, tenant, contract);
+            }
         }
 
-        private void JumpToRoomFromOverview()
+        private async Task RefreshRoomQuickViewAsync(int roomId)
         {
-            if (_gridOverviewRooms == null || _gridOverviewRooms.CurrentRow == null || _gridOverviewRooms.CurrentRow.DataBoundItem == null)
-                return;
-
-            DataRow row = null;
-            if (_gridOverviewRooms.CurrentRow.DataBoundItem is DataRowView drv)
-                row = drv.Row;
-            if (row == null) return;
-
-            int roomId = TryReadInt(row, "RoomId");
-            if (roomId <= 0) return;
-
+            await LoadAllAsync();
             _tabs.SelectedTab = _tabRooms;
             SelectRoomInRoomsGrid(roomId);
             ShowRoomQuickView(roomId);
@@ -1403,18 +1554,21 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void ShowRoomQuickView(int roomId)
         {
-            var room = FindById(_roomsBranch, "RoomId", roomId);
-            if (room == null) return;
-
-            var contract = FindActiveContractForRoom(roomId);
-            DataRow tenant = null;
-            if (contract != null)
+            var roomRow = FindById(_roomsBranch, "RoomId", roomId);
+            var contractRow = FindActiveContractForRoom(roomId);
+            DataRow tenantRow = null;
+            if (contractRow != null)
             {
-                int tenantId = TryReadInt(contract, "TenantId");
+                int tenantId = TryReadInt(contractRow, "TenantId");
                 if (tenantId > 0)
-                    tenant = FindById(_tenantsAll, "TenantId", tenantId);
+                    tenantRow = FindById(_tenantsAll, "TenantId", tenantId);
             }
 
+            ShowRoomQuickView(roomId, roomRow, tenantRow, contractRow);
+        }
+
+        private void ShowRoomQuickView(int roomId, DataRow roomRow, DataRow tenantRow, DataRow contractRow)
+        {
             if (_roomQuickView == null || _roomQuickView.IsDisposed)
             {
                 _roomQuickView = new FrmRoomTenantQuickView(_adminBll, RefreshRoomQuickViewAsync);
@@ -1425,7 +1579,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     int y = Math.Max(0, ownerRect.Top + 90);
                     _roomQuickView.Location = new Point(x, y);
                 }
-                catch { }
+                catch
+                {
+                    // ignore positioning issues
+                }
                 _roomQuickView.Show(this);
             }
             else if (!_roomQuickView.Visible)
@@ -1433,16 +1590,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 _roomQuickView.Show(this);
             }
 
-            _roomQuickView.UpdateData(roomId, room, tenant, contract);
+            _roomQuickView.UpdateData(roomId, roomRow, tenantRow, contractRow);
             _roomQuickView.BringToFront();
-        }
-
-        private async Task RefreshRoomQuickViewAsync(int roomId)
-        {
-            await LoadAllAsync();
-            _tabs.SelectedTab = _tabRooms;
-            SelectRoomInRoomsGrid(roomId);
-            ShowRoomQuickView(roomId);
         }
 
         private void SelectRoomInRoomsGrid(int roomId)
@@ -1535,32 +1684,47 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void RenderRoomInfo(int roomId)
         {
-            var r = FindById(_roomsBranch, "RoomId", roomId);
-            if (r == null)
+            try
             {
-                _lblRoomTitle.Text = "Không tìm thấy phòng";
-                _lblRoomInfo.Text = string.Empty;
-                return;
-            }
+                if (_roomsBranch == null)
+                {
+                    _lblRoomTitle.Text = "Dữ liệu phòng chưa được tải";
+                    _lblRoomInfo.Text = string.Empty;
+                    return;
+                }
 
-            string number = ReadString(r, "RoomNumber");
-            string section = ReadString(r, "SectionName");
-            string type = ReadString(r, "RoomTypeName");
-            string status = ReadString(r, "StatusName");
-            string price = FormatMoney(ReadString(r, "RoomPrice"));
-            string floor = ReadString(r, "Floor");
-            string area = ReadString(r, "Area");
-            bool isActive = true;
-            if (r.Table.Columns.Contains("IsActive"))
+                var r = FindById(_roomsBranch, "RoomId", roomId);
+                if (r == null)
+                {
+                    _lblRoomTitle.Text = "Không tìm thấy phòng";
+                    _lblRoomInfo.Text = string.Empty;
+                    return;
+                }
+
+                string number = ReadString(r, "RoomNumber");
+                string section = ReadString(r, "SectionName");
+                string type = ReadString(r, "RoomTypeName");
+                string status = ReadString(r, "StatusName");
+                string price = FormatMoney(ReadString(r, "RoomPrice"));
+                string floor = ReadString(r, "Floor");
+                string area = ReadString(r, "Area");
+                bool isActive = true;
+                if (r.Table.Columns.Contains("IsActive"))
+                {
+                    try { isActive = Convert.ToBoolean(r["IsActive"]); } catch { isActive = true; }
+                }
+
+                _lblRoomTitle.Text = $"Phòng {NullDash(number)}";
+                _lblRoomInfo.Text =
+                    $"Khu/Dãy: {NullDash(section)}   |   Loại: {NullDash(type)}   |   Trạng thái: {NullDash(status)}\n" +
+                    $"Giá: {NullDash(price)}   |   Tầng: {NullDash(floor)}   |   Diện tích: {NullDash(area)}\n" +
+                    $"Kích hoạt: {(isActive ? "Có" : "Không")}   |   (Click lần 2 để xem người đang sử dụng)";
+            }
+            catch (Exception ex)
             {
-                try { isActive = Convert.ToBoolean(r["IsActive"]); } catch { isActive = true; }
+                _lblRoomTitle.Text = "Lỗi hiển thị thông tin phòng";
+                _lblRoomInfo.Text = ex.Message;
             }
-
-            _lblRoomTitle.Text = $"Phòng {NullDash(number)}";
-            _lblRoomInfo.Text =
-                $"Khu/Dãy: {NullDash(section)}   |   Loại: {NullDash(type)}   |   Trạng thái: {NullDash(status)}\n" +
-                $"Giá: {NullDash(price)}   |   Tầng: {NullDash(floor)}   |   Diện tích: {NullDash(area)}\n" +
-                $"Kích hoạt: {(isActive ? "Có" : "Không")}   |   (Click lần 2 để xem người đang sử dụng)";
         }
 
         private void RenderTenantInfo(int roomId)
@@ -1817,43 +1981,477 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (_tenantsBranch == null) return;
 
-            string searchText = _txtTenantSearch?.Text?.ToLower() ?? "";
-            var rows = _tenantsBranch.Select()
-                .Where(r => string.IsNullOrEmpty(searchText) ||
-                           (r["Name"]?.ToString() ?? "").ToLower().Contains(searchText) ||
-                           (r["Phone"]?.ToString() ?? "").ToLower().Contains(searchText) ||
-                           (r["Email"]?.ToString() ?? "").ToLower().Contains(searchText))
-                .ToArray();
-
+            string searchText = (_txtTenantSearch?.Text ?? "").Trim().ToLower();
             var view = new DataView(_tenantsBranch);
-            view.RowFilter = string.IsNullOrEmpty(searchText) ? "" : 
-                $"Name LIKE '%{searchText}%' OR Phone LIKE '%{searchText}%' OR Email LIKE '%{searchText}%'";
 
-            _gridTenants.DataSource = view;
-            _lblTenantCount.Text = $"Khách thuê: {rows.Length}";
-        }
-
-        private void GridTenants_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
-        {
-            if (e.RowIndex < 0) return;
-
-            var row = _gridTenants.Rows[e.RowIndex];
-            if (row?.DataBoundItem is DataRowView drv)
+            if (!string.IsNullOrEmpty(searchText))
             {
-                int tenantId = TryReadInt(drv.Row, "TenantId");
-                // Open tenant editor if needed
-                // new FrmTenantEditor(tenantId).ShowDialog();
+                var escaped = searchText.Replace("'", "''");
+                view.RowFilter = $"Convert(FullName, 'System.String') LIKE '%{escaped}%' OR Convert(PhoneNumber, 'System.String') LIKE '%{escaped}%' OR Convert(IdentityCard, 'System.String') LIKE '%{escaped}%'";
+            }
+            else
+            {
+                view.RowFilter = "";
+            }
+
+            var filtered = view.ToTable();
+            _lblTenantCount.Text = $"Khách thuê: {filtered.Rows.Count}";
+            RenderTenantCards(filtered);
+            if (_selectedTenantId > 0)
+            {
+                var match = FindById(filtered, "TenantId", _selectedTenantId);
+                if (match != null)
+                {
+                    ShowTenantDetails(match, _selectedTenantCard);
+                }
+                else
+                {
+                    ClearTenantDetails();
+                }
             }
         }
 
-        private void GridTenants_CellClick(object sender, DataGridViewCellEventArgs e)
+        private void RenderTenantCards(DataTable tenants)
         {
-            if (e.RowIndex < 0) return;
+            if (_tenantCardsHost == null) return;
+            _tenantCardsHost.SuspendLayout();
+            _tenantCardsHost.Controls.Clear();
 
-            var row = _gridTenants.Rows[e.RowIndex];
-            if (row?.DataBoundItem is DataRowView drv)
+            if (tenants == null || tenants.Rows.Count == 0)
             {
-                // Handle cell click if needed
+                _tenantCardsHost.Controls.Add(new Label
+                {
+                    AutoSize = true,
+                    Text = "Chưa có khách thuê.",
+                    ForeColor = Color.FromArgb(90, 90, 90),
+                    Margin = new Padding(8, 6, 0, 0)
+                });
+                _tenantCardsHost.ResumeLayout();
+                return;
+            }
+
+            foreach (DataRow row in tenants.Rows)
+            {
+                var card = CreateTenantCard(row);
+                _tenantCardsHost.Controls.Add(card);
+                if (_selectedTenantId == 0)
+                {
+                    ShowTenantDetails(row, card);
+                }
+            }
+
+            _tenantCardsHost.ResumeLayout();
+        }
+
+        private Control CreateTenantCard(DataRow tenantRow)
+        {
+            var panel = new Panel
+            {
+                Width = 240,
+                Height = 140,
+                BackColor = Color.White,
+                Margin = new Padding(8),
+                Padding = new Padding(12),
+                Cursor = Cursors.Hand
+            };
+            panel.Paint += (s, e) =>
+            {
+                using (var pen = new Pen(Color.FromArgb(210, 220, 230)))
+                {
+                    var rect = new Rectangle(0, 0, panel.Width - 1, panel.Height - 1);
+                    e.Graphics.DrawRectangle(pen, rect);
+                }
+            };
+
+            int tenantId = TryReadInt(tenantRow, "TenantId");
+            string name = TextFixer.FixUtf8Mojibake(ReadString(tenantRow, "FullName") ?? "");
+            string phone = ReadString(tenantRow, "PhoneNumber");
+            string identity = ReadString(tenantRow, "IdentityCard");
+            string email = ReadString(tenantRow, "Email");
+            string address = TextFixer.FixUtf8Mojibake(ReadString(tenantRow, "Address"));
+            string status = (tenantRow.Table.Columns.Contains("IsActive") && bool.TryParse(tenantRow["IsActive"]?.ToString(), out var active) && active) ? "Đang ở" : "Tạm ngưng";
+
+            var lblName = new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 24,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Text = $"{tenantId} · {NullDash(name)}",
+                ForeColor = Color.FromArgb(0, 79, 159)
+            };
+
+            var lblInfo = new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 46,
+                Font = new Font("Segoe UI", 9f, FontStyle.Regular),
+                ForeColor = Color.FromArgb(70, 70, 70),
+                Text = $"☎ {NullDash(phone)}   |   CCCD: {NullDash(identity)}\n✉ {NullDash(email)}",
+                AutoSize = false
+            };
+
+            var lblAddress = new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 32,
+                Text = $"🏠 {NullDash(address)}",
+                Font = new Font("Segoe UI", 8.8f),
+                ForeColor = Color.FromArgb(90, 90, 90)
+            };
+
+            var lblStatus = new Label
+            {
+                AutoSize = true,
+                Text = status,
+                BackColor = status.Contains("Đang") ? Color.FromArgb(232, 247, 239) : Color.FromArgb(252, 236, 238),
+                ForeColor = status.Contains("Đang") ? Color.FromArgb(40, 167, 69) : Color.FromArgb(220, 53, 69),
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                Padding = new Padding(6, 2, 6, 2),
+                Location = new Point(12, panel.Height - 28)
+            };
+
+            panel.Controls.Add(lblStatus);
+            panel.Controls.Add(lblAddress);
+            panel.Controls.Add(lblInfo);
+            panel.Controls.Add(lblName);
+
+            void HandleClick(object sender, EventArgs args)
+            {
+                ShowTenantDetails(tenantRow, panel);
+            }
+
+            panel.Click += HandleClick;
+            foreach (Control ctl in panel.Controls)
+            {
+                ctl.Click += HandleClick;
+            }
+
+            return panel;
+        }
+
+        private void ShowTenantDetails(DataRow tenantRow, Control card)
+        {
+            if (tenantRow == null)
+            {
+                ClearTenantDetails();
+                return;
+            }
+
+            _selectedTenantRow = tenantRow;
+            _selectedTenantId = TryReadInt(tenantRow, "TenantId");
+            _lblTenantDetailTitle.Text = $"Khách thuê #{_selectedTenantId}";
+
+            _txtTenantFullName.Text = ReadString(tenantRow, "FullName") ?? "";
+            _txtTenantIdentity.Text = ReadString(tenantRow, "IdentityCard") ?? "";
+            _txtTenantPhone.Text = ReadString(tenantRow, "PhoneNumber") ?? "";
+            _txtTenantEmail.Text = ReadString(tenantRow, "Email") ?? "";
+            SetDatePicker(_dtTenantBirth, ReadString(tenantRow, "BirthDate"));
+            _txtTenantAddress.Text = TextFixer.FixUtf8Mojibake(ReadString(tenantRow, "Address") ?? "");
+            _txtTenantTempReg.Text = TextFixer.FixUtf8Mojibake(ReadString(tenantRow, "TemporaryRegistration") ?? "");
+            SetDatePicker(_dtTenantTempFrom, ReadString(tenantRow, "TemporaryRegistrationDate"));
+            SetDatePicker(_dtTenantTempTo, ReadString(tenantRow, "TemporaryRegistrationExpiry"));
+            _txtTenantFrontId.Text = ReadString(tenantRow, "FrontIdPhoto") ?? "";
+            _txtTenantBackId.Text = ReadString(tenantRow, "BackIdPhoto") ?? "";
+            _chkTenantActive.Checked = tenantRow.Table.Columns.Contains("IsActive") && bool.TryParse(tenantRow["IsActive"]?.ToString(), out var active) && active;
+
+            HighlightSelectedCard(card);
+        }
+
+        private void HighlightSelectedCard(Control card)
+        {
+            if (_selectedTenantCard != null && !_selectedTenantCard.IsDisposed)
+            {
+                _selectedTenantCard.BackColor = Color.White;
+            }
+            _selectedTenantCard = card;
+            if (_selectedTenantCard != null)
+            {
+                _selectedTenantCard.BackColor = Color.FromArgb(248, 252, 255);
+            }
+        }
+
+        private void ClearTenantDetails()
+        {
+            _selectedTenantId = 0;
+            _selectedTenantRow = null;
+            _lblTenantDetailTitle.Text = "Chọn 1 khách thuê để xem thông tin";
+            _txtTenantFullName.Text = "";
+            _txtTenantIdentity.Text = "";
+            _txtTenantPhone.Text = "";
+            _txtTenantEmail.Text = "";
+            _dtTenantBirth.Checked = false;
+            _txtTenantAddress.Text = "";
+            _txtTenantTempReg.Text = "";
+            _dtTenantTempFrom.Checked = false;
+            _dtTenantTempTo.Checked = false;
+            _txtTenantFrontId.Text = "";
+            _txtTenantBackId.Text = "";
+            _chkTenantActive.Checked = false;
+            _selectedTenantCard = null;
+        }
+
+        private void SetDatePicker(DateTimePicker picker, string rawValue)
+        {
+            if (picker == null) return;
+            if (DateTime.TryParse(rawValue, out var dt))
+            {
+                picker.Value = dt;
+                picker.Checked = true;
+            }
+            else
+            {
+                picker.Checked = false;
+            }
+        }
+
+        private void RenderRoomCards(DataTable roomsTable)
+        {
+            _roomCardsHost.SuspendLayout();
+            _roomCardsHost.Controls.Clear();
+
+            if (roomsTable == null || roomsTable.Rows.Count == 0)
+            {
+                _roomCardsHost.Controls.Add(new Label
+                {
+                    AutoSize = true,
+                    Text = "Không có phòng nào.",
+                    ForeColor = Color.FromArgb(90, 90, 90)
+                });
+                _roomCardsHost.ResumeLayout();
+                return;
+            }
+
+            foreach (DataRow row in roomsTable.Rows)
+            {
+                int roomId = TryReadInt(row, "RoomId");
+                if (roomId <= 0) continue;
+
+                var card = CreateRoomCard(row, roomId);
+                _roomCardsHost.Controls.Add(card);
+            }
+
+            _roomCardsHost.ResumeLayout();
+        }
+
+        private Panel CreateRoomCard(DataRow row, int roomId)
+        {
+            var card = new Panel
+            {
+                Width = 300,
+                Height = 180,
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.None,
+                Margin = new Padding(10, 10, 10, 10),
+                Cursor = Cursors.Hand,
+                Tag = roomId
+            };
+
+            card.Paint += (s, e) =>
+            {
+                // Vẽ border chính - xanh dương
+                using (var pen = new Pen(Color.FromArgb(70, 160, 230), 2))
+                {
+                    e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
+                }
+                // Vẽ shadow - gradient từ góc
+                using (var shadowPen = new Pen(Color.FromArgb(200, 220, 245), 1))
+                {
+                    e.Graphics.DrawRectangle(shadowPen, 1, 1, card.Width - 3, card.Height - 3);
+                }
+            };
+
+            card.MouseEnter += (s, e) =>
+            {
+                card.BackColor = Color.FromArgb(245, 250, 255);
+            };
+            card.MouseLeave += (s, e) =>
+            {
+                card.BackColor = Color.White;
+            };
+
+            string roomNumber = SafeReadString(row, "RoomNumber") ?? "—";
+            string typeName = SafeReadString(row, "RoomTypeName") ?? "—";
+            string statusName = SafeReadString(row, "StatusName") ?? "—";
+            decimal price = TryReadDecimal(row, "RoomPrice") ?? 0m;
+            int occupants = TryReadInt(row, "Occupants");
+
+            var mainLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 1,
+                RowCount = 3,
+                Padding = new Padding(14, 12, 14, 12)
+            };
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+
+            // Header: Phòng + Giá
+            var lblRoom = new Label
+            {
+                Text = $"Phòng {roomNumber}",
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 79, 159),
+                Dock = DockStyle.Top,
+                Height = 28,
+                AutoSize = false,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Margin = new Padding(0, 0, 0, 4)
+            };
+
+            var lblPrice = new Label
+            {
+                Text = $"{price:N0}đ",
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 122, 204),
+                Dock = DockStyle.Top,
+                Height = 24,
+                AutoSize = false,
+                TextAlign = ContentAlignment.TopRight,
+                Margin = new Padding(0, 0, 0, 6)
+            };
+
+            // Info: Loại, Trạng thái, Số người
+            var infoPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0) };
+            var infoLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 1,
+                RowCount = 3,
+                Padding = new Padding(0)
+            };
+
+            var lblTypeInfo = new Label
+            {
+                Text = $"Loại: {typeName}",
+                Font = new Font("Segoe UI", 9),
+                ForeColor = Color.FromArgb(80, 80, 80),
+                Dock = DockStyle.Top,
+                Height = 20,
+                AutoSize = false,
+                TextAlign = ContentAlignment.TopLeft,
+                Margin = new Padding(0, 0, 0, 2)
+            };
+
+            var lblStatusInfo = new Label
+            {
+                Text = $"Trạng thái: {statusName}",
+                Font = new Font("Segoe UI", 9),
+                ForeColor = Color.FromArgb(80, 80, 80),
+                Dock = DockStyle.Top,
+                Height = 20,
+                AutoSize = false,
+                TextAlign = ContentAlignment.TopLeft,
+                Margin = new Padding(0, 0, 0, 2)
+            };
+
+            var lblOccupantsInfo = new Label
+            {
+                Text = $"Số người: {occupants}",
+                Font = new Font("Segoe UI", 9),
+                ForeColor = Color.FromArgb(80, 80, 80),
+                Dock = DockStyle.Top,
+                Height = 20,
+                AutoSize = false,
+                TextAlign = ContentAlignment.TopLeft
+            };
+
+            infoLayout.Controls.Add(lblTypeInfo, 0, 0);
+            infoLayout.Controls.Add(lblStatusInfo, 0, 1);
+            infoLayout.Controls.Add(lblOccupantsInfo, 0, 2);
+            infoPanel.Controls.Add(infoLayout);
+
+            mainLayout.Controls.Add(lblRoom, 0, 0);
+            mainLayout.Controls.Add(lblPrice, 0, 1);
+            mainLayout.Controls.Add(infoPanel, 0, 2);
+
+            card.Controls.Add(mainLayout);
+
+            card.Click += (s, e) => ShowRoomDetailsForm(row, roomId);
+            lblRoom.Click += (s, e) => ShowRoomDetailsForm(row, roomId);
+            lblPrice.Click += (s, e) => ShowRoomDetailsForm(row, roomId);
+            lblTypeInfo.Click += (s, e) => ShowRoomDetailsForm(row, roomId);
+            lblStatusInfo.Click += (s, e) => ShowRoomDetailsForm(row, roomId);
+            lblOccupantsInfo.Click += (s, e) => ShowRoomDetailsForm(row, roomId);
+
+            return card;
+        }
+
+        private void ShowRoomDetailsForm(DataRow row, int roomId)
+        {
+            _selectedRoomId = roomId;
+
+            try
+            {
+                var frmType = Type.GetType("quan_ly_chuoi_nha_tro.GUI.FrmRoomDetailForm");
+                if (frmType != null)
+                {
+                    var frm = (Form)Activator.CreateInstance(frmType, _adminBll, row, _contractsBranch, _tenantsHistoryAll);
+                    if (frm.ShowDialog(this) == DialogResult.OK)
+                    {
+                        _ = LoadAllAsync();
+                    }
+                    frm.Dispose();
+                }
+                else
+                {
+                    MessageBox.Show("Form chi tiết phòng chưa được tải. Vui lòng rebuild project.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private string SafeReadString(DataRow row, string col)
+        {
+            if (row == null || !row.Table.Columns.Contains(col)) return null;
+            var v = row[col];
+            if (v == DBNull.Value || v == null) return null;
+            return v.ToString();
+        }
+
+        private decimal? TryReadDecimal(DataRow row, string col)
+        {
+            if (row == null || !row.Table.Columns.Contains(col)) return null;
+            return decimal.TryParse(row[col]?.ToString(), out var val) ? (decimal?)val : null;
+        }
+
+        private async Task SaveTenantAsync()
+        {
+            if (_selectedTenantId <= 0 || _selectedTenantRow == null)
+            {
+                MessageBox.Show("Vui lòng chọn một khách thuê trước.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            try
+            {
+                await _adminBll.UpdateTenantAsync(
+                    _selectedTenantId,
+                    _txtTenantFullName.Text.Trim(),
+                    _txtTenantIdentity.Text.Trim(),
+                    _txtTenantPhone.Text.Trim(),
+                    _txtTenantEmail.Text.Trim(),
+                    _dtTenantBirth.Checked ? _dtTenantBirth.Value : (DateTime?)null,
+                    _txtTenantAddress.Text.Trim(),
+                    _txtTenantTempReg.Text.Trim(),
+                    _dtTenantTempFrom.Checked ? _dtTenantTempFrom.Value : (DateTime?)null,
+                    _dtTenantTempTo.Checked ? _dtTenantTempTo.Value : (DateTime?)null,
+                    _chkTenantActive.Checked,
+                    _txtTenantFrontId.Text.Trim(),
+                    _txtTenantBackId.Text.Trim()
+                );
+
+                await LoadAllAsync();
+                var refreshed = FindById(_tenantsBranch, "TenantId", _selectedTenantId);
+                if (refreshed != null) ShowTenantDetails(refreshed, _selectedTenantCard);
+                MessageBox.Show("Đã lưu thông tin khách thuê.", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Không thể lưu khách thuê.\n\n" + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
     }

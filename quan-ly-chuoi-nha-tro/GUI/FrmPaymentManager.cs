@@ -45,11 +45,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void InitializeComponent()
         {
-            Text = _invoiceId.HasValue ? $"Thanh toán - {_invoiceNumber ?? _invoiceId.Value.ToString()}" : "Thanh toán";
+            Text = _invoiceId.HasValue ? $"Thanh toán - {_invoiceNumber ?? _invoiceId.Value.ToString()}" : "Quản lý thanh toán";
             StartPosition = FormStartPosition.CenterParent;
-            Width = 1200;
-            Height = 650;
-            BackColor = Color.FromArgb(245, 247, 250);
+            Width = 1400;
+            Height = 750;
+            BackColor = Color.FromArgb(240, 242, 245);
+            Font = new Font("Segoe UI", 10F);
 
             _grid = new DataGridView
             {

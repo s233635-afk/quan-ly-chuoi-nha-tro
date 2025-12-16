@@ -23,12 +23,31 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private DataTable _history;
         private DataTable _rooms;
 
-        private DataGridView _dgvTenants;
+        private FlowLayoutPanel _tenantCardsHost;
+        private Panel _tenantDetailPanel;
         private DataGridView _dgvDependents;
         private DataGridView _dgvHistory;
 
         private TextBox _txtSearch;
         private Label _lblTotal;
+        
+        private Label _lblTenantDetailTitle;
+        private TextBox _txtTenantFullName;
+        private TextBox _txtTenantIdentity;
+        private TextBox _txtTenantPhone;
+        private TextBox _txtTenantEmail;
+        private DateTimePicker _dtTenantBirth;
+        private TextBox _txtTenantAddress;
+        private TextBox _txtTenantTempReg;
+        private DateTimePicker _dtTenantTempFrom;
+        private DateTimePicker _dtTenantTempTo;
+        private TextBox _txtTenantFrontId;
+        private TextBox _txtTenantBackId;
+        private CheckBox _chkTenantActive;
+        private Button _btnTenantSave;
+        private DataRow _selectedTenantRow;
+        private Control _selectedTenantCard;
+        private int _selectedTenantId;
 
         public FrmTenantManager(AdminDataBLL bll, int? branchId = null)
         {
@@ -105,31 +124,29 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             toolbar.Controls.Add(actions);
 
-            var tab = new TabControl
+            var host = new SplitContainer
             {
                 Dock = DockStyle.Fill,
+                SplitterDistance = 400,
+                SplitterWidth = 6,
                 BackColor = Color.White
             };
 
-            // Tenants tab
-            _dgvTenants = CreateGrid();
-            var tabTenants = new TabPage("Khách thuê") { BackColor = Color.FromArgb(240, 242, 245), Padding = new Padding(10) };
-            tabTenants.Controls.Add(_dgvTenants);
-            tab.TabPages.Add(tabTenants);
+            _tenantCardsHost = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                AutoScroll = true,
+                WrapContents = true,
+                FlowDirection = FlowDirection.LeftToRight,
+                BackColor = Color.WhiteSmoke,
+                Padding = new Padding(6)
+            };
+            host.Panel1.Controls.Add(_tenantCardsHost);
 
-            // Dependents tab
-            _dgvDependents = CreateGrid();
-            var tabDependents = new TabPage("Người ở cùng") { BackColor = Color.FromArgb(240, 242, 245), Padding = new Padding(10) };
-            tabDependents.Controls.Add(_dgvDependents);
-            tab.TabPages.Add(tabDependents);
+            BuildTenantDetailsPanel();
+            host.Panel2.Controls.Add(_tenantDetailPanel);
 
-            // History tab
-            _dgvHistory = CreateGrid();
-            var tabHistory = new TabPage("Lịch sử phòng") { BackColor = Color.FromArgb(240, 242, 245), Padding = new Padding(10) };
-            tabHistory.Controls.Add(_dgvHistory);
-            tab.TabPages.Add(tabHistory);
-
-            Controls.Add(tab);
+            Controls.Add(host);
             Controls.Add(toolbar);
 
             Load += async (s, e) => await LoadDataAsync();
@@ -190,23 +207,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                 PopulateRoomNumbers();
 
-                _dgvTenants.DataSource = _tenants;
-                _dgvDependents.DataSource = _dependents;
-                _dgvHistory.DataSource = _history;
-
-                if (_dgvTenants.Columns.Contains("TenantId"))
-                    _dgvTenants.Columns["TenantId"].Visible = false;
-                if (_dgvDependents.Columns.Contains("TenantId"))
-                    _dgvDependents.Columns["TenantId"].Visible = false;
-                if (_dgvHistory.Columns.Contains("TenantId"))
-                    _dgvHistory.Columns["TenantId"].Visible = false;
-                if (_dgvHistory.Columns.Contains("RoomId"))
-                    _dgvHistory.Columns["RoomId"].Visible = false;
-
                 _lblTotal.Text = $"Tổng: {_tenants.Rows.Count}";
                 ApplySearch();
-                ConfigureDependentsGrid();
-                ConfigureHistoryGrid();
             }
             catch (Exception ex)
             {
@@ -236,14 +238,375 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 view.RowFilter = string.Empty;
             }
 
-            _dgvTenants.DataSource = view;
-            _lblTotal.Text = $"Tổng: {view.Count}";
-            ConfigureTenantGrid();
+            var filtered = view.ToTable();
+            _lblTotal.Text = $"Tổng: {filtered.Rows.Count}";
+            RenderTenantCards(filtered);
+            if (_selectedTenantId > 0)
+            {
+                var match = FindById(filtered, "TenantId", _selectedTenantId);
+                if (match != null)
+                {
+                    ShowTenantDetails(match, _selectedTenantCard);
+                }
+                else
+                {
+                    ClearTenantDetails();
+                }
+            }
         }
 
-        private DataRowView GetSelectedTenant()
+        private void RenderTenantCards(DataTable tenants)
         {
-            return _dgvTenants.CurrentRow?.DataBoundItem as DataRowView;
+            if (_tenantCardsHost == null) return;
+            _tenantCardsHost.SuspendLayout();
+            _tenantCardsHost.Controls.Clear();
+
+            if (tenants == null || tenants.Rows.Count == 0)
+            {
+                _tenantCardsHost.Controls.Add(new Label
+                {
+                    AutoSize = true,
+                    Text = "Chưa có khách thuê.",
+                    ForeColor = Color.FromArgb(90, 90, 90),
+                    Margin = new Padding(8, 6, 0, 0)
+                });
+                _tenantCardsHost.ResumeLayout();
+                return;
+            }
+
+            foreach (DataRow row in tenants.Rows)
+            {
+                var card = CreateTenantCard(row);
+                _tenantCardsHost.Controls.Add(card);
+                if (_selectedTenantId == 0)
+                {
+                    ShowTenantDetails(row, card);
+                }
+            }
+
+            _tenantCardsHost.ResumeLayout();
+        }
+
+        private Control CreateTenantCard(DataRow tenantRow)
+        {
+            var panel = new Panel
+            {
+                Width = 240,
+                Height = 140,
+                BackColor = Color.White,
+                Margin = new Padding(8),
+                Padding = new Padding(12),
+                Cursor = Cursors.Hand
+            };
+            panel.Paint += (s, e) =>
+            {
+                using (var pen = new Pen(Color.FromArgb(210, 220, 230)))
+                {
+                    var rect = new Rectangle(0, 0, panel.Width - 1, panel.Height - 1);
+                    e.Graphics.DrawRectangle(pen, rect);
+                }
+            };
+
+            int tenantId = TryReadInt(tenantRow, "TenantId");
+            string name = TextFixer.FixUtf8Mojibake(ReadString(tenantRow, "FullName") ?? "");
+            string phone = ReadString(tenantRow, "PhoneNumber");
+            string identity = ReadString(tenantRow, "IdentityCard");
+            string email = ReadString(tenantRow, "Email");
+            string address = TextFixer.FixUtf8Mojibake(ReadString(tenantRow, "Address"));
+            string status = (tenantRow.Table.Columns.Contains("IsActive") && bool.TryParse(tenantRow["IsActive"]?.ToString(), out var active) && active) ? "Đang ở" : "Tạm ngưng";
+
+            var lblName = new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 24,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Text = $"{tenantId} · {NullDash(name)}",
+                ForeColor = Color.FromArgb(0, 79, 159)
+            };
+
+            var lblInfo = new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 46,
+                Font = new Font("Segoe UI", 9f, FontStyle.Regular),
+                ForeColor = Color.FromArgb(70, 70, 70),
+                Text = $"☎ {NullDash(phone)}   |   CCCD: {NullDash(identity)}\n✉ {NullDash(email)}",
+                AutoSize = false
+            };
+
+            var lblAddress = new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 32,
+                Text = $"🏠 {NullDash(address)}",
+                Font = new Font("Segoe UI", 8.8f),
+                ForeColor = Color.FromArgb(90, 90, 90)
+            };
+
+            var lblStatus = new Label
+            {
+                AutoSize = true,
+                Text = status,
+                BackColor = status.Contains("Đang") ? Color.FromArgb(232, 247, 239) : Color.FromArgb(252, 236, 238),
+                ForeColor = status.Contains("Đang") ? Color.FromArgb(40, 167, 69) : Color.FromArgb(220, 53, 69),
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                Padding = new Padding(6, 2, 6, 2),
+                Location = new Point(12, panel.Height - 28)
+            };
+
+            panel.Controls.Add(lblStatus);
+            panel.Controls.Add(lblAddress);
+            panel.Controls.Add(lblInfo);
+            panel.Controls.Add(lblName);
+
+            void HandleClick(object sender, EventArgs args)
+            {
+                ShowTenantDetails(tenantRow, panel);
+            }
+
+            panel.Click += HandleClick;
+            foreach (Control ctl in panel.Controls)
+            {
+                ctl.Click += HandleClick;
+            }
+
+            return panel;
+        }
+
+        private void ShowTenantDetails(DataRow tenantRow, Control card)
+        {
+            if (tenantRow == null)
+            {
+                ClearTenantDetails();
+                return;
+            }
+
+            _selectedTenantRow = tenantRow;
+            _selectedTenantId = TryReadInt(tenantRow, "TenantId");
+            _lblTenantDetailTitle.Text = $"Khách thuê #{_selectedTenantId}";
+
+            _txtTenantFullName.Text = ReadString(tenantRow, "FullName") ?? "";
+            _txtTenantIdentity.Text = ReadString(tenantRow, "IdentityCard") ?? "";
+            _txtTenantPhone.Text = ReadString(tenantRow, "PhoneNumber") ?? "";
+            _txtTenantEmail.Text = ReadString(tenantRow, "Email") ?? "";
+            SetDatePicker(_dtTenantBirth, ReadString(tenantRow, "BirthDate"));
+            _txtTenantAddress.Text = TextFixer.FixUtf8Mojibake(ReadString(tenantRow, "Address") ?? "");
+            _txtTenantTempReg.Text = TextFixer.FixUtf8Mojibake(ReadString(tenantRow, "TemporaryRegistration") ?? "");
+            SetDatePicker(_dtTenantTempFrom, ReadString(tenantRow, "TemporaryRegistrationDate"));
+            SetDatePicker(_dtTenantTempTo, ReadString(tenantRow, "TemporaryRegistrationExpiry"));
+            _txtTenantFrontId.Text = ReadString(tenantRow, "FrontIdPhoto") ?? "";
+            _txtTenantBackId.Text = ReadString(tenantRow, "BackIdPhoto") ?? "";
+            _chkTenantActive.Checked = tenantRow.Table.Columns.Contains("IsActive") && bool.TryParse(tenantRow["IsActive"]?.ToString(), out var active) && active;
+
+            HighlightSelectedCard(card);
+        }
+
+        private void HighlightSelectedCard(Control card)
+        {
+            if (_selectedTenantCard != null && !_selectedTenantCard.IsDisposed)
+            {
+                _selectedTenantCard.BackColor = Color.White;
+            }
+            _selectedTenantCard = card;
+            if (_selectedTenantCard != null)
+            {
+                _selectedTenantCard.BackColor = Color.FromArgb(248, 252, 255);
+            }
+        }
+
+        private void ClearTenantDetails()
+        {
+            _selectedTenantId = 0;
+            _selectedTenantRow = null;
+            _lblTenantDetailTitle.Text = "Chọn 1 khách thuê để xem thông tin";
+            _txtTenantFullName.Text = "";
+            _txtTenantIdentity.Text = "";
+            _txtTenantPhone.Text = "";
+            _txtTenantEmail.Text = "";
+            _dtTenantBirth.Checked = false;
+            _txtTenantAddress.Text = "";
+            _txtTenantTempReg.Text = "";
+            _dtTenantTempFrom.Checked = false;
+            _dtTenantTempTo.Checked = false;
+            _txtTenantFrontId.Text = "";
+            _txtTenantBackId.Text = "";
+            _chkTenantActive.Checked = false;
+            _selectedTenantCard = null;
+        }
+
+        private void SetDatePicker(DateTimePicker picker, string rawValue)
+        {
+            if (picker == null) return;
+            if (DateTime.TryParse(rawValue, out var dt))
+            {
+                picker.Value = dt;
+                picker.Checked = true;
+            }
+            else
+            {
+                picker.Checked = false;
+            }
+        }
+
+        private async Task SaveTenantAsync()
+        {
+            if (_selectedTenantId <= 0 || _selectedTenantRow == null)
+            {
+                MessageBox.Show("Vui lòng chọn một khách thuê trước.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            try
+            {
+                await _bll.UpdateTenantAsync(
+                    _selectedTenantId,
+                    _txtTenantFullName.Text.Trim(),
+                    _txtTenantIdentity.Text.Trim(),
+                    _txtTenantPhone.Text.Trim(),
+                    _txtTenantEmail.Text.Trim(),
+                    _dtTenantBirth.Checked ? _dtTenantBirth.Value : (DateTime?)null,
+                    _txtTenantAddress.Text.Trim(),
+                    _txtTenantTempReg.Text.Trim(),
+                    _dtTenantTempFrom.Checked ? _dtTenantTempFrom.Value : (DateTime?)null,
+                    _dtTenantTempTo.Checked ? _dtTenantTempTo.Value : (DateTime?)null,
+                    _chkTenantActive.Checked,
+                    _txtTenantFrontId.Text.Trim(),
+                    _txtTenantBackId.Text.Trim()
+                );
+
+                await LoadDataAsync();
+                var refreshed = FindById(_tenants, "TenantId", _selectedTenantId);
+                if (refreshed != null) ShowTenantDetails(refreshed, _selectedTenantCard);
+                MessageBox.Show("Đã lưu thông tin khách thuê.", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Không thể lưu khách thuê.\n\n" + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private DataRow GetSelectedTenant()
+        {
+            return _selectedTenantRow;
+        }
+
+        private void BuildTenantDetailsPanel()
+        {
+            _tenantDetailPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White,
+                Padding = new Padding(16),
+                AutoScroll = true
+            };
+
+            _lblTenantDetailTitle = new Label
+            {
+                AutoSize = true,
+                Text = "Chọn 1 khách thuê để xem thông tin",
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 79, 159),
+                Margin = new Padding(0, 0, 0, 12),
+                Dock = DockStyle.Top
+            };
+            _tenantDetailPanel.Controls.Add(_lblTenantDetailTitle);
+
+            var detailLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                ColumnCount = 2,
+                RowCount = 12,
+                Padding = new Padding(0, 6, 0, 0)
+            };
+            detailLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
+            detailLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+
+            Control AddRow(string label, Control ctl)
+            {
+                var lbl = new Label
+                {
+                    Text = label,
+                    Dock = DockStyle.Fill,
+                    TextAlign = ContentAlignment.MiddleLeft,
+                    ForeColor = Color.FromArgb(70, 70, 70),
+                    Margin = new Padding(0, 4, 8, 4)
+                };
+                ctl.Dock = DockStyle.Fill;
+                ctl.Margin = new Padding(0, 4, 0, 4);
+                detailLayout.Controls.Add(lbl);
+                detailLayout.Controls.Add(ctl);
+                return ctl;
+            }
+
+            _txtTenantFullName = new TextBox();
+            _txtTenantIdentity = new TextBox();
+            _txtTenantPhone = new TextBox();
+            _txtTenantEmail = new TextBox();
+            _dtTenantBirth = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true };
+            _txtTenantAddress = new TextBox { Multiline = true, Height = 60, ScrollBars = ScrollBars.Vertical };
+            _txtTenantTempReg = new TextBox();
+            _dtTenantTempFrom = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true };
+            _dtTenantTempTo = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true };
+            _txtTenantFrontId = new TextBox();
+            _txtTenantBackId = new TextBox();
+            _chkTenantActive = new CheckBox { Text = "Đang hoạt động", AutoSize = true };
+
+            AddRow("Họ tên", _txtTenantFullName);
+            AddRow("CCCD", _txtTenantIdentity);
+            AddRow("SĐT", _txtTenantPhone);
+            AddRow("Email", _txtTenantEmail);
+            AddRow("Ngày sinh", _dtTenantBirth);
+            AddRow("Địa chỉ", _txtTenantAddress);
+            AddRow("Tạm trú tại", _txtTenantTempReg);
+            AddRow("Tạm trú từ", _dtTenantTempFrom);
+            AddRow("Tạm trú đến", _dtTenantTempTo);
+            AddRow("Ảnh CCCD (mặt trước)", _txtTenantFrontId);
+            AddRow("Ảnh CCCD (mặt sau)", _txtTenantBackId);
+            AddRow("Trạng thái", _chkTenantActive);
+
+            detailLayout.Controls.Add(new Label());
+            _btnTenantSave = new Button
+            {
+                Text = "Lưu",
+                Width = 120,
+                Height = 36,
+                BackColor = Color.FromArgb(0, 123, 255),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat
+            };
+            _btnTenantSave.FlatAppearance.BorderSize = 0;
+            _btnTenantSave.Click += async (s, e) => await SaveTenantAsync();
+            detailLayout.Controls.Add(_btnTenantSave);
+
+            _tenantDetailPanel.Controls.Add(detailLayout);
+        }
+
+        private string ReadString(DataRow r, string col)
+        {
+            if (r == null || r.Table == null || !r.Table.Columns.Contains(col)) return null;
+            var v = r[col];
+            if (v == DBNull.Value || v == null) return null;
+            return TextFixer.ForceFixUtf8Mojibake(v.ToString());
+        }
+
+        private static int TryReadInt(DataRow r, string col)
+        {
+            if (r == null || r.Table == null || !r.Table.Columns.Contains(col)) return 0;
+            if (int.TryParse(r[col]?.ToString(), out var v)) return v;
+            return 0;
+        }
+
+        private static string NullDash(string s) => string.IsNullOrWhiteSpace(s) ? "—" : s.Trim();
+
+        private static DataRow FindById(DataTable dt, string col, int id)
+        {
+            if (dt == null || !dt.Columns.Contains(col)) return null;
+            foreach (DataRow r in dt.Rows)
+            {
+                if (int.TryParse(r[col]?.ToString(), out var currentId) && currentId == id) return r;
+            }
+            return null;
         }
 
         private async void AddTenant()
@@ -264,7 +627,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 return;
             }
 
-            using (var frm = new FrmTenantEditor(_bll, row.Row))
+            using (var frm = new FrmTenantEditor(_bll, row))
             {
                 if (frm.ShowDialog(this) == DialogResult.OK)
                     await LoadDataAsync();
@@ -273,27 +636,20 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private async void DeleteTenant()
         {
-            var row = GetSelectedTenant();
-            if (row == null)
+            if (_selectedTenantId <= 0)
             {
                 MessageBox.Show("Chọn khách thuê trước.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
-            int tenantId = int.TryParse(row["TenantId"]?.ToString(), out var id) ? id : 0;
-            string name = row["FullName"]?.ToString() ?? tenantId.ToString();
-            if (tenantId <= 0)
-            {
-                MessageBox.Show("Không xác định được TenantId.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
+            string name = _selectedTenantRow != null ? ReadString(_selectedTenantRow, "FullName") : _selectedTenantId.ToString();
 
-            if (MessageBox.Show($"Xóa khách thuê \"{name}\"?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+            if (MessageBox.Show($"Xóa khách thuê \"{NullDash(name)}\"?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                 return;
 
             try
             {
-                await _bll.DeleteTenantAsync(tenantId);
+                await _bll.DeleteTenantAsync(_selectedTenantId);
                 await LoadDataAsync();
             }
             catch (Exception ex)
@@ -343,25 +699,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             return DateTime.TryParse(value.ToString(), out var dt) ? dt : DateTime.MinValue;
         }
 
-        private void ConfigureTenantGrid()
-        {
-            if (_dgvTenants?.Columns == null) return;
-
-            SetHeader(_dgvTenants, "FullName", "Họ tên", 0);
-            SetHeader(_dgvTenants, "IdentityCard", "CCCD/CMND", 1);
-            SetHeader(_dgvTenants, "PhoneNumber", "SĐT", 2);
-            SetHeader(_dgvTenants, "Email", "Email", 3);
-            SetHeader(_dgvTenants, "BirthDate", "Ngày sinh", 4);
-            SetHeader(_dgvTenants, "Address", "Địa chỉ", 5);
-            SetHeader(_dgvTenants, "RoomNumber", "Số phòng", 6);
-            SetHeader(_dgvTenants, "TemporaryRegistration", "Tạm trú", 7);
-            SetHeader(_dgvTenants, "TemporaryRegistrationDate", "Tạm trú từ", 8);
-            SetHeader(_dgvTenants, "TemporaryRegistrationExpiry", "Tạm trú đến", 9);
-            SetHeader(_dgvTenants, "IsActive", "Kích hoạt", 10);
-            SetHeader(_dgvTenants, "CreatedDate", "Ngày tạo", 11);
-            SetHeader(_dgvTenants, "UpdatedDate", "Cập nhật", 12);
-            if (_dgvTenants.Columns.Contains("BranchId")) _dgvTenants.Columns["BranchId"].Visible = false;
-        }
 
         private void ConfigureDependentsGrid()
         {
@@ -385,13 +722,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             SetHeader(_dgvHistory, "CreatedDate", "Ngày tạo");
         }
 
-        private void SetHeader(DataGridView grid, string columnName, string header, int? displayIndex = null, bool visible = true)
+        private void SetHeader(DataGridView grid, string columnName, string header, bool visible = true)
         {
-            if (!grid.Columns.Contains(columnName)) return;
+            if (grid == null || !grid.Columns.Contains(columnName)) return;
             var col = grid.Columns[columnName];
             col.HeaderText = header;
             col.Visible = visible;
-            if (displayIndex.HasValue) col.DisplayIndex = displayIndex.Value;
         }
     }
 }

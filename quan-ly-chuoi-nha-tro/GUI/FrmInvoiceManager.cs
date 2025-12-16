@@ -59,6 +59,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 BorderStyle = BorderStyle.None
             };
             _grid.DoubleClick += (s, e) => EditSelected();
+            _grid.CellDoubleClick += (s, e) => 
+            {
+                if (e.ColumnIndex >= 0 && _grid.Columns[e.ColumnIndex].Name == "InvoiceNumber")
+                    ShowInvoiceDetail();
+            };
             _grid.SelectionChanged += (s, e) => UpdateSummary();
             UiKit.StyleGrid(_grid);
 
@@ -391,6 +396,25 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
 
             using (var frm = new FrmPaymentEditor(_bll, row))
+            {
+                if (frm.ShowDialog(this) == DialogResult.OK)
+                {
+                    _ = LoadDataAsync();
+                    AdminEvents.NotifyDataChanged();
+                }
+            }
+        }
+
+        private void ShowInvoiceDetail()
+        {
+            var row = GetCurrentRow();
+            if (row == null)
+            {
+                MessageBox.Show("Chọn một hóa đơn để xem chi tiết.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using (var frm = new FrmInvoiceEditor(_bll, row))
             {
                 if (frm.ShowDialog(this) == DialogResult.OK)
                 {

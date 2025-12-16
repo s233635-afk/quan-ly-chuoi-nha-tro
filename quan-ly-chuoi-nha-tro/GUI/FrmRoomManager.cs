@@ -23,16 +23,22 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private DataTable _statuses;
         private DataTable _roomTypes;
         private DataTable _tenantHistory;
+        private DataTable _contracts;
 
-        private DataGridView _grid;
+        private FlowLayoutPanel _roomCardsHost;
+        private Panel _roomDetailPanel;
         private ComboBox _cboStatus;
         private TextBox _txtSearch;
         private Label _lblSummary;
+        private Label _lblRoomCount;
 
         private Button _btnSearch;
         private Button _btnRefresh;
         private Button _btnChangeStatus;
         private Button _btnEdit;
+
+        private int _selectedRoomId = 0;
+        private DataRow _selectedRoomRow = null;
 
         public FrmRoomManager(AdminDataBLL bll, int? branchId = null)
         {
@@ -47,13 +53,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void InitializeComponent()
         {
-            AutoScroll = true;
             Text = "Quản lý phòng";
             StartPosition = FormStartPosition.CenterParent;
             BackColor = Color.FromArgb(240, 242, 245);
             Font = new Font("Segoe UI", 10F);
-            Width = 1100;
-            Height = 650;
+            Width = 1400;
+            Height = 750;
 
             var toolbar = new Panel
             {
@@ -173,39 +178,50 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 122, 204)
             };
+            _lblRoomCount = new Label
+            {
+                Text = "Phòng: 0",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 122, 204),
+                Margin = new Padding(12, 0, 0, 0)
+            };
             stats.Controls.Add(_lblSummary);
+            stats.Controls.Add(_lblRoomCount);
 
             toolbar.Controls.Add(stats);
             toolbar.Controls.Add(filters);
 
-            _grid = new DataGridView
+            var splitContainer = new SplitContainer
             {
                 Dock = DockStyle.Fill,
-                ReadOnly = true,
-                AllowUserToAddRows = false,
-                AllowUserToDeleteRows = false,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                MultiSelect = false,
-                AutoGenerateColumns = false,
-                RowHeadersVisible = false,
-                BackgroundColor = Color.White,
-                BorderStyle = BorderStyle.None,
-                ScrollBars = ScrollBars.Both,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+                Orientation = Orientation.Vertical,
+                SplitterDistance = 400,
+                BackColor = Color.White
             };
-            _grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-            _grid.CellDoubleClick += (s, e) => ShowRoomInfo();
 
-            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "OrderNo", DataPropertyName = "OrderNo", HeaderText = "STT", FillWeight = 40 });
-            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "RoomId", DataPropertyName = "RoomId", Visible = false });
-            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "RoomNumber", DataPropertyName = "RoomNumber", HeaderText = "Số phòng", FillWeight = 90 });
-            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "TypeName", DataPropertyName = "TypeName", HeaderText = "Loại phòng", FillWeight = 140 });
-            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "RoomPrice", DataPropertyName = "RoomPrice", HeaderText = "Giá/Tháng", FillWeight = 110, DefaultCellStyle = new DataGridViewCellStyle { Format = "N0", Alignment = DataGridViewContentAlignment.MiddleRight } });
-            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "StatusName", DataPropertyName = "StatusName", HeaderText = "Trạng thái", FillWeight = 100 });
-            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Occupants", DataPropertyName = "Occupants", HeaderText = "Số người", FillWeight = 80, DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter } });
-            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Area", DataPropertyName = "Area", HeaderText = "Diện tích", FillWeight = 80, DefaultCellStyle = new DataGridViewCellStyle { Format = "0.00", Alignment = DataGridViewContentAlignment.MiddleRight } });
+            _roomCardsHost = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                AutoScroll = true,
+                WrapContents = true,
+                FlowDirection = FlowDirection.LeftToRight,
+                BackColor = Color.FromArgb(245, 247, 250),
+                Padding = new Padding(16)
+            };
 
-            Controls.Add(_grid);
+            _roomDetailPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White,
+                Padding = new Padding(14),
+                AutoScroll = true
+            };
+
+            splitContainer.Panel1.Controls.Add(_roomCardsHost);
+            splitContainer.Panel2.Controls.Add(_roomDetailPanel);
+
+            Controls.Add(splitContainer);
             Controls.Add(toolbar);
 
             Load += async (s, e) => await LoadRoomsAsync();
@@ -221,6 +237,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 _statuses = await _bll.GetRoomStatusesAsync() ?? new DataTable();
                 _roomTypes = await _bll.GetRoomTypesAsync() ?? new DataTable();
                 _tenantHistory = await _bll.GetTenantHistoryAsync() ?? new DataTable();
+                _contracts = await _bll.GetContractsAsync() ?? new DataTable();
 
                 if (_branchId.HasValue && _rooms.Columns.Contains("BranchId"))
                 {
@@ -233,7 +250,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 PopulateOccupancy();
                 PopulateStatusFilter();
 
-                _grid.DataSource = _rooms;
                 ApplyFilter();
             }
             catch (Exception ex)
@@ -354,39 +370,344 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             view.RowFilter = filters.Count > 0 ? string.Join(" AND ", filters) : string.Empty;
 
-            // Chỉ hiển thị tối đa 20 phòng để tránh danh sách quá dài
             var filteredTable = view.ToTable();
-            var aRooms = filteredTable.AsEnumerable()
-                .Where(r => SafeToString(r, "RoomNumber")?.StartsWith("A", StringComparison.OrdinalIgnoreCase) == true)
-                .OrderBy(r => SafeToString(r, "RoomNumber"))
-                .Take(10)
-                .ToList();
-            var bRooms = filteredTable.AsEnumerable()
-                .Where(r => SafeToString(r, "RoomNumber")?.StartsWith("B", StringComparison.OrdinalIgnoreCase) == true)
-                .OrderBy(r => SafeToString(r, "RoomNumber"))
-                .Take(10)
-                .ToList();
+            RenderRoomCards(filteredTable);
+            UpdateStats(filteredTable);
+        }
 
-            // A ở trên, B ở dưới, giữ nguyên giới hạn 10 mỗi nhóm
-            var selected = aRooms.Concat(bRooms).ToList();
+        private void RenderRoomCards(DataTable filteredTable)
+        {
+            _roomCardsHost.SuspendLayout();
+            _roomCardsHost.Controls.Clear();
 
-            var displayTable = filteredTable.Clone();
-            if (!displayTable.Columns.Contains("OrderNo"))
-                displayTable.Columns.Add("OrderNo", typeof(int));
-            displayTable.Columns["OrderNo"].SetOrdinal(0);
-
-            int order = 1;
-            foreach (var row in selected)
+            if (filteredTable == null || filteredTable.Rows.Count == 0)
             {
-                var newRow = displayTable.NewRow();
-                foreach (DataColumn col in filteredTable.Columns)
-                    newRow[col.ColumnName] = row[col];
-                newRow["OrderNo"] = order++;
-                displayTable.Rows.Add(newRow);
+                _roomCardsHost.Controls.Add(new Label
+                {
+                    AutoSize = true,
+                    Text = "Không có phòng nào.",
+                    ForeColor = Color.FromArgb(90, 90, 90)
+                });
+                _roomCardsHost.ResumeLayout();
+                _lblRoomCount.Text = "Phòng: 0";
+                return;
             }
 
-            _grid.DataSource = displayTable;
-            UpdateStats(displayTable);
+            foreach (DataRow row in filteredTable.Rows)
+            {
+                int roomId = TryGetInt(row, "RoomId");
+                if (roomId <= 0) continue;
+
+                var card = CreateRoomCard(row, roomId);
+                _roomCardsHost.Controls.Add(card);
+            }
+
+            _roomCardsHost.ResumeLayout();
+            _lblRoomCount.Text = $"Phòng: {filteredTable.Rows.Count}";
+        }
+
+        private Panel CreateRoomCard(DataRow row, int roomId)
+        {
+            var card = new Panel
+            {
+                Width = 300,
+                Height = 180,
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.None,
+                Margin = new Padding(10, 10, 10, 10),
+                Cursor = Cursors.Hand,
+                Tag = roomId
+            };
+
+            card.Paint += (s, e) =>
+            {
+                // Vẽ border chính - xanh dương
+                using (var pen = new Pen(Color.FromArgb(70, 160, 230), 2))
+                {
+                    e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
+                }
+                // Vẽ shadow - gradient từ góc
+                using (var shadowPen = new Pen(Color.FromArgb(200, 220, 245), 1))
+                {
+                    e.Graphics.DrawRectangle(shadowPen, 1, 1, card.Width - 3, card.Height - 3);
+                }
+            };
+
+            card.MouseEnter += (s, e) =>
+            {
+                card.BackColor = Color.FromArgb(245, 250, 255);
+            };
+            card.MouseLeave += (s, e) =>
+            {
+                card.BackColor = Color.White;
+            };
+
+            string roomNumber = SafeToString(row, "RoomNumber") ?? "—";
+            string typeName = SafeToString(row, "TypeName") ?? "—";
+            string statusName = SafeToString(row, "StatusName") ?? "—";
+            decimal price = TryGetDecimal(row, "RoomPrice") ?? 0m;
+            int occupants = TryGetInt(row, "Occupants");
+
+            var mainLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 1,
+                RowCount = 3,
+                Padding = new Padding(14, 12, 14, 12)
+            };
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+
+            // Header: Phòng + Giá
+            var lblRoom = new Label
+            {
+                Text = $"Phòng {roomNumber}",
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 79, 159),
+                Dock = DockStyle.Top,
+                Height = 28,
+                AutoSize = false,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Margin = new Padding(0, 0, 0, 4)
+            };
+
+            var lblPrice = new Label
+            {
+                Text = $"{price:N0}đ",
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 122, 204),
+                Dock = DockStyle.Top,
+                Height = 24,
+                AutoSize = false,
+                TextAlign = ContentAlignment.TopRight,
+                Margin = new Padding(0, 0, 0, 6)
+            };
+
+            // Info: Loại, Trạng thái, Số người
+            var infoPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0) };
+            var infoLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 1,
+                RowCount = 3,
+                Padding = new Padding(0)
+            };
+
+            var lblTypeInfo = new Label
+            {
+                Text = $"Loại: {typeName}",
+                Font = new Font("Segoe UI", 9),
+                ForeColor = Color.FromArgb(80, 80, 80),
+                Dock = DockStyle.Top,
+                Height = 20,
+                AutoSize = false,
+                TextAlign = ContentAlignment.TopLeft,
+                Margin = new Padding(0, 0, 0, 2)
+            };
+
+            var lblStatusInfo = new Label
+            {
+                Text = $"Trạng thái: {statusName}",
+                Font = new Font("Segoe UI", 9),
+                ForeColor = Color.FromArgb(80, 80, 80),
+                Dock = DockStyle.Top,
+                Height = 20,
+                AutoSize = false,
+                TextAlign = ContentAlignment.TopLeft,
+                Margin = new Padding(0, 0, 0, 2)
+            };
+
+            var lblOccupantsInfo = new Label
+            {
+                Text = $"Số người: {occupants}",
+                Font = new Font("Segoe UI", 9),
+                ForeColor = Color.FromArgb(80, 80, 80),
+                Dock = DockStyle.Top,
+                Height = 20,
+                AutoSize = false,
+                TextAlign = ContentAlignment.TopLeft
+            };
+
+            infoLayout.Controls.Add(lblTypeInfo, 0, 0);
+            infoLayout.Controls.Add(lblStatusInfo, 0, 1);
+            infoLayout.Controls.Add(lblOccupantsInfo, 0, 2);
+            infoPanel.Controls.Add(infoLayout);
+
+            mainLayout.Controls.Add(lblRoom, 0, 0);
+            mainLayout.Controls.Add(lblPrice, 0, 1);
+            mainLayout.Controls.Add(infoPanel, 0, 2);
+
+            card.Controls.Add(mainLayout);
+
+            card.Click += (s, e) => ShowRoomDetailsForm(row, roomId);
+            lblRoom.Click += (s, e) => ShowRoomDetailsForm(row, roomId);
+            lblPrice.Click += (s, e) => ShowRoomDetailsForm(row, roomId);
+            lblTypeInfo.Click += (s, e) => ShowRoomDetailsForm(row, roomId);
+            lblStatusInfo.Click += (s, e) => ShowRoomDetailsForm(row, roomId);
+            lblOccupantsInfo.Click += (s, e) => ShowRoomDetailsForm(row, roomId);
+
+            return card;
+        }
+
+        private void ShowRoomDetailsForm(DataRow row, int roomId)
+        {
+            _selectedRoomId = roomId;
+            _selectedRoomRow = row;
+
+            try
+            {
+                var frmType = Type.GetType("quan_ly_chuoi_nha_tro.GUI.FrmRoomDetailForm");
+                if (frmType != null)
+                {
+                    var frm = (Form)Activator.CreateInstance(frmType, _bll, row, _contracts, _tenantHistory);
+                    if (frm.ShowDialog(this) == DialogResult.OK)
+                    {
+                        _ = LoadRoomsAsync();
+                        var syncType = Type.GetType("quan_ly_chuoi_nha_tro.GUI.DataSyncManager");
+                        if (syncType != null)
+                        {
+                            var method = syncType.GetMethod("NotifyRoomsChanged");
+                            method?.Invoke(null, null);
+                        }
+                    }
+                    frm.Dispose();
+                }
+                else
+                {
+                    MessageBox.Show("Form chi tiết phòng chưa được tải. Vui lòng rebuild project.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void ShowRoomDetails(DataRow row, int roomId)
+        {
+            _selectedRoomId = roomId;
+            _selectedRoomRow = row;
+            BuildRoomDetailsPanel();
+        }
+
+        private void BuildRoomDetailsPanel()
+        {
+            _roomDetailPanel.Controls.Clear();
+
+            if (_selectedRoomRow == null)
+            {
+                _roomDetailPanel.Controls.Add(new Label
+                {
+                    Text = "Chọn một phòng để xem chi tiết",
+                    ForeColor = Color.FromArgb(90, 90, 90),
+                    Dock = DockStyle.Top,
+                    Height = 30
+                });
+                return;
+            }
+
+            var layout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                ColumnCount = 2,
+                RowCount = 10,
+                Padding = new Padding(0)
+            };
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 120));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+
+            AddDetailRow(layout, "Số phòng:", SafeToString(_selectedRoomRow, "RoomNumber"));
+            AddDetailRow(layout, "Loại phòng:", SafeToString(_selectedRoomRow, "TypeName"));
+            AddDetailRow(layout, "Trạng thái:", SafeToString(_selectedRoomRow, "StatusName"));
+            AddDetailRow(layout, "Giá/Tháng:", (TryGetDecimal(_selectedRoomRow, "RoomPrice") ?? 0m).ToString("N0"));
+            AddDetailRow(layout, "Diện tích:", (TryGetDecimal(_selectedRoomRow, "Area") ?? 0m).ToString("0.##") + " m²");
+            AddDetailRow(layout, "Số người:", TryGetInt(_selectedRoomRow, "Occupants").ToString());
+
+            _roomDetailPanel.Controls.Add(layout);
+
+            var contractsPanel = BuildContractsPanel();
+            _roomDetailPanel.Controls.Add(contractsPanel);
+        }
+
+        private Panel BuildContractsPanel()
+        {
+            var panel = new Panel { Dock = DockStyle.Top, AutoSize = true, Padding = new Padding(0, 12, 0, 0) };
+
+            var lblTitle = new Label
+            {
+                Text = "Hợp đồng của phòng",
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 79, 159),
+                Dock = DockStyle.Top,
+                Height = 30,
+                AutoSize = false
+            };
+            panel.Controls.Add(lblTitle);
+
+            var grid = new DataGridView
+            {
+                Dock = DockStyle.Top,
+                Height = 200,
+                ReadOnly = true,
+                AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
+                RowHeadersVisible = false,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                BackgroundColor = Color.White,
+                BorderStyle = BorderStyle.None
+            };
+            grid.EnableHeadersVisualStyles = false;
+            grid.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(0, 120, 215);
+            grid.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            grid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+            grid.DefaultCellStyle.Font = new Font("Segoe UI", 9);
+            grid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 249, 255);
+
+            if (_contracts != null && _contracts.Rows.Count > 0)
+            {
+                var roomContracts = _contracts.AsEnumerable()
+                    .Where(r => int.TryParse(r["RoomId"]?.ToString(), out var rid) && rid == _selectedRoomId)
+                    .CopyToDataTable();
+
+                if (roomContracts.Rows.Count > 0)
+                {
+                    grid.DataSource = roomContracts;
+                    if (grid.Columns.Contains("ContractId")) grid.Columns["ContractId"].HeaderText = "ID";
+                    if (grid.Columns.Contains("ContractNumber")) grid.Columns["ContractNumber"].HeaderText = "Số HĐ";
+                    if (grid.Columns.Contains("TenantName")) grid.Columns["TenantName"].HeaderText = "Khách thuê";
+                    if (grid.Columns.Contains("StartDate")) grid.Columns["StartDate"].HeaderText = "Ngày bắt đầu";
+                    if (grid.Columns.Contains("EndDate")) grid.Columns["EndDate"].HeaderText = "Ngày kết thúc";
+                }
+            }
+
+            panel.Controls.Add(grid);
+            return panel;
+        }
+
+        private void AddDetailRow(TableLayoutPanel layout, string label, string value)
+        {
+            var lblLabel = new Label
+            {
+                Text = label,
+                Font = new Font("Segoe UI", 9),
+                ForeColor = Color.FromArgb(70, 70, 70),
+                AutoSize = true,
+                Margin = new Padding(0, 6, 8, 6)
+            };
+
+            var lblValue = new Label
+            {
+                Text = value ?? "—",
+                Font = new Font("Segoe UI", 9),
+                ForeColor = Color.FromArgb(30, 55, 90),
+                AutoSize = true,
+                Margin = new Padding(0, 6, 0, 6)
+            };
+
+            layout.Controls.Add(lblLabel);
+            layout.Controls.Add(lblValue);
         }
 
         private void UpdateStats(DataTable table)
@@ -404,23 +725,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _lblSummary.Text = $"Đang ở/Tổng: {occupied}/{total}";
         }
 
-        private DataRowView GetCurrentRow()
-        {
-            return _grid.CurrentRow?.DataBoundItem as DataRowView;
-        }
-
         private async void ChangeRoomStatus()
         {
-            var rowView = GetCurrentRow();
-            if (rowView == null)
+            if (_selectedRoomId <= 0)
             {
                 MessageBox.Show("Chọn một phòng trước.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            if (!int.TryParse(rowView["RoomId"]?.ToString(), out var roomId) || roomId <= 0)
-            {
-                MessageBox.Show("Không xác định được phòng.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
@@ -480,7 +789,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     try
                     {
                         int newStatusId = Convert.ToInt32(cbo.SelectedValue);
-                        await UpdateRoomStatusAsync(rowView, roomId, newStatusId);
+                        await UpdateRoomStatusAsync(_selectedRoomId, newStatusId);
                         await LoadRoomsAsync();
                     }
                     catch (Exception ex)
@@ -491,122 +800,31 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
         }
 
-        private void ShowRoomInfo()
+        private async void EditCurrentRoom()
         {
-            var rowView = GetCurrentRow();
-            if (rowView == null)
+            if (_selectedRoomRow == null)
             {
                 MessageBox.Show("Chọn một phòng trước.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
-            using (var dlg = new Form())
-            {
-                dlg.Text = "Thông tin phòng";
-                dlg.StartPosition = FormStartPosition.CenterParent;
-                dlg.FormBorderStyle = FormBorderStyle.FixedDialog;
-                dlg.MaximizeBox = false;
-                dlg.MinimizeBox = false;
-                dlg.Size = new Size(420, 300);
-                dlg.BackColor = Color.White;
-                dlg.Font = Font;
-
-                int y = 18;
-                int xLabel = 18;
-                int xValue = 140;
-                int line = 26;
-
-                dlg.Controls.Add(MakeLabel("Số phòng:", xLabel, y));
-                dlg.Controls.Add(MakeValueLabel(SafeToString(rowView.Row, "RoomNumber"), xValue, y));
-                y += line;
-                dlg.Controls.Add(MakeLabel("Loại phòng:", xLabel, y));
-                dlg.Controls.Add(MakeValueLabel(SafeToString(rowView.Row, "TypeName"), xValue, y));
-                y += line;
-                dlg.Controls.Add(MakeLabel("Trạng thái:", xLabel, y));
-                dlg.Controls.Add(MakeValueLabel(SafeToString(rowView.Row, "StatusName"), xValue, y));
-                y += line;
-                dlg.Controls.Add(MakeLabel("Số người:", xLabel, y));
-                dlg.Controls.Add(MakeValueLabel(TryGetInt(rowView, "Occupants").ToString(), xValue, y));
-                y += line;
-                dlg.Controls.Add(MakeLabel("Giá/Tháng:", xLabel, y));
-                dlg.Controls.Add(MakeValueLabel(TryGetDecimal(rowView, "RoomPrice")?.ToString("N0") ?? "-", xValue, y));
-                y += line;
-                dlg.Controls.Add(MakeLabel("Diện tích:", xLabel, y));
-                dlg.Controls.Add(MakeValueLabel(TryGetDecimal(rowView, "Area")?.ToString("0.##") ?? "-", xValue, y));
-
-                var btnEdit = new Button
-                {
-                    Text = "Chỉnh sửa",
-                    Width = 100,
-                    Height = 30,
-                    DialogResult = DialogResult.OK,
-                    BackColor = Color.FromArgb(0, 122, 204),
-                    ForeColor = Color.White,
-                    FlatStyle = FlatStyle.Flat,
-                    Location = new Point(dlg.ClientSize.Width - 220, dlg.ClientSize.Height - 60),
-                    Anchor = AnchorStyles.Bottom | AnchorStyles.Right
-                };
-                btnEdit.FlatAppearance.BorderSize = 0;
-
-                var btnClose = new Button
-                {
-                    Text = "Đóng",
-                    Width = 80,
-                    Height = 30,
-                    DialogResult = DialogResult.Cancel,
-                    Location = new Point(dlg.ClientSize.Width - 110, dlg.ClientSize.Height - 60),
-                    Anchor = AnchorStyles.Bottom | AnchorStyles.Right
-                };
-
-                dlg.Controls.Add(btnEdit);
-                dlg.Controls.Add(btnClose);
-                dlg.AcceptButton = btnClose;
-                dlg.CancelButton = btnClose;
-
-                if (dlg.ShowDialog(this) == DialogResult.OK)
-                {
-                    EditCurrentRoom(rowView);
-                }
-            }
-        }
-
-        private Label MakeLabel(string text, int x, int y)
-        {
-            return new Label { Text = text, AutoSize = true, Location = new Point(x, y) };
-        }
-
-        private Label MakeValueLabel(string text, int x, int y)
-        {
-            return new Label { Text = text, AutoSize = true, Location = new Point(x, y), ForeColor = Color.FromArgb(50, 50, 50) };
-        }
-
-        private async void EditCurrentRoom(DataRowView rowView = null)
-        {
-            if (rowView == null)
-                rowView = GetCurrentRow();
-            if (rowView == null)
-            {
-                MessageBox.Show("Chọn một phòng trước.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            using (var dlg = new RoomEditDialog(rowView, _roomTypes, _statuses))
+            using (var dlg = new RoomEditDialog(_selectedRoomRow, _roomTypes, _statuses))
             {
                 if (dlg.ShowDialog(this) != DialogResult.OK) return;
 
                 try
                 {
-                    string roomNumber = rowView["RoomNumber"]?.ToString() ?? string.Empty;
-                    int roomId = TryGetInt(rowView, "RoomId");
-                    int branchId = TryGetInt(rowView, "BranchId");
-                    int? sectionId = TryGetNullableInt(rowView, "SectionId");
-                    int? roomTypeId = dlg.SelectedRoomTypeId ?? TryGetNullableInt(rowView, "RoomTypeId");
-                    decimal? price = dlg.RoomPrice ?? TryGetDecimal(rowView, "RoomPrice");
-                    int? statusId = dlg.SelectedStatusId ?? TryGetNullableInt(rowView, "CurrentStatusId");
-                    int? floor = TryGetNullableInt(rowView, "Floor");
-                    decimal? area = dlg.Area ?? TryGetDecimal(rowView, "Area");
-                    bool? isActive = dlg.IsActive ?? TryGetBool(rowView, "IsActive");
-                    int occupants = dlg.OccupantCount ?? TryGetInt(rowView, "Occupants");
+                    string roomNumber = SafeToString(_selectedRoomRow, "RoomNumber") ?? string.Empty;
+                    int roomId = TryGetInt(_selectedRoomRow, "RoomId");
+                    int branchId = TryGetInt(_selectedRoomRow, "BranchId");
+                    int? sectionId = TryGetNullableInt(_selectedRoomRow, "SectionId");
+                    int? roomTypeId = dlg.SelectedRoomTypeId ?? TryGetNullableInt(_selectedRoomRow, "RoomTypeId");
+                    decimal? price = dlg.RoomPrice ?? TryGetDecimal(_selectedRoomRow, "RoomPrice");
+                    int? statusId = dlg.SelectedStatusId ?? TryGetNullableInt(_selectedRoomRow, "CurrentStatusId");
+                    int? floor = TryGetNullableInt(_selectedRoomRow, "Floor");
+                    decimal? area = dlg.Area ?? TryGetDecimal(_selectedRoomRow, "Area");
+                    bool? isActive = dlg.IsActive ?? TryGetBool(_selectedRoomRow, "IsActive");
+                    int occupants = dlg.OccupantCount ?? TryGetInt(_selectedRoomRow, "Occupants");
 
                     await _bll.UpdateRoomAsync(roomId, roomNumber, branchId, sectionId, roomTypeId, price, statusId, floor, area, isActive, occupants);
                     await LoadRoomsAsync();
@@ -618,47 +836,49 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
         }
 
-        private async Task UpdateRoomStatusAsync(DataRowView row, int roomId, int newStatusId)
+        private async Task UpdateRoomStatusAsync(int roomId, int newStatusId)
         {
-            string roomNumber = row["RoomNumber"]?.ToString() ?? string.Empty;
-            int branchId = TryGetInt(row, "BranchId");
-            int? sectionId = TryGetNullableInt(row, "SectionId");
-            int? roomTypeId = TryGetNullableInt(row, "RoomTypeId");
-            decimal? price = TryGetDecimal(row, "RoomPrice");
-            int? floor = TryGetNullableInt(row, "Floor");
-            decimal? area = TryGetDecimal(row, "Area");
-            bool? isActive = TryGetBool(row, "IsActive");
+            if (_selectedRoomRow == null) return;
 
-            await _bll.UpdateRoomAsync(roomId, roomNumber, branchId, sectionId, roomTypeId, price, newStatusId, floor, area, isActive, TryGetInt(row, "Occupants"));
+            string roomNumber = SafeToString(_selectedRoomRow, "RoomNumber") ?? string.Empty;
+            int branchId = TryGetInt(_selectedRoomRow, "BranchId");
+            int? sectionId = TryGetNullableInt(_selectedRoomRow, "SectionId");
+            int? roomTypeId = TryGetNullableInt(_selectedRoomRow, "RoomTypeId");
+            decimal? price = TryGetDecimal(_selectedRoomRow, "RoomPrice");
+            int? floor = TryGetNullableInt(_selectedRoomRow, "Floor");
+            decimal? area = TryGetDecimal(_selectedRoomRow, "Area");
+            bool? isActive = TryGetBool(_selectedRoomRow, "IsActive");
+
+            await _bll.UpdateRoomAsync(roomId, roomNumber, branchId, sectionId, roomTypeId, price, newStatusId, floor, area, isActive, TryGetInt(_selectedRoomRow, "Occupants"));
         }
 
-        private static int TryGetInt(DataRowView row, string column)
+        private static int TryGetInt(DataRow row, string column)
         {
-            if (row == null || !row.Row.Table.Columns.Contains(column)) return 0;
+            if (row == null || !row.Table.Columns.Contains(column)) return 0;
             return int.TryParse(row[column]?.ToString(), out var val) ? val : 0;
         }
 
-        private static int? TryGetNullableInt(DataRowView row, string column)
+        private static int? TryGetNullableInt(DataRow row, string column)
         {
-            if (row == null || !row.Row.Table.Columns.Contains(column)) return null;
+            if (row == null || !row.Table.Columns.Contains(column)) return null;
             return int.TryParse(row[column]?.ToString(), out var val) ? (int?)val : null;
         }
 
-        private static decimal? TryGetDecimal(DataRowView row, string column)
+        private static decimal? TryGetDecimal(DataRow row, string column)
         {
-            if (row == null || !row.Row.Table.Columns.Contains(column)) return null;
+            if (row == null || !row.Table.Columns.Contains(column)) return null;
             return decimal.TryParse(row[column]?.ToString(), out var val) ? (decimal?)val : null;
         }
 
-        private static bool? TryGetBool(DataRowView row, string column)
+        private static bool? TryGetBool(DataRow row, string column)
         {
-            if (row == null || !row.Row.Table.Columns.Contains(column)) return null;
+            if (row == null || !row.Table.Columns.Contains(column)) return null;
             return bool.TryParse(row[column]?.ToString(), out var val) ? (bool?)val : null;
         }
 
         private class RoomEditDialog : Form
         {
-            private readonly DataRowView _row;
+            private readonly DataRow _row;
             private readonly DataTable _roomTypes;
             private readonly DataTable _statuses;
 
@@ -671,13 +891,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             public int? SelectedRoomTypeId => _cboRoomType.SelectedValue is int v ? v : (int?)null;
             public int? SelectedStatusId => _cboStatus.SelectedValue is int v ? v : (int?)null;
-            // Không cho sửa giá, luôn null để giữ nguyên giá gốc
             public decimal? RoomPrice => null;
             public int? OccupantCount => (int)_numOccupants.Value;
             public decimal? Area => decimal.TryParse(_txtArea.Text.Replace(",", ""), out var d) ? d : (decimal?)null;
             public bool? IsActive => _chkActive.Checked;
 
-            public RoomEditDialog(DataRowView row, DataTable roomTypes, DataTable statuses)
+            public RoomEditDialog(DataRow row, DataTable roomTypes, DataTable statuses)
             {
                 _row = row;
                 _roomTypes = roomTypes;
@@ -703,7 +922,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     ReadOnly = true,
                     Width = 140,
                     Location = new Point(120, 14),
-                    Text = _row["RoomNumber"]?.ToString() ?? string.Empty
+                    Text = _row != null ? _row["RoomNumber"]?.ToString() ?? string.Empty : string.Empty
                 };
 
                 var lblType = new Label { Text = "Loại phòng:", AutoSize = true, Location = new Point(18, 56) };
@@ -767,7 +986,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             private void LoadData()
             {
-                // room types
                 var roomTypeSrc = new DataTable();
                 roomTypeSrc.Columns.Add("RoomTypeId", typeof(int));
                 roomTypeSrc.Columns.Add("RoomTypeName", typeof(string));
@@ -783,7 +1001,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 _cboRoomType.DisplayMember = "RoomTypeName";
                 _cboRoomType.ValueMember = "RoomTypeId";
 
-                // statuses
                 var statusSrc = new DataTable();
                 statusSrc.Columns.Add("StatusId", typeof(int));
                 statusSrc.Columns.Add("StatusName", typeof(string));
@@ -799,42 +1016,43 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 _cboStatus.DisplayMember = "StatusName";
                 _cboStatus.ValueMember = "StatusId";
 
-                // set current values
-                int? typeId = TryReadInt(_row, "RoomTypeId");
-                if (typeId.HasValue) _cboRoomType.SelectedValue = typeId.Value;
+                if (_row != null)
+                {
+                    int? typeId = TryReadInt(_row, "RoomTypeId");
+                    if (typeId.HasValue) _cboRoomType.SelectedValue = typeId.Value;
 
-                int? statusId = TryReadInt(_row, "CurrentStatusId");
-                if (statusId.HasValue) _cboStatus.SelectedValue = statusId.Value;
+                    int? statusId = TryReadInt(_row, "CurrentStatusId");
+                    if (statusId.HasValue) _cboStatus.SelectedValue = statusId.Value;
 
-                
-                int occupants = TryReadInt(_row, "Occupants") ?? 0;
-                _numOccupants.Value = Math.Max(_numOccupants.Minimum, Math.Min(_numOccupants.Maximum, occupants));
+                    int occupants = TryReadInt(_row, "Occupants") ?? 0;
+                    _numOccupants.Value = Math.Max(_numOccupants.Minimum, Math.Min(_numOccupants.Maximum, occupants));
 
-decimal? price = TryReadDecimal(_row, "RoomPrice");
-                _lblPrice.Text = price.HasValue ? price.Value.ToString("N0") : "KhÃ´ng xÃ¡c Ä‘á»‹nh";
+                    decimal? price = TryReadDecimal(_row, "RoomPrice");
+                    _lblPrice.Text = price.HasValue ? price.Value.ToString("N0") : "Không xác định";
 
-                decimal? area = TryReadDecimal(_row, "Area");
-                if (area.HasValue) _txtArea.Text = area.Value.ToString("0.##");
+                    decimal? area = TryReadDecimal(_row, "Area");
+                    if (area.HasValue) _txtArea.Text = area.Value.ToString("0.##");
 
-                bool? active = TryReadBool(_row, "IsActive");
-                _chkActive.Checked = active ?? true;
+                    bool? active = TryReadBool(_row, "IsActive");
+                    _chkActive.Checked = active ?? true;
+                }
             }
 
-            private static int? TryReadInt(DataRowView row, string column)
+            private static int? TryReadInt(DataRow row, string column)
             {
-                if (row == null || !row.Row.Table.Columns.Contains(column)) return null;
+                if (row == null || !row.Table.Columns.Contains(column)) return null;
                 return int.TryParse(row[column]?.ToString(), out var val) ? (int?)val : null;
             }
 
-            private static decimal? TryReadDecimal(DataRowView row, string column)
+            private static decimal? TryReadDecimal(DataRow row, string column)
             {
-                if (row == null || !row.Row.Table.Columns.Contains(column)) return null;
+                if (row == null || !row.Table.Columns.Contains(column)) return null;
                 return decimal.TryParse(row[column]?.ToString(), out var val) ? (decimal?)val : null;
             }
 
-            private static bool? TryReadBool(DataRowView row, string column)
+            private static bool? TryReadBool(DataRow row, string column)
             {
-                if (row == null || !row.Row.Table.Columns.Contains(column)) return null;
+                if (row == null || !row.Table.Columns.Contains(column)) return null;
                 return bool.TryParse(row[column]?.ToString(), out var val) ? (bool?)val : null;
             }
         }
