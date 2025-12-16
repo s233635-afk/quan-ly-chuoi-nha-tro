@@ -273,6 +273,9 @@
     <Compile Include="GUI\FrmDepositManager.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="GUI\FrmTenantQuickInfo.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="GUI\FrmDepositEditor.cs">
       <SubType>Form</SubType>
     </Compile>

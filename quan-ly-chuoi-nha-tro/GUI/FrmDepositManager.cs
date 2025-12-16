@@ -555,7 +555,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 e.CellStyle.ForeColor = Color.FromArgb(211, 47, 47);
         }
 
-        private void ShowTenantQuickInfo(int rowIndex, int columnIndex)
+        private async void ShowTenantQuickInfo(int rowIndex, int columnIndex)
         {
             if (rowIndex < 0 || _grid.Rows.Count <= rowIndex) return;
 
@@ -568,7 +568,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 using (var frm = new FrmTenantQuickInfo(_bll, tenantId))
                 {
-                    frm.ShowDialog(this);
+                    var result = frm.ShowDialog(this);
+                    
+                    // Nếu form đóng với OK (có lưu dữ liệu), reload danh sách
+                    if (result == DialogResult.OK)
+                    {
+                        await LoadDataAsync();
+                    }
                 }
             }
             catch (Exception ex)
