@@ -56,7 +56,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Text = text,
                 Width = labelWidth,
                 Location = new Point(6, top),
-                TextAlign = ContentAlignment.MiddleLeft
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular) // Đảm bảo font hỗ trợ tiếng Việt
             };
 
             Control Place(Control control, int top)
@@ -70,7 +71,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _txtCode = new TextBox();
             _txtName = new TextBox();
             _txtDesc = new TextBox { Multiline = true, Height = 72, ScrollBars = ScrollBars.Vertical };
-            _chkActive = new CheckBox { Text = "Đang hoạt động", Checked = true, AutoSize = true };
+            _chkActive = new CheckBox { Text = "Đang hoạt động", Checked = true, AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Regular) };
 
             pnlBody.Controls.Add(MakeLabel("Chi nhánh (*)", y));
             pnlBody.Controls.Add(Place(_cboBranch, y));
@@ -123,7 +124,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             try
             {
-                _branches = await _bll.GetBranchesAsync();
+                _branches = AdminBranchScope.Apply(await _bll.GetBranchesAsync());
                 if (_branches == null)
                     _branches = new DataTable();
 
@@ -131,6 +132,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 if (!dt.Columns.Contains("BranchDisplay"))
                     dt.Columns.Add("BranchDisplay", typeof(string));
 
+                TextFixer.FixDataTable(dt, "BranchCode", "BranchName");
                 foreach (DataRow r in dt.Rows)
                 {
                     string code = dt.Columns.Contains("BranchCode") ? r["BranchCode"]?.ToString() : null;
@@ -221,4 +223,3 @@ namespace quan_ly_chuoi_nha_tro.GUI
         }
     }
 }
-

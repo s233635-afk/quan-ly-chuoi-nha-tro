@@ -15,6 +15,7 @@ namespace QuanLyNhaTro.BLL
         public Task<DataTable> GetRoomTypesAsync() => dbHelper.GetRoomTypesAsync();
         public Task<DataTable> GetRoomStatusesAsync() => dbHelper.GetRoomStatusesAsync();
         public Task<DataTable> GetStaffAsync() => dbHelper.GetUsersByRoleAsync(2);
+        public Task<DataTable> GetUsersByBranchAsync(int branchId) => dbHelper.GetUsersByBranchAsync(branchId);
         public Task<DataTable> GetTenantsAsync() => dbHelper.GetTenantsAsync();
         public Task<DataTable> GetDependentsAsync() => dbHelper.GetDependentsAsync();
         public Task<DataTable> GetTenantHistoryAsync() => dbHelper.GetTenantHistoryAsync();
@@ -45,9 +46,19 @@ namespace QuanLyNhaTro.BLL
             DateTime? birthDate, string address, string tempReg, DateTime? tempRegDate, DateTime? tempRegExpiry, bool isActive)
             => dbHelper.AddTenantAsync(fullName, identityCard, phoneNumber, email, birthDate, address, tempReg, tempRegDate, tempRegExpiry, isActive);
 
+        public Task<int> AddTenantAsync(string fullName, string identityCard, string phoneNumber, string email,
+            DateTime? birthDate, string address, string tempReg, DateTime? tempRegDate, DateTime? tempRegExpiry, bool isActive,
+            string frontIdPhoto, string backIdPhoto)
+            => dbHelper.AddTenantAsync(fullName, identityCard, phoneNumber, email, birthDate, address, tempReg, tempRegDate, tempRegExpiry, isActive, frontIdPhoto, backIdPhoto);
+
         public Task<bool> UpdateTenantAsync(int tenantId, string fullName, string identityCard, string phoneNumber, string email,
             DateTime? birthDate, string address, string tempReg, DateTime? tempRegDate, DateTime? tempRegExpiry, bool isActive)
             => dbHelper.UpdateTenantAsync(tenantId, fullName, identityCard, phoneNumber, email, birthDate, address, tempReg, tempRegDate, tempRegExpiry, isActive);
+
+        public Task<bool> UpdateTenantAsync(int tenantId, string fullName, string identityCard, string phoneNumber, string email,
+            DateTime? birthDate, string address, string tempReg, DateTime? tempRegDate, DateTime? tempRegExpiry, bool isActive,
+            string frontIdPhoto, string backIdPhoto)
+            => dbHelper.UpdateTenantAsync(tenantId, fullName, identityCard, phoneNumber, email, birthDate, address, tempReg, tempRegDate, tempRegExpiry, isActive, frontIdPhoto, backIdPhoto);
 
         public Task<bool> DeleteTenantAsync(int tenantId) => dbHelper.DeleteTenantAsync(tenantId);
 

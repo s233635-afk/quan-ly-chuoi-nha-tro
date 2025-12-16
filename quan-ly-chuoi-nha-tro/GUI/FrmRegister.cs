@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
 
@@ -26,7 +27,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             BackColor = System.Drawing.Color.FromArgb(245, 245, 245);
 
-            foreach (Control ctrl in Controls)
+            foreach (Control ctrl in GetAllControls(this))
             {
                 if (ctrl is TextBox textBox)
                 {
@@ -37,7 +38,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 }
             }
 
-            if (Controls.Contains(btnRegister))
+            if (btnRegister != null)
             {
                 btnRegister.BackColor = System.Drawing.Color.FromArgb(40, 167, 69);
                 btnRegister.ForeColor = System.Drawing.Color.White;
@@ -47,8 +48,27 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 btnRegister.Cursor = Cursors.Hand;
             }
 
-            if (Controls.Contains(txtUser))
+            if (chkShowPassword != null)
+            {
+                chkShowPassword.Checked = false;
+                chkShowPassword.CheckedChanged += (s, e) =>
+                {
+                    bool show = chkShowPassword.Checked;
+                    if (txtPass != null) txtPass.UseSystemPasswordChar = !show;
+                    if (txtConfirmPass != null) txtConfirmPass.UseSystemPasswordChar = !show;
+                };
+            }
+
+            if (txtUser != null)
                 txtUser.Focus();
+        }
+
+        private static Control[] GetAllControls(Control root)
+        {
+            if (root == null) return Array.Empty<Control>();
+            return root.Controls.Cast<Control>()
+                .SelectMany(c => GetAllControls(c).Prepend(c))
+                .ToArray();
         }
 
         private async void btnRegister_Click(object sender, EventArgs e)
@@ -58,11 +78,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             try
             {
-                string user = txtUser.Text.Trim();
-                string pass = txtPass.Text.Trim();
-                string name = txtName.Text.Trim();
+                string user = (txtUser.Text ?? string.Empty).Trim();
+                string pass = (txtPass.Text ?? string.Empty).Trim();
+                string confirm = (txtConfirmPass.Text ?? string.Empty).Trim();
+                string name = (txtName.Text ?? string.Empty).Trim();
+                string email = (txtEmail.Text ?? string.Empty).Trim();
+                string phone = (txtPhone.Text ?? string.Empty).Trim();
 
-                if (string.IsNullOrWhiteSpace(user) || string.IsNullOrWhiteSpace(pass) || string.IsNullOrWhiteSpace(name))
+                if (string.IsNullOrWhiteSpace(user) || string.IsNullOrWhiteSpace(pass) || string.IsNullOrWhiteSpace(confirm) || string.IsNullOrWhiteSpace(name))
                 {
                     MessageBox.Show("Vui lòng điền đầy đủ thông tin!", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
@@ -80,19 +103,44 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     return;
                 }
 
+                if (!string.Equals(pass, confirm, StringComparison.Ordinal))
+                {
+                    MessageBox.Show("Mật khẩu nhập lại không khớp!", "Không hợp lệ", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
                 if (name.Length < 2)
                 {
                     MessageBox.Show("Họ tên phải có ít nhất 2 ký tự!", "Không hợp lệ", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
-                bool isSuccess = await userBLL.DangKy(user, pass, name);
+                if (!string.IsNullOrWhiteSpace(email) && (!email.Contains("@") || !email.Contains(".")))
+                {
+                    MessageBox.Show("Email không hợp lệ!", "Không hợp lệ", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                if (!string.IsNullOrWhiteSpace(phone))
+                {
+                    string digits = new string(phone.Where(char.IsDigit).ToArray());
+                    if (digits.Length < 8 || digits.Length > 15)
+                    {
+                        MessageBox.Show("Số điện thoại không hợp lệ!", "Không hợp lệ", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+                }
+
+                bool isSuccess = await userBLL.DangKy(user, pass, name, email, phone);
                 if (isSuccess)
                 {
                     MessageBox.Show("Đăng ký thành công! Bạn có thể đăng nhập ngay.", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     txtUser.Text = "";
                     txtPass.Text = "";
+                    txtConfirmPass.Text = "";
                     txtName.Text = "";
+                    txtEmail.Text = "";
+                    txtPhone.Text = "";
                     Close();
                 }
             }
@@ -118,4 +166,3 @@ namespace quan_ly_chuoi_nha_tro.GUI
         }
     }
 }
-

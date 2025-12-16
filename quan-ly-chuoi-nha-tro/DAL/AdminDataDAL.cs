@@ -1,6 +1,8 @@
 using System;
+using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace QuanLyNhaTro.DAL
@@ -29,51 +31,111 @@ namespace QuanLyNhaTro.DAL
             {
                 await conn.OpenAsync();
 
+                var allowed = ReadAdminAllowedBranchCodes();
+                int[] scopedBranchIds = allowed.Length > 0 ? await ResolveScopedBranchIdsAsync(conn, allowed) : Array.Empty<int>();
+                string branchIdInList = scopedBranchIds.Length > 0 ? string.Join(",", scopedBranchIds) : null;
+
+                int maxRooms = ReadAdminMaxRooms();
+                string roomIdSubquery = null;
+                if (maxRooms > 0)
+                {
+                    // Chỉ giới hạn khi có scope chi nhánh rõ ràng (để tránh đếm 0 do config sai).
+                    string where = "WHERE IsActive = 1";
+                    if (branchIdInList != null)
+                        where += $" AND BranchId IN ({branchIdInList})";
+                    roomIdSubquery = $"SELECT TOP ({maxRooms}) RoomId FROM Rooms {where} ORDER BY RoomNumber, RoomId";
+                }
+
                 // COUNT(*) ít phụ thuộc schema; các chỉ số chi tiết sẽ try nhiều câu lệnh và fallback về 0.
                 dt.Rows[0]["TotalBranches"] = await GetScalarIntBestEffortAsync(conn,
+                    branchIdInList != null ? $"SELECT COUNT(*) FROM Branches WHERE IsActive = 1 AND BranchId IN ({branchIdInList})" : null,
                     "SELECT COUNT(*) FROM Branches WHERE IsActive = 1",
                     "SELECT COUNT(*) FROM Branches",
                     "SELECT COUNT(*) FROM Branch");
 
                 dt.Rows[0]["TotalRooms"] = await GetScalarIntBestEffortAsync(conn,
+                    roomIdSubquery != null ? $"SELECT COUNT(*) FROM ({roomIdSubquery}) x" : (branchIdInList != null ? $"SELECT COUNT(*) FROM Rooms WHERE IsActive = 1 AND BranchId IN ({branchIdInList})" : null),
                     "SELECT COUNT(*) FROM Rooms WHERE IsActive = 1",
                     "SELECT COUNT(*) FROM Rooms",
                     "SELECT COUNT(*) FROM Room");
 
                 dt.Rows[0]["TotalTenants"] = await GetScalarIntBestEffortAsync(conn,
+                    branchIdInList != null ? $@"SELECT COUNT(DISTINCT t.TenantId)
+                      FROM Tenants t
+                      INNER JOIN Contracts c ON c.TenantId = t.TenantId
+                      INNER JOIN Rooms r ON r.RoomId = c.RoomId
+                      WHERE t.IsActive = 1
+                        AND r.BranchId IN ({branchIdInList})
+                        {(roomIdSubquery != null ? $"AND r.RoomId IN ({roomIdSubquery})" : string.Empty)}" : null,
                     "SELECT COUNT(*) FROM Tenants WHERE IsActive = 1",
                     "SELECT COUNT(*) FROM Tenants",
                     "SELECT COUNT(*) FROM Tenant");
 
                 dt.Rows[0]["TotalContracts"] = await GetScalarIntBestEffortAsync(conn,
+                    branchIdInList != null ? $@"SELECT COUNT(*) FROM Contracts c
+                      INNER JOIN Rooms r ON r.RoomId = c.RoomId
+                      WHERE r.BranchId IN ({branchIdInList})
+                        {(roomIdSubquery != null ? $"AND r.RoomId IN ({roomIdSubquery})" : string.Empty)}" : null,
                     "SELECT COUNT(*) FROM Contracts",
                     "SELECT COUNT(*) FROM Contract");
 
                 dt.Rows[0]["TotalInvoices"] = await GetScalarIntBestEffortAsync(conn,
+                    branchIdInList != null ? $@"SELECT COUNT(*) FROM Invoices i
+                      INNER JOIN Rooms r ON r.RoomId = i.RoomId
+                      WHERE r.BranchId IN ({branchIdInList})
+                        {(roomIdSubquery != null ? $"AND r.RoomId IN ({roomIdSubquery})" : string.Empty)}" : null,
                     "SELECT COUNT(*) FROM Invoices",
                     "SELECT COUNT(*) FROM Invoice");
 
                 // Hóa đơn còn nợ (ưu tiên RemainingAmount, fallback theo status)
                 dt.Rows[0]["OutstandingInvoiceCount"] = await GetScalarIntBestEffortAsync(conn,
+                    branchIdInList != null ? $@"SELECT COUNT(*) FROM Invoices i
+                      INNER JOIN Rooms r ON r.RoomId = i.RoomId
+                      WHERE i.RemainingAmount > 0
+                        AND r.BranchId IN ({branchIdInList})
+                        {(roomIdSubquery != null ? $"AND r.RoomId IN ({roomIdSubquery})" : string.Empty)}" : null,
                     "SELECT COUNT(*) FROM Invoices WHERE RemainingAmount > 0",
                     "SELECT COUNT(*) FROM Invoices WHERE (TotalAmount - ISNULL(PaidAmount,0)) > 0",
                     "SELECT COUNT(*) FROM Invoices WHERE Status IN (0, 'Unpaid', 'UNPAID', N'Chưa thanh toán', N'Chua thanh toan')");
 
                 dt.Rows[0]["OutstandingAmount"] = await GetScalarDecimalBestEffortAsync(conn,
+                    branchIdInList != null ? $@"SELECT CAST(ISNULL(SUM(i.RemainingAmount),0) AS DECIMAL(18,2))
+                      FROM Invoices i
+                      INNER JOIN Rooms r ON r.RoomId = i.RoomId
+                      WHERE i.RemainingAmount > 0
+                        AND r.BranchId IN ({branchIdInList})
+                        {(roomIdSubquery != null ? $"AND r.RoomId IN ({roomIdSubquery})" : string.Empty)}" : null,
                     "SELECT CAST(ISNULL(SUM(RemainingAmount),0) AS DECIMAL(18,2)) FROM Invoices WHERE RemainingAmount > 0",
                     "SELECT CAST(ISNULL(SUM(TotalAmount - ISNULL(PaidAmount,0)),0) AS DECIMAL(18,2)) FROM Invoices WHERE (TotalAmount - ISNULL(PaidAmount,0)) > 0");
 
                 // Đặt cọc (DepositAmount hoặc Amount)
                 dt.Rows[0]["TotalDeposits"] = await GetScalarIntBestEffortAsync(conn,
+                    branchIdInList != null ? $@"SELECT COUNT(*) FROM Deposits d
+                      INNER JOIN Rooms r ON r.RoomId = d.RoomId
+                      WHERE r.BranchId IN ({branchIdInList})
+                        {(roomIdSubquery != null ? $"AND r.RoomId IN ({roomIdSubquery})" : string.Empty)}" : null,
                     "SELECT COUNT(*) FROM Deposits",
                     "SELECT COUNT(*) FROM Deposit");
 
                 dt.Rows[0]["DepositAmount"] = await GetScalarDecimalBestEffortAsync(conn,
+                    branchIdInList != null ? $@"SELECT CAST(ISNULL(SUM(d.DepositAmount),0) AS DECIMAL(18,2))
+                      FROM Deposits d
+                      INNER JOIN Rooms r ON r.RoomId = d.RoomId
+                      WHERE r.BranchId IN ({branchIdInList})
+                        {(roomIdSubquery != null ? $"AND r.RoomId IN ({roomIdSubquery})" : string.Empty)}" : null,
                     "SELECT CAST(ISNULL(SUM(DepositAmount),0) AS DECIMAL(18,2)) FROM Deposits",
                     "SELECT CAST(ISNULL(SUM(Amount),0) AS DECIMAL(18,2)) FROM Deposits");
 
                 // Thanh toán tháng này
                 dt.Rows[0]["PaymentsThisMonth"] = await GetScalarDecimalBestEffortAsync(conn,
+                    branchIdInList != null ? $@"SELECT CAST(ISNULL(SUM(p.PaymentAmount),0) AS DECIMAL(18,2))
+                      FROM Payments p
+                      INNER JOIN Invoices i ON i.InvoiceId = p.InvoiceId
+                      INNER JOIN Rooms r ON r.RoomId = i.RoomId
+                      WHERE p.PaymentDate >= DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1)
+                        AND p.PaymentDate < DATEADD(MONTH, 1, DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1))
+                        AND r.BranchId IN ({branchIdInList})
+                        {(roomIdSubquery != null ? $"AND r.RoomId IN ({roomIdSubquery})" : string.Empty)}" : null,
                     @"SELECT CAST(ISNULL(SUM(PaymentAmount),0) AS DECIMAL(18,2)) 
                       FROM Payments 
                       WHERE PaymentDate >= DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1)
@@ -85,6 +147,11 @@ namespace QuanLyNhaTro.DAL
 
                 // Bảo trì mở (MaintenanceTickets hoặc MaintenanceRecords)
                 dt.Rows[0]["OpenMaintenance"] = await GetScalarIntBestEffortAsync(conn,
+                    branchIdInList != null ? $@"SELECT COUNT(*) FROM MaintenanceTickets t
+                      INNER JOIN Rooms r ON r.RoomId = t.RoomId
+                      WHERE t.Status NOT IN ('Done','DONE',N'Hoàn tất',N'Hoan tat',2)
+                        AND r.BranchId IN ({branchIdInList})
+                        {(roomIdSubquery != null ? $"AND r.RoomId IN ({roomIdSubquery})" : string.Empty)}" : null,
                     "SELECT COUNT(*) FROM MaintenanceTickets WHERE Status NOT IN ('Done','DONE',N'Hoàn tất',N'Hoan tat',2)",
                     "SELECT COUNT(*) FROM MaintenanceTickets",
                     "SELECT COUNT(*) FROM MaintenanceRecords WHERE Status NOT IN (2, 'Done','DONE',N'Hoàn tất',N'Hoan tat')",
@@ -95,6 +162,80 @@ namespace QuanLyNhaTro.DAL
         }
 
         #endregion
+
+        private static async Task<int[]> ResolveScopedBranchIdsAsync(SqlConnection conn, string[] allowedCodes)
+        {
+            if (conn == null) throw new ArgumentNullException(nameof(conn));
+            if (allowedCodes == null || allowedCodes.Length == 0) return Array.Empty<int>();
+
+            // 1) try by BranchCode from config
+            try
+            {
+                string inList = BuildNvarcharInList(allowedCodes);
+                using (var cmd = new SqlCommand($"SELECT BranchId FROM Branches WHERE IsActive = 1 AND BranchCode IN ({inList}) ORDER BY BranchId", conn))
+                {
+                    var list = new System.Collections.Generic.List<int>();
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            if (!reader.IsDBNull(0))
+                                list.Add(Convert.ToInt32(reader.GetValue(0)));
+                        }
+                    }
+                    if (list.Count > 0) return list.ToArray();
+                }
+            }
+            catch
+            {
+                // ignore
+            }
+
+            // 2) fallback by name contains "Cần Thơ"/"Can Tho"
+            try
+            {
+                using (var cmd = new SqlCommand(
+                    "SELECT TOP 2 BranchId FROM Branches WHERE IsActive = 1 AND (BranchName LIKE N'%Cần Thơ%' OR BranchName LIKE N'%Can Tho%') ORDER BY BranchId", conn))
+                {
+                    var list = new System.Collections.Generic.List<int>();
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            if (!reader.IsDBNull(0))
+                                list.Add(Convert.ToInt32(reader.GetValue(0)));
+                        }
+                    }
+                    if (list.Count > 0) return list.ToArray();
+                }
+            }
+            catch
+            {
+                // ignore
+            }
+
+            // 3) last resort: take first 2 active branches
+            try
+            {
+                using (var cmd = new SqlCommand("SELECT TOP 2 BranchId FROM Branches WHERE IsActive = 1 ORDER BY BranchId", conn))
+                {
+                    var list = new System.Collections.Generic.List<int>();
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            if (!reader.IsDBNull(0))
+                                list.Add(Convert.ToInt32(reader.GetValue(0)));
+                        }
+                    }
+                    return list.ToArray();
+                }
+            }
+            catch
+            {
+                return Array.Empty<int>();
+            }
+        }
 
         private async Task<DataTable> GetTableAsync(string sql, Action<SqlCommand> parameterize = null)
         {
@@ -148,6 +289,7 @@ namespace QuanLyNhaTro.DAL
         {
             foreach (var sql in sqlAttempts)
             {
+                if (string.IsNullOrWhiteSpace(sql)) continue;
                 try
                 {
                     using (var cmd = new SqlCommand(sql, conn))
@@ -170,6 +312,7 @@ namespace QuanLyNhaTro.DAL
         {
             foreach (var sql in sqlAttempts)
             {
+                if (string.IsNullOrWhiteSpace(sql)) continue;
                 try
                 {
                     using (var cmd = new SqlCommand(sql, conn))
@@ -186,6 +329,41 @@ namespace QuanLyNhaTro.DAL
             }
 
             return 0m;
+        }
+
+        private static string[] ReadAdminAllowedBranchCodes()
+        {
+            string raw = null;
+            try { raw = ConfigurationManager.AppSettings["AdminAllowedBranchCodes"]; } catch { }
+
+            // Missing key => default 2 chi nhánh Cần Thơ.
+            if (raw == null) raw = "CT01,CT02";
+
+            // Present-but-empty => no scope.
+            if (string.IsNullOrWhiteSpace(raw)) return Array.Empty<string>();
+
+            return raw
+                .Split(new[] { ',', ';', '|' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(s => s.Trim())
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+
+        private static int ReadAdminMaxRooms()
+        {
+            string raw = null;
+            try { raw = ConfigurationManager.AppSettings["AdminMaxRooms"]; } catch { }
+
+            if (string.IsNullOrWhiteSpace(raw)) return 0;
+            if (!int.TryParse(raw.Trim(), out var limit)) return 0;
+            return limit > 0 ? limit : 0;
+        }
+
+        private static string BuildNvarcharInList(string[] values)
+        {
+            if (values == null || values.Length == 0) return "N''";
+            return string.Join(",", values.Select(v => "N'" + (v ?? string.Empty).Replace("'", "''") + "'"));
         }
 
         #region Rooms CRUD
@@ -982,6 +1160,81 @@ namespace QuanLyNhaTro.DAL
             );
         }
 
+        public async Task<DataTable> GetUsersByBranchAsync(int branchId)
+        {
+            await EnsureUsersPhoneColumnBestEffortAsync();
+
+            return await GetTableSafeAsync(
+                "Users",
+                cmd => cmd.Parameters.AddWithValue("@BranchId", branchId),
+                @"SELECT u.UserId,
+                         u.Username AS UserName,
+                         u.Email,
+                         u.FullName,
+                         u.Phone,
+                         u.RoleId,
+                         r.RoleName,
+                         u.BranchId,
+                         b.BranchName,
+                         u.IsActive,
+                         u.CreatedDate,
+                         u.UpdatedDate
+                  FROM Users u
+                  LEFT JOIN Roles r ON r.RoleId = u.RoleId
+                  LEFT JOIN Branches b ON b.BranchId = u.BranchId
+                  WHERE u.BranchId = @BranchId AND u.RoleId <> 1
+                  ORDER BY u.RoleId, u.UserId DESC",
+                // Nếu DB chưa có cột Phone, vẫn trả về cột Phone dạng NULL để UI không bị lỗi.
+                @"SELECT u.UserId,
+                         u.Username AS UserName,
+                         u.Email,
+                         u.FullName,
+                         CAST(NULL AS NVARCHAR(20)) AS Phone,
+                         u.RoleId,
+                         r.RoleName,
+                         u.BranchId,
+                         b.BranchName,
+                         u.IsActive,
+                         u.CreatedDate,
+                         u.UpdatedDate
+                  FROM Users u
+                  LEFT JOIN Roles r ON r.RoleId = u.RoleId
+                  LEFT JOIN Branches b ON b.BranchId = u.BranchId
+                  WHERE u.BranchId = @BranchId AND u.RoleId <> 1
+                  ORDER BY u.RoleId, u.UserId DESC",
+                @"SELECT UserId,
+                         Username AS UserName,
+                         Email,
+                         FullName,
+                         CAST(NULL AS NVARCHAR(20)) AS Phone,
+                         RoleId,
+                         CAST(NULL AS NVARCHAR(50)) AS RoleName,
+                         BranchId,
+                         CAST(NULL AS NVARCHAR(255)) AS BranchName,
+                         IsActive,
+                         CreatedDate,
+                         UpdatedDate
+                  FROM Users
+                  WHERE BranchId = @BranchId AND RoleId <> 1
+                  ORDER BY RoleId, UserId DESC",
+                @"SELECT UserId,
+                         UserName,
+                         Email,
+                         FullName,
+                         CAST(NULL AS NVARCHAR(20)) AS Phone,
+                         RoleId,
+                         CAST(NULL AS NVARCHAR(50)) AS RoleName,
+                         CAST(NULL AS INT) AS BranchId,
+                         CAST(NULL AS NVARCHAR(255)) AS BranchName,
+                         IsActive,
+                         CreatedDate,
+                         CAST(NULL AS DATETIME) AS UpdatedDate
+                  FROM Users
+                  WHERE RoleId <> 1
+                  ORDER BY RoleId, UserId DESC"
+            );
+        }
+
         #region CRUD Staff (RoleId = 2)
 
         public async Task<int> AddStaffUserAsync(string username, string password, string fullName, string email, string phone, int? branchId, bool isActive)
@@ -1168,6 +1421,8 @@ namespace QuanLyNhaTro.DAL
                          Email,
                          BirthDate,
                          Address,
+                         FrontIdPhoto,
+                         BackIdPhoto,
                          TemporaryRegistration,
                          TemporaryRegistrationDate,
                          TemporaryRegistrationExpiry,
@@ -2028,32 +2283,68 @@ namespace QuanLyNhaTro.DAL
         #region CRUD Tenants
 
         public async Task<int> AddTenantAsync(string fullName, string identityCard, string phoneNumber, string email,
-            DateTime? birthDate, string address, string tempReg, DateTime? tempRegDate, DateTime? tempRegExpiry, bool isActive)
+            DateTime? birthDate, string address, string tempReg, DateTime? tempRegDate, DateTime? tempRegExpiry, bool isActive,
+            string frontIdPhoto = null, string backIdPhoto = null)
         {
-            const string sql = @"
-                INSERT INTO Tenants
-                    (FullName, IdentityCard, PhoneNumber, Email, BirthDate, Address,
-                     TemporaryRegistration, TemporaryRegistrationDate, TemporaryRegistrationExpiry, IsActive, CreatedDate, UpdatedDate)
-                VALUES
-                    (@FullName, @IdentityCard, @PhoneNumber, @Email, @BirthDate, @Address,
-                     @TempReg, @TempRegDate, @TempRegExpiry, @IsActive, GETDATE(), GETDATE());
-                SELECT CAST(SCOPE_IDENTITY() AS INT);";
-
             using (var conn = new SqlConnection(connectionString))
             {
                 await conn.OpenAsync();
+
+                string tbl = "Tenants";
+                bool hasFullName = await ColumnExistsAsync(conn, tbl, "FullName");
+                bool hasIdentity = await ColumnExistsAsync(conn, tbl, "IdentityCard");
+                bool hasPhone = await ColumnExistsAsync(conn, tbl, "PhoneNumber");
+                bool hasEmail = await ColumnExistsAsync(conn, tbl, "Email");
+                bool hasBirth = await ColumnExistsAsync(conn, tbl, "BirthDate");
+                bool hasAddress = await ColumnExistsAsync(conn, tbl, "Address");
+                bool hasFront = await ColumnExistsAsync(conn, tbl, "FrontIdPhoto");
+                bool hasBack = await ColumnExistsAsync(conn, tbl, "BackIdPhoto");
+                bool hasTemp = await ColumnExistsAsync(conn, tbl, "TemporaryRegistration");
+                bool hasTempDate = await ColumnExistsAsync(conn, tbl, "TemporaryRegistrationDate");
+                bool hasTempExp = await ColumnExistsAsync(conn, tbl, "TemporaryRegistrationExpiry");
+                bool hasActive = await ColumnExistsAsync(conn, tbl, "IsActive");
+                bool hasCreated = await ColumnExistsAsync(conn, tbl, "CreatedDate");
+                bool hasUpdated = await ColumnExistsAsync(conn, tbl, "UpdatedDate");
+
+                if (!hasFullName)
+                    throw new Exception("Schema Tenants không hợp lệ (thiếu cột FullName).");
+
+                var cols = new System.Collections.Generic.List<string>();
+                var vals = new System.Collections.Generic.List<string>();
+
+                if (hasFullName) { cols.Add("FullName"); vals.Add("@FullName"); }
+                if (hasIdentity) { cols.Add("IdentityCard"); vals.Add("@IdentityCard"); }
+                if (hasPhone) { cols.Add("PhoneNumber"); vals.Add("@PhoneNumber"); }
+                if (hasEmail) { cols.Add("Email"); vals.Add("@Email"); }
+                if (hasBirth) { cols.Add("BirthDate"); vals.Add("@BirthDate"); }
+                if (hasAddress) { cols.Add("Address"); vals.Add("@Address"); }
+                if (hasFront) { cols.Add("FrontIdPhoto"); vals.Add("@FrontIdPhoto"); }
+                if (hasBack) { cols.Add("BackIdPhoto"); vals.Add("@BackIdPhoto"); }
+                if (hasTemp) { cols.Add("TemporaryRegistration"); vals.Add("@TempReg"); }
+                if (hasTempDate) { cols.Add("TemporaryRegistrationDate"); vals.Add("@TempRegDate"); }
+                if (hasTempExp) { cols.Add("TemporaryRegistrationExpiry"); vals.Add("@TempRegExpiry"); }
+                if (hasActive) { cols.Add("IsActive"); vals.Add("@IsActive"); }
+                if (hasCreated) { cols.Add("CreatedDate"); vals.Add("GETDATE()"); }
+                if (hasUpdated) { cols.Add("UpdatedDate"); vals.Add("GETDATE()"); }
+
+                string sql = $@"INSERT INTO {tbl} ({string.Join(", ", cols)})
+                                VALUES ({string.Join(", ", vals)});
+                                SELECT CAST(SCOPE_IDENTITY() AS INT);";
+
                 using (var cmd = new SqlCommand(sql, conn))
                 {
-                    cmd.Parameters.AddWithValue("@FullName", fullName);
-                    cmd.Parameters.AddWithValue("@IdentityCard", string.IsNullOrWhiteSpace(identityCard) ? (object)DBNull.Value : identityCard);
-                    cmd.Parameters.AddWithValue("@PhoneNumber", string.IsNullOrWhiteSpace(phoneNumber) ? (object)DBNull.Value : phoneNumber);
-                    cmd.Parameters.AddWithValue("@Email", string.IsNullOrWhiteSpace(email) ? (object)DBNull.Value : email);
-                    cmd.Parameters.AddWithValue("@BirthDate", birthDate.HasValue ? (object)birthDate.Value : DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Address", string.IsNullOrWhiteSpace(address) ? (object)DBNull.Value : address);
-                    cmd.Parameters.AddWithValue("@TempReg", string.IsNullOrWhiteSpace(tempReg) ? (object)DBNull.Value : tempReg);
-                    cmd.Parameters.AddWithValue("@TempRegDate", tempRegDate.HasValue ? (object)tempRegDate.Value : DBNull.Value);
-                    cmd.Parameters.AddWithValue("@TempRegExpiry", tempRegExpiry.HasValue ? (object)tempRegExpiry.Value : DBNull.Value);
-                    cmd.Parameters.AddWithValue("@IsActive", isActive);
+                    if (hasFullName) cmd.Parameters.AddWithValue("@FullName", fullName);
+                    if (hasIdentity) cmd.Parameters.AddWithValue("@IdentityCard", string.IsNullOrWhiteSpace(identityCard) ? (object)DBNull.Value : identityCard);
+                    if (hasPhone) cmd.Parameters.AddWithValue("@PhoneNumber", string.IsNullOrWhiteSpace(phoneNumber) ? (object)DBNull.Value : phoneNumber);
+                    if (hasEmail) cmd.Parameters.AddWithValue("@Email", string.IsNullOrWhiteSpace(email) ? (object)DBNull.Value : email);
+                    if (hasBirth) cmd.Parameters.AddWithValue("@BirthDate", birthDate.HasValue ? (object)birthDate.Value : DBNull.Value);
+                    if (hasAddress) cmd.Parameters.AddWithValue("@Address", string.IsNullOrWhiteSpace(address) ? (object)DBNull.Value : address);
+                    if (hasFront) cmd.Parameters.AddWithValue("@FrontIdPhoto", string.IsNullOrWhiteSpace(frontIdPhoto) ? (object)DBNull.Value : frontIdPhoto);
+                    if (hasBack) cmd.Parameters.AddWithValue("@BackIdPhoto", string.IsNullOrWhiteSpace(backIdPhoto) ? (object)DBNull.Value : backIdPhoto);
+                    if (hasTemp) cmd.Parameters.AddWithValue("@TempReg", string.IsNullOrWhiteSpace(tempReg) ? (object)DBNull.Value : tempReg);
+                    if (hasTempDate) cmd.Parameters.AddWithValue("@TempRegDate", tempRegDate.HasValue ? (object)tempRegDate.Value : DBNull.Value);
+                    if (hasTempExp) cmd.Parameters.AddWithValue("@TempRegExpiry", tempRegExpiry.HasValue ? (object)tempRegExpiry.Value : DBNull.Value);
+                    if (hasActive) cmd.Parameters.AddWithValue("@IsActive", isActive);
 
                     var result = await cmd.ExecuteScalarAsync();
                     return result != null ? Convert.ToInt32(result) : 0;
@@ -2062,39 +2353,63 @@ namespace QuanLyNhaTro.DAL
         }
 
         public async Task<bool> UpdateTenantAsync(int tenantId, string fullName, string identityCard, string phoneNumber, string email,
-            DateTime? birthDate, string address, string tempReg, DateTime? tempRegDate, DateTime? tempRegExpiry, bool isActive)
+            DateTime? birthDate, string address, string tempReg, DateTime? tempRegDate, DateTime? tempRegExpiry, bool isActive,
+            string frontIdPhoto = null, string backIdPhoto = null)
         {
-            const string sql = @"
-                UPDATE Tenants SET
-                    FullName = @FullName,
-                    IdentityCard = @IdentityCard,
-                    PhoneNumber = @PhoneNumber,
-                    Email = @Email,
-                    BirthDate = @BirthDate,
-                    Address = @Address,
-                    TemporaryRegistration = @TempReg,
-                    TemporaryRegistrationDate = @TempRegDate,
-                    TemporaryRegistrationExpiry = @TempRegExpiry,
-                    IsActive = @IsActive,
-                    UpdatedDate = GETDATE()
-                WHERE TenantId = @TenantId";
-
             using (var conn = new SqlConnection(connectionString))
             {
                 await conn.OpenAsync();
+
+                string tbl = "Tenants";
+                bool hasFullName = await ColumnExistsAsync(conn, tbl, "FullName");
+                bool hasIdentity = await ColumnExistsAsync(conn, tbl, "IdentityCard");
+                bool hasPhone = await ColumnExistsAsync(conn, tbl, "PhoneNumber");
+                bool hasEmail = await ColumnExistsAsync(conn, tbl, "Email");
+                bool hasBirth = await ColumnExistsAsync(conn, tbl, "BirthDate");
+                bool hasAddress = await ColumnExistsAsync(conn, tbl, "Address");
+                bool hasFront = await ColumnExistsAsync(conn, tbl, "FrontIdPhoto");
+                bool hasBack = await ColumnExistsAsync(conn, tbl, "BackIdPhoto");
+                bool hasTemp = await ColumnExistsAsync(conn, tbl, "TemporaryRegistration");
+                bool hasTempDate = await ColumnExistsAsync(conn, tbl, "TemporaryRegistrationDate");
+                bool hasTempExp = await ColumnExistsAsync(conn, tbl, "TemporaryRegistrationExpiry");
+                bool hasActive = await ColumnExistsAsync(conn, tbl, "IsActive");
+                bool hasUpdated = await ColumnExistsAsync(conn, tbl, "UpdatedDate");
+
+                if (!hasFullName)
+                    throw new Exception("Schema Tenants không hợp lệ (thiếu cột FullName).");
+
+                var sets = new System.Collections.Generic.List<string>();
+                if (hasFullName) sets.Add("FullName = @FullName");
+                if (hasIdentity) sets.Add("IdentityCard = @IdentityCard");
+                if (hasPhone) sets.Add("PhoneNumber = @PhoneNumber");
+                if (hasEmail) sets.Add("Email = @Email");
+                if (hasBirth) sets.Add("BirthDate = @BirthDate");
+                if (hasAddress) sets.Add("Address = @Address");
+                if (hasFront && frontIdPhoto != null) sets.Add("FrontIdPhoto = @FrontIdPhoto");
+                if (hasBack && backIdPhoto != null) sets.Add("BackIdPhoto = @BackIdPhoto");
+                if (hasTemp) sets.Add("TemporaryRegistration = @TempReg");
+                if (hasTempDate) sets.Add("TemporaryRegistrationDate = @TempRegDate");
+                if (hasTempExp) sets.Add("TemporaryRegistrationExpiry = @TempRegExpiry");
+                if (hasActive) sets.Add("IsActive = @IsActive");
+                if (hasUpdated) sets.Add("UpdatedDate = GETDATE()");
+
+                string sql = $@"UPDATE {tbl} SET {string.Join(", ", sets)} WHERE TenantId = @TenantId";
+
                 using (var cmd = new SqlCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue("@TenantId", tenantId);
-                    cmd.Parameters.AddWithValue("@FullName", fullName);
-                    cmd.Parameters.AddWithValue("@IdentityCard", string.IsNullOrWhiteSpace(identityCard) ? (object)DBNull.Value : identityCard);
-                    cmd.Parameters.AddWithValue("@PhoneNumber", string.IsNullOrWhiteSpace(phoneNumber) ? (object)DBNull.Value : phoneNumber);
-                    cmd.Parameters.AddWithValue("@Email", string.IsNullOrWhiteSpace(email) ? (object)DBNull.Value : email);
-                    cmd.Parameters.AddWithValue("@BirthDate", birthDate.HasValue ? (object)birthDate.Value : DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Address", string.IsNullOrWhiteSpace(address) ? (object)DBNull.Value : address);
-                    cmd.Parameters.AddWithValue("@TempReg", string.IsNullOrWhiteSpace(tempReg) ? (object)DBNull.Value : tempReg);
-                    cmd.Parameters.AddWithValue("@TempRegDate", tempRegDate.HasValue ? (object)tempRegDate.Value : DBNull.Value);
-                    cmd.Parameters.AddWithValue("@TempRegExpiry", tempRegExpiry.HasValue ? (object)tempRegExpiry.Value : DBNull.Value);
-                    cmd.Parameters.AddWithValue("@IsActive", isActive);
+                    if (hasFullName) cmd.Parameters.AddWithValue("@FullName", fullName);
+                    if (hasIdentity) cmd.Parameters.AddWithValue("@IdentityCard", string.IsNullOrWhiteSpace(identityCard) ? (object)DBNull.Value : identityCard);
+                    if (hasPhone) cmd.Parameters.AddWithValue("@PhoneNumber", string.IsNullOrWhiteSpace(phoneNumber) ? (object)DBNull.Value : phoneNumber);
+                    if (hasEmail) cmd.Parameters.AddWithValue("@Email", string.IsNullOrWhiteSpace(email) ? (object)DBNull.Value : email);
+                    if (hasBirth) cmd.Parameters.AddWithValue("@BirthDate", birthDate.HasValue ? (object)birthDate.Value : DBNull.Value);
+                    if (hasAddress) cmd.Parameters.AddWithValue("@Address", string.IsNullOrWhiteSpace(address) ? (object)DBNull.Value : address);
+                    if (hasFront && frontIdPhoto != null) cmd.Parameters.AddWithValue("@FrontIdPhoto", string.IsNullOrWhiteSpace(frontIdPhoto) ? (object)DBNull.Value : frontIdPhoto);
+                    if (hasBack && backIdPhoto != null) cmd.Parameters.AddWithValue("@BackIdPhoto", string.IsNullOrWhiteSpace(backIdPhoto) ? (object)DBNull.Value : backIdPhoto);
+                    if (hasTemp) cmd.Parameters.AddWithValue("@TempReg", string.IsNullOrWhiteSpace(tempReg) ? (object)DBNull.Value : tempReg);
+                    if (hasTempDate) cmd.Parameters.AddWithValue("@TempRegDate", tempRegDate.HasValue ? (object)tempRegDate.Value : DBNull.Value);
+                    if (hasTempExp) cmd.Parameters.AddWithValue("@TempRegExpiry", tempRegExpiry.HasValue ? (object)tempRegExpiry.Value : DBNull.Value);
+                    if (hasActive) cmd.Parameters.AddWithValue("@IsActive", isActive);
 
                     int affected = await cmd.ExecuteNonQueryAsync();
                     return affected > 0;

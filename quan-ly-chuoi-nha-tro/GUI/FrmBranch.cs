@@ -111,8 +111,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             try
             {
-                dtBranches = await branchBLL.GetAllBranchesAsync();
-                TextFixer.FixDataTable(dtBranches, "BranchName", "Address", "Description");
+                var all = await branchBLL.GetAllBranchesAsync();
+                TextFixer.FixDataTable(all, "BranchName", "Address", "Description");
+                dtBranches = AdminBranchScope.Apply(all);
                 dataGridViewBranches.DataSource = dtBranches;
                 UpdateStats();
             }
@@ -128,6 +129,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             if (frm.ShowDialog() == DialogResult.OK)
             {
                 LoadBranches();
+                AdminEvents.NotifyDataChanged();
             }
         }
 
@@ -144,6 +146,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             if (frm.ShowDialog() == DialogResult.OK)
             {
                 LoadBranches();
+                AdminEvents.NotifyDataChanged();
             }
         }
 
@@ -167,6 +170,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 {
                     MessageBox.Show("Xóa chi nhánh thành công!", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     LoadBranches();
+                    AdminEvents.NotifyDataChanged();
                 }
             }
             catch (Exception ex)

@@ -111,7 +111,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             if (_existingRow == null) return;
 
             if (_existingRow.Table.Columns.Contains("RoomTypeName"))
-                _txtName.Text = _existingRow["RoomTypeName"]?.ToString();
+                _txtName.Text = RoomTypeCatalog.Canonicalize(_existingRow["RoomTypeName"]?.ToString());
+
+            // Chỉ cho chỉnh các thuộc tính (giá/tiện ích...) để giữ đúng 3 loại phòng chuẩn.
+            _txtName.ReadOnly = true;
 
             if (_existingRow.Table.Columns.Contains("DefaultPrice") && decimal.TryParse(_existingRow["DefaultPrice"]?.ToString(), out var p) && p >= 0)
                 _numDefaultPrice.Value = Math.Min(_numDefaultPrice.Maximum, p);
@@ -168,4 +171,3 @@ namespace quan_ly_chuoi_nha_tro.GUI
         }
     }
 }
-

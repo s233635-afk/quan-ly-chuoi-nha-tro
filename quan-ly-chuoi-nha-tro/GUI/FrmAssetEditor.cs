@@ -2,6 +2,7 @@ using System;
 using System.Data;
 using System.Drawing;
 using System.Globalization;
+using System.Linq;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
 
@@ -188,8 +189,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             if (_existingRow == null) return;
 
             txtCode.Text = ReadString(_existingRow, "AssetCode");
-            txtName.Text = ReadString(_existingRow, "AssetName");
-            txtCategory.Text = ReadString(_existingRow, "Category");
+            txtName.Text = TextFixer.FixUtf8Mojibake(ReadString(_existingRow, "AssetName"));
+            txtCategory.Text = TextFixer.FixUtf8Mojibake(ReadString(_existingRow, "Category"));
 
             int roomId = ReadInt(_existingRow, "RoomId");
             if (roomId > 0) { try { cboRoom.SelectedValue = roomId; } catch { } }
@@ -215,7 +216,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             if (price >= numPrice.Minimum && price <= numPrice.Maximum) numPrice.Value = price;
 
             chkActive.Checked = ReadBool(_existingRow, "IsActive") ?? true;
-            txtDesc.Text = ReadString(_existingRow, "Description");
+            txtDesc.Text = TextFixer.FixUtf8Mojibake(ReadString(_existingRow, "Description"));
         }
 
         private async System.Threading.Tasks.Task LoadRoomsAsync()
@@ -223,6 +224,30 @@ namespace quan_ly_chuoi_nha_tro.GUI
             try
             {
                 var dt = await _bll.GetRoomsAsync();
+                TextFixer.FixDataTable(dt, "RoomNumber", "BranchName", "SectionName", "RoomTypeName");
+
+                if (AdminBranchScope.IsEnabled && dt != null && dt.Columns.Contains("BranchId"))
+                {
+                    var branches = AdminBranchScope.Apply(await _bll.GetBranchesAsync());
+                    var allowed = branches?.AsEnumerable()
+                        .Select(r => r["BranchId"]?.ToString())
+                        .Where(s => int.TryParse(s, out var id) && id > 0)
+                        .Select(int.Parse)
+                        .ToHashSet();
+
+                    if (allowed != null && allowed.Count > 0)
+                    {
+                        var filtered = dt.Clone();
+                        foreach (DataRow r in dt.Rows)
+                        {
+                            if (!int.TryParse(r["BranchId"]?.ToString(), out var bid)) continue;
+                            if (!allowed.Contains(bid)) continue;
+                            filtered.ImportRow(r);
+                        }
+                        dt = filtered;
+                    }
+                }
+
                 _roomTable = new DataTable();
                 _roomTable.Columns.Add("RoomId", typeof(int));
                 _roomTable.Columns.Add("RoomDisplay", typeof(string));
@@ -234,8 +259,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     {
                         int id = 0;
                         try { id = Convert.ToInt32(r["RoomId"]); } catch { }
-                        string roomNo = r.Table.Columns.Contains("RoomNumber") ? r["RoomNumber"]?.ToString() : null;
-                        string branch = r.Table.Columns.Contains("BranchName") ? r["BranchName"]?.ToString() : null;
+                        string roomNo = r.Table.Columns.Contains("RoomNumber") ? TextFixer.FixUtf8Mojibake(r["RoomNumber"]?.ToString()) : null;
+                        string branch = r.Table.Columns.Contains("BranchName") ? TextFixer.FixUtf8Mojibake(r["BranchName"]?.ToString()) : null;
                         string display = roomNo;
                         if (!string.IsNullOrWhiteSpace(branch)) display = $"{roomNo} - {branch}";
                         if (string.IsNullOrWhiteSpace(display)) display = "Phòng " + id;
@@ -361,4 +386,3 @@ namespace quan_ly_chuoi_nha_tro.GUI
         }
     }
 }
-

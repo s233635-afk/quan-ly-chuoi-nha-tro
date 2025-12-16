@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
-using System.IO;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
 
@@ -66,7 +65,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _userPlaceholderLabel = SetupOverlayPlaceholder(txtUser, pnlUserBox, UserPlaceholder, isPassword: false);
             _passPlaceholderLabel = SetupOverlayPlaceholder(txtPass, pnlPassBox, PassPlaceholder, isPassword: true);
 
-            TryLoadRememberedUsername();
+            if (chkShowPassword != null)
+            {
+                chkShowPassword.Checked = false;
+                chkShowPassword.CheckedChanged += (s, e) =>
+                {
+                    txtPass.UseSystemPasswordChar = !chkShowPassword.Checked;
+                    UpdateOverlayPlaceholderVisibility(_passPlaceholderLabel, txtPass);
+                };
+            }
 
             txtUser.Focus();
         }
@@ -91,28 +98,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 var access = await userBLL.GetUserAccessAsync(user);
                 int roleId = access.RoleId;
 
-                SaveRememberedUsername(user);
-
                 MessageBox.Show($"Xin chào {fullName}!", "Đăng nhập thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                if (roleId == 1) // Admin
+                // Hệ thống chỉ chạy chế độ Admin (RoleId = 1)
+                if (roleId != 1)
                 {
-                    FrmAdminDashboard adminForm = new FrmAdminDashboard(user, access.UserId);
-                    Hide();
-                    adminForm.ShowDialog();
-                    Show();
+                    MessageBox.Show("Hệ thống hiện chỉ hỗ trợ tài khoản Admin (RoleId = 1).", "Không có quyền", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
                 }
-                else if (roleId == 2 || roleId == 3) // Staff/Manager
-                {
-                    FrmStaffDashboard staffForm = new FrmStaffDashboard(user, fullName, access.BranchId);
-                    Hide();
-                    staffForm.ShowDialog();
-                    Show();
-                }
-                else
-                {
-                    MessageBox.Show("Tài khoản có RoleId không được hỗ trợ: " + roleId, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                }
+
+                FrmAdminDashboard adminForm = new FrmAdminDashboard(user, access.UserId);
+                Hide();
+                adminForm.ShowDialog();
+                Show();
 
                 UpdateOverlayPlaceholderVisibility(_userPlaceholderLabel, txtUser);
                 UpdateOverlayPlaceholderVisibility(_passPlaceholderLabel, txtPass);
@@ -237,65 +235,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             placeholderLabel.Visible = string.IsNullOrEmpty(textBox.Text);
         }
 
-        private string GetRememberPath()
-        {
-            try
-            {
-                return Path.Combine(Application.UserAppDataPath, "remember_user.txt");
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        private void TryLoadRememberedUsername()
-        {
-            var path = GetRememberPath();
-            if (string.IsNullOrWhiteSpace(path)) return;
-            if (!File.Exists(path)) return;
-
-            try
-            {
-                var user = File.ReadAllText(path).Trim();
-                if (!string.IsNullOrWhiteSpace(user))
-                {
-                    chkRemember.Checked = true;
-                    txtUser.Text = user;
-                    txtUser.ForeColor = Color.FromArgb(33, 37, 41);
-                    UpdateOverlayPlaceholderVisibility(_userPlaceholderLabel, txtUser);
-                }
-            }
-            catch
-            {
-                // ignore
-            }
-        }
-
-        private void SaveRememberedUsername(string username)
-        {
-            var path = GetRememberPath();
-            if (string.IsNullOrWhiteSpace(path)) return;
-
-            try
-            {
-                if (chkRemember != null && chkRemember.Checked)
-                {
-                    Directory.CreateDirectory(Path.GetDirectoryName(path));
-                    File.WriteAllText(path, username ?? string.Empty);
-                }
-                else
-                {
-                    if (File.Exists(path))
-                        File.Delete(path);
-                }
-            }
-            catch
-            {
-                // ignore
-            }
-        }
-
         private void pnlContainer_Paint(object sender, PaintEventArgs e)
         {
             var g = e.Graphics;
@@ -392,13 +331,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var rect = pnlRight.ClientRectangle;
             if (rect.Width <= 0 || rect.Height <= 0) return;
 
-            using (var brush = new LinearGradientBrush(rect, Color.FromArgb(0, 70, 180), Color.FromArgb(0, 173, 181), 135f))
+            // Sử dụng gradient nhẹ hơn để không bị khuất
+            using (var brush = new LinearGradientBrush(rect, Color.FromArgb(0, 100, 200), Color.FromArgb(0, 150, 200), 135f))
             {
                 g.FillRectangle(brush, rect);
             }
 
             EnsureStars(rect);
-            using (var starBrush = new SolidBrush(Color.FromArgb(220, 255, 255, 255)))
+            // Giảm độ mờ của các ngôi sao để không che khuất
+            using (var starBrush = new SolidBrush(Color.FromArgb(180, 255, 255, 255)))
             {
                 foreach (var p in _stars)
                 {
@@ -429,27 +370,29 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 path.AddLine(rect.Left, rect.Top, rect.Left, rect.Bottom);
 
                 var p1 = new Point(rect.Left, rect.Bottom);
-                var c1 = new Point(rect.Left + rect.Width / 3, rect.Bottom - rect.Height / 5);
-                var c2 = new Point(rect.Left + rect.Width / 2, rect.Top + rect.Height / 2);
-                var p2 = new Point(rect.Left + rect.Width / 5, rect.Top);
+                var c1 = new Point(rect.Left + rect.Width / 4, rect.Bottom - rect.Height / 6); // Điều chỉnh đường cong
+                var c2 = new Point(rect.Left + rect.Width / 2, rect.Top + rect.Height / 3);
+                var p2 = new Point(rect.Left + rect.Width / 6, rect.Top);
                 path.AddBezier(p1, c1, c2, p2);
                 path.CloseFigure();
 
-                using (var brush = new SolidBrush(Color.FromArgb(60, 255, 255, 255)))
+                // Tăng độ trong suốt để không che khuất
+                using (var brush = new SolidBrush(Color.FromArgb(40, 255, 255, 255)))
                 {
                     g.FillPath(brush, path);
                 }
             }
 
-            using (var pen = new Pen(Color.FromArgb(70, 255, 255, 255), 2f))
+            // Giảm độ dày và độ mờ của các đường kẻ
+            using (var pen = new Pen(Color.FromArgb(50, 255, 255, 255), 1.5f))
             {
                 pen.StartCap = LineCap.Round;
                 pen.EndCap = LineCap.Round;
-                for (int i = 0; i < 14; i++)
+                for (int i = 0; i < 10; i++) // Giảm số lượng đường kẻ
                 {
-                    int x1 = rect.Left + (rect.Width * i / 14);
-                    int y1 = rect.Top - 30;
-                    g.DrawLine(pen, x1, y1, x1 + 120, y1 + 110);
+                    int x1 = rect.Left + (rect.Width * i / 10);
+                    int y1 = rect.Top - 20;
+                    g.DrawLine(pen, x1, y1, x1 + 100, y1 + 90);
                 }
             }
         }
@@ -475,15 +418,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void lnkForgot_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            MessageBox.Show("Vui lòng liên hệ quản trị viên để đặt lại mật khẩu.", "Quên mật khẩu", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            using (var frm = new FrmForgotPassword())
+            {
+                frm.ShowDialog(this);
+            }
         }
 
         private void lnkRegister_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            using (var frm = new FrmRegister())
-            {
-                frm.ShowDialog(this);
-            }
+            MessageBox.Show("Hệ thống chỉ sử dụng tài khoản Admin. Vui lòng liên hệ quản trị viên để cấp tài khoản.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
     }
 }

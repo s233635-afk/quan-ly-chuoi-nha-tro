@@ -198,7 +198,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             try
             {
-                _branchTable = await _bll.GetBranchesAsync();
+                _branchTable = AdminBranchScope.Apply(await _bll.GetBranchesAsync());
                 _typeTable = await _bll.GetRoomTypesAsync();
                 _statusTable = await _bll.GetRoomStatusesAsync();
 
@@ -224,6 +224,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             if (!dt.Columns.Contains("BranchDisplay"))
                 dt.Columns.Add("BranchDisplay", typeof(string));
 
+            TextFixer.FixDataTable(dt, "BranchCode", "BranchName", "Address");
+
             foreach (DataRow r in dt.Rows)
             {
                 string code = dt.Columns.Contains("BranchCode") ? r["BranchCode"]?.ToString() : null;
@@ -241,14 +243,16 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private void BindRoomTypes()
         {
             if (_typeTable == null) return;
-            cboRoomType.DataSource = _typeTable;
-            cboRoomType.DisplayMember = _typeTable.Columns.Contains("RoomTypeName") ? "RoomTypeName" : _typeTable.Columns[0].ColumnName;
-            cboRoomType.ValueMember = _typeTable.Columns.Contains("RoomTypeId") ? "RoomTypeId" : _typeTable.Columns[0].ColumnName;
+            var filtered = RoomTypeCatalog.FilterToCanonicalTypes(_typeTable);
+            cboRoomType.DataSource = filtered;
+            cboRoomType.DisplayMember = filtered.Columns.Contains("RoomTypeName") ? "RoomTypeName" : filtered.Columns[0].ColumnName;
+            cboRoomType.ValueMember = filtered.Columns.Contains("RoomTypeId") ? "RoomTypeId" : filtered.Columns[0].ColumnName;
         }
 
         private void BindStatuses()
         {
             if (_statusTable == null) return;
+            TextFixer.FixDataTable(_statusTable, "StatusName", "Description");
             cboStatus.DataSource = _statusTable;
             cboStatus.DisplayMember = _statusTable.Columns.Contains("StatusName") ? "StatusName" : _statusTable.Columns[0].ColumnName;
             cboStatus.ValueMember = _statusTable.Columns.Contains("StatusId") ? "StatusId" : _statusTable.Columns[0].ColumnName;
@@ -267,18 +271,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     return;
                 }
 
-                var dt = _sectionTable.Copy();
-                if (!dt.Columns.Contains("SectionDisplay"))
-                    dt.Columns.Add("SectionDisplay", typeof(string));
-
-                foreach (DataRow r in dt.Rows)
-                {
-                    string code = dt.Columns.Contains("SectionCode") ? r["SectionCode"]?.ToString() : null;
-                    string name = dt.Columns.Contains("SectionName") ? r["SectionName"]?.ToString() : null;
-                    string id = dt.Columns.Contains("SectionId") ? r["SectionId"]?.ToString() : null;
-                    string display = $"{code} - {name}".Trim(' ', '-');
-                    r["SectionDisplay"] = string.IsNullOrWhiteSpace(display) ? ("Khu " + id) : display;
-                }
+                var dt = BranchSectionCatalog.NormalizeForRoomEditor(_sectionTable, branchId);
 
                 // add placeholder row (id=0)
                 var none = dt.Clone();

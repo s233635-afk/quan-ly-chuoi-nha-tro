@@ -145,23 +145,22 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 _tenantTable = await _bll.GetTenantsAsync();
                 _roomTable = await _bll.GetRoomsAsync();
 
+                var branches = AdminBranchScope.Apply(await _bll.GetBranchesAsync());
+                var allowedIds = AdminBranchScope.GetAllowedBranchIds(branches);
+                _roomTable = AdminBranchScope.FilterByBranchIds(_roomTable, allowedIds);
+                TextFixer.FixDataTable(_roomTable, "RoomNumber", "BranchName", "StatusName");
+
                 cboTenant.DataSource = _tenantTable;
                 cboTenant.DisplayMember = "FullName";
                 cboTenant.ValueMember = "TenantId";
 
-                if (_roomTable.Columns.Contains("RoomNumber"))
-                {
-                    _roomTable.Columns["RoomNumber"].ColumnName = "RoomDisplay";
-                }
-                else if (!_roomTable.Columns.Contains("RoomDisplay"))
-                {
+                if (!_roomTable.Columns.Contains("RoomDisplay"))
                     _roomTable.Columns.Add("RoomDisplay", typeof(string));
-                }
                 foreach (DataRow r in _roomTable.Rows)
                 {
-                    if (_roomTable.Columns.Contains("RoomNumber"))
-                        r["RoomDisplay"] = r["RoomNumber"].ToString();
-                    else if (_roomTable.Columns.Contains("RoomId"))
+                    if (_roomTable.Columns.Contains("RoomNumber") && r["RoomNumber"] != DBNull.Value)
+                        r["RoomDisplay"] = r["RoomNumber"]?.ToString();
+                    else if (_roomTable.Columns.Contains("RoomId") && r["RoomId"] != DBNull.Value)
                         r["RoomDisplay"] = "Phòng " + r["RoomId"];
                 }
 
