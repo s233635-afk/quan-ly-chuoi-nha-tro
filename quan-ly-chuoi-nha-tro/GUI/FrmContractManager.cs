@@ -1,565 +1,348 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
+    // ================================================================
+    // PHẦN 1: MÀN HÌNH QUẢN LÝ HỢP ĐỒNG (DẠNG THẺ - CARD VIEW)
+    // ================================================================
     public class FrmContractManager : Form
     {
+        private const string SearchPlaceholder = "Tìm theo số HĐ/khách/phòng...";
+
         private readonly AdminDataBLL _bll = new AdminDataBLL();
         private readonly int? _branchId;
         private HashSet<int> _allowedBranchIds;
-
         private DataTable _rawTable;
 
-        private DataGridView _grid;
+        // Dùng FlowLayoutPanel để hiện thẻ thay vì GridView
+        private FlowLayoutPanel _flowPanel;
         private TextBox _txtSearch;
         private ComboBox _cboStatus;
         private DateTimePicker _dtFrom;
         private DateTimePicker _dtTo;
         private Label _lblCount;
 
-        private Button _btnAdd;
-        private Button _btnEdit;
-        private Button _btnDelete;
-        private Button _btnMarkDone;
-        private Button _btnViewPdf;
-        private Button _btnRefresh;
-
-        public FrmContractManager() : this(null)
-        {
-        }
+        public FrmContractManager() : this(null) { }
 
         public FrmContractManager(int? branchId)
         {
             _branchId = branchId;
-            InitializeComponent();
+            // Gọi hàm khởi tạo giao diện thủ công, bỏ qua Designer cũ
+            InitializeComponentManual();
         }
 
-        private void InitializeComponent()
+        // Đổi tên hàm này để tránh xung đột với file Designer.cs (nếu có)
+        private void InitializeComponentManual()
         {
-            this.Text = "Quản lý Hợp đồng";
-            this.StartPosition = FormStartPosition.CenterParent;
-            this.Width = 1200;
-            this.Height = 650;
+            Text = "Quản lý Hợp đồng";
+            StartPosition = FormStartPosition.CenterParent;
+            Width = 1280;
+            Height = 760;
+            BackColor = Color.FromArgb(245, 247, 250); // Nền xám nhạt
 
-            _grid = new DataGridView
-            {
-                Dock = DockStyle.Fill,
-                ReadOnly = true,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                MultiSelect = false,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                AllowUserToAddRows = false,
-                AllowUserToDeleteRows = false,
-                RowHeadersVisible = false,
-                BackgroundColor = Color.White,
-                BorderStyle = BorderStyle.None
-            };
-            _grid.EnableHeadersVisualStyles = false;
-            _grid.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(0, 120, 215);
-            _grid.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            _grid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
-            _grid.DefaultCellStyle.Font = new Font("Segoe UI", 10, FontStyle.Regular);
-            _grid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 249, 255);
-            _grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(232, 244, 252);
-            _grid.DefaultCellStyle.SelectionForeColor = Color.Black;
-            _grid.DoubleClick += async (s, e) => await EditSelectedAsync();
+            // --- HEADER: Tìm kiếm và Bộ lọc ---
+            var top = new Panel { Dock = DockStyle.Top, Height = 100, BackColor = Color.White, Padding = new Padding(15) };
+            top.Controls.Add(new Panel { Dock = DockStyle.Bottom, Height = 1, BackColor = Color.LightGray });
 
-            _txtSearch = new TextBox { Width = 260 };
-            _txtSearch.TextChanged += (s, e) => ApplyFilter();
+            // Dòng nút bấm (Thêm, Tải lại)
+            var pnlActions = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 40, WrapContents = false, FlowDirection = FlowDirection.LeftToRight, BackColor = Color.Transparent };
 
-            _cboStatus = new ComboBox { Width = 160, DropDownStyle = ComboBoxStyle.DropDownList };
-            _cboStatus.Items.AddRange(new object[] { "Tất cả", "Active", "Extended", "Terminated", "Expired" });
+            // Nếu bạn dùng UiKit
+            var btnAdd = UiKit.MakeButton("Thêm Mới", UiKit.Primary, async (s, e) => await AddNewAsync());
+            var btnRefresh = UiKit.MakeButton("Tải lại", Color.Gray, async (s, e) => await LoadDataAsync());
+
+            pnlActions.Controls.AddRange(new Control[] { btnAdd, btnRefresh });
+
+            // Dòng bộ lọc
+            var pnlFilters = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 35, WrapContents = false, FlowDirection = FlowDirection.LeftToRight, BackColor = Color.Transparent };
+
+            _txtSearch = new TextBox { Width = 220, Font = new Font("Segoe UI", 10) };
+            // Giả sử UiKit.MakeSearchPanel trả về Panel
+            var pnlSearch = UiKit.MakeSearchPanel(_txtSearch, 230, SearchPlaceholder, ApplyFilter);
+
+            _cboStatus = new ComboBox { Width = 140, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 10), FlatStyle = FlatStyle.Flat };
+            _cboStatus.Items.AddRange(new object[] { "Tất cả", "Active", "Terminated", "Expired" });
             _cboStatus.SelectedIndex = 0;
             _cboStatus.SelectedIndexChanged += (s, e) => ApplyFilter();
 
-            _dtFrom = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true, Width = 120 };
-            _dtTo = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true, Width = 120 };
+            _dtFrom = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true, Checked = false, Width = 110, Font = new Font("Segoe UI", 10) };
+            _dtTo = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true, Checked = false, Width = 110, Font = new Font("Segoe UI", 10) };
             _dtFrom.ValueChanged += (s, e) => ApplyFilter();
             _dtTo.ValueChanged += (s, e) => ApplyFilter();
 
-            _lblCount = new Label { AutoSize = true, Text = "Tổng: 0" };
+            _lblCount = new Label { AutoSize = true, Text = "Tổng: 0", Font = new Font("Segoe UI", 10, FontStyle.Bold), Margin = new Padding(10, 8, 0, 0), ForeColor = Color.DimGray };
 
-            _btnAdd = MakeButton("Thêm", async (s, e) => await AddNewAsync());
-            _btnEdit = MakeButton("Sửa", async (s, e) => await EditSelectedAsync());
-            _btnDelete = MakeButton("Xóa", async (s, e) => await DeleteSelectedAsync());
-            _btnMarkDone = MakeButton("Đã xong", async (s, e) => await MarkDoneAsync());
-            _btnMarkDone.BackColor = Color.FromArgb(46, 125, 50);
-            _btnViewPdf = MakeButton("Xem PDF", (s, e) => ViewPdf());
-            _btnRefresh = MakeButton("Tải lại", async (s, e) => await LoadDataAsync());
+            pnlFilters.Controls.Add(pnlSearch);
+            pnlFilters.Controls.Add(new Label { Text = "Trạng thái:", AutoSize = true, Margin = new Padding(15, 8, 5, 0) });
+            pnlFilters.Controls.Add(_cboStatus);
+            pnlFilters.Controls.Add(new Label { Text = "Từ:", AutoSize = true, Margin = new Padding(15, 8, 5, 0) });
+            pnlFilters.Controls.Add(_dtFrom);
+            pnlFilters.Controls.Add(new Label { Text = "Đến:", AutoSize = true, Margin = new Padding(5, 8, 5, 0) });
+            pnlFilters.Controls.Add(_dtTo);
+            pnlFilters.Controls.Add(_lblCount);
 
-            var top = new Panel { Dock = DockStyle.Top, Height = 52, Padding = new Padding(10, 10, 10, 10), BackColor = Color.White };
+            top.Controls.Add(pnlFilters);
+            top.Controls.Add(pnlActions);
 
-            int x = 10;
-            Place(top, _btnAdd, ref x);
-            Place(top, _btnEdit, ref x);
-            Place(top, _btnDelete, ref x);
-            Place(top, _btnMarkDone, ref x);
-            Place(top, _btnViewPdf, ref x);
-            Place(top, _btnRefresh, ref x);
-
-            var lblSearch = new Label { Text = "Tìm:", AutoSize = true, Location = new Point(x + 10, 16) };
-            top.Controls.Add(lblSearch);
-            _txtSearch.Location = new Point(lblSearch.Right + 6, 12);
-            top.Controls.Add(_txtSearch);
-
-            var lblStatus = new Label { Text = "Trạng thái:", AutoSize = true, Location = new Point(_txtSearch.Right + 12, 16) };
-            top.Controls.Add(lblStatus);
-            _cboStatus.Location = new Point(lblStatus.Right + 6, 12);
-            top.Controls.Add(_cboStatus);
-
-            var lblFrom = new Label { Text = "Từ:", AutoSize = true, Location = new Point(_cboStatus.Right + 12, 16) };
-            top.Controls.Add(lblFrom);
-            _dtFrom.Location = new Point(lblFrom.Right + 6, 12);
-            top.Controls.Add(_dtFrom);
-
-            var lblTo = new Label { Text = "Đến:", AutoSize = true, Location = new Point(_dtFrom.Right + 10, 16) };
-            top.Controls.Add(lblTo);
-            _dtTo.Location = new Point(lblTo.Right + 6, 12);
-            top.Controls.Add(_dtTo);
-
-            _lblCount.Location = new Point(_dtTo.Right + 14, 16);
-            top.Controls.Add(_lblCount);
-
-            var hint = new Label
+            // --- BODY: Nơi chứa các thẻ (Cards) ---
+            _flowPanel = new FlowLayoutPanel
             {
-                Text = "Mẹo: double-click để sửa",
-                AutoSize = true,
-                ForeColor = Color.Gray,
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
-            };
-            top.Controls.Add(hint);
-            hint.Location = new Point(this.Width - 210, 16);
-            top.Resize += (s, e) =>
-            {
-                hint.Location = new Point(top.ClientSize.Width - hint.Width - 10, 16);
+                Dock = DockStyle.Fill,
+                AutoScroll = true,
+                BackColor = Color.FromArgb(245, 247, 250),
+                Padding = new Padding(15)
             };
 
-            this.Controls.Add(_grid);
-            this.Controls.Add(top);
+            Controls.Add(_flowPanel);
+            Controls.Add(top);
 
-            this.Load += async (s, e) => await LoadDataAsync();
-        }
-
-        private static Button MakeButton(string text, EventHandler onClick)
-        {
-            var b = new Button
-            {
-                Text = text,
-                Width = 92,
-                Height = 30,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(0, 122, 204),
-                ForeColor = Color.White
-            };
-            b.FlatAppearance.BorderSize = 0;
-            b.Click += onClick;
-            return b;
-        }
-
-        private static void Place(Control parent, Control control, ref int x)
-        {
-            control.Location = new Point(x, 10);
-            parent.Controls.Add(control);
-            x += control.Width + 8;
+            Load += async (s, e) => await LoadDataAsync();
         }
 
         private async System.Threading.Tasks.Task LoadDataAsync()
         {
             try
             {
+                _flowPanel.Controls.Clear();
+                var loading = new Label { Text = "Đang tải dữ liệu...", AutoSize = true, Font = new Font("Segoe UI", 12), ForeColor = Color.Gray, Padding = new Padding(20) };
+                _flowPanel.Controls.Add(loading);
+
                 await EnsureAllowedBranchScopeAsync();
                 _rawTable = await _bll.GetContractsAsync();
                 _rawTable = _branchId.HasValue ? FilterByBranch(_rawTable, _branchId) : AdminBranchScope.FilterByBranchIds(_rawTable, _allowedBranchIds);
-
+                TextFixer.FixDataTable(_rawTable, "ContractNumber", "TenantName", "RoomNumber", "BranchName", "Status");
                 await EnrichContractsAsync(_rawTable);
-                _grid.DataSource = _rawTable;
-                ApplyGridPresentation();
 
                 ApplyFilter();
             }
             catch (Exception ex)
             {
-                _rawTable = new DataTable();
-                _grid.DataSource = _rawTable;
-                ApplyFilter();
-                MessageBox.Show("Không kết nối được CSDL để tải hợp đồng.\n\nChi tiết: " + ex.Message,
-                    "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Lỗi: " + ex.Message);
             }
-        }
-
-        private async System.Threading.Tasks.Task EnrichContractsAsync(DataTable contracts)
-        {
-            if (contracts == null) return;
-
-            DataTable tenants = null;
-            DataTable rooms = null;
-            try
-            {
-                tenants = await _bll.GetTenantsAsync();
-                rooms = await _bll.GetRoomsAsync();
-                rooms = _branchId.HasValue ? FilterByBranch(rooms, _branchId) : AdminBranchScope.FilterByBranchIds(rooms, _allowedBranchIds);
-            }
-            catch
-            {
-                return;
-            }
-
-            var tenantMap = new Dictionary<int, string>();
-            if (tenants != null && tenants.Columns.Contains("TenantId"))
-            {
-                foreach (DataRow r in tenants.Rows)
-                {
-                    if (int.TryParse(r["TenantId"]?.ToString(), out var id))
-                    {
-                        string name = tenants.Columns.Contains("FullName") ? r["FullName"]?.ToString() : ("Tenant " + id);
-                        if (!tenantMap.ContainsKey(id)) tenantMap.Add(id, name);
-                    }
-                }
-            }
-
-            var roomMap = new Dictionary<int, string>();
-            if (rooms != null && rooms.Columns.Contains("RoomId"))
-            {
-                foreach (DataRow r in rooms.Rows)
-                {
-                    if (int.TryParse(r["RoomId"]?.ToString(), out var id))
-                    {
-                        string num = rooms.Columns.Contains("RoomNumber") ? r["RoomNumber"]?.ToString() : ("Phòng " + id);
-                        if (!roomMap.ContainsKey(id)) roomMap.Add(id, num);
-                    }
-                }
-            }
-
-            if (!contracts.Columns.Contains("TenantName"))
-                contracts.Columns.Add("TenantName", typeof(string));
-            if (!contracts.Columns.Contains("RoomNumber"))
-                contracts.Columns.Add("RoomNumber", typeof(string));
-
-            foreach (DataRow r in contracts.Rows)
-            {
-                if (contracts.Columns.Contains("TenantId") && int.TryParse(r["TenantId"]?.ToString(), out var tid) && tenantMap.TryGetValue(tid, out var tname))
-                    r["TenantName"] = tname;
-                if (contracts.Columns.Contains("RoomId") && int.TryParse(r["RoomId"]?.ToString(), out var rid) && roomMap.TryGetValue(rid, out var rnum))
-                    r["RoomNumber"] = rnum;
-            }
-        }
-
-        private void ApplyGridPresentation()
-        {
-            foreach (DataGridViewColumn c in _grid.Columns)
-            {
-                c.HeaderText = c.HeaderText;
-            }
-
-            SetHeader("ContractId", "ID");
-            SetHeader("ContractNumber", "Số HĐ");
-            SetHeader("TenantName", "Khách thuê");
-            SetHeader("TenantId", "TenantId");
-            SetHeader("RoomNumber", "Phòng");
-            SetHeader("RoomId", "RoomId");
-            SetHeader("SignDate", "Ngày ký");
-            SetHeader("StartDate", "Bắt đầu");
-            SetHeader("EndDate", "Kết thúc");
-            SetHeader("RentalPrice", "Giá thuê");
-            SetHeader("DepositRequired", "Tiền cọc");
-            SetHeader("Status", "Trạng thái");
-            SetHeader("ContractPdfPath", "File PDF");
-            SetHeader("Terms", "Điều khoản");
-            SetHeader("CreatedDate", "Tạo lúc");
-            SetHeader("UpdatedDate", "Cập nhật");
-
-            HideIfExists("TenantId");
-            HideIfExists("RoomId");
-            HideIfExists("BranchId");
-
-            FormatMoney("RentalPrice");
-            FormatMoney("DepositRequired");
-
-            SetDisplayOrder(
-                "ContractNumber",
-                "TenantName",
-                "RoomNumber",
-                "StartDate",
-                "EndDate",
-                "RentalPrice",
-                "DepositRequired",
-                "Status",
-                "SignDate",
-                "ContractPdfPath",
-                "Terms",
-                "ContractId",
-                "CreatedDate",
-                "UpdatedDate"
-            );
-        }
-
-        private void SetHeader(string columnName, string headerText)
-        {
-            if (_grid.Columns.Contains(columnName))
-                _grid.Columns[columnName].HeaderText = headerText;
-        }
-
-        private void HideIfExists(string columnName)
-        {
-            if (_grid.Columns.Contains(columnName))
-                _grid.Columns[columnName].Visible = false;
-        }
-
-        private void SetDisplayOrder(params string[] order)
-        {
-            int index = 0;
-            foreach (var name in order)
-            {
-                if (_grid.Columns.Contains(name))
-                {
-                    _grid.Columns[name].DisplayIndex = index;
-                    index++;
-                }
-            }
-        }
-
-        private void FormatMoney(string columnName)
-        {
-            if (_grid.Columns.Contains(columnName))
-                _grid.Columns[columnName].DefaultCellStyle.Format = "N0";
-        }
-
-        private DataRow GetCurrentRow()
-        {
-            if (_grid.CurrentRow == null || _grid.CurrentRow.DataBoundItem == null) return null;
-            if (_grid.CurrentRow.DataBoundItem is DataRowView drv) return drv.Row;
-            return null;
         }
 
         private void ApplyFilter()
         {
             if (_rawTable == null) return;
-
-            string keyword = (_txtSearch.Text ?? string.Empty).Trim();
-            bool hasKeyword = !string.IsNullOrWhiteSpace(keyword);
+            string keyword = _txtSearch.Text.Trim().ToLowerInvariant();
+            if (keyword == SearchPlaceholder.ToLowerInvariant()) keyword = "";
             string status = _cboStatus.SelectedItem?.ToString();
-            bool filterStatus = !string.IsNullOrWhiteSpace(status) && status != "Tất cả";
-
             DateTime? from = _dtFrom.Checked ? (DateTime?)_dtFrom.Value.Date : null;
             DateTime? to = _dtTo.Checked ? (DateTime?)_dtTo.Value.Date : null;
 
-            IEnumerable<DataRow> rows = _rawTable.AsEnumerable();
+            var query = _rawTable.AsEnumerable();
+            if (!string.IsNullOrEmpty(status) && status != "Tất cả")
+                query = query.Where(r => string.Equals(r["Status"]?.ToString(), status, StringComparison.OrdinalIgnoreCase));
+            if (from.HasValue) query = query.Where(r => DateTime.TryParse(r["StartDate"]?.ToString(), out var d) && d.Date >= from.Value);
+            if (to.HasValue) query = query.Where(r => DateTime.TryParse(r["EndDate"]?.ToString(), out var d) && d.Date <= to.Value);
+            if (!string.IsNullOrEmpty(keyword))
+                query = query.Where(r => Contains(r, "ContractNumber", keyword) || Contains(r, "TenantName", keyword) || Contains(r, "RoomNumber", keyword));
 
-            if (filterStatus && _rawTable.Columns.Contains("Status"))
-                rows = rows.Where(r => string.Equals(r["Status"]?.ToString(), status, StringComparison.OrdinalIgnoreCase));
+            var resultTable = query.Any() ? query.CopyToDataTable() : null;
+            _lblCount.Text = resultTable != null ? $"Tổng: {resultTable.Rows.Count}" : "Tổng: 0";
 
-            if (from.HasValue && _rawTable.Columns.Contains("StartDate"))
-                rows = rows.Where(r => DateTime.TryParse(r["StartDate"]?.ToString(), out var d) && d.Date >= from.Value);
-
-            if (to.HasValue && _rawTable.Columns.Contains("EndDate"))
-                rows = rows.Where(r => DateTime.TryParse(r["EndDate"]?.ToString(), out var d) && d.Date <= to.Value);
-
-            if (hasKeyword)
-            {
-                string kw = keyword.ToLowerInvariant();
-                rows = rows.Where(r => RowContains(r, kw));
-            }
-
-            var filtered = _rawTable.Clone();
-            foreach (var r in rows)
-                filtered.ImportRow(r);
-
-            _grid.DataSource = filtered;
-            ApplyGridPresentation();
-            _lblCount.Text = $"Tổng: {filtered.Rows.Count}";
+            RenderCards(resultTable);
         }
 
-        private bool RowContains(DataRow row, string keyword)
+        // --- HÀM VẼ THẺ (CARD) ---
+        private void RenderCards(DataTable dt)
         {
-            foreach (DataColumn c in row.Table.Columns)
+            _flowPanel.Controls.Clear();
+            if (dt == null || dt.Rows.Count == 0) return;
+
+            foreach (DataRow row in dt.Rows)
             {
-                if (c.DataType == typeof(byte[])) continue;
-                string text = row[c]?.ToString();
-                if (!string.IsNullOrEmpty(text) && text.ToLowerInvariant().Contains(keyword))
-                    return true;
+                // 1. Khung thẻ
+                var card = new Panel
+                {
+                    Width = 380,
+                    Height = 170,
+                    BackColor = Color.White,
+                    Margin = new Padding(10),
+                    Cursor = Cursors.Hand
+                };
+
+                // Màu trạng thái
+                string status = row["Status"]?.ToString();
+                Color statusColor = status == "Active" ? Color.SeaGreen : (status == "Expired" ? Color.Firebrick : Color.Gray);
+
+                // Dải màu bên trái
+                var strip = new Panel { Dock = DockStyle.Left, Width = 6, BackColor = statusColor };
+
+                // Nội dung
+                var content = new Panel { Dock = DockStyle.Fill, Padding = new Padding(12) };
+
+                var lblNo = new Label { Text = row["ContractNumber"]?.ToString(), Font = new Font("Segoe UI", 12, FontStyle.Bold), ForeColor = Color.FromArgb(0, 100, 200), AutoSize = true, Location = new Point(10, 10) };
+                var lblStt = new Label { Text = status, Font = new Font("Segoe UI", 9, FontStyle.Bold), ForeColor = statusColor, AutoSize = true, Location = new Point(280, 12) };
+
+                var lblTenant = new Label { Text = "Khách: " + row["TenantName"]?.ToString(), Font = new Font("Segoe UI", 10), Location = new Point(10, 45), AutoSize = true };
+                var lblRoom = new Label { Text = "Phòng: " + row["RoomNumber"]?.ToString(), Font = new Font("Segoe UI", 10), Location = new Point(10, 70), AutoSize = true };
+
+                decimal price = 0; decimal.TryParse(row["RentalPrice"]?.ToString(), out price);
+                var lblPrice = new Label { Text = "Giá: " + price.ToString("N0") + " đ", Font = new Font("Segoe UI", 10, FontStyle.Bold), ForeColor = Color.DarkSlateGray, Location = new Point(200, 70), AutoSize = true };
+
+                var lblDate = new Label { Text = $"Hạn: {Convert.ToDateTime(row["StartDate"]):dd/MM} - {Convert.ToDateTime(row["EndDate"]):dd/MM/yyyy}", Font = new Font("Segoe UI", 9, FontStyle.Italic), ForeColor = Color.Gray, Location = new Point(10, 110), AutoSize = true };
+
+                var line = new Panel { Height = 1, BackColor = Color.LightGray, Width = 340, Location = new Point(10, 135) };
+                var lblBr = new Label { Text = row["BranchName"]?.ToString(), Font = new Font("Segoe UI", 8), ForeColor = Color.DimGray, Location = new Point(10, 142), AutoSize = true };
+
+                content.Controls.AddRange(new Control[] { lblNo, lblStt, lblTenant, lblRoom, lblPrice, lblDate, line, lblBr });
+                card.Controls.Add(content);
+                card.Controls.Add(strip);
+
+                // Sự kiện click mở chi tiết
+                card.Click += (s, e) => ShowDetail(row);
+                foreach (Control c in content.Controls) c.Click += (s, e) => ShowDetail(row);
+
+                _flowPanel.Controls.Add(card);
             }
-            return false;
+        }
+
+        private void ShowDetail(DataRow row)
+        {
+            using (var frm = new FrmContractDetail(row, _bll))
+            {
+                if (frm.ShowDialog(this) == DialogResult.OK) LoadDataAsync();
+            }
         }
 
         private async System.Threading.Tasks.Task AddNewAsync()
         {
-            using (var frm = new FrmContractEditor(_bll, null))
-            {
-                if (frm.ShowDialog(this) != DialogResult.OK) return;
-                await LoadDataAsync();
-                AdminEvents.NotifyDataChanged();
-            }
+            using (var frm = new FrmContractEditor(_bll, null)) { if (frm.ShowDialog(this) == DialogResult.OK) await LoadDataAsync(); }
         }
 
-        private async System.Threading.Tasks.Task EditSelectedAsync()
+        // --- Hàm hỗ trợ dữ liệu ---
+        private async System.Threading.Tasks.Task EnrichContractsAsync(DataTable contracts)
         {
-            var selected = GetCurrentRow();
-            if (selected == null)
-            {
-                MessageBox.Show("Chọn một dòng để sửa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            using (var frm = new FrmContractEditor(_bll, selected))
-            {
-                if (frm.ShowDialog(this) != DialogResult.OK) return;
-                await LoadDataAsync();
-                AdminEvents.NotifyDataChanged();
-            }
-        }
-
-        private async System.Threading.Tasks.Task DeleteSelectedAsync()
-        {
-            var row = GetCurrentRow();
-            if (row == null)
-            {
-                MessageBox.Show("Chọn một dòng để xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            int id = row.Table.Columns.Contains("ContractId") ? Convert.ToInt32(row["ContractId"]) : 0;
-            if (MessageBox.Show($"Xóa hợp đồng ID {id}?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                return;
-
+            if (contracts == null) return;
             try
             {
-                await _bll.DeleteContractAsync(id);
-                await LoadDataAsync();
-                AdminEvents.NotifyDataChanged();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Lỗi xóa: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
+                var tenants = await _bll.GetTenantsAsync();
+                var rooms = await _bll.GetRoomsAsync();
+                var branches = await _bll.GetBranchesAsync();
 
-        private async System.Threading.Tasks.Task MarkDoneAsync()
-        {
-            var row = GetCurrentRow();
-            if (row == null)
-            {
-                MessageBox.Show("Chọn một hợp đồng để đánh dấu đã xong.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
+                var tenantMap = new Dictionary<int, string>();
+                foreach (DataRow r in tenants.Rows) if (int.TryParse(r["TenantId"]?.ToString(), out int id)) tenantMap[id] = r["FullName"]?.ToString();
 
-            string currentStatus = row.Table.Columns.Contains("Status") ? row["Status"]?.ToString() : null;
-            if (string.Equals(currentStatus, "Terminated", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(currentStatus, "Expired", StringComparison.OrdinalIgnoreCase))
-            {
-                MessageBox.Show("Hợp đồng này đã ở trạng thái kết thúc.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
+                var roomMap = new Dictionary<int, string>();
+                foreach (DataRow r in rooms.Rows) if (int.TryParse(r["RoomId"]?.ToString(), out int id)) roomMap[id] = r["RoomNumber"]?.ToString();
 
-            if (MessageBox.Show("Đánh dấu hợp đồng này là 'Đã xong' (Status = Terminated)?", "Xác nhận",
-                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                return;
+                var branchMap = new Dictionary<int, string>();
+                foreach (DataRow r in branches.Rows) if (int.TryParse(r["BranchId"]?.ToString(), out int id)) branchMap[id] = r["BranchName"]?.ToString();
 
-            int id = row.Table.Columns.Contains("ContractId") ? Convert.ToInt32(row["ContractId"]) : 0;
-            if (id <= 0)
-            {
-                MessageBox.Show("Không xác định được ContractId.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
+                if (!contracts.Columns.Contains("TenantName")) contracts.Columns.Add("TenantName");
+                if (!contracts.Columns.Contains("RoomNumber")) contracts.Columns.Add("RoomNumber");
+                if (!contracts.Columns.Contains("BranchName")) contracts.Columns.Add("BranchName");
 
-            try
-            {
-                var raw = await _bll.GetContractsAsync();
-                var found = raw.AsEnumerable().FirstOrDefault(r => Convert.ToInt32(r["ContractId"]) == id);
-                if (found == null)
+                foreach (DataRow r in contracts.Rows)
                 {
-                    MessageBox.Show("Không tìm thấy hợp đồng để cập nhật.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
+                    if (int.TryParse(r["TenantId"]?.ToString(), out int tid) && tenantMap.TryGetValue(tid, out var tname)) r["TenantName"] = tname;
+                    if (int.TryParse(r["RoomId"]?.ToString(), out int rid) && roomMap.TryGetValue(rid, out var rnum)) r["RoomNumber"] = rnum;
+                    if (int.TryParse(r["BranchId"]?.ToString(), out int bid) && branchMap.TryGetValue(bid, out var bname)) r["BranchName"] = bname;
                 }
-
-                string contractNumber = found["ContractNumber"]?.ToString();
-                int tenantId = Convert.ToInt32(found["TenantId"]);
-                int roomId = Convert.ToInt32(found["RoomId"]);
-                DateTime? signDate = DateTime.TryParse(found["SignDate"]?.ToString(), out var sd) ? (DateTime?)sd.Date : null;
-                DateTime startDate = Convert.ToDateTime(found["StartDate"]).Date;
-                DateTime endDate = Convert.ToDateTime(found["EndDate"]).Date;
-                decimal? rentalPrice = decimal.TryParse(found["RentalPrice"]?.ToString(), out var rp) ? (decimal?)rp : null;
-                decimal? depositRequired = decimal.TryParse(found["DepositRequired"]?.ToString(), out var dr) ? (decimal?)dr : null;
-                string terms = found["Terms"]?.ToString();
-                string pdf = found["ContractPdfPath"]?.ToString();
-
-                await _bll.UpdateContractAsync(id, contractNumber, tenantId, roomId, signDate, startDate, endDate, rentalPrice, depositRequired, terms, pdf, "Terminated");
-                await LoadDataAsync();
-                AdminEvents.NotifyDataChanged();
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Lỗi cập nhật trạng thái: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+            catch { }
         }
-
         private async System.Threading.Tasks.Task EnsureAllowedBranchScopeAsync()
         {
-            if (_branchId.HasValue) return;
-            if (_allowedBranchIds != null && _allowedBranchIds.Count > 0) return;
-
-            try
+            if (!_branchId.HasValue && (_allowedBranchIds == null || _allowedBranchIds.Count == 0))
             {
-                var branches = AdminBranchScope.Apply(await _bll.GetBranchesAsync());
-                _allowedBranchIds = AdminBranchScope.GetAllowedBranchIds(branches);
-            }
-            catch
-            {
-                _allowedBranchIds = new HashSet<int>();
+                try { var branches = AdminBranchScope.Apply(await _bll.GetBranchesAsync()); _allowedBranchIds = AdminBranchScope.GetAllowedBranchIds(branches); } catch { _allowedBranchIds = new HashSet<int>(); }
             }
         }
-
-        private void ViewPdf()
-        {
-            var row = GetCurrentRow();
-            if (row == null)
-            {
-                MessageBox.Show("Chọn một dòng để xem PDF.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            string path = row.Table.Columns.Contains("ContractPdfPath") ? row["ContractPdfPath"]?.ToString() : null;
-            if (string.IsNullOrWhiteSpace(path))
-            {
-                MessageBox.Show("Hợp đồng chưa có đường dẫn PDF.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            try
-            {
-                if (!System.IO.File.Exists(path))
-                {
-                    MessageBox.Show("Không tìm thấy file: " + path, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-
-                Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Không mở được file: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
         private static DataTable FilterByBranch(DataTable dt, int? branchId)
         {
-            if (dt == null) return dt;
-            if (!branchId.HasValue) return dt;
-            if (!dt.Columns.Contains("BranchId")) return dt;
+            if (dt == null || !branchId.HasValue) return dt;
+            var clone = dt.Clone();
+            foreach (DataRow r in dt.Rows) if (r["BranchId"] != DBNull.Value && Convert.ToInt32(r["BranchId"]) == branchId.Value) clone.ImportRow(r);
+            return clone;
+        }
+        private static bool Contains(DataRow row, string col, string key) => row.Table.Columns.Contains(col) && row[col] != DBNull.Value && row[col].ToString().ToLower().Contains(key);
+    }
 
-            var filtered = dt.Clone();
-            foreach (DataRow r in dt.Rows)
-            {
-                if (int.TryParse(r["BranchId"]?.ToString(), out var b) && b == branchId.Value)
-                    filtered.ImportRow(r);
-            }
-            return filtered;
+    // ================================================================
+    // PHẦN 2: FORM CHI TIẾT HỢP ĐỒNG (CÓ TAB - GIỐNG ẢNH BẠN GỬI)
+    // ================================================================
+    public class FrmContractDetail : Form
+    {
+        private DataRow _row;
+        private AdminDataBLL _bll;
+
+        public FrmContractDetail(DataRow row, AdminDataBLL bll)
+        {
+            _row = row;
+            _bll = bll;
+            InitializeComponentManual();
+        }
+
+        private void InitializeComponentManual()
+        {
+            Text = "Chi tiết hợp đồng";
+            Width = 1000;
+            Height = 650;
+            StartPosition = FormStartPosition.CenterParent;
+            BackColor = Color.White;
+
+            // 1. Header
+            var pnlHeader = new Panel { Dock = DockStyle.Top, Height = 100, BackColor = Color.White, Padding = new Padding(20) };
+
+            var lblTitle = new Label { Text = _row["ContractNumber"]?.ToString() + " - " + _row["TenantName"]?.ToString(), Font = new Font("Segoe UI", 16, FontStyle.Bold), ForeColor = Color.FromArgb(0, 122, 204), AutoSize = true, Location = new Point(20, 20) };
+            var lblSub = new Label { Text = $"Phòng: {_row["RoomNumber"]} | Chi nhánh: {_row["BranchName"]}", Font = new Font("Segoe UI", 11), ForeColor = Color.Gray, AutoSize = true, Location = new Point(20, 55) };
+
+            var btnEdit = UiKit.MakeButton("Sửa Hợp Đồng", Color.Orange, (s, e) => EditContract());
+            btnEdit.Location = new Point(800, 30);
+
+            var btnClose = UiKit.MakeButton("Đóng", Color.Gray, (s, e) => Close());
+            btnClose.Location = new Point(900, 30);
+
+            pnlHeader.Controls.AddRange(new Control[] { lblTitle, lblSub, btnEdit, btnClose });
+            pnlHeader.Controls.Add(new Panel { Dock = DockStyle.Bottom, Height = 1, BackColor = Color.LightGray });
+
+            // 2. Tabs
+            var tabControl = new TabControl { Dock = DockStyle.Fill, Font = new Font("Segoe UI", 10) };
+
+            // Tab Tổng quan
+            var tabOverview = new TabPage("Tổng quan") { BackColor = Color.White, Padding = new Padding(20) };
+            tabOverview.Controls.Add(MakeRow("Ngày bắt đầu:", Convert.ToDateTime(_row["StartDate"]).ToString("dd/MM/yyyy"), 20, 20));
+            tabOverview.Controls.Add(MakeRow("Ngày kết thúc:", Convert.ToDateTime(_row["EndDate"]).ToString("dd/MM/yyyy"), 20, 60));
+            tabOverview.Controls.Add(MakeRow("Giá thuê:", string.Format("{0:N0} đ", _row["RentalPrice"]), 20, 100));
+            tabOverview.Controls.Add(MakeRow("Tiền cọc:", string.Format("{0:N0} đ", _row["DepositRequired"]), 20, 140));
+            tabOverview.Controls.Add(MakeRow("Trạng thái:", _row["Status"]?.ToString(), 20, 180));
+
+            // Tab Hóa đơn
+            var tabBill = new TabPage("Hóa đơn") { BackColor = Color.WhiteSmoke };
+            tabBill.Controls.Add(new Label { Text = "Danh sách hóa đơn của hợp đồng này...", Location = new Point(20, 20), AutoSize = true });
+
+            // Tab Điều khoản
+            var tabTerm = new TabPage("Điều khoản") { BackColor = Color.WhiteSmoke };
+            tabTerm.Controls.Add(new Label { Text = _row["Terms"]?.ToString(), Location = new Point(20, 20), AutoSize = true, MaximumSize = new Size(900, 0) });
+
+            tabControl.TabPages.Add(tabOverview);
+            tabControl.TabPages.Add(tabBill);
+            tabControl.TabPages.Add(tabTerm);
+
+            Controls.Add(tabControl);
+            Controls.Add(pnlHeader);
+        }
+
+        private Control MakeRow(string title, string value, int x, int y)
+        {
+            var pnl = new Panel { Location = new Point(x, y), Size = new Size(500, 30) };
+            pnl.Controls.Add(new Label { Text = title, Font = new Font("Segoe UI", 10, FontStyle.Bold), Width = 150, ForeColor = Color.DimGray });
+            pnl.Controls.Add(new Label { Text = value, Font = new Font("Segoe UI", 10), Location = new Point(160, 0), AutoSize = true });
+            return pnl;
+        }
+
+        private void EditContract()
+        {
+            using (var frm = new FrmContractEditor(_bll, _row)) { if (frm.ShowDialog(this) == DialogResult.OK) { DialogResult = DialogResult.OK; Close(); } }
         }
     }
 }
