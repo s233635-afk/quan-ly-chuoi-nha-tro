@@ -87,7 +87,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var footerPanel = new Panel { Dock = DockStyle.Bottom, Height = 50, BackColor = Color.FromArgb(245, 247, 250), Padding = new Padding(12) };
             var btnClose = new Button
             {
-                Text = "Đóng",
+                Text = "Đóng lại",
                 Width = 100,
                 Height = 36,
                 BackColor = Color.FromArgb(0, 122, 204),
