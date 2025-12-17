@@ -711,14 +711,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 grid.Columns["Terms"].HeaderText = "Điều Khoản";
             if (grid.Columns.Contains("Notes"))
                 grid.Columns["Notes"].HeaderText = "Ghi Chú";
->>>>>>> 0d992608b2fdecad77563c2750c487d789fcd173
+
         }
 
         private void FormatHistoryGrid(DataGridView grid)
         {
             if (grid == null || grid.Columns.Count == 0) return;
             
-<<<<<<< HEAD
+
             // Comprehensive translation dictionary - all possible column names
             var columnMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
