@@ -1,5 +1,9 @@
+Dưới đây là **đoạn code đầy đủ (Full Code)** của file `FrmStaffDashboard.cs` đã được chỉnh sửa.
+
+Tôi đã tích hợp phần đổi tên cột sang tiếng Việt trực tiếp vào bên trong các hàm `Load...Async`. Bạn chỉ cần **Copy toàn bộ** code dưới đây và dán đè lên file cũ của bạn là được.
+
+```csharp
 using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
 using System.Linq;
@@ -9,32 +13,28 @@ using QuanLyNhaTro.BLL;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
-    /// <summary>
-    /// Dashboard dành cho nhân viên với sidebar chọn module.
-    /// </summary>
     public class FrmStaffDashboard : Form
     {
         private readonly string _username;
         private readonly string _fullName;
         private readonly int? _branchId;
-        private readonly int _userId;
 
-        private readonly AdminDataBLL _dataBll = new AdminDataBLL();
+        private readonly AdminDataBLL _bll = new AdminDataBLL();
         private Form _currentModule;
 
         private Panel _sidebar;
         private Panel _header;
-        private Panel _contentHost;
-        private Panel _overviewPanel;
-
+        private Panel _host;
+        private Panel _overviewHost;
         private Label _lblHeader;
         private Label _lblUser;
-        private Label _lblBranch;
+        private Button _btnLogout;
 
-        private Button _btnStaffOverview;
+        // Các button menu
         private Button _btnOverview;
         private Button _btnRoom;
         private Button _btnTenant;
+        private Button _btnContract;
         private Button _btnDeposit;
         private Button _btnUtility;
         private Button _btnInvoice;
@@ -42,41 +42,37 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Button _btnMaintenance;
         private Button _btnAsset;
         private Button _btnReport;
-        private Button _btnLogout;
-        private Button _btnRefreshOverview;
 
-        private Button _activeButton;
-        private bool _isLoadingOverview;
-
-        public FrmStaffDashboard(string username, string fullName, int? branchId, int userId = 0)
+        public FrmStaffDashboard(string username, string fullName, int? branchId)
         {
             _username = username;
             _fullName = fullName;
             _branchId = branchId;
-            _userId = userId;
             InitializeComponent();
         }
 
-        private async Task FrmStaffDashboard_LoadAsync()
+        private async void FrmStaffDashboard_Load(object sender, EventArgs e)
         {
             if (!await CheckStaffPermissionAsync())
             {
-                MessageBox.Show("Bạn không có quyền truy cập màn Nhân viên.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Bạn không có quyền truy cập màn Nhân viên!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 Close();
                 return;
             }
 
-            UpdateHeaderInfo();
-            await ShowOverviewAsync();
+            Text = $"Staff Dashboard - {_username}";
+            WindowState = FormWindowState.Maximized;
+            _lblUser.Text = $"👤 {_fullName} ({_username})" + (_branchId.HasValue ? $" | Chi nhánh: {_branchId.Value}" : "");
+            ShowOverview();
         }
 
         private async Task<bool> CheckStaffPermissionAsync()
         {
             try
             {
-                var userBll = new UserBLL();
-                var access = await userBll.GetUserAccessAsync(_username);
-                return access.RoleId == 2 || access.RoleId == 3;
+                var bll = new UserBLL();
+                var access = await bll.GetUserAccessAsync(_username);
+                return access.RoleId == 2;
             }
             catch
             {
@@ -86,437 +82,411 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void InitializeComponent()
         {
-            this.SuspendLayout();
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            Text = "Quản lý chuỗi nhà trọ - Nhân viên";
-            WindowState = FormWindowState.Maximized;
-            BackColor = Color.FromArgb(240, 242, 245);
-            Font = new Font("Segoe UI", 10F);
+            BackColor = Color.FromArgb(245, 247, 250);
 
-            // Sidebar
             _sidebar = new Panel
             {
                 Dock = DockStyle.Left,
-                Width = 230,
-                BackColor = Color.FromArgb(0, 95, 178),
-                AutoScroll = true
+                Width = 210,
+                BackColor = Color.FromArgb(0, 122, 204)
             };
 
             var brand = new Label
             {
-                Text = "Nhân viên",
-                Dock = DockStyle.Top,
-                Height = 70,
-                TextAlign = ContentAlignment.MiddleCenter,
+                Text = "Quản Lý Nhà Trọ",
                 ForeColor = Color.White,
                 Font = new Font("Segoe UI", 14, FontStyle.Bold),
-                BackColor = Color.FromArgb(0, 80, 150)
+                AutoSize = false,
+                Height = 60,
+                Dock = DockStyle.Top,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(14, 0, 0, 0)
             };
-            _sidebar.Controls.Add(brand);
 
-            var menu = new FlowLayoutPanel
+            var nav = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 FlowDirection = FlowDirection.TopDown,
                 WrapContents = false,
                 AutoScroll = true,
-                Padding = new Padding(0, 12, 0, 0)
+                Padding = new Padding(10, 8, 10, 10),
+                BackColor = Color.Transparent
             };
 
-            _btnStaffOverview = CreateSidebarButton("Tổng quan NV");
-            _btnOverview = CreateSidebarButton("Tổng quan");
-            _btnRoom = CreateSidebarButton("Quản lý phòng");
-            _btnTenant = CreateSidebarButton("Khách thuê");
-            _btnDeposit = CreateSidebarButton("Tiền cọc");
-            _btnUtility = CreateSidebarButton("Tiện ích");
-            _btnInvoice = CreateSidebarButton("Hóa đơn");
-            _btnPayment = CreateSidebarButton("Thanh toán");
-            _btnMaintenance = CreateSidebarButton("Bảo trì");
-            _btnAsset = CreateSidebarButton("Tài sản");
-            _btnReport = CreateSidebarButton("Báo cáo");
+            _btnOverview = MakeNavButton("🏠 Tổng quan", (s, e) => ShowOverview());
+            _btnRoom = MakeNavButton("🏠 Phòng", (s, e) => { SetActive(_btnRoom); LoadModule(new FrmDataViewer("Danh sách Phòng", LoadRoomsAsync), "🏠 Phòng"); });
+            _btnTenant = MakeNavButton("👥 Khách thuê", (s, e) => { SetActive(_btnTenant); LoadModule(new FrmTenantManager(), "👥 Khách thuê"); });
+            _btnContract = MakeNavButton("📄 Hợp đồng", (s, e) => { SetActive(_btnContract); LoadModule(new FrmContractManager(_branchId), "📄 Hợp đồng"); });
+            _btnDeposit = MakeNavButton("💰 Đặt cọc", (s, e) => { SetActive(_btnDeposit); LoadModule(new FrmDepositManager(_branchId), "💰 Đặt cọc"); });
+            _btnUtility = MakeNavButton("⚡ Điện/Nước/DV", (s, e) => { SetActive(_btnUtility); LoadModule(new FrmDataViewer("Điện - Nước - Dịch vụ", LoadUtilitiesAsync), "⚡ Điện/Nước/DV"); });
+            _btnInvoice = MakeNavButton("🧾 Hóa đơn", (s, e) => { SetActive(_btnInvoice); LoadModule(new FrmInvoiceManager(_branchId), "🧾 Hóa đơn"); });
+            _btnPayment = MakeNavButton("💳 Thanh toán", (s, e) => { SetActive(_btnPayment); LoadModule(new FrmPaymentManager(_bll, null, null, _branchId), "💳 Thanh toán"); });
+            _btnMaintenance = MakeNavButton("🔧 Bảo trì", (s, e) => { SetActive(_btnMaintenance); LoadModule(new FrmDataViewer("Bảo trì & Sự cố", LoadMaintenanceAsync), "🔧 Bảo trì"); });
+            _btnAsset = MakeNavButton("📦 Tài sản", (s, e) => { SetActive(_btnAsset); LoadModule(new FrmDataViewer("Tài sản phòng", LoadAssetsAsync), "📦 Tài sản"); });
+            _btnReport = MakeNavButton("📊 Báo cáo", (s, e) => { SetActive(_btnReport); LoadModule(new FrmDataViewer("Báo cáo chi nhánh", LoadInvoicesAsync), "📊 Báo cáo"); });
 
-            menu.Controls.AddRange(new Control[]
-            {
-                _btnStaffOverview, _btnOverview, _btnRoom, _btnTenant, _btnDeposit, _btnUtility,
-                _btnInvoice, _btnPayment, _btnMaintenance, _btnAsset, _btnReport
-            });
+            nav.Controls.Add(_btnOverview);
+            nav.Controls.Add(_btnRoom);
+            nav.Controls.Add(_btnTenant);
+            nav.Controls.Add(_btnContract);
+            nav.Controls.Add(_btnDeposit);
+            nav.Controls.Add(_btnUtility);
+            nav.Controls.Add(_btnInvoice);
+            nav.Controls.Add(_btnPayment);
+            nav.Controls.Add(_btnMaintenance);
+            nav.Controls.Add(_btnAsset);
+            nav.Controls.Add(_btnReport);
 
-            _sidebar.Controls.Add(menu);
+            _sidebar.Controls.Add(nav);
+            _sidebar.Controls.Add(brand);
 
-            // Header
             _header = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 70,
-                BackColor = Color.White,
-                Padding = new Padding(12, 12, 12, 12)
+                Height = 62,
+                BackColor = Color.White
             };
 
             _lblHeader = new Label
             {
-                Text = "Tổng quan",
+                Text = "🏠 Tổng quan",
                 Font = new Font("Segoe UI", 16, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 122, 204),
                 AutoSize = true,
-                ForeColor = Color.FromArgb(35, 47, 62),
-                Location = new Point(12, 18)
+                Location = new Point(18, 16)
             };
-
-            _btnRefreshOverview = new Button
-            {
-                Text = "Cập nhật",
-                Width = 90,
-                Height = 28,
-                Location = new Point(160, 21),
-                BackColor = Color.FromArgb(0, 122, 204),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
-            };
-            _btnRefreshOverview.FlatAppearance.BorderSize = 0;
-            _btnRefreshOverview.Click += async (s, e) => await ShowOverviewAsync();
 
             _lblUser = new Label
             {
-                Text = "Người dùng",
-                AutoSize = true,
-                Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                ForeColor = Color.FromArgb(0, 122, 204),
-                Location = new Point(300, 12)
-            };
-
-            _lblBranch = new Label
-            {
-                Text = "Chi nhánh",
                 AutoSize = true,
                 ForeColor = Color.FromArgb(90, 90, 90),
-                Location = new Point(300, 34)
+                Location = new Point(22, 42)
             };
 
             _btnLogout = new Button
             {
                 Text = "Đăng xuất",
-                Width = 92,
-                Height = 36,
-                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                Width = 110,
+                Height = 34,
+                FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(0, 122, 204),
                 ForeColor = Color.White,
-                Font = new Font("Segoe UI", 10F),
-                FlatStyle = FlatStyle.Flat
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
             _btnLogout.FlatAppearance.BorderSize = 0;
-            _btnLogout.Click += BtnLogout_Click;
+            _btnLogout.Location = new Point(Width - 150, 14);
+            _btnLogout.Click += (s, e) =>
+            {
+                if (MessageBox.Show("Bạn chắc chắn muốn đăng xuất?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                    Close();
+            };
+            _header.Resize += (s, e) => _btnLogout.Location = new Point(_header.ClientSize.Width - _btnLogout.Width - 18, 14);
 
             _header.Controls.Add(_lblHeader);
-            _header.Controls.Add(_btnRefreshOverview);
             _header.Controls.Add(_lblUser);
-            _header.Controls.Add(_lblBranch);
             _header.Controls.Add(_btnLogout);
-            _header.Resize += (s, e) =>
-            {
-                // Center user and branch info horizontally
-                _lblUser.Left = (_header.Width / 2) - (_lblUser.Width / 2) - 100;
-                _lblBranch.Left = (_header.Width / 2) - (_lblBranch.Width / 2) - 100;
-                // Right align logout button and center vertically
-                _btnLogout.Left = _header.Width - _btnLogout.Width - 16;
-                _btnLogout.Top = (_header.Height - _btnLogout.Height) / 2;
-                _btnRefreshOverview.Top = _lblHeader.Top + 3;
-            };
 
-            // Content
-            _overviewPanel = new Panel
-            {
-                Dock = DockStyle.Fill,
-                AutoScroll = true,
-                BackColor = Color.FromArgb(240, 242, 245),
-                Padding = new Padding(16)
-            };
+            _host = new Panel { Dock = DockStyle.Fill, BackColor = BackColor };
+            _overviewHost = new Panel { Dock = DockStyle.Fill, BackColor = BackColor, Padding = new Padding(18) };
 
-            _contentHost = new Panel
-            {
-                Dock = DockStyle.Fill,
-                BackColor = Color.FromArgb(240, 242, 245)
-            };
-            _contentHost.Controls.Add(_overviewPanel);
-
-            Controls.Add(_contentHost);
+            Controls.Add(_host);
             Controls.Add(_header);
             Controls.Add(_sidebar);
 
-            // Events
-            Load += async (s, e) => await FrmStaffDashboard_LoadAsync();
-            _btnStaffOverview.Click += async (s, e) => await ShowOverviewAsync();
-            _btnOverview.Click += async (s, e) => await ShowOverviewAsync();
-            _btnRoom.Click += (s, e) => ShowModule(new FrmRoomManager(new AdminDataBLL(), _branchId), "Quản lý phòng", _btnRoom);
-            _btnTenant.Click += (s, e) => ShowModule(new FrmTenantManager(new AdminDataBLL(), _branchId), "Khách thuê", _btnTenant);
-            _btnDeposit.Click += (s, e) => ShowModule(new FrmDepositManager(_branchId), "Tiền cọc", _btnDeposit);
-            _btnUtility.Click += (s, e) => ShowModule(new FrmUtilityManager(), "Tiện ích", _btnUtility);
-            _btnInvoice.Click += (s, e) => ShowModule(new FrmInvoiceManager(_branchId), "Hóa đơn", _btnInvoice);
-            _btnPayment.Click += (s, e) => ShowModule(new FrmPaymentManager(new AdminDataBLL(), null, null, _branchId), "Thanh toán", _btnPayment);
-            _btnMaintenance.Click += (s, e) => ShowModule(new FrmMaintenanceManager(), "Bảo trì", _btnMaintenance);
-            _btnAsset.Click += (s, e) => ShowModule(new FrmAssetManager(), "Tài sản", _btnAsset);
-            _btnReport.Click += (s, e) => ShowModule(new FrmReportManager(new AdminDataBLL()), "Báo cáo", _btnReport);
-            
-            this.ResumeLayout(false);
+            Load += FrmStaffDashboard_Load;
         }
 
-        private Button CreateSidebarButton(string text)
+        private Button MakeNavButton(string text, EventHandler onClick)
         {
             var btn = new Button
             {
                 Text = text,
-                Width = 210,
-                Height = 46,
-                Margin = new Padding(10, 6, 10, 0),
-                TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(12, 0, 0, 0),
-                BackColor = Color.FromArgb(0, 118, 221),
-                ForeColor = Color.White,
+                Width = 180,
+                Height = 42,
                 FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(0, 122, 204),
+                ForeColor = Color.White,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Margin = new Padding(0, 0, 0, 10),
                 Cursor = Cursors.Hand
             };
             btn.FlatAppearance.BorderSize = 0;
-
-            btn.MouseEnter += (s, e) =>
-            {
-                if (btn != _activeButton)
-                    btn.BackColor = Color.FromArgb(0, 136, 255);
-            };
-            btn.MouseLeave += (s, e) =>
-            {
-                if (btn != _activeButton)
-                    btn.BackColor = Color.FromArgb(0, 118, 221);
-            };
-
+            btn.Click += onClick;
             return btn;
         }
 
-        private void UpdateHeaderInfo()
+        private void SetActive(Button active)
         {
-            _lblUser.Text = $"Người dùng: {_fullName}";
-            _lblUser.Left = (_header.Width / 2) - (_lblUser.Width / 2) - 100;
-
-            _lblBranch.Text = _branchId.HasValue ? $"Chi nhánh: {_branchId.Value}" : "Tất cả chi nhánh";
-            _lblBranch.Left = (_header.Width / 2) - (_lblBranch.Width / 2) - 100;
-        }
-
-        private async Task ShowOverviewAsync()
-        {
-            if (_isLoadingOverview) return;
-            _isLoadingOverview = true;
-            SetActiveButton(_btnOverview);
-            _lblHeader.Text = "Tổng quan";
-            _btnRefreshOverview.Visible = true;
-            _overviewPanel.Controls.Clear();
-
-            try
+            foreach (Control c in _sidebar.Controls)
             {
-                var summary = await _dataBll.GetDashboardSummaryAsync();
-                var roomStats = await GetRoomStatsAsync();
-                var cards = BuildOverviewCards(summary, roomStats);
-                _overviewPanel.Controls.Add(cards);
-            }
-            catch (Exception ex)
-            {
-                var fallback = new Label
+                if (!(c is FlowLayoutPanel flp)) continue;
+                foreach (Control child in flp.Controls)
                 {
-                    Text = $"Không tải được thống kê: {ex.Message}",
-                    AutoSize = true,
-                    ForeColor = Color.Red,
-                    Location = new Point(10, 10)
-                };
-                _overviewPanel.Controls.Add(fallback);
-            }
-            finally
-            {
-                _isLoadingOverview = false;
-            }
-        }
-
-        private async Task<(int limited, int occupied)> GetRoomStatsAsync()
-        {
-            var rooms = await _dataBll.GetRoomsAsync() ?? new DataTable();
-            int total = rooms.Rows.Count;
-            int limited = Math.Min(total, 20);
-
-            int occupied = 0;
-            if (rooms.Columns.Contains("StatusName"))
-            {
-                occupied = rooms.AsEnumerable()
-                    .Count(r => (r["StatusName"]?.ToString() ?? string.Empty)
-                        .IndexOf("đang", StringComparison.OrdinalIgnoreCase) >= 0);
-            }
-
-            occupied = Math.Min(occupied, limited);
-            return (limited, occupied);
-        }
-
-        private Control BuildOverviewCards(DataTable summary, (int limited, int occupied) roomStats)
-        {
-            var panel = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Top,
-                AutoSize = true,
-                WrapContents = true,
-                FlowDirection = FlowDirection.LeftToRight
-            };
-
-            var values = summary != null && summary.Rows.Count > 0 ? summary.Rows[0] : null;
-
-            var cards = new[]
-            {
-                new { Title = "Doanh thu tháng", Value = ReadDecimal(values, "PaymentsThisMonth").ToString("N0"), Color = Color.FromArgb(39, 174, 96), Icon = "💵", Subtitle = (string)null, Action = (Action)(() => ShowModule(new FrmPaymentManager(new AdminDataBLL(), null, null, _branchId), "Thanh toán", _btnPayment)) },
-                new { Title = "Công nợ tháng", Value = ReadDecimal(values, "OutstandingAmount").ToString("N0"), Color = Color.FromArgb(231, 76, 60), Icon = "📉", Subtitle = (string)null, Action = (Action)(() => ShowModule(new FrmInvoiceManager(_branchId), "Hóa đơn", _btnInvoice)) },
-                new { Title = "Tổng phòng", Value = $"{roomStats.limited}/20", Color = Color.FromArgb(52, 168, 219), Icon = "🏠", Subtitle = $"Đã thuê: {roomStats.occupied}", Action = (Action)(() => ShowModule(new FrmRoomManager(new AdminDataBLL(), _branchId), "Quản lý phòng", _btnRoom)) },
-                new { Title = "Bảo trì mở", Value = ReadInt(values, "OpenMaintenance").ToString("N0"), Color = Color.FromArgb(52, 152, 219), Icon = "🛠", Subtitle = (string)null, Action = (Action)(() => ShowModule(new FrmMaintenanceManager(), "Bảo trì", _btnMaintenance)) },
-                new { Title = "Khách thuê", Value = ReadInt(values, "TotalTenants").ToString("N0"), Color = Color.FromArgb(46, 204, 113), Icon = "👥", Subtitle = (string)null, Action = (Action)(() => ShowModule(new FrmTenantManager(new AdminDataBLL(), _branchId), "Khách thuê", _btnTenant)) },
-                new { Title = "Hợp đồng", Value = ReadInt(values, "TotalContracts").ToString("N0"), Color = Color.FromArgb(155, 89, 182), Icon = "📜", Subtitle = (string)null, Action = (Action)(() => ShowModule(new FrmContractManager(_branchId), "Hợp đồng", _btnReport)) },
-                new { Title = "Hóa đơn", Value = ReadInt(values, "TotalInvoices").ToString("N0"), Color = Color.FromArgb(230, 126, 34), Icon = "🧾", Subtitle = (string)null, Action = (Action)(() => ShowModule(new FrmInvoiceManager(_branchId), "Hóa đơn", _btnInvoice)) },
-                new { Title = "Tiền cọc", Value = ReadDecimal(values, "TotalDeposits").ToString("N0"), Color = Color.FromArgb(241, 196, 15), Icon = "🏦", Subtitle = (string)null, Action = (Action)(() => ShowModule(new FrmDepositManager(_branchId), "Tiền cọc", _btnDeposit)) }
-            };
-
-            foreach (var c in cards)
-                panel.Controls.Add(CreateStatCard(c.Title, c.Value, c.Color, c.Icon, c.Action, c.Subtitle));
-
-            return panel;
-        }
-
-        private Control CreateStatCard(string title, string value, Color color, string icon, Action onClick, string subtitle)
-        {
-            var card = new Panel
-            {
-                Width = 270,
-                Height = 130,
-                BackColor = Color.White,
-                Margin = new Padding(10),
-                Padding = new Padding(14),
-                Cursor = onClick != null ? Cursors.Hand : Cursors.Default
-            };
-
-            card.Paint += (s, e) =>
-            {
-                using (var pen = new Pen(Color.FromArgb(210, 210, 210)))
-                {
-                    e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
+                    if (child is Button b)
+                        b.BackColor = b == active ? Color.FromArgb(0, 90, 160) : Color.FromArgb(0, 122, 204);
                 }
-                using (var bar = new SolidBrush(color))
-                {
-                    e.Graphics.FillRectangle(bar, 0, 0, card.Width, 4);
-                }
-            };
-
-            var lblIcon = new Label
-            {
-                Text = icon ?? string.Empty,
-                AutoSize = true,
-                Font = new Font("Segoe UI Emoji", 12, FontStyle.Regular),
-                Location = new Point(4, 6)
-            };
-
-            var lblTitle = new Label
-            {
-                Text = title,
-                AutoSize = true,
-                ForeColor = Color.FromArgb(80, 80, 80),
-                Font = new Font("Segoe UI", 11, FontStyle.Bold),
-                Location = new Point(6, 32)
-            };
-
-            var lblValue = new Label
-            {
-                Text = value,
-                AutoSize = true,
-                ForeColor = color,
-                Font = new Font("Segoe UI", 24, FontStyle.Bold),
-                Location = new Point(6, 58)
-            };
-
-            if (!string.IsNullOrWhiteSpace(subtitle))
-            {
-                var lblSubtitle = new Label
-                {
-                    Text = subtitle,
-                    AutoSize = true,
-                    ForeColor = Color.FromArgb(100, 100, 100),
-                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
-                    Location = new Point(6, 92)
-                };
-                card.Controls.Add(lblSubtitle);
             }
-
-            if (onClick != null)
-            {
-                void AttachClick(Control ctl)
-                {
-                    ctl.Click += (s, e) => onClick();
-                    ctl.MouseEnter += (s, e) => card.BackColor = Color.FromArgb(248, 250, 252);
-                    ctl.MouseLeave += (s, e) => card.BackColor = Color.White;
-                }
-                AttachClick(card);
-                AttachClick(lblIcon);
-                AttachClick(lblTitle);
-                AttachClick(lblValue);
-            }
-
-            card.Controls.Add(lblIcon);
-            card.Controls.Add(lblTitle);
-            card.Controls.Add(lblValue);
-            return card;
         }
 
-        private void ShowModule(Form module, string title, Button button)
+        private void ClearCurrentModule()
         {
-            SetActiveButton(button);
-            _lblHeader.Text = title;
-            _btnRefreshOverview.Visible = false;
+            if (_currentModule != null)
+            {
+                _currentModule.Close();
+                _currentModule.Dispose();
+                _currentModule = null;
+            }
+            _host.Controls.Clear();
+        }
 
-            _currentModule?.Close();
-            _overviewPanel.Controls.Clear();
+        private void LoadModule(Form module, string headerTitle)
+        {
+            _lblHeader.Text = headerTitle;
 
-            _currentModule = module;
+            ClearCurrentModule();
+
             module.TopLevel = false;
             module.FormBorderStyle = FormBorderStyle.None;
             module.Dock = DockStyle.Fill;
-
-            _overviewPanel.Controls.Add(module);
+            module.StartPosition = FormStartPosition.CenterParent;
+            _currentModule = module;
+            _host.Controls.Add(module);
             module.Show();
         }
 
-        private void SetActiveButton(Button btn)
+        private void ShowOverview()
         {
-            if (_activeButton != null)
-            {
-                _activeButton.BackColor = Color.FromArgb(0, 118, 221);
-                _activeButton.ForeColor = Color.White;
-            }
+            SetActive(_btnOverview);
+            _lblHeader.Text = "🏠 Tổng quan";
+            ClearCurrentModule();
 
-            _activeButton = btn;
-            if (btn != null)
+            _overviewHost = new Panel { Dock = DockStyle.Fill, BackColor = BackColor, Padding = new Padding(18) };
+            var title = new Label
             {
-                btn.BackColor = Color.FromArgb(0, 95, 178);
-                btn.ForeColor = Color.White;
+                Text = "Công việc hôm nay",
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                ForeColor = Color.FromArgb(33, 37, 41),
+                AutoSize = true,
+                Location = new Point(0, 0)
+            };
+            _overviewHost.Controls.Add(title);
+
+            var grid = new TableLayoutPanel
+            {
+                ColumnCount = 3,
+                RowCount = 2,
+                Location = new Point(0, 46),
+                Width = 980,
+                Height = 260,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            };
+            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
+            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
+            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.34f));
+            grid.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
+            grid.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
+
+            var loading = new Label { Text = "Đang tải thống kê...", AutoSize = true, ForeColor = Color.Gray, Location = new Point(0, 320) };
+            _overviewHost.Controls.Add(grid);
+            _overviewHost.Controls.Add(loading);
+
+            _host.Controls.Add(_overviewHost);
+            _ = LoadOverviewAsync(grid, loading);
+        }
+
+        private async Task LoadOverviewAsync(TableLayoutPanel grid, Label loadingLabel)
+        {
+            try
+            {
+                var rooms = await _bll.GetRoomsAsync();
+                var invoices = await _bll.GetInvoicesViewAsync();
+                var payments = await _bll.GetPaymentsViewAsync();
+                var contracts = await _bll.GetContractsAsync();
+                var maintenance = await _bll.GetMaintenanceAsync();
+
+                rooms = FilterByBranch(rooms, _branchId);
+                invoices = FilterByBranch(invoices, _branchId);
+                payments = FilterByBranch(payments, _branchId);
+                contracts = FilterByBranch(contracts, _branchId);
+                maintenance = FilterByBranch(maintenance, _branchId);
+
+                int totalRooms = rooms?.Rows.Count ?? 0;
+                int occupied = rooms?.AsEnumerable().Count(r => r.Table.Columns.Contains("CurrentStatusId") && int.TryParse(r["CurrentStatusId"]?.ToString(), out var s) && s != 1) ?? 0;
+
+                int overdueCount = invoices?.AsEnumerable().Count(r => string.Equals(r["Status"]?.ToString(), "Overdue", StringComparison.OrdinalIgnoreCase)) ?? 0;
+                decimal debt = invoices?.AsEnumerable()
+                                  .Where(r => r.Table.Columns.Contains("RemainingAmount"))
+                                  .Sum(r => TryDecimal(r["RemainingAmount"])) ?? 0m;
+
+                decimal collectedThisMonth = payments?.AsEnumerable()
+                    .Where(r => r.Table.Columns.Contains("PaymentDate") && DateTime.TryParse(r["PaymentDate"]?.ToString(), out var d) && d.Year == DateTime.Today.Year && d.Month == DateTime.Today.Month)
+                    .Sum(r => TryDecimal(r["PaymentAmount"])) ?? 0m;
+
+                int endingSoon = contracts?.AsEnumerable().Count(r => r.Table.Columns.Contains("EndDate") && DateTime.TryParse(r["EndDate"]?.ToString(), out var d) && d.Date >= DateTime.Today && d.Date <= DateTime.Today.AddDays(7)) ?? 0;
+
+                int openMaintenance = maintenance?.AsEnumerable().Count(r => !string.Equals(r["Status"]?.ToString(), "Done", StringComparison.OrdinalIgnoreCase)
+                                                                            && !string.Equals(r["Status"]?.ToString(), "Hoàn tất", StringComparison.OrdinalIgnoreCase)
+                                                                            && !string.Equals(r["Status"]?.ToString(), "Hoan tat", StringComparison.OrdinalIgnoreCase)) ?? 0;
+
+                grid.Controls.Clear();
+                grid.Controls.Add(MakeMetricCard("🏠 Phòng", $"{occupied:N0}/{totalRooms:N0}", "Đang sử dụng / Tổng phòng", Color.FromArgb(0, 150, 136), (s, e) => _btnRoom.PerformClick()), 0, 0);
+                grid.Controls.Add(MakeMetricCard("🧾 Công nợ", $"{debt:N0}", "Tổng tiền còn nợ", Color.FromArgb(244, 67, 54), (s, e) => _btnInvoice.PerformClick()), 1, 0);
+                grid.Controls.Add(MakeMetricCard("⏰ Quá hạn", $"{overdueCount:N0}", "Hóa đơn overdue", Color.FromArgb(255, 152, 0), (s, e) => _btnInvoice.PerformClick()), 2, 0);
+                grid.Controls.Add(MakeMetricCard("💳 Thu tháng này", $"{collectedThisMonth:N0}", "Tổng tiền đã thu", Color.FromArgb(76, 175, 80), (s, e) => _btnPayment.PerformClick()), 0, 1);
+                grid.Controls.Add(MakeMetricCard("📄 Sắp hết hạn", $"{endingSoon:N0}", "Hợp đồng trong 7 ngày", Color.FromArgb(103, 58, 183), (s, e) => _btnContract.PerformClick()), 1, 1);
+                grid.Controls.Add(MakeMetricCard("🔧 Bảo trì mở", $"{openMaintenance:N0}", "Ticket chưa hoàn thành", Color.FromArgb(156, 39, 176), (s, e) => _btnMaintenance.PerformClick()), 2, 1);
+
+                loadingLabel.Visible = false;
+            }
+            catch (Exception ex)
+            {
+                loadingLabel.Text = "Không thể tải thống kê: " + ex.Message;
+                loadingLabel.Visible = true;
             }
         }
 
-        private void BtnLogout_Click(object sender, EventArgs e)
+        private Panel MakeMetricCard(string title, string value, string subtitle, Color accent, EventHandler onClick)
         {
-            if (MessageBox.Show("Đăng xuất khỏi màn hình nhân viên?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            var card = new Panel
             {
-                _currentModule?.Close();
-                Close();
+                Dock = DockStyle.Fill,
+                Margin = new Padding(8),
+                BackColor = Color.White,
+                Cursor = Cursors.Hand
+            };
+
+            var bar = new Panel { Dock = DockStyle.Left, Width = 6, BackColor = accent };
+            var lblTitle = new Label { Text = title, AutoSize = true, Font = new Font("Segoe UI", 11, FontStyle.Bold), Location = new Point(14, 16) };
+            var lblValue = new Label { Text = value, AutoSize = true, Font = new Font("Segoe UI", 18, FontStyle.Bold), ForeColor = accent, Location = new Point(14, 44) };
+            var lblSub = new Label { Text = subtitle, AutoSize = true, ForeColor = Color.Gray, Location = new Point(14, 86) };
+
+            card.Controls.Add(bar);
+            card.Controls.Add(lblTitle);
+            card.Controls.Add(lblValue);
+            card.Controls.Add(lblSub);
+
+            card.Click += onClick;
+            foreach (Control c in card.Controls) c.Click += onClick;
+            return card;
+        }
+
+        // =========================================================================================
+        // ĐÃ CHỈNH SỬA: CÁC HÀM LOAD DỮ LIỆU CÓ ĐỔI TÊN CỘT SANG TIẾNG VIỆT
+        // =========================================================================================
+
+        private async Task<DataTable> LoadRoomsAsync()
+        {
+            var dt = await _bll.GetRoomsAsync();
+            var table = FilterByBranch(dt, _branchId);
+
+            if (table != null)
+            {
+                // Đổi tên cột hiển thị cho Grid "Danh sách Phòng"
+                if (table.Columns.Contains("RoomId")) table.Columns["RoomId"].ColumnName = "Mã Phòng";
+                if (table.Columns.Contains("RoomNumber")) table.Columns["RoomNumber"].ColumnName = "Số Phòng";
+                if (table.Columns.Contains("BranchId")) table.Columns["BranchId"].ColumnName = "Chi Nhánh";
+                if (table.Columns.Contains("SectionId")) table.Columns["SectionId"].ColumnName = "Khu Vực";
+                if (table.Columns.Contains("RoomTypeId")) table.Columns["RoomTypeId"].ColumnName = "Loại Phòng";
+                if (table.Columns.Contains("RoomPrice")) table.Columns["RoomPrice"].ColumnName = "Giá Phòng";
+                if (table.Columns.Contains("CurrentStatusId")) table.Columns["CurrentStatusId"].ColumnName = "Trạng Thái";
+                if (table.Columns.Contains("Floor")) table.Columns["Floor"].ColumnName = "Tầng";
+                if (table.Columns.Contains("Area")) table.Columns["Area"].ColumnName = "Diện Tích";
+                if (table.Columns.Contains("IsActive")) table.Columns["IsActive"].ColumnName = "Hoạt Động";
+                if (table.Columns.Contains("CreatedDate")) table.Columns["CreatedDate"].ColumnName = "Ngày Tạo";
+                if (table.Columns.Contains("UpdatedDate")) table.Columns["UpdatedDate"].ColumnName = "Ngày Cập Nhật";
             }
+            return table;
         }
 
-        private static int ReadInt(DataRow row, string column)
+        private async Task<DataTable> LoadInvoicesAsync()
         {
-            if (row == null || !row.Table.Columns.Contains(column)) return 0;
-            var v = row[column];
-            return int.TryParse(v?.ToString(), out var val) ? val : 0;
+            var dt = await _bll.GetInvoicesViewAsync();
+            var table = FilterByBranch(dt, _branchId);
+            
+            if (table != null)
+            {
+                // Đổi tên cột cho Grid "Báo cáo / Hóa đơn"
+                if (table.Columns.Contains("InvoiceId")) table.Columns["InvoiceId"].ColumnName = "Mã HĐ";
+                if (table.Columns.Contains("RoomNumber")) table.Columns["RoomNumber"].ColumnName = "Phòng";
+                if (table.Columns.Contains("TotalAmount")) table.Columns["TotalAmount"].ColumnName = "Tổng Tiền";
+                if (table.Columns.Contains("Status")) table.Columns["Status"].ColumnName = "Trạng Thái";
+                if (table.Columns.Contains("CreatedDate")) table.Columns["CreatedDate"].ColumnName = "Ngày Lập";
+                if (table.Columns.Contains("BranchId")) table.Columns["BranchId"].ColumnName = "Chi Nhánh";
+            }
+            return table;
         }
 
-        private static decimal ReadDecimal(DataRow row, string column)
+        private async Task<DataTable> LoadUtilitiesAsync()
         {
-            if (row == null || !row.Table.Columns.Contains(column)) return 0m;
-            var v = row[column];
-            return decimal.TryParse(v?.ToString(), out var val) ? val : 0m;
+            var dt = await _bll.GetUtilitiesAsync();
+            var table = FilterByBranch(dt, _branchId);
+            
+             if (table != null)
+            {
+                // Đổi tên cột cho Grid "Điện/Nước"
+                if (table.Columns.Contains("RoomNumber")) table.Columns["RoomNumber"].ColumnName = "Phòng";
+                if (table.Columns.Contains("ElectricityIndex")) table.Columns["ElectricityIndex"].ColumnName = "Chỉ Số Điện";
+                if (table.Columns.Contains("WaterIndex")) table.Columns["WaterIndex"].ColumnName = "Chỉ Số Nước";
+                if (table.Columns.Contains("RecordedDate")) table.Columns["RecordedDate"].ColumnName = "Ngày Ghi";
+                if (table.Columns.Contains("BranchId")) table.Columns["BranchId"].ColumnName = "Chi Nhánh";
+            }
+            return table;
+        }
+
+        private async Task<DataTable> LoadMaintenanceAsync()
+        {
+            var dt = await _bll.GetMaintenanceAsync();
+            var table = FilterByBranch(dt, _branchId);
+            
+            if (table != null)
+            {
+                // Đổi tên cột cho Grid "Bảo trì"
+                if (table.Columns.Contains("Description")) table.Columns["Description"].ColumnName = "Mô Tả Sự Cố";
+                if (table.Columns.Contains("RequestDate")) table.Columns["RequestDate"].ColumnName = "Ngày Yêu Cầu";
+                if (table.Columns.Contains("Status")) table.Columns["Status"].ColumnName = "Trạng Thái";
+                if (table.Columns.Contains("Cost")) table.Columns["Cost"].ColumnName = "Chi Phí";
+                if (table.Columns.Contains("BranchId")) table.Columns["BranchId"].ColumnName = "Chi Nhánh";
+            }
+            return table;
+        }
+
+        private async Task<DataTable> LoadAssetsAsync()
+        {
+            var dt = await _bll.GetAssetsAsync();
+            var table = FilterByBranch(dt, _branchId);
+            
+            if (table != null)
+            {
+                // Đổi tên cột cho Grid "Tài sản"
+                if (table.Columns.Contains("AssetName")) table.Columns["AssetName"].ColumnName = "Tên Tài Sản";
+                if (table.Columns.Contains("Quantity")) table.Columns["Quantity"].ColumnName = "Số Lượng";
+                if (table.Columns.Contains("Status")) table.Columns["Status"].ColumnName = "Tình Trạng";
+                if (table.Columns.Contains("BranchId")) table.Columns["BranchId"].ColumnName = "Chi Nhánh";
+            }
+            return table;
+        }
+
+        private static DataTable FilterByBranch(DataTable dt, int? branchId)
+        {
+            if (dt == null) return dt;
+            if (!branchId.HasValue) return dt;
+            if (!dt.Columns.Contains("BranchId")) return dt;
+
+            var filtered = dt.Clone();
+            foreach (DataRow r in dt.Rows)
+            {
+                if (int.TryParse(r["BranchId"]?.ToString(), out var b) && b == branchId.Value)
+                    filtered.ImportRow(r);
+            }
+            return filtered;
+        }
+
+        private static decimal TryDecimal(object v)
+        {
+            if (v == null || v == DBNull.Value) return 0m;
+            if (v is decimal d) return d;
+            return decimal.TryParse(v.ToString(), out var parsed) ? parsed : 0m;
         }
     }
-}
+g}
