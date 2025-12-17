@@ -50,7 +50,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             Width = 1400;
             Height = 750;
             BackColor = Color.FromArgb(240, 242, 245);
-            Font = new Font("Segoe UI", 10F);
+            Font = new Font("Times New Roman", 11F);
 
             _grid = new DataGridView
             {
@@ -68,8 +68,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _grid.EnableHeadersVisualStyles = false;
             _grid.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(0, 120, 215);
             _grid.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            _grid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
-            _grid.DefaultCellStyle.Font = new Font("Segoe UI", 10, FontStyle.Regular);
+            _grid.ColumnHeadersDefaultCellStyle.Font = new Font("Times New Roman", 11, FontStyle.Bold);
+            _grid.DefaultCellStyle.Font = new Font("Times New Roman", 11, FontStyle.Regular);
             _grid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 249, 255);
             _grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(232, 244, 252);
             _grid.DefaultCellStyle.SelectionForeColor = Color.Black;
@@ -107,10 +107,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _lblCount = new Label { AutoSize = true, Text = "Tổng: 0" };
             _lblTotal = new Label { AutoSize = true, Text = "Tổng thu: 0", ForeColor = Color.FromArgb(70, 70, 70) };
 
-            _btnAdd = MakeButton("Thu tiền", Color.FromArgb(46, 125, 50), async (s, e) => await AddNewAsync());
-            _btnEdit = MakeButton("Sửa", Color.FromArgb(0, 122, 204), async (s, e) => await EditSelectedAsync());
-            _btnDelete = MakeButton("Xóa", Color.FromArgb(211, 47, 47), async (s, e) => await DeleteSelectedAsync());
-            _btnRefresh = MakeButton("Tải lại", Color.FromArgb(0, 122, 204), async (s, e) => await LoadDataAsync());
+            _btnAdd = MakeButton("💰 Thu tiền", Color.FromArgb(46, 125, 50), async (s, e) => await AddNewAsync());
+            _btnEdit = MakeButton("✏️ Sửa", Color.FromArgb(0, 122, 204), async (s, e) => await EditSelectedAsync());
+            _btnDelete = MakeButton("❌ Xóa", Color.FromArgb(211, 47, 47), async (s, e) => await DeleteSelectedAsync());
+            var _btnCancel = MakeButton("🚫 Hủy", Color.FromArgb(255, 152, 0), async (s, e) => await CancelPaymentAsync());
+            var _btnRefund = MakeButton("↩️ Hoàn tiền", Color.FromArgb(233, 30, 99), async (s, e) => await RefundPaymentAsync());
+            _btnRefresh = MakeButton("🔄 Tải lại", Color.FromArgb(0, 122, 204), async (s, e) => await LoadDataAsync());
 
             var top = new Panel { Dock = DockStyle.Top, Height = 64, Padding = new Padding(12, 10, 12, 10), BackColor = Color.White };
 
@@ -125,6 +127,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             actions.Controls.Add(_btnAdd);
             actions.Controls.Add(_btnEdit);
             actions.Controls.Add(_btnDelete);
+            actions.Controls.Add(_btnCancel);
+            actions.Controls.Add(_btnRefund);
             actions.Controls.Add(_btnRefresh);
 
             var searchHost = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent };
@@ -179,7 +183,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             var summary = new Panel { Dock = DockStyle.Right, Width = 260, BackColor = Color.Transparent };
             _lblCount.Location = new Point(0, 6);
-            _lblCount.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+            _lblCount.Font = new Font("Times New Roman", 11, FontStyle.Bold);
             _lblTotal.Location = new Point(0, 28);
             summary.Controls.Add(_lblCount);
             summary.Controls.Add(_lblTotal);
@@ -517,6 +521,84 @@ namespace quan_ly_chuoi_nha_tro.GUI
             catch
             {
                 _allowedBranchIds = new HashSet<int>();
+            }
+        }
+
+        private async Task CancelPaymentAsync()
+        {
+            var row = GetCurrentRow();
+            if (row == null)
+            {
+                MessageBox.Show("Chọn một thanh toán để hủy.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            if (!int.TryParse(row["PaymentId"]?.ToString(), out var paymentId))
+            {
+                MessageBox.Show("Không xác định được ID thanh toán.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            var result = MessageBox.Show(
+                "Bạn có chắc chắn muốn hủy thanh toán này? Hóa đơn sẽ được cập nhật trạng thái.",
+                "Xác nhận hủy",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning);
+
+            if (result == DialogResult.No) return;
+
+            try
+            {
+                // Update payment status to cancelled
+                await _bll.UpdatePaymentStatusAsync(paymentId, "Cancelled");
+                await LoadDataAsync();
+                AdminEvents.NotifyDataChanged();
+                MessageBox.Show("Thanh toán đã được hủy thành công.", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi hủy thanh toán: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private async Task RefundPaymentAsync()
+        {
+            var row = GetCurrentRow();
+            if (row == null)
+            {
+                MessageBox.Show("Chọn một thanh toán để hoàn tiền.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            if (!int.TryParse(row["PaymentId"]?.ToString(), out var paymentId))
+            {
+                MessageBox.Show("Không xác định được ID thanh toán.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            decimal paymentAmount = 0m;
+            if (decimal.TryParse(row["PaymentAmount"]?.ToString(), out var amount))
+                paymentAmount = amount;
+
+            var result = MessageBox.Show(
+                $"Bạn có chắc chắn muốn hoàn lại {paymentAmount:N0} VND cho khách hàng?\n\nHóa đơn sẽ được cập nhật lại trạng thái thanh toán.",
+                "Xác nhận hoàn tiền",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning);
+
+            if (result == DialogResult.No) return;
+
+            try
+            {
+                // Update payment status to refunded
+                await _bll.UpdatePaymentStatusAsync(paymentId, "Refunded");
+                await LoadDataAsync();
+                AdminEvents.NotifyDataChanged();
+                MessageBox.Show($"Đã hoàn lại {paymentAmount:N0} VND. Trạng thái hóa đơn được cập nhật.", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi hoàn tiền: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

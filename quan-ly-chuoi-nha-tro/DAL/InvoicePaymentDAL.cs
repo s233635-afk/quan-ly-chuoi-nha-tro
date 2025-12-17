@@ -471,6 +471,51 @@ namespace QuanLyNhaTro.DAL
             }
         }
 
+        public async Task<bool> UpdatePaymentStatusAsync(int paymentId, string status)
+        {
+            if (!await TableExistsAsync("Payments"))
+                throw new Exception("Bảng Payments không tồn tại.");
+
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                using (var tx = conn.BeginTransaction())
+                {
+                    try
+                    {
+                        int invoiceId;
+                        using (var cmd = new SqlCommand("SELECT InvoiceId FROM Payments WHERE PaymentId = @PaymentId", conn, tx))
+                        {
+                            cmd.Parameters.AddWithValue("@PaymentId", paymentId);
+                            var result = await cmd.ExecuteScalarAsync();
+                            if (result == null || result == DBNull.Value)
+                                throw new Exception("Không tìm thấy thanh toán.");
+                            invoiceId = Convert.ToInt32(result);
+                        }
+
+                        using (var cmd = new SqlCommand("UPDATE Payments SET Status = @Status, UpdatedDate = GETDATE() WHERE PaymentId = @PaymentId", conn, tx))
+                        {
+                            cmd.Parameters.AddWithValue("@PaymentId", paymentId);
+                            cmd.Parameters.AddWithValue("@Status", status ?? "");
+                            int affected = await cmd.ExecuteNonQueryAsync();
+                            if (affected <= 0)
+                                throw new Exception("Không thể cập nhật trạng thái thanh toán.");
+                        }
+
+                        await RecalculateInvoiceFromPaymentsAsync(conn, tx, invoiceId);
+
+                        tx.Commit();
+                        return true;
+                    }
+                    catch
+                    {
+                        tx.Rollback();
+                        throw;
+                    }
+                }
+            }
+        }
+
         public async Task<int> GenerateMonthlyInvoicesAsync(int year, int month, DateTime? invoiceDate = null, int? dueDay = null)
         {
             if (!await TableExistsAsync("Contracts"))

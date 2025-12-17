@@ -42,6 +42,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             MinimizeBox = false;
             ClientSize = new Size(640, 420);
             BackColor = Color.White;
+            Font = new Font("Times New Roman", 11);
 
             var pnlBottom = new Panel
             {
@@ -70,7 +71,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Text = text,
                 Location = new Point(left, y),
                 Width = labelWidth,
-                TextAlign = ContentAlignment.MiddleLeft
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Times New Roman", 11)
             };
 
             Control MakeInput(Control ctl, int y)
@@ -80,8 +82,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 return ctl;
             }
 
-            lblInvoice = new Label { AutoSize = true, Font = new Font("Segoe UI", 11F, FontStyle.Bold), Location = new Point(left, top) };
-            lblAmounts = new Label { AutoSize = true, ForeColor = Color.DimGray, Location = new Point(left, top + 28) };
+            lblInvoice = new Label { AutoSize = true, Font = new Font("Times New Roman", 12F, FontStyle.Bold), Location = new Point(left, top) };
+            lblAmounts = new Label { AutoSize = true, ForeColor = Color.DimGray, Font = new Font("Times New Roman", 11), Location = new Point(left, top + 28) };
             pnlBody.Controls.Add(lblInvoice);
             pnlBody.Controls.Add(lblAmounts);
 

@@ -39,7 +39,76 @@ namespace quan_ly_chuoi_nha_tro.GUI
             Height = 750;
             BackColor = Color.FromArgb(245, 247, 250);
             this.DoubleBuffered = true;
+            Font = new Font("Times New Roman", 11);
 
+            // Header panel
+            var header = new Panel 
+            { 
+                Dock = DockStyle.Top, 
+                Height = 80, 
+                BackColor = Color.White, 
+                Padding = new Padding(16, 12, 16, 12) 
+            };
+
+            var lblTitle = new Label
+            {
+                AutoSize = true,
+                Font = new Font("Times New Roman", 14, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 79, 159),
+                Text = "📊 Báo Cáo & Thống Kê",
+                Dock = DockStyle.Top,
+                Margin = new Padding(0)
+            };
+
+            var lblSub = new Label
+            {
+                AutoSize = true,
+                Font = new Font("Times New Roman", 11, FontStyle.Regular),
+                ForeColor = Color.FromArgb(90, 90, 90),
+                Text = "Xem và xuất dữ liệu từ các module",
+                Dock = DockStyle.Top,
+                Margin = new Padding(0, 4, 0, 0)
+            };
+
+            _btnExport = UiKit.MakeButton("📥 Xuất CSV", UiKit.Purple, (s, e) => ExportCsv(), 110);
+            _btnRefresh = UiKit.MakeButton("🔄 Tải Lại", UiKit.Primary, async (s, e) => await LoadDataAsync(), 110);
+
+            var headerButtons = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Right,
+                AutoSize = true,
+                WrapContents = false,
+                FlowDirection = FlowDirection.LeftToRight,
+                BackColor = Color.Transparent,
+                Margin = new Padding(0),
+                Padding = new Padding(0, 6, 0, 0)
+            };
+            _btnExport.Margin = new Padding(0, 0, 10, 0);
+            _btnRefresh.Margin = new Padding(0, 0, 0, 0);
+            headerButtons.Controls.Add(_btnExport);
+            headerButtons.Controls.Add(_btnRefresh);
+
+            var headerLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 1,
+                BackColor = Color.Transparent
+            };
+            headerLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            headerLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+
+            var headerText = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent };
+            headerText.Controls.Add(lblSub);
+            headerText.Controls.Add(lblTitle);
+
+            headerLayout.Controls.Add(headerText, 0, 0);
+            headerLayout.Controls.Add(headerButtons, 1, 0);
+
+            header.Controls.Add(headerLayout);
+            header.Controls.Add(new Panel { Dock = DockStyle.Bottom, Height = 3, BackColor = Color.FromArgb(0, 120, 215) });
+
+            // Filter toolbar
             _cboSource = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 200 };
             _cboSource.Items.AddRange(new object[]
             {
@@ -60,11 +129,63 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _txtSearch = new TextBox { Width = 300 };
             var pnlSearch = UiKit.MakeSearchPanel(_txtSearch, 340, SearchPlaceholder, ApplyFilter);
 
-            _btnExport = UiKit.MakeButton("📥 Xuất CSV", UiKit.Purple, (s, e) => ExportCsv(), 110);
-            _btnRefresh = UiKit.MakeButton("🔄 Tải Lại", UiKit.Primary, async (s, e) => await LoadDataAsync(), 110);
+            _lblCount = new Label 
+            { 
+                AutoSize = true, 
+                Text = "Tổng: 0", 
+                Font = new Font("Times New Roman", 11, FontStyle.Bold), 
+                ForeColor = Color.FromArgb(0, 120, 215) 
+            };
 
-            _lblCount = new Label { AutoSize = true, Text = "Tổng: 0", Font = new System.Drawing.Font("Segoe UI", 11, System.Drawing.FontStyle.Bold), ForeColor = Color.FromArgb(0, 120, 215) };
+            var toolbar = new Panel 
+            { 
+                Dock = DockStyle.Top, 
+                Height = 70, 
+                Padding = new Padding(15, 10, 15, 10), 
+                BackColor = Color.White 
+            };
+            toolbar.BorderStyle = BorderStyle.FixedSingle;
 
+            var filter = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent };
+            var lblSource = new Label 
+            { 
+                Text = "Báo Cáo:", 
+                AutoSize = true, 
+                ForeColor = Color.FromArgb(70, 70, 70), 
+                Font = new Font("Times New Roman", 11), 
+                Location = new Point(0, 12) 
+            };
+            _cboSource.Location = new Point(lblSource.Right + 8, 8);
+            
+            var lblSearch = new Label 
+            { 
+                Text = "Tìm:", 
+                AutoSize = true, 
+                ForeColor = Color.FromArgb(70, 70, 70), 
+                Font = new Font("Times New Roman", 11) 
+            };
+            lblSearch.Location = new Point(_cboSource.Right + 20, 12);
+            pnlSearch.Location = new Point(lblSearch.Right + 8, 10);
+
+            filter.Controls.Add(lblSource);
+            filter.Controls.Add(_cboSource);
+            filter.Controls.Add(lblSearch);
+            filter.Controls.Add(pnlSearch);
+            filter.Resize += (s, e) =>
+            {
+                _cboSource.Location = new Point(lblSource.Right + 8, 8);
+                lblSearch.Location = new Point(_cboSource.Right + 20, 12);
+                pnlSearch.Location = new Point(lblSearch.Right + 8, 10);
+            };
+
+            var summary = new Panel { Dock = DockStyle.Left, Width = 280, BackColor = Color.Transparent };
+            _lblCount.Location = new Point(5, 20);
+            summary.Controls.Add(_lblCount);
+
+            toolbar.Controls.Add(filter);
+            toolbar.Controls.Add(summary);
+
+            // Grid
             _grid = new DataGridView
             {
                 Dock = DockStyle.Fill,
@@ -82,62 +203,21 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _grid.EnableHeadersVisualStyles = false;
             _grid.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(0, 120, 215);
             _grid.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            _grid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+            _grid.ColumnHeadersDefaultCellStyle.Font = new Font("Times New Roman", 11, FontStyle.Bold);
             _grid.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
-            _grid.DefaultCellStyle.Font = new Font("Segoe UI", 10);
+            _grid.DefaultCellStyle.Font = new Font("Times New Roman", 11);
             _grid.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
             _grid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 249, 255);
             _grid.RowTemplate.Height = 28;
-            _grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(200, 230, 255);
+            _grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(232, 244, 252);
             _grid.DefaultCellStyle.SelectionForeColor = Color.Black;
-
-            var top = new Panel { Dock = DockStyle.Top, Height = 70, Padding = new Padding(15, 10, 15, 10), BackColor = Color.White };
-            top.BorderStyle = BorderStyle.FixedSingle;
-
-            var actions = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Right,
-                AutoSize = true,
-                WrapContents = false,
-                FlowDirection = FlowDirection.LeftToRight,
-                BackColor = Color.Transparent,
-                Padding = new Padding(5)
-            };
-            actions.Controls.Add(_btnExport);
-            actions.Controls.Add(_btnRefresh);
-
-            var filter = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent };
-            var lblSource = new Label { Text = "Báo Cáo:", AutoSize = true, ForeColor = Color.FromArgb(70, 70, 70), Font = new Font("Segoe UI", 10), Location = new Point(0, 12) };
-            _cboSource.Location = new Point(lblSource.Right + 8, 8);
-            
-            var lblSearch = new Label { Text = "Tìm:", AutoSize = true, ForeColor = Color.FromArgb(70, 70, 70), Font = new Font("Segoe UI", 10) };
-            lblSearch.Location = new Point(_cboSource.Right + 20, 12);
-            pnlSearch.Location = new Point(lblSearch.Right + 8, 10);
-
-            filter.Controls.Add(lblSource);
-            filter.Controls.Add(_cboSource);
-            filter.Controls.Add(lblSearch);
-            filter.Controls.Add(pnlSearch);
-            filter.Resize += (s, e) =>
-            {
-                _cboSource.Location = new Point(lblSource.Right + 8, 8);
-                lblSearch.Location = new Point(_cboSource.Right + 20, 12);
-                pnlSearch.Location = new Point(lblSearch.Right + 8, 10);
-            };
-
-            var summary = new Panel { Dock = DockStyle.Left, Width = 180, BackColor = Color.Transparent };
-            _lblCount.Location = new Point(5, 20);
-            summary.Controls.Add(_lblCount);
-
-            top.Controls.Add(filter);
-            top.Controls.Add(actions);
-            top.Controls.Add(summary);
 
             var gridHost = new Panel { Dock = DockStyle.Fill, Padding = new Padding(12), BackColor = BackColor };
             gridHost.Controls.Add(_grid);
 
             Controls.Add(gridHost);
-            Controls.Add(top);
+            Controls.Add(toolbar);
+            Controls.Add(header);
 
             Load += async (s, e) => await LoadDataAsync();
         }
@@ -152,7 +232,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     _raw = AdminBranchScope.FilterByBranchIds(_raw, _allowedBranchIds);
                 _grid.DataSource = _raw;
                 TranslateGridHeaders(_grid);
-                _lblCount.Text = $"Tổng: {_raw?.Rows.Count ?? 0}";
+                ApplyMoneyFormatting(_grid);
+                UpdateSummaryStats(_raw);
                 ApplyFilter();
             }
             catch (Exception ex)
@@ -194,8 +275,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 { "PaymentDate", "Ngày Thanh Toán" },
                 { "PaymentAmount", "Số Tiền" },
                 { "PaymentMethod", "Phương Thức" },
-                { "TransactionReference", "Tham Chiếu Giao Dịch" },
+                { "TransactionReference", "Mã GD" },
                 { "Notes", "Ghi Chú" },
+                { "PaymentStatus", "Trạng Thái Thanh Toán" },
+                { "RemainingAmount", "Còn Nợ" },
+                { "FromDate", "Từ Ngày" },
+                { "ToDate", "Đến Ngày" },
                 
                 // Tenant columns
                 { "FullName", "Tên Đầy Đủ" },
@@ -288,6 +373,51 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
         }
 
+        private void ApplyMoneyFormatting(DataGridView grid)
+        {
+            if (grid == null) return;
+            
+            // Money columns that need formatting
+            var moneyColumns = new[] 
+            { 
+                "PaymentAmount", "TotalAmount", "PaidAmount", "RemainingAmount",
+                "RentalCost", "UtilityCost", "OtherCost", "RoomPrice",
+                "DepositAmount", "DepositRequired", "ReturnedAmount",
+                "AssetValue", "Cost", "RentalPrice"
+            };
+            
+            // Date columns that need formatting
+            var dateColumns = new[]
+            {
+                "PaymentDate", "InvoiceDate", "FromDate", "ToDate", "DueDate",
+                "BirthDate", "TempRegDate", "TempRegExpiry", "DepositDate",
+                "ReturnedDate", "RequestDate", "CompletionDate", "SignDate",
+                "StartDate", "EndDate", "PurchaseDate", "NotificationDate",
+                "CreatedDate", "UpdatedDate"
+            };
+
+            // Wide columns for notes and descriptions
+            var wideColumns = new[] { "Notes", "Description", "NotificationContent", "SettingValue", "SettingDescription" };
+
+            foreach (DataGridViewColumn col in grid.Columns)
+            {
+                if (moneyColumns.Contains(col.Name, StringComparer.OrdinalIgnoreCase))
+                {
+                    col.DefaultCellStyle.Format = "N0";
+                    col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+                }
+                else if (dateColumns.Contains(col.Name, StringComparer.OrdinalIgnoreCase))
+                {
+                    col.DefaultCellStyle.Format = "dd/MM/yyyy";
+                }
+                else if (wideColumns.Contains(col.Name, StringComparer.OrdinalIgnoreCase))
+                {
+                    col.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
+                    grid.AutoResizeRowsHeightForHeader = true;
+                }
+            }
+        }
+
         private async System.Threading.Tasks.Task EnsureAllowedBranchScopeAsync()
         {
             if (_allowedBranchIds != null && _allowedBranchIds.Count > 0) return;
@@ -302,34 +432,107 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
         }
 
-        private System.Threading.Tasks.Task<DataTable> LoadSelectedAsync()
+        private async System.Threading.Tasks.Task<DataTable> LoadSelectedAsync()
         {
             var selected = _cboSource.SelectedItem?.ToString() ?? string.Empty;
+            DataTable result = null;
+            
             switch (selected)
             {
                 case "Hóa đơn":
-                    return _bll.GetInvoicesViewAsync();
+                    result = await _bll.GetInvoicesViewAsync();
+                    break;
                 case "Thanh toán":
-                    return _bll.GetPaymentsViewAsync();
+                    result = await _bll.GetPaymentsViewAsync();
+                    result = EnrichPaymentData(result);
+                    break;
                 case "Khách thuê":
-                    return _bll.GetTenantsAsync();
+                    result = await _bll.GetTenantsAsync();
+                    break;
                 case "Phòng":
-                    return _bll.GetRoomsAsync();
+                    result = await _bll.GetRoomsAsync();
+                    break;
                 case "Hợp đồng":
-                    return _bll.GetContractsAsync();
+                    result = await _bll.GetContractsAsync();
+                    break;
                 case "Đặt cọc":
-                    return _bll.GetDepositsAsync();
+                    result = await _bll.GetDepositsAsync();
+                    break;
                 case "Bảo trì":
-                    return _bll.GetMaintenanceAsync();
+                    result = await _bll.GetMaintenanceAsync();
+                    break;
                 case "Tài sản":
-                    return _bll.GetAssetsAsync();
+                    result = await _bll.GetAssetsAsync();
+                    break;
                 case "Thông báo":
-                    return _bll.GetNotificationsAsync();
+                    result = await _bll.GetNotificationsAsync();
+                    break;
                 case "Cấu hình hệ thống":
-                    return _bll.GetSystemSettingsAsync();
+                    result = await _bll.GetSystemSettingsAsync();
+                    break;
                 default:
-                    return _bll.GetInvoicesViewAsync();
+                    result = await _bll.GetInvoicesViewAsync();
+                    break;
             }
+            
+            return result;
+        }
+
+        private DataTable EnrichPaymentData(DataTable payments)
+        {
+            if (payments == null) return payments;
+
+            // Thêm cột ghi chú nếu chưa có
+            if (!payments.Columns.Contains("Notes"))
+                payments.Columns.Add("Notes", typeof(string));
+            if (!payments.Columns.Contains("PaymentStatus"))
+                payments.Columns.Add("PaymentStatus", typeof(string));
+            if (!payments.Columns.Contains("RemainingAmount"))
+                payments.Columns.Add("RemainingAmount", typeof(decimal));
+            if (!payments.Columns.Contains("FromDate"))
+                payments.Columns.Add("FromDate", typeof(DateTime));
+            if (!payments.Columns.Contains("ToDate"))
+                payments.Columns.Add("ToDate", typeof(DateTime));
+
+            foreach (DataRow row in payments.Rows)
+            {
+                // Ghi chú thanh toán thành công
+                var paymentAmount = ReadDecimal(row, "PaymentAmount");
+                var remainingAmount = ReadDecimal(row, "RemainingAmount");
+                var notes = row["Notes"]?.ToString() ?? "";
+
+                if (!string.IsNullOrWhiteSpace(notes))
+                    notes += " | ";
+
+                notes += $"✓ Thanh toán thành công: {paymentAmount:N0}";
+
+                if (remainingAmount > 0)
+                    notes += $" | Còn công nợ: {remainingAmount:N0}";
+
+                // Thêm khoảng thời gian nếu có
+                if (row.Table.Columns.Contains("FromDate") && row["FromDate"] != DBNull.Value &&
+                    row.Table.Columns.Contains("ToDate") && row["ToDate"] != DBNull.Value)
+                {
+                    var fromDate = Convert.ToDateTime(row["FromDate"]);
+                    var toDate = Convert.ToDateTime(row["ToDate"]);
+                    notes += $" | Kỳ: {fromDate:dd/MM/yyyy} - {toDate:dd/MM/yyyy}";
+                }
+
+                row["Notes"] = notes;
+                row["PaymentStatus"] = remainingAmount > 0 ? "Thanh toán một phần" : "Đã thanh toán";
+            }
+
+            return payments;
+        }
+
+        private static decimal ReadDecimal(DataRow row, string col)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(col)) return 0m;
+            var v = row[col];
+            if (v == null || v == DBNull.Value) return 0m;
+            if (v is decimal d) return d;
+            if (decimal.TryParse(v.ToString(), out var parsed)) return parsed;
+            return 0m;
         }
 
         private void ApplyFilter()
@@ -341,22 +544,82 @@ namespace quan_ly_chuoi_nha_tro.GUI
             if (raw == SearchPlaceholder) raw = string.Empty;
             string keyword = raw.ToLowerInvariant();
 
+            DataTable displayed;
             if (string.IsNullOrWhiteSpace(keyword))
             {
-                _grid.DataSource = _raw;
-                _lblCount.Text = $"Tổng: {_raw.Rows.Count}";
-                return;
+                displayed = _raw;
             }
-
-            var filtered = _raw.Clone();
-            foreach (DataRow row in _raw.Rows)
+            else
             {
-                if (RowContains(row, keyword))
-                    filtered.ImportRow(row);
+                displayed = _raw.Clone();
+                foreach (DataRow row in _raw.Rows)
+                {
+                    if (RowContains(row, keyword))
+                        displayed.ImportRow(row);
+                }
             }
 
-            _grid.DataSource = filtered;
-            _lblCount.Text = $"Tổng: {filtered.Rows.Count}";
+            _grid.DataSource = displayed;
+            _lblCount.Text = $"Tổng: {displayed.Rows.Count}";
+            UpdateSummaryStats(displayed);
+        }
+
+        private void UpdateSummaryStats(DataTable displayed)
+        {
+            var selectedReport = _cboSource.SelectedItem?.ToString() ?? string.Empty;
+            
+            // Only calculate totals for specific reports
+            if (selectedReport == "Thanh toán")
+            {
+                decimal totalPaid = 0m;
+                decimal totalRemaining = 0m;
+                int successfulPayments = 0;
+                int partialPayments = 0;
+
+                if (displayed != null)
+                {
+                    foreach (DataRow r in displayed.Rows)
+                    {
+                        if (decimal.TryParse(r["PaymentAmount"]?.ToString(), out var paid))
+                            totalPaid += paid;
+                        if (decimal.TryParse(r["RemainingAmount"]?.ToString(), out var remaining))
+                            totalRemaining += remaining;
+
+                        var status = r["PaymentStatus"]?.ToString() ?? "";
+                        if (status.Contains("Đã thanh toán"))
+                            successfulPayments++;
+                        else if (status.Contains("một phần"))
+                            partialPayments++;
+                    }
+                }
+
+                _lblCount.Text = $"Tổng: {displayed?.Rows.Count ?? 0} | Đã thu: {totalPaid:N0} | Còn nợ: {totalRemaining:N0} | ✓ Toàn bộ: {successfulPayments} | ◐ Một phần: {partialPayments}";
+            }
+            else if (selectedReport == "Hóa đơn")
+            {
+                decimal totalAmount = 0m;
+                decimal remainingAmount = 0m;
+                if (displayed != null)
+                {
+                    if (displayed.Columns.Contains("TotalAmount"))
+                    {
+                        foreach (DataRow r in displayed.Rows)
+                        {
+                            if (decimal.TryParse(r["TotalAmount"]?.ToString(), out var v))
+                                totalAmount += v;
+                        }
+                    }
+                    if (displayed.Columns.Contains("RemainingAmount"))
+                    {
+                        foreach (DataRow r in displayed.Rows)
+                        {
+                            if (decimal.TryParse(r["RemainingAmount"]?.ToString(), out var v))
+                                remainingAmount += v;
+                        }
+                    }
+                }
+                _lblCount.Text = $"Tổng: {displayed?.Rows.Count ?? 0} | Tổng tiền: {totalAmount:N0} | Còn nợ: {remainingAmount:N0}";
+            }
         }
 
         private static bool RowContains(DataRow row, string keyword)
