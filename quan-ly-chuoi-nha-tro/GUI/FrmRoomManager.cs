@@ -15,6 +15,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
     public class FrmRoomManager : Form
     {
         private const string SearchPlaceholder = "Tìm theo số phòng/loại...";
+        private const int MaxDisplayedRooms = 20;
 
         private readonly AdminDataBLL _bll;
         private readonly int? _branchId;
@@ -24,7 +25,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private DataTable _roomTypes;
         private DataTable _tenantHistory;
         private DataTable _contracts;
+        private DataTable _tenants;
 
+        private SplitContainer _splitContainer;
         private FlowLayoutPanel _roomCardsHost;
         private Panel _roomDetailPanel;
         private ComboBox _cboStatus;
@@ -135,7 +138,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 BackColor = Color.FromArgb(255, 193, 7),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Margin = new Padding(0, 4, 8, 0)
+                Margin = new Padding(0, 4, 8, 0),
+                Visible = false
             };
             _btnChangeStatus.FlatAppearance.BorderSize = 0;
             _btnChangeStatus.Click += (s, e) => ChangeRoomStatus();
@@ -148,7 +152,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 BackColor = Color.FromArgb(111, 66, 193),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Margin = new Padding(0, 4, 8, 0)
+                Margin = new Padding(0, 4, 8, 0),
+                Visible = false
             };
             _btnEdit.FlatAppearance.BorderSize = 0;
             _btnEdit.Click += (s, e) => EditCurrentRoom();
@@ -160,7 +165,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             filters.Controls.Add(_btnSearch);
             filters.Controls.Add(_btnRefresh);
             filters.Controls.Add(_btnChangeStatus);
-            filters.Controls.Add(_btnEdit);
 
             var stats = new FlowLayoutPanel
             {
@@ -173,14 +177,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
             };
             _lblSummary = new Label
             {
-                Text = "Đang ở/Tổng: 0/0",
+                Text = $"Đang ở/Tổng: 0/{MaxDisplayedRooms} phòng",
                 AutoSize = true,
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 122, 204)
             };
             _lblRoomCount = new Label
             {
-                Text = "Phòng: 0",
+                Text = $"Phòng: 0/{MaxDisplayedRooms}",
                 AutoSize = true,
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 122, 204),
@@ -192,12 +196,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
             toolbar.Controls.Add(stats);
             toolbar.Controls.Add(filters);
 
-            var splitContainer = new SplitContainer
+            _splitContainer = new SplitContainer
             {
                 Dock = DockStyle.Fill,
                 Orientation = Orientation.Vertical,
-                SplitterDistance = 400,
-                BackColor = Color.White
+                SplitterDistance = 1000,
+                BackColor = Color.White,
+                IsSplitterFixed = false
             };
 
             _roomCardsHost = new FlowLayoutPanel
@@ -218,10 +223,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 AutoScroll = true
             };
 
-            splitContainer.Panel1.Controls.Add(_roomCardsHost);
-            splitContainer.Panel2.Controls.Add(_roomDetailPanel);
+            _splitContainer.Panel1.Controls.Add(_roomCardsHost);
+            _splitContainer.Panel2.Controls.Add(_roomDetailPanel);
+            _splitContainer.Panel2Collapsed = true;
 
-            Controls.Add(splitContainer);
+            Controls.Add(_splitContainer);
             Controls.Add(toolbar);
 
             Load += async (s, e) => await LoadRoomsAsync();
@@ -232,12 +238,20 @@ namespace quan_ly_chuoi_nha_tro.GUI
             try
             {
                 Cursor = Cursors.WaitCursor;
+                _selectedRoomId = 0;
+                _selectedRoomRow = null;
+                _btnEdit.Visible = false;
+                if (_splitContainer != null)
+                {
+                _splitContainer.Panel2Collapsed = true;
+            }
 
                 _rooms = await _bll.GetRoomsAsync() ?? new DataTable();
                 _statuses = await _bll.GetRoomStatusesAsync() ?? new DataTable();
                 _roomTypes = await _bll.GetRoomTypesAsync() ?? new DataTable();
                 _tenantHistory = await _bll.GetTenantHistoryAsync() ?? new DataTable();
                 _contracts = await _bll.GetContractsAsync() ?? new DataTable();
+                _tenants = await _bll.GetTenantsAsync() ?? new DataTable();
 
                 if (_branchId.HasValue && _rooms.Columns.Contains("BranchId"))
                 {
@@ -371,16 +385,23 @@ namespace quan_ly_chuoi_nha_tro.GUI
             view.RowFilter = filters.Count > 0 ? string.Join(" AND ", filters) : string.Empty;
 
             var filteredTable = view.ToTable();
-            RenderRoomCards(filteredTable);
-            UpdateStats(filteredTable);
+            var displayedRows = filteredTable.AsEnumerable()
+                .OrderBy(r => SafeToString(r, "RoomNumber"))
+                .Take(MaxDisplayedRooms)
+                .ToList();
+
+            RenderRoomCards(displayedRows);
+            UpdateStats(displayedRows);
         }
 
-        private void RenderRoomCards(DataTable filteredTable)
+        private void RenderRoomCards(IEnumerable<DataRow> displayedRows)
         {
             _roomCardsHost.SuspendLayout();
             _roomCardsHost.Controls.Clear();
 
-            if (filteredTable == null || filteredTable.Rows.Count == 0)
+            var roomsToRender = displayedRows?.ToList() ?? new List<DataRow>();
+
+            if (roomsToRender.Count == 0)
             {
                 _roomCardsHost.Controls.Add(new Label
                 {
@@ -389,11 +410,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     ForeColor = Color.FromArgb(90, 90, 90)
                 });
                 _roomCardsHost.ResumeLayout();
-                _lblRoomCount.Text = "Phòng: 0";
+                _lblRoomCount.Text = $"Phòng: 0/{MaxDisplayedRooms}";
                 return;
             }
 
-            foreach (DataRow row in filteredTable.Rows)
+            foreach (DataRow row in roomsToRender)
             {
                 int roomId = TryGetInt(row, "RoomId");
                 if (roomId <= 0) continue;
@@ -403,16 +424,26 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
 
             _roomCardsHost.ResumeLayout();
-            _lblRoomCount.Text = $"Phòng: {filteredTable.Rows.Count}";
+            _lblRoomCount.Text = $"Phòng: {roomsToRender.Count}/{MaxDisplayedRooms}";
         }
 
         private Panel CreateRoomCard(DataRow row, int roomId)
         {
+            string roomNumber = SafeToString(row, "RoomNumber") ?? "—";
+            string typeName = SafeToString(row, "TypeName") ?? "—";
+            string statusName = SafeToString(row, "StatusName") ?? "—";
+            var statusColor = GetStatusColor(statusName);
+            var hoverColor = ControlPaint.Light(statusColor, 0.1f);
+            decimal price = TryGetDecimal(row, "RoomPrice") ?? 0m;
+            int occupants = TryGetInt(row, "Occupants");
+            bool isSelected = _selectedRoomId == roomId;
+            var selectedColor = ControlPaint.Dark(statusColor, 0.05f);
+
             var card = new Panel
             {
                 Width = 300,
                 Height = 180,
-                BackColor = Color.White,
+                BackColor = isSelected ? selectedColor : statusColor,
                 BorderStyle = BorderStyle.None,
                 Margin = new Padding(10, 10, 10, 10),
                 Cursor = Cursors.Hand,
@@ -421,12 +452,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             card.Paint += (s, e) =>
             {
-                // Vẽ border chính - xanh dương
-                using (var pen = new Pen(Color.FromArgb(70, 160, 230), 2))
+                var borderColor = isSelected ? Color.FromArgb(0, 95, 180) : Color.FromArgb(70, 160, 230);
+                var borderWidth = isSelected ? 3 : 2;
+                using (var pen = new Pen(borderColor, borderWidth))
                 {
                     e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
                 }
-                // Vẽ shadow - gradient từ góc
                 using (var shadowPen = new Pen(Color.FromArgb(200, 220, 245), 1))
                 {
                     e.Graphics.DrawRectangle(shadowPen, 1, 1, card.Width - 3, card.Height - 3);
@@ -435,18 +466,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             card.MouseEnter += (s, e) =>
             {
-                card.BackColor = Color.FromArgb(245, 250, 255);
+                if (!isSelected) card.BackColor = hoverColor;
             };
             card.MouseLeave += (s, e) =>
             {
-                card.BackColor = Color.White;
+                card.BackColor = isSelected ? selectedColor : statusColor;
             };
-
-            string roomNumber = SafeToString(row, "RoomNumber") ?? "—";
-            string typeName = SafeToString(row, "TypeName") ?? "—";
-            string statusName = SafeToString(row, "StatusName") ?? "—";
-            decimal price = TryGetDecimal(row, "RoomPrice") ?? 0m;
-            int occupants = TryGetInt(row, "Occupants");
 
             var mainLayout = new TableLayoutPanel
             {
@@ -459,23 +484,42 @@ namespace quan_ly_chuoi_nha_tro.GUI
             mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
-            // Header: Phòng + Giá
+            // Header: Phòng + icon
             var lblRoom = new Label
             {
                 Text = $"Phòng {roomNumber}",
-                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                Font = new Font("Segoe UI", 16, FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 79, 159),
-                Dock = DockStyle.Top,
+                Dock = DockStyle.Fill,
                 Height = 28,
                 AutoSize = false,
                 TextAlign = ContentAlignment.MiddleLeft,
-                Margin = new Padding(0, 0, 0, 4)
+                Margin = new Padding(0, 0, 0, 0)
             };
+
+            var lblTypeIcon = new Label
+            {
+                Text = GetOccupancyIcon(occupants, typeName),
+                Font = new Font("Segoe UI Symbol", 16, FontStyle.Regular),
+                ForeColor = Color.FromArgb(0, 79, 159),
+                Dock = DockStyle.Right,
+                Width = 38,
+                TextAlign = ContentAlignment.MiddleRight,
+                Margin = new Padding(0)
+            };
+
+            var headerPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 32
+            };
+            headerPanel.Controls.Add(lblRoom);
+            headerPanel.Controls.Add(lblTypeIcon);
 
             var lblPrice = new Label
             {
                 Text = $"{price:N0}đ",
-                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 122, 204),
                 Dock = DockStyle.Top,
                 Height = 24,
@@ -496,8 +540,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             var lblTypeInfo = new Label
             {
-                Text = $"Loại: {typeName}",
-                Font = new Font("Segoe UI", 9),
+                Text = $"Loại: {GetTypeIcon(typeName)} {typeName}",
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
                 ForeColor = Color.FromArgb(80, 80, 80),
                 Dock = DockStyle.Top,
                 Height = 20,
@@ -509,7 +553,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var lblStatusInfo = new Label
             {
                 Text = $"Trạng thái: {statusName}",
-                Font = new Font("Segoe UI", 9),
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
                 ForeColor = Color.FromArgb(80, 80, 80),
                 Dock = DockStyle.Top,
                 Height = 20,
@@ -521,7 +565,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var lblOccupantsInfo = new Label
             {
                 Text = $"Số người: {occupants}",
-                Font = new Font("Segoe UI", 9),
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
                 ForeColor = Color.FromArgb(80, 80, 80),
                 Dock = DockStyle.Top,
                 Height = 20,
@@ -534,18 +578,18 @@ namespace quan_ly_chuoi_nha_tro.GUI
             infoLayout.Controls.Add(lblOccupantsInfo, 0, 2);
             infoPanel.Controls.Add(infoLayout);
 
-            mainLayout.Controls.Add(lblRoom, 0, 0);
+            mainLayout.Controls.Add(headerPanel, 0, 0);
             mainLayout.Controls.Add(lblPrice, 0, 1);
             mainLayout.Controls.Add(infoPanel, 0, 2);
 
             card.Controls.Add(mainLayout);
 
-            card.Click += (s, e) => ShowRoomDetailsForm(row, roomId);
-            lblRoom.Click += (s, e) => ShowRoomDetailsForm(row, roomId);
-            lblPrice.Click += (s, e) => ShowRoomDetailsForm(row, roomId);
-            lblTypeInfo.Click += (s, e) => ShowRoomDetailsForm(row, roomId);
-            lblStatusInfo.Click += (s, e) => ShowRoomDetailsForm(row, roomId);
-            lblOccupantsInfo.Click += (s, e) => ShowRoomDetailsForm(row, roomId);
+            card.Click += (s, e) => ShowRoomDetails(row, roomId);
+            lblRoom.Click += (s, e) => ShowRoomDetails(row, roomId);
+            lblPrice.Click += (s, e) => ShowRoomDetails(row, roomId);
+            lblTypeInfo.Click += (s, e) => ShowRoomDetails(row, roomId);
+            lblStatusInfo.Click += (s, e) => ShowRoomDetails(row, roomId);
+            lblOccupantsInfo.Click += (s, e) => ShowRoomDetails(row, roomId);
 
             return card;
         }
@@ -589,6 +633,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _selectedRoomId = roomId;
             _selectedRoomRow = row;
             BuildRoomDetailsPanel();
+            ApplyFilter();
+            _btnEdit.Visible = true;
+
+            if (_splitContainer != null)
+            {
+                _splitContainer.Panel2Collapsed = false;
+                var desired = Math.Max(600, _splitContainer.Width - 420);
+                if (desired > 0) _splitContainer.SplitterDistance = Math.Min(desired, _splitContainer.Width - 280);
+            }
         }
 
         private void BuildRoomDetailsPanel()
@@ -597,15 +650,21 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             if (_selectedRoomRow == null)
             {
-                _roomDetailPanel.Controls.Add(new Label
+                var header = BuildDetailHeader("Thông tin phòng");
+                var emptyLabel = new Label
                 {
                     Text = "Chọn một phòng để xem chi tiết",
                     ForeColor = Color.FromArgb(90, 90, 90),
                     Dock = DockStyle.Top,
                     Height = 30
-                });
+                };
+
+                _roomDetailPanel.Controls.Add(emptyLabel);
+                _roomDetailPanel.Controls.Add(header);
                 return;
             }
+
+            var detailHeader = BuildDetailHeader($"Phòng {SafeToString(_selectedRoomRow, "RoomNumber") ?? "—"}");
 
             var layout = new TableLayoutPanel
             {
@@ -625,10 +684,73 @@ namespace quan_ly_chuoi_nha_tro.GUI
             AddDetailRow(layout, "Diện tích:", (TryGetDecimal(_selectedRoomRow, "Area") ?? 0m).ToString("0.##") + " m²");
             AddDetailRow(layout, "Số người:", TryGetInt(_selectedRoomRow, "Occupants").ToString());
 
-            _roomDetailPanel.Controls.Add(layout);
+            var editButton = new Button
+            {
+                Text = "Chỉnh sửa",
+                AutoSize = true,
+                BackColor = Color.FromArgb(111, 66, 193),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Padding = new Padding(12, 6, 12, 6),
+                Margin = new Padding(0, 12, 0, 0)
+            };
+            editButton.FlatAppearance.BorderSize = 0;
+            editButton.Click += (s, e) => EditCurrentRoom();
 
-            var contractsPanel = BuildContractsPanel();
-            _roomDetailPanel.Controls.Add(contractsPanel);
+            var buttonPanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                FlowDirection = FlowDirection.LeftToRight
+            };
+            buttonPanel.Controls.Add(editButton);
+
+            var tenantsPanel = BuildTenantListPanel();
+
+            _roomDetailPanel.Controls.Add(buttonPanel);
+            _roomDetailPanel.Controls.Add(tenantsPanel);
+            _roomDetailPanel.Controls.Add(layout);
+            _roomDetailPanel.Controls.Add(detailHeader);
+        }
+
+        private Control BuildDetailHeader(string title)
+        {
+            var panel = new Panel { Dock = DockStyle.Top, Height = 40 };
+
+            var lblTitle = new Label
+            {
+                Text = title,
+                Font = new Font("Segoe UI", 13, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 79, 159),
+                Dock = DockStyle.Left,
+                AutoSize = false,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Width = 240
+            };
+
+            var btnClose = new Button
+            {
+                Text = "X",
+                Width = 36,
+                Height = 30,
+                BackColor = Color.FromArgb(230, 64, 64),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Dock = DockStyle.Right,
+                Margin = new Padding(0, 5, 0, 5)
+            };
+            btnClose.FlatAppearance.BorderSize = 0;
+            btnClose.Click += (s, e) =>
+            {
+                _selectedRoomRow = null;
+                _selectedRoomId = 0;
+                _btnEdit.Visible = false;
+                if (_splitContainer != null) _splitContainer.Panel2Collapsed = true;
+            };
+
+            panel.Controls.Add(btnClose);
+            panel.Controls.Add(lblTitle);
+            return panel;
         }
 
         private Panel BuildContractsPanel()
@@ -669,11 +791,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 var roomContracts = _contracts.AsEnumerable()
                     .Where(r => int.TryParse(r["RoomId"]?.ToString(), out var rid) && rid == _selectedRoomId)
-                    .CopyToDataTable();
+                    .ToList();
 
-                if (roomContracts.Rows.Count > 0)
+                if (roomContracts.Count > 0)
                 {
-                    grid.DataSource = roomContracts;
+                    grid.DataSource = roomContracts.CopyToDataTable();
                     if (grid.Columns.Contains("ContractId")) grid.Columns["ContractId"].HeaderText = "ID";
                     if (grid.Columns.Contains("ContractNumber")) grid.Columns["ContractNumber"].HeaderText = "Số HĐ";
                     if (grid.Columns.Contains("TenantName")) grid.Columns["TenantName"].HeaderText = "Khách thuê";
@@ -686,12 +808,166 @@ namespace quan_ly_chuoi_nha_tro.GUI
             return panel;
         }
 
+        private Panel BuildTenantListPanel()
+        {
+            var panel = new Panel { Dock = DockStyle.Top, AutoSize = true, Padding = new Padding(0, 12, 0, 0) };
+
+            var lblTitle = new Label
+            {
+                Text = "Khách đang ở",
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 79, 159),
+                Dock = DockStyle.Top,
+                Height = 30,
+                AutoSize = false
+            };
+            panel.Controls.Add(lblTitle);
+
+            var container = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                Padding = new Padding(0, 6, 0, 0)
+            };
+
+            var activeTenants = new List<(DataRow tenant, DataRow history)>();
+            if (_tenantHistory != null && _tenantHistory.Columns.Contains("RoomId"))
+            {
+                var rows = _tenantHistory.AsEnumerable()
+                    .Where(r => int.TryParse(r["RoomId"]?.ToString(), out var rid) && rid == _selectedRoomId)
+                    .Where(r =>
+                    {
+                        var statusText = r.Table.Columns.Contains("Status") ? r["Status"]?.ToString() ?? string.Empty : string.Empty;
+                        var checkout = r.Table.Columns.Contains("CheckOutDate") ? r["CheckOutDate"] : null;
+                        bool isOut = checkout != null && checkout != DBNull.Value;
+                        if (!isOut) return true;
+                        return statusText.IndexOf("đang", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                               statusText.IndexOf("active", StringComparison.OrdinalIgnoreCase) >= 0;
+                    })
+                    .ToList();
+
+                foreach (var history in rows)
+                {
+                    if (!int.TryParse(history["TenantId"]?.ToString(), out var tid)) continue;
+                    var tenantRow = _tenants?.AsEnumerable()
+                        .FirstOrDefault(t => int.TryParse(t["TenantId"]?.ToString(), out var tenantId) && tenantId == tid);
+                    if (tenantRow != null)
+                    {
+                        activeTenants.Add((tenantRow, history));
+                    }
+                    else
+                    {
+                        // Fallback to history-only info when tenant data is missing
+                        var fallbackTable = _tenantHistory?.Clone() ?? new DataTable();
+                        if (!fallbackTable.Columns.Contains("TenantId"))
+                            fallbackTable.Columns.Add("TenantId", typeof(int));
+                        var fallback = fallbackTable.NewRow();
+                        fallback["TenantId"] = tid;
+                        activeTenants.Add((fallback, history));
+                    }
+                }
+            }
+
+            if (activeTenants.Count == 0)
+            {
+                container.Controls.Add(new Label
+                {
+                    Text = "Chưa có khách ở.",
+                    AutoSize = true,
+                    ForeColor = Color.FromArgb(100, 100, 100),
+                    Font = new Font("Segoe UI", 10, FontStyle.Italic),
+                    Margin = new Padding(0, 4, 0, 4)
+                });
+            }
+            else
+            {
+                foreach (var (tenant, history) in activeTenants)
+                {
+                    var card = new Panel
+                    {
+                        AutoSize = true,
+                        AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                        Padding = new Padding(10),
+                        BackColor = Color.FromArgb(246, 250, 255),
+                        Margin = new Padding(0, 0, 0, 8),
+                        BorderStyle = BorderStyle.FixedSingle
+                    };
+
+                    var inner = new FlowLayoutPanel
+                    {
+                        Dock = DockStyle.Fill,
+                        AutoSize = true,
+                        FlowDirection = FlowDirection.TopDown,
+                        WrapContents = false,
+                        Padding = new Padding(0)
+                    };
+
+                    string name = SafeToString(tenant, "FullName") ?? $"Khách #{SafeToString(tenant, "TenantId")}";
+                    string phone = SafeToString(tenant, "PhoneNumber") ?? "—";
+                    string cccd = SafeToString(tenant, "IdentityCard") ?? "—";
+                    string email = SafeToString(tenant, "Email") ?? "—";
+                    string checkIn = FormatDateSafe(history, "CheckInDate");
+
+                    var lblName = new Label
+                    {
+                        Text = name,
+                        AutoSize = true,
+                        Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                        ForeColor = Color.FromArgb(30, 55, 90),
+                        Margin = new Padding(0, 0, 0, 2)
+                    };
+                    var lblPhone = new Label
+                    {
+                        Text = $"SĐT: {phone}",
+                        AutoSize = true,
+                        Font = new Font("Segoe UI", 10),
+                        ForeColor = Color.FromArgb(60, 60, 60)
+                    };
+                    var lblCccd = new Label
+                    {
+                        Text = $"CCCD: {cccd}",
+                        AutoSize = true,
+                        Font = new Font("Segoe UI", 10),
+                        ForeColor = Color.FromArgb(60, 60, 60)
+                    };
+                    var lblEmail = new Label
+                    {
+                        Text = $"Email: {email}",
+                        AutoSize = true,
+                        Font = new Font("Segoe UI", 10),
+                        ForeColor = Color.FromArgb(60, 60, 60)
+                    };
+                    var lblCheckIn = new Label
+                    {
+                        Text = $"Ngày vào: {checkIn}",
+                        AutoSize = true,
+                        Font = new Font("Segoe UI", 10),
+                        ForeColor = Color.FromArgb(60, 60, 60)
+                    };
+
+                    inner.Controls.Add(lblName);
+                    inner.Controls.Add(lblPhone);
+                    inner.Controls.Add(lblCccd);
+                    inner.Controls.Add(lblEmail);
+                    inner.Controls.Add(lblCheckIn);
+
+                    card.Controls.Add(inner);
+                    container.Controls.Add(card);
+                }
+            }
+
+            panel.Controls.Add(container);
+            return panel;
+        }
+
         private void AddDetailRow(TableLayoutPanel layout, string label, string value)
         {
             var lblLabel = new Label
             {
                 Text = label,
-                Font = new Font("Segoe UI", 9),
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
                 ForeColor = Color.FromArgb(70, 70, 70),
                 AutoSize = true,
                 Margin = new Padding(0, 6, 8, 6)
@@ -700,7 +976,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var lblValue = new Label
             {
                 Text = value ?? "—",
-                Font = new Font("Segoe UI", 9),
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
                 ForeColor = Color.FromArgb(30, 55, 90),
                 AutoSize = true,
                 Margin = new Padding(0, 6, 0, 6)
@@ -710,19 +986,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
             layout.Controls.Add(lblValue);
         }
 
-        private void UpdateStats(DataTable table)
+        private void UpdateStats(IEnumerable<DataRow> rows)
         {
-            int total = table?.Rows.Count ?? 0;
-            int occupied = 0;
+            var list = rows?.ToList() ?? new List<DataRow>();
 
-            if (table != null)
-            {
-                occupied = table.AsEnumerable()
-                    .Count(r => (r["StatusName"]?.ToString() ?? string.Empty)
-                        .IndexOf("đang", StringComparison.OrdinalIgnoreCase) >= 0);
-            }
+            int occupied = list.Count(r => (r["StatusName"]?.ToString() ?? string.Empty)
+                .IndexOf("đang", StringComparison.OrdinalIgnoreCase) >= 0);
 
-            _lblSummary.Text = $"Đang ở/Tổng: {occupied}/{total}";
+            _lblSummary.Text = $"Đang ở/Tổng: {occupied}/{MaxDisplayedRooms} phòng";
         }
 
         private async void ChangeRoomStatus()
@@ -874,6 +1145,59 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (row == null || !row.Table.Columns.Contains(column)) return null;
             return bool.TryParse(row[column]?.ToString(), out var val) ? (bool?)val : null;
+        }
+
+        private static string FormatDateSafe(DataRow row, string column)
+        {
+            if (row == null || !row.Table.Columns.Contains(column)) return "—";
+            var val = row[column];
+            if (val == null || val == DBNull.Value) return "—";
+            if (val is DateTime dt) return dt.ToString("dd/MM/yyyy");
+            if (DateTime.TryParse(val.ToString(), out var parsed)) return parsed.ToString("dd/MM/yyyy");
+            return val.ToString();
+        }
+
+        private static Color GetStatusColor(string statusName)
+        {
+            if (string.IsNullOrWhiteSpace(statusName)) return Color.White;
+
+            var status = statusName.ToLowerInvariant();
+            bool isDeposit = status.Contains("cọc") || status.Contains("coc") || status.Contains("đặt cọc");
+            bool isMaintenance = status.Contains("bảo trì") || status.Contains("bao tri") || status.Contains("maintenance");
+            bool isOccupied = status.Contains("đang ở") || status.Contains("dang o") || status.Contains("đang thuê") || status.Contains("dang thue");
+
+            if (isMaintenance) return Color.FromArgb(255, 220, 220);
+            if (isDeposit) return Color.FromArgb(255, 245, 200);
+            if (isOccupied) return Color.FromArgb(220, 245, 230);
+            return Color.White;
+        }
+
+        private static string GetTypeIcon(string typeName)
+        {
+            if (string.IsNullOrWhiteSpace(typeName)) return "🏠";
+
+            var lower = typeName.ToLowerInvariant();
+            if (lower.Contains("cao cấp") || lower.Contains("vip") || lower.Contains("premium"))
+                return "⭐";
+            if (lower.Contains("đôi") || lower.Contains("doi") || lower.Contains("double"))
+                return "👥";
+            if (lower.Contains("đơn") || lower.Contains("don") || lower.Contains("single"))
+                return "👤";
+
+            return "🏠";
+        }
+
+        private static string GetOccupancyIcon(int occupants, string typeName = null)
+        {
+            var lowerType = typeName?.ToLowerInvariant() ?? string.Empty;
+            if (lowerType.Contains("cao cấp") || lowerType.Contains("vip") || lowerType.Contains("premium"))
+                return "⭐";
+
+            if (occupants >= 3)
+                return "👤+";
+            if (occupants == 2 || lowerType.Contains("đôi") || lowerType.Contains("doi") || lowerType.Contains("double"))
+                return "👥";
+            return "👤";
         }
 
         private class RoomEditDialog : Form
