@@ -127,7 +127,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 AllowUserToDeleteRows = false,
                 BackgroundColor = Color.White,
                 BorderStyle = BorderStyle.None,
-<<<<<<< HEAD
+
                 MultiSelect = false,
                 AutoGenerateColumns = true
             };
@@ -142,8 +142,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _gridContracts.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
             _gridContracts.EnableHeadersVisualStyles = false;
             _gridContracts.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 245, 245);
-=======
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells,
+
+        AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells,
                 RowHeadersVisible = false
             };
             _gridContracts.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(0, 120, 215);
@@ -156,7 +156,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _gridContracts.EnableHeadersVisualStyles = false;
             _gridContracts.ColumnHeadersHeight = 35;
             _gridContracts.RowTemplate.Height = 30;
->>>>>>> 0d992608b2fdecad77563c2750c487d789fcd173
+
             tabContracts.Controls.Add(_gridContracts);
 
             // Tab 3: Lịch Sử
@@ -171,7 +171,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 AllowUserToDeleteRows = false,
                 BackgroundColor = Color.White,
                 BorderStyle = BorderStyle.None,
-<<<<<<< HEAD
+
                 MultiSelect = false,
                 AutoGenerateColumns = true
             };
@@ -186,7 +186,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _gridHistory.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
             _gridHistory.EnableHeadersVisualStyles = false;
             _gridHistory.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 245, 245);
-=======
+
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells,
                 RowHeadersVisible = false
             };
@@ -200,7 +200,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _gridHistory.EnableHeadersVisualStyles = false;
             _gridHistory.ColumnHeadersHeight = 35;
             _gridHistory.RowTemplate.Height = 30;
->>>>>>> 0d992608b2fdecad77563c2750c487d789fcd173
+
             tabHistory.Controls.Add(_gridHistory);
 
             tabControl.TabPages.Add(tabBasic);
