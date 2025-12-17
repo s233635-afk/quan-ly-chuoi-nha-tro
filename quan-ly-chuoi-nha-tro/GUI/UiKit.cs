@@ -54,11 +54,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Height = 34,
                 Width = width,
                 Padding = new Padding(10, 7, 10, 7)
+                Padding = new Padding(10, 0, 10, 0), // Bỏ padding dọc
+                Anchor = AnchorStyles.None // Để TableLayoutPanel tự căn giữa
             };
 
             textBox.BorderStyle = BorderStyle.None;
             textBox.Parent = panel;
             textBox.Location = new Point(2, 6);
+            textBox.Location = new Point(2, (panel.ClientSize.Height - textBox.Height) / 2); // Căn giữa theo chiều dọc
             textBox.Width = panel.Width - 16;
             panel.Resize += (s, e) => textBox.Width = panel.Width - 16;
 
