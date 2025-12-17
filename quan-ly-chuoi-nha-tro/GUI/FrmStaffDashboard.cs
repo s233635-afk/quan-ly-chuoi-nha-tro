@@ -1,8 +1,3 @@
-Dưới đây là **đoạn code đầy đủ (Full Code)** của file `FrmStaffDashboard.cs` đã được chỉnh sửa.
-
-Tôi đã tích hợp phần đổi tên cột sang tiếng Việt trực tiếp vào bên trong các hàm `Load...Async`. Bạn chỉ cần **Copy toàn bộ** code dưới đây và dán đè lên file cũ của bạn là được.
-
-```csharp
 using System;
 using System.Data;
 using System.Drawing;
@@ -18,6 +13,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private readonly string _username;
         private readonly string _fullName;
         private readonly int? _branchId;
+        private readonly int? _userId;
 
         private readonly AdminDataBLL _bll = new AdminDataBLL();
         private Form _currentModule;
@@ -43,11 +39,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Button _btnAsset;
         private Button _btnReport;
 
-        public FrmStaffDashboard(string username, string fullName, int? branchId)
+        public FrmStaffDashboard(string username, string fullName, int? branchId, int? userId = null)
         {
             _username = username;
             _fullName = fullName;
             _branchId = branchId;
+            _userId = userId;
             InitializeComponent();
         }
 
@@ -489,4 +486,4 @@ namespace quan_ly_chuoi_nha_tro.GUI
             return decimal.TryParse(v.ToString(), out var parsed) ? parsed : 0m;
         }
     }
-g}
+}

@@ -53,7 +53,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 BackColor = AppBackground,
                 Height = 34,
                 Width = width,
-                Padding = new Padding(10, 7, 10, 7)
                 Padding = new Padding(10, 0, 10, 0), // Bỏ padding dọc
                 Anchor = AnchorStyles.None // Để TableLayoutPanel tự căn giữa
             };
@@ -90,4 +89,3 @@ namespace quan_ly_chuoi_nha_tro.GUI
         }
     }
 }
-
