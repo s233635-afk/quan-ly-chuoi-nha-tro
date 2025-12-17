@@ -230,14 +230,44 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             try
             {
-                if (_existing == null)
+                bool isNewDeposit = (_existing == null);
+
+                if (isNewDeposit)
                 {
                     await _bll.AddDepositAsync(tenantId, roomId, amount, depositDate, type, status, returned, returnedDate, notes);
+                    
+                    // Lưu lịch sử khách hàng: nhân viên thêm khách vào phòng
+                    DateTime checkInDate = depositDate ?? DateTime.Now.Date;
+                    await _bll.AddTenantHistoryAsync(tenantId, roomId, checkInDate, null, "Active", 
+                        $"[Đặt cọc] {type} - Tiền cọc: {amount:N0} VND - Ghi chú: {notes}");
                 }
                 else
                 {
                     int id = Convert.ToInt32(_existing["DepositId"]);
                     await _bll.UpdateDepositAsync(id, tenantId, roomId, amount, depositDate, type, status, returned, returnedDate, notes);
+                    
+                    // Nếu trạng thái thay đổi sang "Returned" hoặc "Cancelled", cập nhật lịch sử
+                    string oldStatus = _existing["Status"]?.ToString() ?? "";
+                    if (oldStatus != status && (status == "Returned" || status == "Cancelled"))
+                    {
+                        // Tìm lịch sử gần nhất của khách này trong phòng này
+                        DataTable historyTable = await _bll.GetTenantHistoryAsync();
+                        var recentHistory = historyTable?.AsEnumerable()
+                            .Where(r => r["TenantId"]?.ToString() == tenantId.ToString() && 
+                                       r["RoomId"]?.ToString() == roomId.ToString())
+                            .OrderByDescending(r => r["CheckInDate"])
+                            .FirstOrDefault();
+                        
+                        if (recentHistory != null && int.TryParse(recentHistory["HistoryId"]?.ToString(), out int historyId))
+                        {
+                            DateTime checkOutDate = returnedDate ?? DateTime.Now.Date;
+                            await _bll.UpdateTenantHistoryAsync(historyId, roomId, 
+                                DateTime.Parse(recentHistory["CheckInDate"].ToString()), 
+                                checkOutDate, 
+                                status == "Returned" ? "Completed" : "Cancelled", 
+                                $"[Cập nhật cọc] {status} - Tiền hoàn: {returned:N0} VND");
+                        }
+                    }
                 }
 
                 this.DialogResult = DialogResult.OK;
