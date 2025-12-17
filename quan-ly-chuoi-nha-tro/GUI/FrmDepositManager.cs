@@ -55,7 +55,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 BorderStyle = BorderStyle.None
             };
             _grid.DoubleClick += (s, e) => EditSelected();
-            _grid.CellClick += (s, e) => ShowTenantQuickInfo(e.RowIndex, e.ColumnIndex);
+            _grid.MouseDown += (s, e) => HandleGridMouseDown(e);
             _grid.EnableHeadersVisualStyles = false;
             _grid.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(0, 120, 215);
             _grid.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
@@ -86,7 +86,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             };
 
             _cboStatus = new ComboBox { Width = 160, DropDownStyle = ComboBoxStyle.DropDownList };
-            _cboStatus.Items.AddRange(new object[] { "Tất cả", "Pending", "Confirmed", "Returned", "Cancelled" });
+            _cboStatus.Items.AddRange(new object[] { "Tất cả", "Chờ xử lý", "Đã xác nhận", "Hoàn cọc", "Hủy" });
             _cboStatus.SelectedIndex = 0;
             _cboStatus.SelectedIndexChanged += (s, e) => ApplyFilter();
 
@@ -280,11 +280,20 @@ namespace quan_ly_chuoi_nha_tro.GUI
             string rawKeyword = (_txtSearch.Text ?? string.Empty).Trim();
             if (rawKeyword == SearchPlaceholder) rawKeyword = string.Empty;
             string keyword = rawKeyword.Replace("'", "''");
-            string status = _cboStatus?.SelectedItem?.ToString();
+            string statusCombo = _cboStatus?.SelectedItem?.ToString();
 
-            string statusFilter = (!string.IsNullOrWhiteSpace(status) && status != "Tất cả")
-                ? $"Status = '{status}'"
-                : null;
+            string statusFilter = null;
+            if (!string.IsNullOrWhiteSpace(statusCombo) && statusCombo != "Tất cả")
+            {
+                // Convert Vietnamese status to English for database query
+                string dbStatus = statusCombo;
+                if (statusCombo == "Chờ xử lý") dbStatus = "Pending";
+                else if (statusCombo == "Đã xác nhận") dbStatus = "Confirmed";
+                else if (statusCombo == "Hoàn cọc") dbStatus = "Returned";
+                else if (statusCombo == "Hủy") dbStatus = "Cancelled";
+                
+                statusFilter = $"Status = '{dbStatus}'";
+            }
 
             string keywordFilter = !string.IsNullOrWhiteSpace(keyword)
                 ? $"(Convert(DepositId, 'System.String') LIKE '%{keyword}%' " +
@@ -390,7 +399,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
 
             int id = Convert.ToInt32(row["DepositId"]);
-            if (MessageBox.Show($"Cập nhật trạng thái cọc ID {id} -> {newStatus}?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+            string displayStatus = newStatus == "Confirmed" ? "Đã xác nhận" : newStatus;
+            if (MessageBox.Show($"Cập nhật trạng thái cọc ID {id} -> {displayStatus}?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                 return;
 
             try
@@ -427,7 +437,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
 
             int id = Convert.ToInt32(row["DepositId"]);
-            if (MessageBox.Show($"Hoàn cọc cho ID {id} (Status = Returned)?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+            if (MessageBox.Show($"Hoàn cọc cho ID {id} (Trạng thái = Hoàn cọc)?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                 return;
 
             try
@@ -542,46 +552,84 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void Grid_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
         {
-            if (_grid.Columns[e.ColumnIndex].Name != "Status" || e.Value == null) return;
-
-            string status = e.Value.ToString();
-            if (string.Equals(status, "Confirmed", StringComparison.OrdinalIgnoreCase))
-                e.CellStyle.ForeColor = Color.FromArgb(46, 125, 50);
-            else if (string.Equals(status, "Pending", StringComparison.OrdinalIgnoreCase))
-                e.CellStyle.ForeColor = Color.FromArgb(245, 124, 0);
-            else if (string.Equals(status, "Returned", StringComparison.OrdinalIgnoreCase))
-                e.CellStyle.ForeColor = Color.FromArgb(33, 150, 243);
-            else if (string.Equals(status, "Cancelled", StringComparison.OrdinalIgnoreCase))
-                e.CellStyle.ForeColor = Color.FromArgb(211, 47, 47);
-        }
-
-        private async void ShowTenantQuickInfo(int rowIndex, int columnIndex)
-        {
-            if (rowIndex < 0 || _grid.Rows.Count <= rowIndex) return;
-
-            var row = GetCurrentRow();
-            if (row == null || !row.Table.Columns.Contains("TenantId")) return;
-
-            if (!int.TryParse(row["TenantId"]?.ToString(), out var tenantId)) return;
-
-            try
+            if (_grid.Columns[e.ColumnIndex].Name == "DepositType" && e.Value != null)
             {
-                using (var frm = new FrmTenantQuickInfo(_bll, tenantId))
+                string type = e.Value.ToString();
+                if (type == "Booking") e.Value = "Đặt chỗ";
+                else if (type == "Official") e.Value = "Chính thức";
+            }
+
+            if (_grid.Columns[e.ColumnIndex].Name == "Status" && e.Value != null)
+            {
+                string status = e.Value.ToString();
+                if (status == "Pending") e.Value = "Chờ xử lý";
+                else if (status == "Confirmed") 
                 {
-                    var result = frm.ShowDialog(this);
-                    
-                    // Nếu form đóng với OK (có lưu dữ liệu), reload danh sách
-                    if (result == DialogResult.OK)
-                    {
-                        await LoadDataAsync();
-                    }
+                    e.Value = "Đã xác nhận";
+                    e.CellStyle.ForeColor = Color.FromArgb(46, 125, 50); // Green
+                }
+                else if (status == "Returned") 
+                {
+                    e.Value = "Hoàn cọc";
+                    e.CellStyle.ForeColor = Color.FromArgb(33, 150, 243); // Blue
+                }
+                else if (status == "Cancelled") 
+                {
+                    e.Value = "Hủy";
+                    e.CellStyle.ForeColor = Color.FromArgb(211, 47, 47); // Red
                 }
             }
-            catch (Exception ex)
+        }
+
+        private void HandleGridMouseDown(MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Right)
             {
-                MessageBox.Show("Lỗi hiển thị thông tin khách: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                var hitTest = _grid.HitTest(e.X, e.Y);
+                if (hitTest.RowIndex >= 0)
+                {
+                    _grid.ClearSelection();
+                    _grid.Rows[hitTest.RowIndex].Selected = true;
+                    ShowContextMenu(e.X, e.Y);
+                }
             }
         }
+
+        private void ShowContextMenu(int x, int y)
+        {
+            var row = GetCurrentRow();
+            if (row == null) return;
+
+            ContextMenuStrip menu = new ContextMenuStrip();
+            
+            menu.Items.Add("Xem chi tiết khách", null, (s, e) =>
+            {
+                try
+                {
+                    if (!int.TryParse(row["TenantId"]?.ToString(), out var tenantId)) return;
+                    using (var frm = new FrmTenantQuickInfo(_bll, tenantId))
+                    {
+                        var result = frm.ShowDialog(this);
+                        if (result == DialogResult.OK)
+                        {
+                            _ = LoadDataAsync();
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Lỗi: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            });
+
+            menu.Items.Add("-"); // Separator
+            menu.Items.Add("Sửa", null, (s, e) => EditSelected());
+            menu.Items.Add("Xóa", null, async (s, e) => await DeleteSelectedAsync());
+            
+            _grid.ContextMenuStrip = menu;
+            menu.Show(_grid, x, y);
+        }
+
     }
 }
 

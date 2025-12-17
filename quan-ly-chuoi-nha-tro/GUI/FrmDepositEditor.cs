@@ -37,6 +37,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void InitializeComponent()
         {
+            // Tiêu đề sẽ được cập nhật khi load dữ liệu (LoadExisting)
             this.Text = _existing == null ? "Thêm đặt phòng & cọc" : "Cập nhật đặt phòng & cọc";
             this.StartPosition = FormStartPosition.CenterParent;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -75,8 +76,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             dtReturned = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true };
             txtNotes = new TextBox { Multiline = true, Height = 80, ScrollBars = ScrollBars.Vertical };
 
-            cboType.Items.AddRange(new object[] { "Booking", "Official" });
-            cboStatus.Items.AddRange(new object[] { "Pending", "Confirmed", "Returned", "Cancelled" });
+            cboType.Items.AddRange(new object[] { "Đặt chỗ", "Chính thức" });
+            cboStatus.Items.AddRange(new object[] { "Chờ xử lý", "Đã xác nhận", "Hoàn cọc", "Hủy" });
 
             this.Controls.Add(MakeLabel("Khách thuê (*)", top));
             this.Controls.Add(MakeInput(cboTenant, top));
@@ -179,6 +180,18 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private void LoadExisting()
         {
             if (_existing == null) return;
+            
+            // Cập nhật tiêu đề với tên khách thuê
+            if (_existing.Table.Columns.Contains("TenantId") && _tenantTable != null)
+            {
+                var tenantRow = _tenantTable.AsEnumerable()
+                    .FirstOrDefault(r => r["TenantId"].ToString() == _existing["TenantId"].ToString());
+                if (tenantRow != null && tenantRow.Table.Columns.Contains("FullName"))
+                {
+                    this.Text = $"Cập nhật cọc - {tenantRow["FullName"]}";
+                }
+            }
+            
             if (_existing.Table.Columns.Contains("TenantId"))
                 cboTenant.SelectedValue = _existing["TenantId"];
             if (_existing.Table.Columns.Contains("RoomId"))
@@ -194,8 +207,17 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             else dtDeposit.Checked = false;
 
-            cboType.SelectedItem = _existing["DepositType"]?.ToString();
-            cboStatus.SelectedItem = _existing["Status"]?.ToString();
+            string depositType = _existing["DepositType"]?.ToString();
+            if (depositType == "Booking") depositType = "Đặt chỗ";
+            else if (depositType == "Official") depositType = "Chính thức";
+            cboType.SelectedItem = depositType;
+
+            string status = _existing["Status"]?.ToString();
+            if (status == "Pending") status = "Chờ xử lý";
+            else if (status == "Confirmed") status = "Đã xác nhận";
+            else if (status == "Returned") status = "Hoàn cọc";
+            else if (status == "Cancelled") status = "Hủy";
+            cboStatus.SelectedItem = status;
 
             if (decimal.TryParse(_existing["ReturnedAmount"]?.ToString(), out var ret))
                 numReturned.Value = Math.Min(numReturned.Maximum, ret);
@@ -218,6 +240,22 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 return;
             }
 
+            // Kiểm tra Ngày hoàn không được để trống
+            if (!dtReturned.Checked && cboStatus.Text == "Hoàn cọc")
+            {
+                MessageBox.Show("Ngày hoàn không được để trống.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                dtReturned.Focus();
+                return;
+            }
+
+            // Kiểm tra Trạng thái không được để trống và không được là Chờ xử lý khi tạo mới
+            if (string.IsNullOrWhiteSpace(cboStatus.Text))
+            {
+                MessageBox.Show("Trạng thái không được để trống.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                cboStatus.Focus();
+                return;
+            }
+
             int tenantId = Convert.ToInt32(cboTenant.SelectedValue);
             int roomId = Convert.ToInt32(cboRoom.SelectedValue);
             decimal amount = numAmount.Value;
@@ -225,7 +263,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             DateTime? depositDate = dtDeposit.Checked ? (DateTime?)dtDeposit.Value.Date : null;
             DateTime? returnedDate = dtReturned.Checked ? (DateTime?)dtReturned.Value.Date : null;
             string type = cboType.Text;
-            string status = string.IsNullOrWhiteSpace(cboStatus.Text) ? "Pending" : cboStatus.Text;
+            string status = cboStatus.Text;
             string notes = txtNotes.Text.Trim();
 
             try

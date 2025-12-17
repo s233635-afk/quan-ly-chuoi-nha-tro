@@ -32,8 +32,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             this.Text = "Thông Tin Khách Thuê";
             this.StartPosition = FormStartPosition.CenterParent;
-            this.Width = 900;
-            this.Height = 800;
+            this.Width = 1200;
+            this.Height = 850;
             this.BackColor = Color.FromArgb(240, 242, 245);
             this.MaximizeBox = false;
             this.MinimizeBox = false;
@@ -114,7 +114,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _pnlBasic = new Panel { Dock = DockStyle.Fill, AutoScroll = true };
             tabBasic.Controls.Add(_pnlBasic);
 
-            // Tab 2: Hợp đồng
+            // Tab 2: Hợp Đồng
             var tabContracts = new TabPage { Text = "Hợp Đồng", Padding = new Padding(10) };
             tabContracts.BackColor = Color.White;
             _gridContracts = new DataGridView
@@ -123,18 +123,25 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 ReadOnly = true,
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
                 AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
                 BackgroundColor = Color.White,
-                BorderStyle = BorderStyle.None
+                BorderStyle = BorderStyle.None,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells,
+                RowHeadersVisible = false
             };
             _gridContracts.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(0, 120, 215);
             _gridContracts.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            _gridContracts.ColumnHeadersDefaultCellStyle.Font = new Font("Times New Roman", 10, FontStyle.Bold);
-            _gridContracts.DefaultCellStyle.Font = new Font("Times New Roman", 10);
-            _gridContracts.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            _gridContracts.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+            _gridContracts.ColumnHeadersDefaultCellStyle.WrapMode = DataGridViewTriState.False;
+            _gridContracts.DefaultCellStyle.Font = new Font("Segoe UI", 10);
+            _gridContracts.DefaultCellStyle.WrapMode = DataGridViewTriState.False;
+            _gridContracts.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
             _gridContracts.EnableHeadersVisualStyles = false;
+            _gridContracts.ColumnHeadersHeight = 35;
+            _gridContracts.RowTemplate.Height = 30;
             tabContracts.Controls.Add(_gridContracts);
 
-            // Tab 3: Lịch sử nhân phòng
+            // Tab 3: Lịch Sử
             var tabHistory = new TabPage { Text = "Lịch Sử", Padding = new Padding(10) };
             tabHistory.BackColor = Color.White;
             _gridHistory = new DataGridView
@@ -143,15 +150,22 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 ReadOnly = true,
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
                 AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
                 BackgroundColor = Color.White,
-                BorderStyle = BorderStyle.None
+                BorderStyle = BorderStyle.None,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells,
+                RowHeadersVisible = false
             };
             _gridHistory.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(0, 120, 215);
             _gridHistory.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            _gridHistory.ColumnHeadersDefaultCellStyle.Font = new Font("Times New Roman", 10, FontStyle.Bold);
-            _gridHistory.DefaultCellStyle.Font = new Font("Times New Roman", 10);
-            _gridHistory.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            _gridHistory.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+            _gridHistory.ColumnHeadersDefaultCellStyle.WrapMode = DataGridViewTriState.False;
+            _gridHistory.DefaultCellStyle.Font = new Font("Segoe UI", 10);
+            _gridHistory.DefaultCellStyle.WrapMode = DataGridViewTriState.False;
+            _gridHistory.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
             _gridHistory.EnableHeadersVisualStyles = false;
+            _gridHistory.ColumnHeadersHeight = 35;
+            _gridHistory.RowTemplate.Height = 30;
             tabHistory.Controls.Add(_gridHistory);
 
             tabControl.TabPages.Add(tabBasic);
@@ -538,34 +552,82 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (grid == null || grid.Columns.Count == 0) return;
             
-            // Only set header text if column exists
+            // Hide unwanted columns
+            var columnsToHide = new[] { "TenantId", "RoomId", "BranchId", "IsActive", "CreatedDate", "UpdatedDate" };
+            foreach (var col in columnsToHide)
+            {
+                if (grid.Columns.Contains(col))
+                    grid.Columns[col].Visible = false;
+            }
+            
+            // Set header text in Vietnamese
             if (grid.Columns.Contains("ContractId"))
-                grid.Columns["ContractId"].HeaderText = "ID Hợp Đồng";
+                grid.Columns["ContractId"].HeaderText = "Mã HĐ";
             if (grid.Columns.Contains("ContractNumber"))
-                grid.Columns["ContractNumber"].HeaderText = "Số Hợp Đồng";
+                grid.Columns["ContractNumber"].HeaderText = "Số HĐ";
+            if (grid.Columns.Contains("RoomNumber"))
+                grid.Columns["RoomNumber"].HeaderText = "Phòng";
             if (grid.Columns.Contains("StartDate"))
+            {
                 grid.Columns["StartDate"].HeaderText = "Ngày Bắt Đầu";
+                grid.Columns["StartDate"].DefaultCellStyle.Format = "dd/MM/yyyy";
+            }
             if (grid.Columns.Contains("EndDate"))
+            {
                 grid.Columns["EndDate"].HeaderText = "Ngày Kết Thúc";
+                grid.Columns["EndDate"].DefaultCellStyle.Format = "dd/MM/yyyy";
+            }
             if (grid.Columns.Contains("Status"))
                 grid.Columns["Status"].HeaderText = "Trạng Thái";
+            if (grid.Columns.Contains("RentalPrice"))
+            {
+                grid.Columns["RentalPrice"].HeaderText = "Tiền Thuê";
+                grid.Columns["RentalPrice"].DefaultCellStyle.Format = "N0";
+            }
+            if (grid.Columns.Contains("DepositAmount"))
+            {
+                grid.Columns["DepositAmount"].HeaderText = "Cọc";
+                grid.Columns["DepositAmount"].DefaultCellStyle.Format = "N0";
+            }
+            if (grid.Columns.Contains("Terms"))
+                grid.Columns["Terms"].HeaderText = "Điều Khoản";
+            if (grid.Columns.Contains("Notes"))
+                grid.Columns["Notes"].HeaderText = "Ghi Chú";
         }
 
         private void FormatHistoryGrid(DataGridView grid)
         {
             if (grid == null || grid.Columns.Count == 0) return;
             
-            // Only set header text if column exists
-            if (grid.Columns.Contains("HistoryId"))
-                grid.Columns["HistoryId"].HeaderText = "ID Lịch Sử";
+            // Hide unwanted columns
+            var columnsToHide = new[] { "TenantId", "BranchId", "IsActive", "CreatedDate", "UpdatedDate" };
+            foreach (var col in columnsToHide)
+            {
+                if (grid.Columns.Contains(col))
+                    grid.Columns[col].Visible = false;
+            }
+            
+            // Set header text in Vietnamese
+            if (grid.Columns.Contains("TenantHistoryId"))
+                grid.Columns["TenantHistoryId"].HeaderText = "Mã";
+            if (grid.Columns.Contains("RoomId"))
+                grid.Columns["RoomId"].HeaderText = "ID Phòng";
             if (grid.Columns.Contains("RoomNumber"))
                 grid.Columns["RoomNumber"].HeaderText = "Phòng";
             if (grid.Columns.Contains("CheckInDate"))
-                grid.Columns["CheckInDate"].HeaderText = "Ngày Nhận Phòng";
+            {
+                grid.Columns["CheckInDate"].HeaderText = "Ngày Nhận";
+                grid.Columns["CheckInDate"].DefaultCellStyle.Format = "dd/MM/yyyy";
+            }
             if (grid.Columns.Contains("CheckOutDate"))
-                grid.Columns["CheckOutDate"].HeaderText = "Ngày Trả Phòng";
+            {
+                grid.Columns["CheckOutDate"].HeaderText = "Ngày Trả";
+                grid.Columns["CheckOutDate"].DefaultCellStyle.Format = "dd/MM/yyyy";
+            }
             if (grid.Columns.Contains("Duration"))
                 grid.Columns["Duration"].HeaderText = "Thời Hạn";
+            if (grid.Columns.Contains("Notes"))
+                grid.Columns["Notes"].HeaderText = "Ghi Chú";
         }
     }
 }
