@@ -127,22 +127,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 AllowUserToDeleteRows = false,
                 BackgroundColor = Color.White,
                 BorderStyle = BorderStyle.None,
-<<<<<<< HEAD
                 MultiSelect = false,
-                AutoGenerateColumns = true
-            };
-            _gridContracts.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(0, 120, 215);
-            _gridContracts.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            _gridContracts.ColumnHeadersDefaultCellStyle.Font = new Font("Times New Roman", 10, FontStyle.Bold);
-            _gridContracts.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
-            _gridContracts.ColumnHeadersHeight = 35;
-            _gridContracts.DefaultCellStyle.Font = new Font("Times New Roman", 10);
-            _gridContracts.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
-            _gridContracts.RowTemplate.Height = 28;
-            _gridContracts.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
-            _gridContracts.EnableHeadersVisualStyles = false;
-            _gridContracts.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 245, 245);
-=======
+                AutoGenerateColumns = true,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells,
                 RowHeadersVisible = false
             };
@@ -150,13 +136,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _gridContracts.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
             _gridContracts.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
             _gridContracts.ColumnHeadersDefaultCellStyle.WrapMode = DataGridViewTriState.False;
+            _gridContracts.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            _gridContracts.ColumnHeadersHeight = 35;
             _gridContracts.DefaultCellStyle.Font = new Font("Segoe UI", 10);
             _gridContracts.DefaultCellStyle.WrapMode = DataGridViewTriState.False;
             _gridContracts.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
-            _gridContracts.EnableHeadersVisualStyles = false;
-            _gridContracts.ColumnHeadersHeight = 35;
             _gridContracts.RowTemplate.Height = 30;
->>>>>>> 0d992608b2fdecad77563c2750c487d789fcd173
+            _gridContracts.EnableHeadersVisualStyles = false;
+            _gridContracts.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 245, 245);
             tabContracts.Controls.Add(_gridContracts);
 
             // Tab 3: Lịch Sử
@@ -171,22 +158,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 AllowUserToDeleteRows = false,
                 BackgroundColor = Color.White,
                 BorderStyle = BorderStyle.None,
-<<<<<<< HEAD
                 MultiSelect = false,
-                AutoGenerateColumns = true
-            };
-            _gridHistory.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(0, 120, 215);
-            _gridHistory.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            _gridHistory.ColumnHeadersDefaultCellStyle.Font = new Font("Times New Roman", 10, FontStyle.Bold);
-            _gridHistory.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
-            _gridHistory.ColumnHeadersHeight = 35;
-            _gridHistory.DefaultCellStyle.Font = new Font("Times New Roman", 10);
-            _gridHistory.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
-            _gridHistory.RowTemplate.Height = 28;
-            _gridHistory.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
-            _gridHistory.EnableHeadersVisualStyles = false;
-            _gridHistory.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 245, 245);
-=======
+                AutoGenerateColumns = true,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells,
                 RowHeadersVisible = false
             };
@@ -194,13 +167,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _gridHistory.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
             _gridHistory.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
             _gridHistory.ColumnHeadersDefaultCellStyle.WrapMode = DataGridViewTriState.False;
+            _gridHistory.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            _gridHistory.ColumnHeadersHeight = 35;
             _gridHistory.DefaultCellStyle.Font = new Font("Segoe UI", 10);
             _gridHistory.DefaultCellStyle.WrapMode = DataGridViewTriState.False;
             _gridHistory.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
-            _gridHistory.EnableHeadersVisualStyles = false;
-            _gridHistory.ColumnHeadersHeight = 35;
             _gridHistory.RowTemplate.Height = 30;
->>>>>>> 0d992608b2fdecad77563c2750c487d789fcd173
+            _gridHistory.EnableHeadersVisualStyles = false;
+            _gridHistory.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 245, 245);
             tabHistory.Controls.Add(_gridHistory);
 
             tabControl.TabPages.Add(tabBasic);
@@ -590,252 +564,216 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (grid == null || grid.Columns.Count == 0) return;
             
-<<<<<<< HEAD
             // Comprehensive translation dictionary - all possible column names
             var columnMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 // CamelCase names
                 { "ContractId", "ID" },
                 { "TenantId", "Khách" },
-                { "ContractNumber", "Số Hợp Đồng" },
-                { "ContractType", "Loại Hợp Đồng" },
-                { "RoomId", "Phòng ID" },
-                { "RoomNumber", "Số Phòng" },
+                { "ContractNumber", "S? H?p Ğ?ng" },
+                { "ContractType", "Lo?i H?p Ğ?ng" },
+                { "RoomId", "Ph?ng ID" },
+                { "RoomNumber", "S? Ph?ng" },
                 { "BranchId", "Chi Nhánh" },
-                { "SignDate", "Ngày Ký" },
-                { "StartDate", "Ngày Bắt Đầu" },
-                { "EndDate", "Ngày Kết Thúc" },
-                { "RentAmount", "Tiền Thuê/Tháng" },
+                { "SignDate", "Ngày K?" },
+                { "StartDate", "Ngày B?t Ğ?u" },
+                { "EndDate", "Ngày K?t Thúc" },
+                { "RentAmount", "Ti?n Thuê/Tháng" },
                 { "RentalPrice", "Giá Thuê" },
-                { "DepositAmount", "Tiền Cọc" },
-                { "DepositRequired", "Cọc Yêu Cầu" },
-                { "RentalPeriod", "Thời Hạn (Tháng)" },
-                { "Status", "Trạng Thái" },
-                { "CreatedDate", "Ngày Tạo" },
-                { "CreatedBy", "Người Tạo" },
-                { "UpdatedDate", "Ngày Cập Nhập" },
-                { "UpdatedBy", "Người Cập Nhập" },
-                { "Terms", "Điều Khoản" },
+                { "DepositAmount", "Ti?n C?c" },
+                { "DepositRequired", "C?c Yêu C?u" },
+                { "RentalPeriod", "Th?i H?n (Tháng)" },
+                { "Status", "Tr?ng Thái" },
+                { "CreatedDate", "Ngày T?o" },
+                { "CreatedBy", "Ngı?i T?o" },
+                { "UpdatedDate", "Ngày C?p Nh?p" },
+                { "UpdatedBy", "Ngı?i C?p Nh?p" },
+                { "Terms", "Ği?u Kho?n" },
                 { "Notes", "Ghi Chú" },
-                { "DepositReturnDate", "Ngày Hoàn Cọc" },
-                { "ContractPdfPath", "Đường Dẫn PDF" },
+                { "DepositReturnDate", "Ngày Hoàn C?c" },
+                { "ContractPdfPath", "Ğı?ng D?n PDF" },
                 // English names with spaces
                 { "Contract Id", "ID" },
                 { "Tenant Id", "Khách" },
-                { "Contract Number", "Số Hợp Đồng" },
-                { "Contract Type", "Loại Hợp Đồng" },
-                { "Room Id", "Phòng ID" },
-                { "Room Number", "Số Phòng" },
+                { "Contract Number", "S? H?p Ğ?ng" },
+                { "Contract Type", "Lo?i H?p Ğ?ng" },
+                { "Room Id", "Ph?ng ID" },
+                { "Room Number", "S? Ph?ng" },
                 { "Branch Id", "Chi Nhánh" },
-                { "Sign Date", "Ngày Ký" },
-                { "Start Date", "Ngày Bắt Đầu" },
-                { "End Date", "Ngày Kết Thúc" },
-                { "Rent Amount", "Tiền Thuê/Tháng" },
+                { "Sign Date", "Ngày K?" },
+                { "Start Date", "Ngày B?t Ğ?u" },
+                { "End Date", "Ngày K?t Thúc" },
+                { "Rent Amount", "Ti?n Thuê/Tháng" },
                 { "Rental Price", "Giá Thuê" },
-                { "Deposit Amount", "Tiền Cọc" },
-                { "Deposit Required", "Cọc Yêu Cầu" },
-                { "Rental Period", "Thời Hạn (Tháng)" },
-                { "Created Date", "Ngày Tạo" },
-                { "Created By", "Người Tạo" },
-                { "Updated Date", "Ngày Cập Nhập" },
-                { "Updated By", "Người Cập Nhập" },
-                { "Deposit Return Date", "Ngày Hoàn Cọc" },
-                { "Contract Pdf Path", "Đường Dẫn PDF" }
+                { "Deposit Amount", "Ti?n C?c" },
+                { "Deposit Required", "C?c Yêu C?u" },
+                { "Rental Period", "Th?i H?n (Tháng)" },
+                { "Created Date", "Ngày T?o" },
+                { "Created By", "Ngı?i T?o" },
+                { "Updated Date", "Ngày C?p Nh?p" },
+                { "Updated By", "Ngı?i C?p Nh?p" },
+                { "Deposit Return Date", "Ngày Hoàn C?c" },
+                { "Contract Pdf Path", "Ğı?ng D?n PDF" }
             };
 
             foreach (DataGridViewColumn col in grid.Columns)
             {
-                // Try to find translation by column name first
                 if (columnMap.TryGetValue(col.Name, out var translatedName))
                 {
                     col.HeaderText = translatedName;
                 }
-                // Try by current header text
                 else if (columnMap.TryGetValue(col.HeaderText, out var translatedName2))
                 {
                     col.HeaderText = translatedName2;
                 }
-                // Fallback: convert camelCase to readable Vietnamese format
                 else
                 {
                     col.HeaderText = ConvertColumnNameToVietnamese(col.Name);
                 }
             }
-            
-            // Auto-size columns with reasonable minimum width
+
             foreach (DataGridViewColumn col in grid.Columns)
             {
                 col.AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
                 if (col.Width < 90)
                     col.Width = 90;
             }
-=======
-            // Hide unwanted columns
+
             var columnsToHide = new[] { "TenantId", "RoomId", "BranchId", "IsActive", "CreatedDate", "UpdatedDate" };
-            foreach (var col in columnsToHide)
+            foreach (var colName in columnsToHide)
             {
-                if (grid.Columns.Contains(col))
-                    grid.Columns[col].Visible = false;
+                if (grid.Columns.Contains(colName))
+                    grid.Columns[colName].Visible = false;
             }
-            
-            // Set header text in Vietnamese
-            if (grid.Columns.Contains("ContractId"))
-                grid.Columns["ContractId"].HeaderText = "Mã HĐ";
-            if (grid.Columns.Contains("ContractNumber"))
-                grid.Columns["ContractNumber"].HeaderText = "Số HĐ";
-            if (grid.Columns.Contains("RoomNumber"))
-                grid.Columns["RoomNumber"].HeaderText = "Phòng";
+
             if (grid.Columns.Contains("StartDate"))
             {
-                grid.Columns["StartDate"].HeaderText = "Ngày Bắt Đầu";
                 grid.Columns["StartDate"].DefaultCellStyle.Format = "dd/MM/yyyy";
             }
             if (grid.Columns.Contains("EndDate"))
             {
-                grid.Columns["EndDate"].HeaderText = "Ngày Kết Thúc";
                 grid.Columns["EndDate"].DefaultCellStyle.Format = "dd/MM/yyyy";
             }
-            if (grid.Columns.Contains("Status"))
-                grid.Columns["Status"].HeaderText = "Trạng Thái";
             if (grid.Columns.Contains("RentalPrice"))
             {
-                grid.Columns["RentalPrice"].HeaderText = "Tiền Thuê";
                 grid.Columns["RentalPrice"].DefaultCellStyle.Format = "N0";
             }
             if (grid.Columns.Contains("DepositAmount"))
             {
-                grid.Columns["DepositAmount"].HeaderText = "Cọc";
                 grid.Columns["DepositAmount"].DefaultCellStyle.Format = "N0";
             }
-            if (grid.Columns.Contains("Terms"))
-                grid.Columns["Terms"].HeaderText = "Điều Khoản";
-            if (grid.Columns.Contains("Notes"))
-                grid.Columns["Notes"].HeaderText = "Ghi Chú";
->>>>>>> 0d992608b2fdecad77563c2750c487d789fcd173
         }
 
         private void FormatHistoryGrid(DataGridView grid)
         {
             if (grid == null || grid.Columns.Count == 0) return;
             
-<<<<<<< HEAD
             // Comprehensive translation dictionary - all possible column names
             var columnMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 // CamelCase names
                 { "HistoryId", "ID" },
                 { "TenantId", "Khách" },
-                { "RoomId", "Phòng ID" },
-                { "RoomNumber", "Số Phòng" },
+                { "RoomId", "Ph?ng ID" },
+                { "RoomNumber", "S? Ph?ng" },
                 { "BranchId", "Chi Nhánh" },
-                { "CheckInDate", "Ngày Nhận Phòng" },
-                { "CheckOutDate", "Ngày Trả Phòng" },
-                { "Duration", "Thời Gian Ở (Tháng)" },
-                { "RentAmount", "Tiền Thuê/Tháng" },
+                { "CheckInDate", "Ngày Nh?n Ph?ng" },
+                { "CheckOutDate", "Ngày Tr? Ph?ng" },
+                { "Duration", "Th?i Gian ? (Tháng)" },
+                { "RentAmount", "Ti?n Thuê/Tháng" },
                 { "RentalPrice", "Giá Thuê" },
-                { "DepositAmount", "Tiền Cọc" },
-                { "DepositRequired", "Cọc Yêu Cầu" },
-                { "StartDate", "Ngày Bắt Đầu" },
-                { "EndDate", "Ngày Kết Thúc" },
-                { "Status", "Trạng Thái" },
-                { "CreatedDate", "Ngày Tạo" },
-                { "CreatedBy", "Người Tạo" },
-                { "UpdatedDate", "Ngày Cập Nhập" },
-                { "UpdatedBy", "Người Cập Nhập" },
-                { "Terms", "Điều Khoản" },
+                { "DepositAmount", "Ti?n C?c" },
+                { "DepositRequired", "C?c Yêu C?u" },
+                { "StartDate", "Ngày B?t Ğ?u" },
+                { "EndDate", "Ngày K?t Thúc" },
+                { "Status", "Tr?ng Thái" },
+                { "CreatedDate", "Ngày T?o" },
+                { "CreatedBy", "Ngı?i T?o" },
+                { "UpdatedDate", "Ngày C?p Nh?p" },
+                { "UpdatedBy", "Ngı?i C?p Nh?p" },
+                { "Terms", "Ği?u Kho?n" },
                 { "Notes", "Ghi Chú" },
                 // English names with spaces
                 { "History Id", "ID" },
                 { "Tenant Id", "Khách" },
-                { "Room Id", "Phòng ID" },
-                { "Room Number", "Số Phòng" },
+                { "Room Id", "Ph?ng ID" },
+                { "Room Number", "S? Ph?ng" },
                 { "Branch Id", "Chi Nhánh" },
-                { "Check In Date", "Ngày Nhận Phòng" },
-                { "Check Out Date", "Ngày Trả Phòng" },
-                { "Rent Amount", "Tiền Thuê/Tháng" },
+                { "Check In Date", "Ngày Nh?n Ph?ng" },
+                { "Check Out Date", "Ngày Tr? Ph?ng" },
+                { "Rent Amount", "Ti?n Thuê/Tháng" },
                 { "Rental Price", "Giá Thuê" },
-                { "Deposit Amount", "Tiền Cọc" },
-                { "Deposit Required", "Cọc Yêu Cầu" },
-                { "Start Date", "Ngày Bắt Đầu" },
-                { "End Date", "Ngày Kết Thúc" },
-                { "Created Date", "Ngày Tạo" },
-                { "Created By", "Người Tạo" },
-                { "Updated Date", "Ngày Cập Nhập" },
-                { "Updated By", "Người Cập Nhập" }
+                { "Deposit Amount", "Ti?n C?c" },
+                { "Deposit Required", "C?c Yêu C?u" },
+                { "Start Date", "Ngày B?t Ğ?u" },
+                { "End Date", "Ngày K?t Thúc" },
+                { "Created Date", "Ngày T?o" },
+                { "Created By", "Ngı?i T?o" },
+                { "Updated Date", "Ngày C?p Nh?p" },
+                { "Updated By", "Ngı?i C?p Nh?p" }
             };
 
             foreach (DataGridViewColumn col in grid.Columns)
             {
-                // Try to find translation by column name first
                 if (columnMap.TryGetValue(col.Name, out var translatedName))
                 {
                     col.HeaderText = translatedName;
                 }
-                // Try by current header text
                 else if (columnMap.TryGetValue(col.HeaderText, out var translatedName2))
                 {
                     col.HeaderText = translatedName2;
                 }
-                // Fallback: convert camelCase to readable Vietnamese format
                 else
                 {
                     col.HeaderText = ConvertColumnNameToVietnamese(col.Name);
                 }
             }
-            
-            // Auto-size columns with reasonable minimum width
+
             foreach (DataGridViewColumn col in grid.Columns)
             {
                 col.AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
                 if (col.Width < 90)
                     col.Width = 90;
             }
-        }
 
-        private string ConvertColumnNameToVietnamese(string columnName)
-        {
-            // Convert camelCase column names to readable format
-            if (string.IsNullOrEmpty(columnName)) return columnName;
-            
-            var result = new StringBuilder();
-            foreach (char c in columnName)
-            {
-                if (char.IsUpper(c) && result.Length > 0)
-                    result.Append(" ");
-                result.Append(c);
-            }
-            return result.ToString();
-=======
-            // Hide unwanted columns
             var columnsToHide = new[] { "TenantId", "BranchId", "IsActive", "CreatedDate", "UpdatedDate" };
-            foreach (var col in columnsToHide)
+            foreach (var colName in columnsToHide)
             {
-                if (grid.Columns.Contains(col))
-                    grid.Columns[col].Visible = false;
+                if (grid.Columns.Contains(colName))
+                    grid.Columns[colName].Visible = false;
             }
-            
-            // Set header text in Vietnamese
-            if (grid.Columns.Contains("TenantHistoryId"))
-                grid.Columns["TenantHistoryId"].HeaderText = "Mã";
-            if (grid.Columns.Contains("RoomId"))
-                grid.Columns["RoomId"].HeaderText = "ID Phòng";
-            if (grid.Columns.Contains("RoomNumber"))
-                grid.Columns["RoomNumber"].HeaderText = "Phòng";
+
             if (grid.Columns.Contains("CheckInDate"))
             {
-                grid.Columns["CheckInDate"].HeaderText = "Ngày Nhận";
                 grid.Columns["CheckInDate"].DefaultCellStyle.Format = "dd/MM/yyyy";
             }
             if (grid.Columns.Contains("CheckOutDate"))
             {
-                grid.Columns["CheckOutDate"].HeaderText = "Ngày Trả";
                 grid.Columns["CheckOutDate"].DefaultCellStyle.Format = "dd/MM/yyyy";
             }
             if (grid.Columns.Contains("Duration"))
-                grid.Columns["Duration"].HeaderText = "Thời Hạn";
+            {
+                grid.Columns["Duration"].HeaderText = "Th?i H?n";
+            }
             if (grid.Columns.Contains("Notes"))
+            {
                 grid.Columns["Notes"].HeaderText = "Ghi Chú";
->>>>>>> 0d992608b2fdecad77563c2750c487d789fcd173
+            }
+        }
+
+        private string ConvertColumnNameToVietnamese(string columnName)
+        {
+            if (string.IsNullOrWhiteSpace(columnName))
+                return columnName;
+
+            var builder = new StringBuilder();
+            foreach (char c in columnName)
+            {
+                if (char.IsUpper(c) && builder.Length > 0)
+                    builder.Append(' ');
+                builder.Append(c);
+            }
+            return builder.ToString();
         }
     }
 }
