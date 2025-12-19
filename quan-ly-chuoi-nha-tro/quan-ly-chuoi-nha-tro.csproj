@@ -194,6 +194,7 @@
     <Compile Include="BLL\BranchBLL.cs" />
     <Compile Include="BLL\UserBLL.cs" />
     <Compile Include="DAL\DatabaseHelper.cs" />
+    <Compile Include="DAL\DatabaseInitializer.cs" />
     <Compile Include="DAL\BranchDAL.cs" />
     <Compile Include="DAL\AdminDataDAL.cs" />
     <Compile Include="DAL\InvoicePaymentDAL.cs" />
@@ -394,6 +395,15 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\Database\setup_database_final.sql">
+      <Link>Database\setup_database_final.sql</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\sample_data.sql">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
