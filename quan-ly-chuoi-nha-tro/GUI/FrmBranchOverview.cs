@@ -56,7 +56,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Label _lblTenantInfo;
         private int _selectedRoomId;
         private bool _tenantVisible;
-        private DataTable _contractsAll;
         private DataTable _tenantsHistoryAll;
 
         private FlowLayoutPanel _tenantCardsHost;

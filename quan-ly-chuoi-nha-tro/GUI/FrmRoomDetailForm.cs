@@ -223,11 +223,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 int roomId = TryGetInt(_roomRow, "RoomId");
                 var roomContracts = _contracts.AsEnumerable()
                     .Where(r => int.TryParse(r["RoomId"]?.ToString(), out var rid) && rid == roomId)
-                    .CopyToDataTable();
+                    .ToList();
 
-                if (roomContracts.Rows.Count > 0)
+                if (roomContracts.Count > 0)
                 {
-                    grid.DataSource = roomContracts;
+                    grid.DataSource = roomContracts.CopyToDataTable();
                     if (grid.Columns.Contains("ContractId")) grid.Columns["ContractId"].HeaderText = "ID";
                     if (grid.Columns.Contains("ContractNumber")) grid.Columns["ContractNumber"].HeaderText = "Số HĐ";
                     if (grid.Columns.Contains("TenantName")) grid.Columns["TenantName"].HeaderText = "Khách thuê";

@@ -1,29 +1,44 @@
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
+    /// <summary>
+    /// FrmNotificationManager - Quản Lý Thông Báo & Hệ Thống Nhắc Nhở Tự Động
+    /// Tính năng: Thêm/Sửa/Xóa thông báo, Gửi thông báo, Nhắc công nợ, Nhắc hết hạn hợp đồng, 
+    /// Nhắc nhập chỉ số điện nước, Thông báo nội bộ, Lịch sử gửi
+    /// </summary>
     public class FrmNotificationManager : Form
     {
-        private const string SearchPlaceholder = "Tìm theo tiêu đề/nội dung...";
-
         private readonly AdminDataBLL _bll = new AdminDataBLL();
+        private DataTable _notifications;
+        private TabControl _tabMain;
 
-        private DataTable _rawTable;
-        private DataGridView _grid;
-        private TextBox _txtSearch;
+        // Tab 1: Quản Lý Thông Báo
+        private DataGridView _dgvNotifications;
+        private TextBox _txtSearchTitle;
         private ComboBox _cboStatus;
-        private Label _lblCount;
+        private Label _lblTotalCount;
+        private Button _btnAdd, _btnEdit, _btnDelete, _btnSend, _btnRefresh;
 
-        private Button _btnAdd;
-        private Button _btnEdit;
-        private Button _btnDelete;
-        private Button _btnMarkRead;
-        private Button _btnRefresh;
+        // Tab 2: Nhắc Nhở Tự Động
+        private Label _lblOverdueCount, _lblExpiredCount, _lblMissingUtilityCount;
+        private Button _btnGenerateReminders, _btnViewReminders;
+        private ListBox _lbAutoReminders;
+
+        // Tab 3: Thông Báo Nội Bộ
+        private TextBox _txtNotificationTitle, _txtNotificationContent;
+        private ComboBox _cboTarget;
+        private Button _btnSendInternal;
+
+        // Tab 4: Lịch Sử Gửi
+        private DataGridView _dgvHistory;
 
         public FrmNotificationManager()
         {
@@ -32,348 +47,713 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void InitializeComponent()
         {
-            Text = "Thông báo & Nhắc lịch";
+            Text = "📬 Quản Lý Thông Báo & Nhắc Nhở";
             StartPosition = FormStartPosition.CenterParent;
-            Width = 1280;
-            Height = 720;
-            BackColor = Color.FromArgb(245, 247, 250);
+            Width = 1400;
+            Height = 850;
+            BackColor = Color.FromArgb(240, 242, 245);
+            Font = new Font("Segoe UI", 9.75f);
 
-            _grid = MakeGrid();
-            _grid.Dock = DockStyle.Fill;
-            _grid.DoubleClick += async (s, e) => await EditSelectedAsync();
+            _tabMain = new TabControl { Dock = DockStyle.Fill, Padding = new Point(12, 6) };
+            _tabMain.TabPages.Add(CreateManagerTab());
+            _tabMain.TabPages.Add(CreateRemindersTab());
+            _tabMain.TabPages.Add(CreateInternalNotificationTab());
+            _tabMain.TabPages.Add(CreateHistoryTab());
 
-            _txtSearch = MakeSearchBox(SearchPlaceholder, () => ApplyFilter());
+            Controls.Add(_tabMain);
+            Load += async (s, e) => await LoadAllDataAsync();
+        }
 
-            _cboStatus = new ComboBox { Width = 160, DropDownStyle = ComboBoxStyle.DropDownList };
-            _cboStatus.Items.AddRange(new object[] { "Tất cả", "Unread", "Read", "Sent" });
-            _cboStatus.SelectedIndex = 0;
-            _cboStatus.SelectedIndexChanged += (s, e) => ApplyFilter();
+        #region ========== TAB 1: QUẢN LÝ THÔNG BÁO ==========
 
-            _lblCount = new Label { AutoSize = true, Text = "Tổng: 0", Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+        private TabPage CreateManagerTab()
+        {
+            var tab = new TabPage { Text = "📬 Quản Lý Thông Báo", BackColor = Color.White };
 
-            _btnAdd = MakeButton("Thêm", Color.FromArgb(0, 122, 204), async (s, e) => await AddNewAsync());
-            _btnEdit = MakeButton("Sửa", Color.FromArgb(0, 122, 204), async (s, e) => await EditSelectedAsync());
-            _btnDelete = MakeButton("Xóa", Color.FromArgb(211, 47, 47), async (s, e) => await DeleteSelectedAsync());
-            _btnMarkRead = MakeButton("Đã đọc", Color.FromArgb(46, 125, 50), async (s, e) => await MarkReadAsync());
-            _btnRefresh = MakeButton("Tải lại", Color.FromArgb(0, 122, 204), async (s, e) => await LoadAsync());
+            var pnlToolbar = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 70,
+                Padding = new Padding(12, 10, 12, 10),
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle
+            };
 
-            var top = new Panel { Dock = DockStyle.Top, Height = 64, Padding = new Padding(12, 10, 12, 10), BackColor = Color.White };
-            var actions = new FlowLayoutPanel
+            _btnAdd = CreateStyledButton("➕ Thêm", Color.FromArgb(46, 204, 113), 90);
+            _btnEdit = CreateStyledButton("✏️ Sửa", Color.FromArgb(52, 168, 219), 90);
+            _btnDelete = CreateStyledButton("🗑️ Xóa", Color.FromArgb(231, 76, 60), 90);
+            _btnSend = CreateStyledButton("📤 Gửi", Color.FromArgb(155, 89, 182), 90);
+            _btnRefresh = CreateStyledButton("🔄 Tải", Color.FromArgb(149, 165, 166), 90);
+
+            _btnAdd.Click += async (s, e) => await AddNotificationAsync();
+            _btnEdit.Click += async (s, e) => await EditSelectedAsync();
+            _btnDelete.Click += async (s, e) => await DeleteSelectedAsync();
+            _btnSend.Click += async (s, e) => await SendNotificationAsync();
+            _btnRefresh.Click += async (s, e) => await LoadNotificationsAsync();
+
+            var pnlLeft = new FlowLayoutPanel
             {
                 Dock = DockStyle.Left,
                 AutoSize = true,
                 WrapContents = false,
-                FlowDirection = FlowDirection.LeftToRight,
                 BackColor = Color.Transparent
             };
-            actions.Controls.Add(_btnAdd);
-            actions.Controls.Add(_btnEdit);
-            actions.Controls.Add(_btnDelete);
-            actions.Controls.Add(_btnMarkRead);
-            actions.Controls.Add(_btnRefresh);
+            pnlLeft.Controls.AddRange(new[] { _btnAdd, _btnEdit, _btnDelete, _btnSend, _btnRefresh });
 
-            var filters = new FlowLayoutPanel
+            _txtSearchTitle = new TextBox
+            {
+                Width = 250,
+                Height = 36,
+                Margin = new Padding(0, 2, 8, 0),
+                Text = "🔍 Tìm tiêu đề...",
+                ForeColor = Color.Gray
+            };
+            _txtSearchTitle.GotFocus += (s, e) => { if (_txtSearchTitle.Text == "🔍 Tìm tiêu đề...") { _txtSearchTitle.Text = string.Empty; _txtSearchTitle.ForeColor = Color.Black; } };
+            _txtSearchTitle.LostFocus += (s, e) => { if (string.IsNullOrWhiteSpace(_txtSearchTitle.Text)) { _txtSearchTitle.Text = "🔍 Tìm tiêu đề..."; _txtSearchTitle.ForeColor = Color.Gray; } };
+            _txtSearchTitle.TextChanged += (s, e) => ApplyFilter();
+
+            _cboStatus = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Width = 140,
+                Height = 36,
+                Margin = new Padding(0, 2, 8, 0)
+            };
+            _cboStatus.Items.AddRange(new object[] { "Tất cả", "Chưa đọc", "Đã đọc", "Đã gửi" });
+            _cboStatus.SelectedIndex = 0;
+            _cboStatus.SelectedIndexChanged += (s, e) => ApplyFilter();
+
+            _lblTotalCount = new Label
+            {
+                Text = "Tổng: 0",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Margin = new Padding(8, 8, 0, 0)
+            };
+
+            var pnlRight = new FlowLayoutPanel
             {
                 Dock = DockStyle.Right,
                 AutoSize = true,
                 WrapContents = false,
-                FlowDirection = FlowDirection.LeftToRight,
-                BackColor = Color.Transparent,
-                Padding = new Padding(0, 6, 0, 0)
+                BackColor = Color.Transparent
             };
-            filters.Controls.Add(new Label { Text = "Tìm:", AutoSize = true, Margin = new Padding(0, 6, 6, 0) });
-            filters.Controls.Add(_txtSearch);
-            filters.Controls.Add(new Label { Text = "Trạng thái:", AutoSize = true, Margin = new Padding(12, 6, 6, 0) });
-            filters.Controls.Add(_cboStatus);
-            filters.Controls.Add(new Label { Text = "  ", AutoSize = true });
-            filters.Controls.Add(_lblCount);
+            pnlRight.Controls.AddRange(new Control[]
+            {
+                new Label { Text = "Tìm:", AutoSize = true, Margin = new Padding(0, 8, 6, 0) },
+                _txtSearchTitle,
+                new Label { Text = "Trạng thái:", AutoSize = true, Margin = new Padding(12, 8, 6, 0) },
+                _cboStatus,
+                _lblTotalCount
+            });
 
-            top.Controls.Add(actions);
-            top.Controls.Add(filters);
+            pnlToolbar.Controls.Add(pnlLeft);
+            pnlToolbar.Controls.Add(pnlRight);
 
-            Controls.Add(_grid);
-            Controls.Add(top);
-            Load += async (s, e) => await LoadAsync();
+            _dgvNotifications = CreateDataGrid();
+            _dgvNotifications.Dock = DockStyle.Fill;
+            _dgvNotifications.DoubleClick += async (s, e) => await EditSelectedAsync();
+
+            tab.Controls.Add(_dgvNotifications);
+            tab.Controls.Add(pnlToolbar);
+            return tab;
         }
 
-        private async System.Threading.Tasks.Task LoadAsync()
+        private async Task AddNotificationAsync()
         {
+            using (var frm = new FrmNotificationEditor(_bll))
+            {
+                if (frm.ShowDialog() == DialogResult.OK)
+                {
+                    await LoadNotificationsAsync();
+                }
+            }
+        }
+
+        private async Task EditSelectedAsync()
+        {
+            if (_dgvNotifications.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("Vui lòng chọn thông báo để chỉnh sửa.", "Chú ý", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            if (_notifications == null || _notifications.Rows.Count == 0) return;
+
+            var selectedRow = _dgvNotifications.SelectedRows[0];
+            var row = _notifications.Rows[selectedRow.Index];
+
+            using (var frm = new FrmNotificationEditor(_bll, row))
+            {
+                if (frm.ShowDialog() == DialogResult.OK)
+                {
+                    await LoadNotificationsAsync();
+                }
+            }
+        }
+
+        private async Task DeleteSelectedAsync()
+        {
+            if (_dgvNotifications.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("Vui lòng chọn thông báo để xóa.", "Chú ý", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            if (MessageBox.Show("Bạn chắc chắn muốn xóa?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                return;
+
             try
             {
-                _rawTable = await _bll.GetNotificationsAsync();
-                _grid.DataSource = _rawTable;
-                ApplyGridPresentation();
-                ApplyFilter();
+                if (_notifications == null || _notifications.Rows.Count == 0) return;
+
+                var selectedRow = _dgvNotifications.SelectedRows[0];
+                var notificationId = Convert.ToInt32(_notifications.Rows[selectedRow.Index]["NotificationId"]);
+
+                await _bll.DeleteNotificationAsync(notificationId);
+                MessageBox.Show("Xóa thành công!", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                await LoadNotificationsAsync();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi tải thông báo: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Lỗi: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void ApplyGridPresentation()
+        private async Task SendNotificationAsync()
         {
-            SetHeader("NotificationId", "ID");
-            SetHeader("UserId", "UserId");
-            SetHeader("Title", "Tiêu đề");
-            SetHeader("Status", "Trạng thái");
-            SetHeader("CreatedDate", "Tạo lúc");
-            SetHeader("Message", "Nội dung");
+            if (_dgvNotifications.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("Vui lòng chọn thông báo để gửi.", "Chú ý", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
 
-            FormatDateTime("CreatedDate");
-            SetDisplayOrder("NotificationId", "Title", "Status", "CreatedDate", "UserId", "Message");
+            try
+            {
+                if (_notifications == null || _notifications.Rows.Count == 0) return;
 
-            if (_grid.Columns.Contains("Message"))
-                _grid.Columns["Message"].FillWeight = 220;
+                var selectedRow = _dgvNotifications.SelectedRows[0];
+                var row = _notifications.Rows[selectedRow.Index];
+                var notificationId = Convert.ToInt32(row["NotificationId"]);
+
+                var title = row["Title"].ToString();
+                var message = row["Message"].ToString();
+                var userId = row["UserId"] == DBNull.Value ? null : (int?)Convert.ToInt32(row["UserId"]);
+
+                await _bll.UpdateNotificationAsync(notificationId, userId, title, message, "Đã gửi");
+                MessageBox.Show("Gửi thành công!", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                await LoadNotificationsAsync();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void ApplyFilter()
         {
-            if (_rawTable == null) return;
+            if (_notifications == null || _notifications.Rows.Count == 0) return;
 
-            string rawKeyword = (_txtSearch.Text ?? string.Empty).Trim();
-            if (rawKeyword == SearchPlaceholder) rawKeyword = string.Empty;
-            string keyword = rawKeyword.ToLowerInvariant();
+            var filtered = _notifications.AsEnumerable()
+                .Where(r =>
+                {
+                    bool titleMatch = r["Title"].ToString().IndexOf(_txtSearchTitle.Text, StringComparison.OrdinalIgnoreCase) >= 0;
+                    bool statusMatch = _cboStatus.SelectedIndex == 0 || r["Status"].ToString() == GetStatusValue(_cboStatus.SelectedIndex);
+                    return titleMatch && statusMatch;
+                })
+                .ToList();
 
-            string status = _cboStatus.SelectedIndex > 0 ? _cboStatus.Text : null;
-            var rows = _rawTable.AsEnumerable();
-
-            if (!string.IsNullOrWhiteSpace(status) && _rawTable.Columns.Contains("Status"))
-                rows = rows.Where(r => string.Equals(r["Status"]?.ToString(), status, StringComparison.OrdinalIgnoreCase));
-
-            if (!string.IsNullOrWhiteSpace(keyword))
+            // Handle empty result
+            if (filtered.Count == 0)
             {
-                rows = rows.Where(r => Contains(r, "Title", keyword) || Contains(r, "Message", keyword));
+                _dgvNotifications.DataSource = _notifications.Clone(); // Show empty table with same columns
+                _lblTotalCount.Text = "Tổng: 0";
             }
-
-            var filtered = rows.Any() ? rows.CopyToDataTable() : _rawTable.Clone();
-            _grid.DataSource = filtered;
-            _lblCount.Text = $"Tổng: {filtered.Rows.Count}";
-        }
-
-        private async System.Threading.Tasks.Task AddNewAsync()
-        {
-            using (var frm = new FrmNotificationEditor(_bll))
+            else
             {
-                if (frm.ShowDialog(this) == DialogResult.OK)
-                    await LoadAsync();
+                _dgvNotifications.DataSource = filtered.CopyToDataTable();
+                _lblTotalCount.Text = $"Tổng: {filtered.Count}";
             }
         }
 
-        private async System.Threading.Tasks.Task EditSelectedAsync()
+        private string GetStatusValue(int index)
         {
-            var row = GetCurrentRow();
-            if (row == null)
+            return index switch
             {
-                MessageBox.Show("Chọn một dòng để sửa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            using (var frm = new FrmNotificationEditor(_bll, row))
-            {
-                if (frm.ShowDialog(this) == DialogResult.OK)
-                    await LoadAsync();
-            }
+                1 => "Chưa đọc",
+                2 => "Đã đọc",
+                3 => "Đã gửi",
+                _ => ""
+            };
         }
 
-        private async System.Threading.Tasks.Task DeleteSelectedAsync()
+        private async Task LoadNotificationsAsync()
         {
-            var row = GetCurrentRow();
-            if (row == null)
-            {
-                MessageBox.Show("Chọn một dòng để xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            int id = ReadInt(row, "NotificationId");
-            string title = ReadString(row, "Title") ?? id.ToString();
-
-            if (MessageBox.Show($"Xóa thông báo \"{title}\"?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                return;
-
             try
             {
-                await _bll.DeleteNotificationAsync(id);
-                await LoadAsync();
+                _notifications = await _bll.GetNotificationsAsync();
+                _dgvNotifications.DataSource = _notifications;
+                _lblTotalCount.Text = $"Tổng: {_notifications.Rows.Count}";
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi xóa thông báo: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Lỗi tải: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private async System.Threading.Tasks.Task MarkReadAsync()
-        {
-            var row = GetCurrentRow();
-            if (row == null)
-            {
-                MessageBox.Show("Chọn một dòng để đánh dấu đã đọc.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
+        #endregion
 
-            int id = ReadInt(row, "NotificationId");
-            string current = ReadString(row, "Status");
-            if (string.Equals(current, "Read", StringComparison.OrdinalIgnoreCase))
+        #region ========== TAB 2: NHẮC NHỞ TỰ ĐỘNG ==========
+
+        private TabPage CreateRemindersTab()
+        {
+            var tab = new TabPage { Text = "🔔 Nhắc Nhở Tự Động", BackColor = Color.White };
+
+            var pnlStats = new Panel
             {
-                MessageBox.Show("Đã ở trạng thái Read.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                Dock = DockStyle.Top,
+                Height = 150,
+                Padding = new Padding(15),
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle
+            };
+
+            _lblOverdueCount = CreateStatCard("💰 Công Nợ Quá Hạn", "0", Color.FromArgb(231, 76, 60), pnlStats, 10);
+            _lblExpiredCount = CreateStatCard("📜 Hợp Đồng Hết Hạn", "0", Color.FromArgb(230, 126, 34), pnlStats, 350);
+            _lblMissingUtilityCount = CreateStatCard("💡 Chưa Nhập Chỉ Số", "0", Color.FromArgb(52, 168, 219), pnlStats, 690);
+
+            var pnlActions = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 60,
+                Padding = new Padding(12, 10, 12, 10),
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle
+            };
+
+            _btnGenerateReminders = CreateStyledButton("🎯 Tạo Nhắc Nhở", Color.FromArgb(46, 204, 113), 160);
+            _btnViewReminders = CreateStyledButton("📋 Xem Chi Tiết", Color.FromArgb(52, 168, 219), 160);
+
+            _btnGenerateReminders.Click += async (s, e) => await GenerateRemindersAsync();
+            _btnViewReminders.Click += (s, e) => ShowReminderDetails();
+
+            var pnlActionFlow = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Left,
+                AutoSize = true,
+                WrapContents = false,
+                BackColor = Color.Transparent
+            };
+            pnlActionFlow.Controls.AddRange(new[] { _btnGenerateReminders, _btnViewReminders });
+            pnlActions.Controls.Add(pnlActionFlow);
+
+            _lbAutoReminders = new ListBox
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle,
+                SelectionMode = SelectionMode.MultiSimple,
+                Font = new Font("Segoe UI", 10)
+            };
+
+            tab.Controls.Add(_lbAutoReminders);
+            tab.Controls.Add(pnlActions);
+            tab.Controls.Add(pnlStats);
+            return tab;
+        }
+
+        private Label CreateStatCard(string title, string value, Color color, Panel parent, int left)
+        {
+            var pnl = new Panel
+            {
+                Location = new Point(left, 15),
+                Size = new Size(320, 120),
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle
+            };
+
+            var lblTitle = new Label
+            {
+                Text = title,
+                Location = new Point(12, 10),
+                Size = new Size(296, 25),
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = color,
+                AutoSize = false,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+
+            var lblValue = new Label
+            {
+                Text = value,
+                Location = new Point(12, 40),
+                Size = new Size(296, 60),
+                Font = new Font("Segoe UI", 36, FontStyle.Bold),
+                ForeColor = color,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+
+            pnl.Controls.AddRange(new[] { lblTitle, lblValue });
+            parent.Controls.Add(pnl);
+
+            return lblValue;
+        }
+
+        private async Task GenerateRemindersAsync()
+        {
+            try
+            {
+                _lbAutoReminders.Items.Clear();
+
+                // Nhắc công nợ
+                var overDueInvoices = await GetOverdueInvoicesAsync();
+                _lblOverdueCount.Text = overDueInvoices.Count.ToString();
+                foreach (var inv in overDueInvoices)
+                {
+                    _lbAutoReminders.Items.Add($"💰 {inv}");
+                    await _bll.AddNotificationAsync(null, "⚠️ NHẮC CÔNG NỢ QUÁ HẠN", $"Công nợ {inv} đã quá hạn thanh toán!", "Chưa đọc");
+                }
+
+                // Nhắc hết hạn hợp đồng
+                var expiredContracts = await GetExpiredContractsAsync();
+                _lblExpiredCount.Text = expiredContracts.Count.ToString();
+                foreach (var contract in expiredContracts)
+                {
+                    _lbAutoReminders.Items.Add($"📜 {contract}");
+                    await _bll.AddNotificationAsync(null, "⚠️ NHẮC HẬN HỢP ĐỒNG", $"Hợp đồng {contract} sắp hết hạn!", "Chưa đọc");
+                }
+
+                // Nhắc nhập chỉ số điện nước
+                var missingUtility = await GetMissingUtilityReadingsAsync();
+                _lblMissingUtilityCount.Text = missingUtility.Count.ToString();
+                foreach (var room in missingUtility)
+                {
+                    _lbAutoReminders.Items.Add($"💡 Phòng {room}");
+                    await _bll.AddNotificationAsync(null, "⚠️ NHẮC NHẬP CHỈ SỐ ĐIỆN NƯỚC", $"Phòng {room} chưa cập nhật chỉ số tháng này!", "Chưa đọc");
+                }
+
+                MessageBox.Show($"✅ Tạo {_lbAutoReminders.Items.Count} nhắc nhở thành công!", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"❌ Lỗi: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private async Task<List<string>> GetOverdueInvoicesAsync()
+        {
+            var result = new List<string>();
+            try
+            {
+                var invoices = await _bll.GetInvoicesAsync();
+                if (invoices == null) return result;
+
+                var today = DateTime.Today;
+                foreach (DataRow row in invoices.Rows)
+                {
+                    var dueDate = row["DueDate"] == DBNull.Value ? null : (DateTime?)Convert.ToDateTime(row["DueDate"]);
+                    var remainingAmount = row["RemainingAmount"] == DBNull.Value ? 0 : Convert.ToDecimal(row["RemainingAmount"]);
+
+                    if (dueDate.HasValue && dueDate.Value < today && remainingAmount > 0)
+                    {
+                        var invoiceNumber = row["InvoiceNumber"].ToString();
+                        var days = (today - dueDate.Value).Days;
+                        result.Add($"HĐ {invoiceNumber} (quá {days} ngày, nợ {remainingAmount:C})");
+                    }
+                }
+            }
+            catch { }
+            return result;
+        }
+
+        private async Task<List<string>> GetExpiredContractsAsync()
+        {
+            var result = new List<string>();
+            try
+            {
+                var contracts = await _bll.GetContractsAsync();
+                if (contracts == null) return result;
+
+                var today = DateTime.Today;
+                var threshold = today.AddDays(30);
+
+                foreach (DataRow row in contracts.Rows)
+                {
+                    var endDate = row["EndDate"] == DBNull.Value ? null : (DateTime?)Convert.ToDateTime(row["EndDate"]);
+                    var status = row["Status"]?.ToString() ?? "";
+
+                    if (endDate.HasValue && endDate.Value >= today && endDate.Value <= threshold && status != "Hủy bỏ")
+                    {
+                        var contractNumber = row["ContractNumber"].ToString();
+                        var days = (endDate.Value - today).Days;
+                        result.Add($"HĐ {contractNumber} (còn {days} ngày)");
+                    }
+                }
+            }
+            catch { }
+            return result;
+        }
+
+        private async Task<List<string>> GetMissingUtilityReadingsAsync()
+        {
+            var result = new List<string>();
+            try
+            {
+                var rooms = await _bll.GetRoomsAsync();
+                var utilities = await _bll.GetUtilitiesAsync();
+
+                if (rooms == null || utilities == null) return result;
+
+                var today = DateTime.Today;
+                var thisMonthReadings = utilities.AsEnumerable()
+                    .Where(r => r["ReadingDate"] != DBNull.Value &&
+                           Convert.ToDateTime(r["ReadingDate"]).Year == today.Year &&
+                           Convert.ToDateTime(r["ReadingDate"]).Month == today.Month)
+                    .Select(r => Convert.ToInt32(r["RoomId"]))
+                    .Distinct()
+                    .ToList();
+
+                var activeRooms = rooms.AsEnumerable()
+                    .Where(r => r["IsActive"] != DBNull.Value && Convert.ToBoolean(r["IsActive"]))
+                    .Select(r => Convert.ToInt32(r["RoomId"]))
+                    .ToList();
+
+                foreach (var roomId in activeRooms)
+                {
+                    if (!thisMonthReadings.Contains(roomId))
+                    {
+                        var roomNumber = rooms.AsEnumerable()
+                            .FirstOrDefault(r => Convert.ToInt32(r["RoomId"]) == roomId)?["RoomNumber"]?.ToString() ?? $"#{roomId}";
+                        result.Add(roomNumber);
+                    }
+                }
+            }
+            catch { }
+            return result;
+        }
+
+        private void ShowReminderDetails()
+        {
+            if (_lbAutoReminders.Items.Count == 0)
+            {
+                MessageBox.Show("Chưa có nhắc nhở nào. Hãy bấm 'Tạo Nhắc Nhở' để sinh dữ liệu.", "Thông tin", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
+        #endregion
+
+        #region ========== TAB 3: THÔNG BÁO NỘI BỘ ==========
+
+        private TabPage CreateInternalNotificationTab()
+        {
+            var tab = new TabPage { Text = "📢 Thông Báo Nội Bộ", BackColor = Color.White };
+
+            var pnlForm = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(30),
+                AutoScroll = true,
+                BackColor = Color.White
+            };
+
+            int top = 20;
+
+            var lblTitle = new Label
+            {
+                Text = "Tiêu Đề Thông Báo (*)",
+                Location = new Point(20, top),
+                Size = new Size(200, 25),
+                Font = new Font("Segoe UI", 10, FontStyle.Bold)
+            };
+            _txtNotificationTitle = new TextBox
+            {
+                Location = new Point(240, top),
+                Size = new Size(450, 36),
+                Font = new Font("Segoe UI", 10)
+            };
+            top += 55;
+
+            var lblContent = new Label
+            {
+                Text = "Nội Dung",
+                Location = new Point(20, top),
+                Size = new Size(200, 25),
+                Font = new Font("Segoe UI", 10, FontStyle.Bold)
+            };
+            _txtNotificationContent = new TextBox
+            {
+                Location = new Point(240, top),
+                Size = new Size(450, 140),
+                Multiline = true,
+                ScrollBars = ScrollBars.Vertical,
+                Font = new Font("Segoe UI", 10),
+                WordWrap = true
+            };
+            top += 160;
+
+            var lblTarget = new Label
+            {
+                Text = "Gửi Tới",
+                Location = new Point(20, top),
+                Size = new Size(200, 25),
+                Font = new Font("Segoe UI", 10, FontStyle.Bold)
+            };
+            _cboTarget = new ComboBox
+            {
+                Location = new Point(240, top),
+                Size = new Size(450, 36),
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = new Font("Segoe UI", 10)
+            };
+            _cboTarget.Items.AddRange(new object[] { "Tất cả nhân viên", "Tất cả quản lý", "Toàn hệ thống" });
+            _cboTarget.SelectedIndex = 2;
+            top += 50;
+
+            _btnSendInternal = CreateStyledButton("📤 Gửi Thông Báo", Color.FromArgb(52, 168, 219), 160);
+            _btnSendInternal.Location = new Point(240, top);
+            _btnSendInternal.Click += async (s, e) => await SendInternalNotificationAsync();
+
+            pnlForm.Controls.AddRange(new Control[]
+            {
+                lblTitle, _txtNotificationTitle,
+                lblContent, _txtNotificationContent,
+                lblTarget, _cboTarget,
+                _btnSendInternal
+            });
+
+            tab.Controls.Add(pnlForm);
+            return tab;
+        }
+
+        private async Task SendInternalNotificationAsync()
+        {
+            if (string.IsNullOrWhiteSpace(_txtNotificationTitle.Text))
+            {
+                MessageBox.Show("Vui lòng nhập tiêu đề thông báo.", "Chú ý", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                _txtNotificationTitle.Focus();
                 return;
             }
 
             try
             {
-                int? userId = TryReadIntNullable(row, "UserId");
-                await _bll.UpdateNotificationAsync(
-                    id,
-                    userId,
-                    ReadString(row, "Title"),
-                    ReadString(row, "Message"),
-                    "Read");
-                await LoadAsync();
+                var title = _txtNotificationTitle.Text.Trim();
+                var content = _txtNotificationContent.Text.Trim();
+                var target = _cboTarget.SelectedItem?.ToString() ?? "Toàn hệ thống";
+
+                var fullMessage = string.IsNullOrWhiteSpace(content) ? $"[Đối tượng: {target}]" : $"{content}\n\n[Đối tượng: {target}]";
+
+                await _bll.AddNotificationAsync(null, title, fullMessage, "Chưa đọc");
+
+                MessageBox.Show("✅ Gửi thông báo nội bộ thành công!", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                _txtNotificationTitle.Clear();
+                _txtNotificationContent.Clear();
+                _cboTarget.SelectedIndex = 2;
+                _txtNotificationTitle.Focus();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi cập nhật trạng thái: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"❌ Lỗi: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private DataRow GetCurrentRow()
+        #endregion
+
+        #region ========== TAB 4: LỊCH SỬ GỬI ==========
+
+        private TabPage CreateHistoryTab()
         {
-            if (_grid.CurrentRow == null || _grid.CurrentRow.DataBoundItem == null) return null;
-            var drv = _grid.CurrentRow.DataBoundItem as DataRowView;
-            return drv?.Row;
+            var tab = new TabPage { Text = "📜 Lịch Sử Gửi", BackColor = Color.White };
+
+            _dgvHistory = CreateDataGrid();
+            _dgvHistory.Dock = DockStyle.Fill;
+
+            tab.Controls.Add(_dgvHistory);
+            return tab;
         }
 
-        private static DataGridView MakeGrid()
+        private async Task LoadHistoryAsync()
         {
-            var g = new DataGridView
+            try
             {
-                ReadOnly = true,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                MultiSelect = false,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                var data = await _bll.GetNotificationsAsync();
+                if (data != null)
+                {
+                    var history = data.AsEnumerable()
+                        .Where(r => r["Status"].ToString() == "Đã gửi")
+                        .ToList();
+                    if (history.Count > 0)
+                    {
+                        _dgvHistory.DataSource = history.CopyToDataTable();
+                    }
+                    else
+                    {
+                        _dgvHistory.DataSource = data.Clone(); // Empty table with same columns
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"❌ Lỗi tải: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        #endregion
+
+        #region ========== HELPER METHODS ==========
+
+        private DataGridView CreateDataGrid()
+        {
+            return new DataGridView
+            {
                 AllowUserToAddRows = false,
                 AllowUserToDeleteRows = false,
-                RowHeadersVisible = false,
+                ReadOnly = true,
+                MultiSelect = false,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
                 BackgroundColor = Color.White,
-                BorderStyle = BorderStyle.None
+                BorderStyle = BorderStyle.None,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                RowTemplate = new DataGridViewRow { Height = 30 },
+                ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize,
+                EnableHeadersVisualStyles = false,
+                ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle
+                {
+                    BackColor = Color.FromArgb(0, 120, 215),
+                    ForeColor = Color.White,
+                    Font = new Font("Segoe UI", 10, FontStyle.Bold)
+                },
+                DefaultCellStyle = new DataGridViewCellStyle
+                {
+                    Font = new Font("Segoe UI", 10)
+                }
             };
-            g.EnableHeadersVisualStyles = false;
-            g.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(0, 120, 215);
-            g.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            g.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
-            g.DefaultCellStyle.Font = new Font("Segoe UI", 10, FontStyle.Regular);
-            g.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 249, 255);
-            g.DefaultCellStyle.SelectionBackColor = Color.FromArgb(232, 244, 252);
-            g.DefaultCellStyle.SelectionForeColor = Color.Black;
-            return g;
         }
 
-        private static Button MakeButton(string text, Color backColor, EventHandler onClick)
+        private Button CreateStyledButton(string text, Color bgColor, int width = 100)
         {
-            var b = new Button
+            var btn = new Button
             {
                 Text = text,
-                Width = 96,
-                Height = 34,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = backColor,
+                BackColor = bgColor,
                 ForeColor = Color.White,
-                Margin = new Padding(0, 0, 8, 0)
+                Width = width,
+                Height = 40,
+                Margin = new Padding(4),
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                FlatStyle = FlatStyle.Flat
             };
-            b.FlatAppearance.BorderSize = 0;
-            b.Click += onClick;
-            return b;
+            btn.FlatAppearance.BorderSize = 0;
+            return btn;
         }
 
-        private static TextBox MakeSearchBox(string placeholder, Action onChanged)
+        private async Task LoadAllDataAsync()
         {
-            var tb = new TextBox { Width = 320, ForeColor = Color.Gray, Text = placeholder };
-            tb.GotFocus += (s, e) =>
-            {
-                if (tb.Text == placeholder)
-                {
-                    tb.Text = string.Empty;
-                    tb.ForeColor = Color.Black;
-                }
-            };
-            tb.LostFocus += (s, e) =>
-            {
-                if (string.IsNullOrWhiteSpace(tb.Text))
-                {
-                    tb.Text = placeholder;
-                    tb.ForeColor = Color.Gray;
-                }
-            };
-            tb.TextChanged += (s, e) => onChanged?.Invoke();
-            return tb;
+            await LoadNotificationsAsync();
+            await LoadHistoryAsync();
         }
 
-        private void SetHeader(string columnName, string headerText)
-        {
-            if (_grid.Columns.Contains(columnName))
-                _grid.Columns[columnName].HeaderText = headerText;
-        }
-
-        private void FormatDateTime(string columnName)
-        {
-            if (_grid.Columns.Contains(columnName))
-                _grid.Columns[columnName].DefaultCellStyle.Format = "dd/MM/yyyy HH:mm";
-        }
-
-        private void SetDisplayOrder(params string[] order)
-        {
-            int idx = 0;
-            foreach (var name in order)
-            {
-                if (_grid.Columns.Contains(name))
-                {
-                    _grid.Columns[name].DisplayIndex = idx;
-                    idx++;
-                }
-            }
-        }
-
-        private static bool Contains(DataRow row, string column, string keywordLower)
-        {
-            if (row?.Table == null || !row.Table.Columns.Contains(column)) return false;
-            var v = row[column];
-            if (v == null || v == DBNull.Value) return false;
-            return v.ToString().ToLowerInvariant().Contains(keywordLower);
-        }
-
-        private static string ReadString(DataRow row, params string[] cols)
-        {
-            foreach (var c in cols)
-            {
-                if (row.Table.Columns.Contains(c))
-                {
-                    var v = row[c];
-                    if (v != null && v != DBNull.Value) return v.ToString();
-                }
-            }
-            return null;
-        }
-
-        private static int ReadInt(DataRow row, params string[] cols)
-        {
-            foreach (var c in cols)
-            {
-                if (row.Table.Columns.Contains(c))
-                {
-                    var v = row[c];
-                    if (v == null || v == DBNull.Value) continue;
-                    if (int.TryParse(v.ToString(), out var i)) return i;
-                    try { return Convert.ToInt32(v); } catch { }
-                }
-            }
-            return 0;
-        }
-
-        private static int? TryReadIntNullable(DataRow row, params string[] cols)
-        {
-            int i = ReadInt(row, cols);
-            return i > 0 ? (int?)i : null;
-        }
+        #endregion
     }
 }
 

@@ -320,14 +320,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
         }
 
-        private void ShowDetail(DataRow row)
+        private async void ShowDetail(DataRow row)
         {
             // Mở form chi tiết giống như ảnh bạn gửi
             using (var frm = new FrmContractDetail(row, _bll))
             {
                 if (frm.ShowDialog(this) == DialogResult.OK)
                 {
-                    LoadDataAsync(); // Load lại nếu có sửa đổi
+                    await LoadDataAsync(); // Load lại nếu có sửa đổi
                 }
             }
         }

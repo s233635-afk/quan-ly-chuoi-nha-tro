@@ -123,7 +123,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
         }
 
-        private async void btnAdd_Click(object sender, EventArgs e)
+        private void btnAdd_Click(object sender, EventArgs e)
         {
             FrmBranchDetail frm = new FrmBranchDetail();
             if (frm.ShowDialog() == DialogResult.OK)
@@ -133,7 +133,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
         }
 
-        private async void btnEdit_Click(object sender, EventArgs e)
+        private void btnEdit_Click(object sender, EventArgs e)
         {
             if (dataGridViewBranches.SelectedRows.Count == 0)
             {
@@ -179,7 +179,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
         }
 
-        private async void btnRefresh_Click(object sender, EventArgs e)
+        private void btnRefresh_Click(object sender, EventArgs e)
         {
             LoadBranches();
         }
