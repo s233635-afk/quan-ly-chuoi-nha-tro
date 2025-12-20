@@ -38,52 +38,67 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void InitializeComponent()
         {
-            Text = _existingRow == null ? "Thêm phiếu bảo trì" : "Cập nhật phiếu bảo trì";
+            Text = _existingRow == null ? "➕ Thêm phiếu bảo trì" : "✎ Cập nhật phiếu bảo trì";
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
-            ClientSize = new Size(820, 560);
+            ClientSize = new Size(900, 720);
             BackColor = Color.White;
+            Font = new Font("Segoe UI", 10F);
 
-            var pnlBottom = new Panel
+            // ===== HEADER =====
+            var pnlHeader = new Panel
             {
-                Dock = DockStyle.Bottom,
-                Height = 58,
-                Padding = new Padding(12, 10, 12, 10),
-                BackColor = Color.White
+                Dock = DockStyle.Top,
+                Height = 50,
+                BackColor = Color.FromArgb(229, 57, 53),
+                Padding = new Padding(20, 12, 20, 12)
             };
+            var lblTitle = new Label
+            {
+                Text = _existingRow == null ? "Thêm phiếu bảo trì mới" : "Cập nhật thông tin phiếu",
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                ForeColor = Color.White,
+                AutoSize = true
+            };
+            pnlHeader.Controls.Add(lblTitle);
 
+            // ===== BODY =====
             var pnlBody = new Panel
             {
                 Dock = DockStyle.Fill,
-                Padding = new Padding(18, 18, 18, 10),
+                Padding = new Padding(20, 20, 20, 10),
                 AutoScroll = true,
-                BackColor = Color.White
+                BackColor = Color.FromArgb(245, 247, 250)
             };
 
-            int labelWidth = 200;
-            int inputWidth = 520;
+            int labelWidth = 160;
+            int inputWidth = 600;
             int top = 10;
             int left = 6;
-            int line = 34;
+            int line = 38;
 
-            Label MakeLabel(string text, int y) => new Label
+            Label MakeLabel(string text, int y, bool required = false) => new Label
             {
-                Text = text,
+                Text = required ? text + " (*)" : text,
                 Location = new Point(left, y),
                 Width = labelWidth,
-                TextAlign = ContentAlignment.MiddleLeft
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI", 10),
+                ForeColor = required ? Color.FromArgb(229, 57, 53) : Color.FromArgb(50, 50, 50)
             };
 
             Control MakeInput(Control ctl, int y)
             {
-                ctl.Location = new Point(left + labelWidth, y);
+                ctl.Location = new Point(left + labelWidth + 10, y);
                 ctl.Width = inputWidth;
+                if (ctl is TextBox tb) tb.BackColor = Color.White;
+                if (ctl is ComboBox cb) cb.BackColor = Color.White;
                 return ctl;
             }
 
-            txtTicketNumber = new TextBox { ReadOnly = true };
+            txtTicketNumber = new TextBox { ReadOnly = true, BackColor = Color.FromArgb(245, 245, 245), ForeColor = Color.Gray };
             cboRoom = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
             cboRequestorType = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
             cboRequestorType.Items.AddRange(new object[] { "Tenant", "Staff", "System" });
@@ -92,7 +107,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             numRequestorId = new NumericUpDown { Minimum = 0, Maximum = 1000000000, DecimalPlaces = 0, ThousandsSeparator = true };
 
             cboPriority = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
-            cboPriority.Items.AddRange(new object[] { "Low", "Medium", "High", "Urgent" });
+            cboPriority.Items.AddRange(new object[] { "🟢 Low", "🟡 Medium", "🔴 High", "⛔ Urgent" });
             cboPriority.SelectedIndex = 1;
 
             cboAssigned = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
@@ -109,16 +124,40 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 }
             };
 
-            dtCompleted = new DateTimePicker { Format = DateTimePickerFormat.Custom, CustomFormat = "dd/MM/yyyy HH:mm", ShowCheckBox = true, Checked = false, Value = DateTime.Now };
+            dtCompleted = new DateTimePicker 
+            { 
+                Format = DateTimePickerFormat.Custom, 
+                CustomFormat = "dd/MM/yyyy HH:mm", 
+                ShowCheckBox = true, 
+                Checked = false, 
+                Value = DateTime.Now 
+            };
 
-            txtIssue = new TextBox { Multiline = true, Height = 80, ScrollBars = ScrollBars.Vertical };
-            txtNotes = new TextBox { Multiline = true, Height = 80, ScrollBars = ScrollBars.Vertical };
+            txtIssue = new TextBox 
+            { 
+                Multiline = true, 
+                Height = 100, 
+                ScrollBars = ScrollBars.Vertical,
+                BackColor = Color.White,
+                Font = new Font("Segoe UI", 10),
+                AcceptsReturn = true
+            };
+            
+            txtNotes = new TextBox 
+            { 
+                Multiline = true, 
+                Height = 80, 
+                ScrollBars = ScrollBars.Vertical,
+                BackColor = Color.White,
+                Font = new Font("Segoe UI", 10),
+                AcceptsReturn = true
+            };
 
             pnlBody.Controls.Add(MakeLabel("Số phiếu", top));
             pnlBody.Controls.Add(MakeInput(txtTicketNumber, top));
             top += line;
 
-            pnlBody.Controls.Add(MakeLabel("Phòng (*)", top));
+            pnlBody.Controls.Add(MakeLabel("Phòng", top, true));
             pnlBody.Controls.Add(MakeInput(cboRoom, top));
             top += line;
 
@@ -126,7 +165,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             pnlBody.Controls.Add(MakeInput(cboRequestorType, top));
             top += line;
 
-            pnlBody.Controls.Add(MakeLabel("Nguồn ID (tùy chọn)", top));
+            pnlBody.Controls.Add(MakeLabel("Nguồn ID", top));
             pnlBody.Controls.Add(MakeInput(numRequestorId, top));
             top += line;
 
@@ -146,35 +185,48 @@ namespace quan_ly_chuoi_nha_tro.GUI
             pnlBody.Controls.Add(MakeInput(dtCompleted, top));
             top += line;
 
-            pnlBody.Controls.Add(MakeLabel("Mô tả sự cố", top));
+            pnlBody.Controls.Add(MakeLabel("Mô tả sự cố", top, true));
             pnlBody.Controls.Add(MakeInput(txtIssue, top));
-            top += 90;
+            top += 110;
 
             pnlBody.Controls.Add(MakeLabel("Ghi chú", top));
             pnlBody.Controls.Add(MakeInput(txtNotes, top));
 
+            // ===== BOTTOM BUTTONS =====
+            var pnlBottom = new Panel
+            {
+                Dock = DockStyle.Bottom,
+                Height = 60,
+                Padding = new Padding(20, 12, 20, 12),
+                BackColor = Color.FromArgb(245, 247, 250),
+                BorderStyle = BorderStyle.FixedSingle
+            };
+
             btnCancel = new Button
             {
-                Text = "Hủy",
-                Width = 110,
-                Height = 34,
-                Anchor = AnchorStyles.Right | AnchorStyles.Top,
+                Text = "❌ Hủy",
+                Width = 120,
+                Height = 36,
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.White
+                BackColor = Color.White,
+                ForeColor = Color.FromArgb(100, 100, 100),
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                Cursor = Cursors.Hand
             };
-            btnCancel.FlatAppearance.BorderColor = Color.FromArgb(210, 210, 210);
+            btnCancel.FlatAppearance.BorderColor = Color.FromArgb(200, 200, 200);
             btnCancel.FlatAppearance.BorderSize = 1;
             btnCancel.Click += (s, e) => DialogResult = DialogResult.Cancel;
 
             btnSave = new Button
             {
-                Text = "Lưu",
-                Width = 110,
-                Height = 34,
-                Anchor = AnchorStyles.Right | AnchorStyles.Top,
+                Text = "✓ Lưu",
+                Width = 120,
+                Height = 36,
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(0, 122, 204),
-                ForeColor = Color.White
+                BackColor = Color.FromArgb(46, 125, 50),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                Cursor = Cursors.Hand
             };
             btnSave.FlatAppearance.BorderSize = 0;
             btnSave.Click += async (s, e) => await SaveAsync();
@@ -194,6 +246,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             Controls.Add(pnlBody);
             Controls.Add(pnlBottom);
+            Controls.Add(pnlHeader);
         }
 
         private async System.Threading.Tasks.Task LoadAsync()

@@ -500,13 +500,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private void btnMaintenance_Click(object sender, EventArgs e)
         {
             SetActiveNav(btnNavMaintenance);
-            LoadModuleSafe(() => new FrmMaintenanceManager(), "Bảo trì & sự cố");
+            LoadModuleSafe(() => new FrmMaintenanceManager(), "Bảo trì");
         }
 
         private void btnAsset_Click(object sender, EventArgs e)
         {
             SetActiveNav(btnNavAsset);
-            LoadModuleSafe(() => new FrmAssetManager(), "Quản lý tài sản");
+            LoadModuleSafe(() => new FrmAssetManager(), "Tài sản");
         }
 
         private void btnReport_Click(object sender, EventArgs e)
