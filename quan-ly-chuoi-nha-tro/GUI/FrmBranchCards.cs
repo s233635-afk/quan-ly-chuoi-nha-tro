@@ -182,6 +182,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             return btn;
         }
 
+
         private static Panel MakeStatCard(string title, Color valueColor, out Label valueLabel)
         {
             var panel = new Panel
@@ -410,7 +411,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             void OpenDetails()
             {
                 SelectThis();
-                OpenBranchDialog(branchId, FrmBranchOverview.BranchOverviewTab.Overview);
+                OpenBranchDialog(branchId, FrmBranchOverview.BranchOverviewTab.Branch);
             }
 
             card.Click += (s, e) => OpenDetails();

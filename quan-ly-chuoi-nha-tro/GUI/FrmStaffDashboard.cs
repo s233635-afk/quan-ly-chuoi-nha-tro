@@ -28,7 +28,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         // Các button menu
         private Button _btnOverview;
-        private Button _btnBranch;
         private Button _btnRoom;
         private Button _btnTenant;
         private Button _btnContract;
@@ -112,7 +111,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             };
 
             _btnOverview = MakeNavButton("🏠 Tổng quan", (s, e) => ShowOverview());
-            _btnBranch = MakeNavButton("🏢 Chi nhánh", (s, e) => { SetActive(_btnBranch); LoadModule(new FrmBranch(), "🏢 Chi nhánh"); });
             _btnRoom = MakeNavButton("🏠 Phòng", (s, e) => { SetActive(_btnRoom); LoadModule(new FrmDataViewer("Danh sách Phòng", LoadRoomsAsync), "🏠 Phòng"); });
             _btnTenant = MakeNavButton("👥 Khách thuê", (s, e) => { SetActive(_btnTenant); LoadModule(new FrmTenantManager(), "👥 Khách thuê"); });
             _btnContract = MakeNavButton("📄 Hợp đồng", (s, e) => { SetActive(_btnContract); LoadModule(new FrmContractManager(_branchId), "📄 Hợp đồng"); });
@@ -125,7 +123,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnStatus = MakeNavButton("🔔 Thông báo", (s, e) => { SetActive(_btnStatus); LoadModule(new FrmDataViewer("Thông báo & Sự kiện", LoadMaintenanceAsync), "🔔 Thông báo"); });
 
             nav.Controls.Add(_btnOverview);
-            nav.Controls.Add(_btnBranch);
             nav.Controls.Add(_btnRoom);
             nav.Controls.Add(_btnTenant);
             nav.Controls.Add(_btnContract);
