@@ -14,6 +14,22 @@ namespace quan_ly_chuoi_nha_tro.GUI
     /// </summary>
     public class FrmBranchOverview : Form
     {
+        public enum BranchOverviewTab
+        {
+            Overview,
+            Rooms,
+            Sections,
+            Tenants,
+            Staff,
+            Contracts,
+            Deposits,
+            Invoices,
+            Payments,
+            Utilities,
+            Maintenance,
+            Assets
+        }
+
         private const int RoomDetailsCollapsedHeight = 190;
         private const int RoomDetailsExpandedHeight = 270;
 
@@ -108,6 +124,50 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _branchId = branchId;
             InitializeComponent();
             Load += async (s, e) => await LoadAllAsync();
+        }
+
+        public void SelectTab(BranchOverviewTab tab)
+        {
+            if (_tabs == null) return;
+            switch (tab)
+            {
+                case BranchOverviewTab.Overview:
+                    _tabs.SelectedTab = _tabOverview;
+                    break;
+                case BranchOverviewTab.Rooms:
+                    _tabs.SelectedTab = _tabRooms;
+                    break;
+                case BranchOverviewTab.Sections:
+                    _tabs.SelectedTab = _tabSections;
+                    break;
+                case BranchOverviewTab.Tenants:
+                    _tabs.SelectedTab = _tabTenants;
+                    break;
+                case BranchOverviewTab.Staff:
+                    _tabs.SelectedTab = _tabStaff;
+                    break;
+                case BranchOverviewTab.Contracts:
+                    _tabs.SelectedTab = _tabContracts;
+                    break;
+                case BranchOverviewTab.Deposits:
+                    _tabs.SelectedTab = _tabDeposits;
+                    break;
+                case BranchOverviewTab.Invoices:
+                    _tabs.SelectedTab = _tabInvoices;
+                    break;
+                case BranchOverviewTab.Payments:
+                    _tabs.SelectedTab = _tabPayments;
+                    break;
+                case BranchOverviewTab.Utilities:
+                    _tabs.SelectedTab = _tabUtilities;
+                    break;
+                case BranchOverviewTab.Maintenance:
+                    _tabs.SelectedTab = _tabMaintenance;
+                    break;
+                case BranchOverviewTab.Assets:
+                    _tabs.SelectedTab = _tabAssets;
+                    break;
+            }
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)

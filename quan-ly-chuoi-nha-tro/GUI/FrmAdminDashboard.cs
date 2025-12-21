@@ -64,7 +64,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             StyleNavButton(btnNavUtility);
             StyleNavButton(btnNavInvoice);
             StyleNavButton(btnNavReport);
-            StyleNavButton(btnNavPayment);
             StyleNavButton(btnNavMaintenance);
             StyleNavButton(btnNavAsset);
             StyleNavButton(btnNavNotification);
@@ -477,13 +476,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private void btnDeposit_Click(object sender, EventArgs e)
         {
             SetActiveNav(btnNavDeposit);
-            LoadModuleSafe(() => new FrmDepositManager(), "Đặt phòng & đặt cọc");
-        }
-
-        private void btnPayment_Click(object sender, EventArgs e)
-        {
-            SetActiveNav(btnNavPayment);
-            LoadModuleSafe(() => new FrmPaymentManager(adminDataBLL), "Thanh toán");
+            LoadModuleSafe(() => new FrmDepositManager(), "Đặt cọc");
         }
 
         private void btnUtility_Click(object sender, EventArgs e)
@@ -495,19 +488,26 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private void btnInvoice_Click(object sender, EventArgs e)
         {
             SetActiveNav(btnNavInvoice);
-            LoadModuleSafe(() => new FrmInvoiceManager(), "Hóa đơn & thanh toán");
+            // MERGED: Mở FrmInvoicePaymentUnified (2 tabs: Hóa Đơn + Thanh Toán)
+            LoadModuleSafe(() => new FrmInvoicePaymentUnified(), "💳 Hóa Đơn & Thanh Toán");
+        }
+
+        private void btnPayment_Click(object sender, EventArgs e)
+        {
+            SetActiveNav(btnNavInvoice);
+            LoadModuleSafe(() => new FrmInvoicePaymentUnified(), "💳 Hóa Đơn & Thanh Toán");
         }
 
         private void btnMaintenance_Click(object sender, EventArgs e)
         {
             SetActiveNav(btnNavMaintenance);
-            LoadModuleSafe(() => new FrmMaintenanceManager(), "Bảo trì - sự cố");
+            LoadModuleSafe(() => new FrmMaintenanceManager(), "Bảo trì & sự cố");
         }
 
         private void btnAsset_Click(object sender, EventArgs e)
         {
             SetActiveNav(btnNavAsset);
-            LoadModuleSafe(() => new FrmAssetManager(), "Quản lý Tài Sản");
+            LoadModuleSafe(() => new FrmAssetManager(), "Tài sản");
         }
 
         private void btnReport_Click(object sender, EventArgs e)

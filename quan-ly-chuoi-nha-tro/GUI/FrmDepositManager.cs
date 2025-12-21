@@ -35,7 +35,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void InitializeComponent()
         {
-            this.Text = "Đặt Phòng & Cọc";
+            this.Text = "Đặt cọc";
             this.StartPosition = FormStartPosition.CenterParent;
             this.Width = 1200;
             this.Height = 650;
@@ -90,17 +90,24 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _cboStatus.SelectedIndex = 0;
             _cboStatus.SelectedIndexChanged += (s, e) => ApplyFilter();
 
-            _lblCount = new Label { AutoSize = true, Text = "Tổng: 0" };
+            _lblCount = new Label { AutoSize = true, Text = "Tổng: 0", Font = new Font("Segoe UI", 10, FontStyle.Bold) };
             _lblTotal = new Label { AutoSize = true, Text = "Tổng cọc: 0", ForeColor = Color.FromArgb(70, 70, 70) };
 
-            _btnAdd = MakeButton("Thêm", Color.FromArgb(0, 122, 204), (s, e) => AddNew());
-            _btnEdit = MakeButton("Sửa", Color.FromArgb(0, 122, 204), (s, e) => EditSelected());
-            _btnDelete = MakeButton("Xóa", Color.FromArgb(211, 47, 47), async (s, e) => await DeleteSelectedAsync());
-            _btnConfirm = MakeButton("Xác nhận", Color.FromArgb(46, 125, 50), async (s, e) => await MarkStatusAsync("Confirmed"));
-            _btnReturn = MakeButton("Hoàn cọc", Color.FromArgb(121, 85, 72), async (s, e) => await MarkReturnedAsync());
-            _btnRefresh = MakeButton("Tải lại", Color.FromArgb(0, 122, 204), async (s, e) => await LoadDataAsync());
+            _btnAdd = MakeButton("➕ Thêm", Color.FromArgb(0, 122, 204), (s, e) => AddNew());
+            _btnEdit = MakeButton("✏️ Sửa", Color.FromArgb(0, 122, 204), (s, e) => EditSelected());
+            _btnDelete = MakeButton("🗑 Xóa", Color.FromArgb(211, 47, 47), async (s, e) => await DeleteSelectedAsync());
+            _btnConfirm = MakeButton("✔ Xác nhận cọc", Color.FromArgb(46, 125, 50), async (s, e) => await MarkStatusAsync("Confirmed"));
+            _btnReturn = MakeButton("💸 Hoàn cọc", Color.FromArgb(121, 85, 72), async (s, e) => await MarkReturnedAsync());
+            _btnRefresh = MakeButton("🔄 Tải lại", Color.FromArgb(0, 122, 204), async (s, e) => await LoadDataAsync());
 
-            var top = new Panel { Dock = DockStyle.Top, Height = 64, Padding = new Padding(12, 10, 12, 10), BackColor = Color.White };
+            var top = new Panel { Dock = DockStyle.Top, Height = 72, Padding = new Padding(12, 12, 12, 12), BackColor = Color.White };
+            top.Paint += (s, e) =>
+            {
+                using (var pen = new Pen(Color.FromArgb(220, 220, 220), 1))
+                {
+                    e.Graphics.DrawLine(pen, 0, top.Height - 1, top.Width, top.Height - 1);
+                }
+            };
 
             var actions = new FlowLayoutPanel
             {
@@ -153,8 +160,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             };
 
             var summary = new Panel { Dock = DockStyle.Right, Width = 260, BackColor = Color.Transparent };
-            _lblCount.Location = new Point(0, 6);
-            _lblCount.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+            _lblCount.Location = new Point(0, 4);
             _lblTotal.Location = new Point(0, 28);
             summary.Controls.Add(_lblCount);
             summary.Controls.Add(_lblTotal);
@@ -399,9 +405,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
 
             int id = Convert.ToInt32(row["DepositId"]);
-            string displayStatus = newStatus == "Confirmed" ? "Đã xác nhận" : newStatus;
-            if (MessageBox.Show($"Cập nhật trạng thái cọc ID {id} -> {displayStatus}?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                return;
+            string tenantName = row.Table.Columns.Contains("TenantName") ? row["TenantName"]?.ToString() : null;
+            string roomNumber = row.Table.Columns.Contains("RoomNumber") ? row["RoomNumber"]?.ToString() : null;
 
             try
             {
@@ -414,8 +419,21 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 DateTime? returnedDate = DateTime.TryParse(row["ReturnedDate"]?.ToString(), out var rd) ? (DateTime?)rd.Date : null;
                 string notes = row["Notes"]?.ToString();
 
-                if (newStatus == "Confirmed" && !depositDate.HasValue)
-                    depositDate = DateTime.Today;
+                if (newStatus == "Confirmed")
+                {
+                    using (var dlg = new DepositActionDialog(
+                        DepositActionKind.Confirm,
+                        tenantName,
+                        roomNumber,
+                        amount,
+                        depositDate,
+                        notes))
+                    {
+                        if (dlg.ShowDialog(this) != DialogResult.OK) return;
+                        depositDate = dlg.DepositDate ?? DateTime.Today;
+                        notes = dlg.Notes;
+                    }
+                }
 
                 await _bll.UpdateDepositAsync(id, tenantId, roomId, amount, depositDate, type, newStatus, returnedAmount, returnedDate, notes);
                 await LoadDataAsync();
@@ -437,8 +455,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
 
             int id = Convert.ToInt32(row["DepositId"]);
-            if (MessageBox.Show($"Hoàn cọc cho ID {id} (Trạng thái = Hoàn cọc)?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                return;
+            string tenantName = row.Table.Columns.Contains("TenantName") ? row["TenantName"]?.ToString() : null;
+            string roomNumber = row.Table.Columns.Contains("RoomNumber") ? row["RoomNumber"]?.ToString() : null;
 
             try
             {
@@ -451,9 +469,20 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 DateTime? returnedDate = DateTime.TryParse(row["ReturnedDate"]?.ToString(), out var rd) ? (DateTime?)rd.Date : null;
                 string notes = row["Notes"]?.ToString();
 
-                if (!returnedAmount.HasValue || returnedAmount.Value <= 0)
-                    returnedAmount = amount;
-                returnedDate = DateTime.Today;
+                using (var dlg = new DepositActionDialog(
+                    DepositActionKind.Return,
+                    tenantName,
+                    roomNumber,
+                    amount,
+                    returnedAmount,
+                    returnedDate,
+                    notes))
+                {
+                    if (dlg.ShowDialog(this) != DialogResult.OK) return;
+                    returnedAmount = dlg.ReturnedAmount ?? amount;
+                    returnedDate = dlg.ReturnedDate ?? DateTime.Today;
+                    notes = dlg.Notes;
+                }
 
                 await _bll.UpdateDepositAsync(id, tenantId, roomId, amount, depositDate, type, "Returned", returnedAmount, returnedDate, notes);
                 await LoadDataAsync();
@@ -501,12 +530,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var b = new Button
             {
                 Text = text,
-                Width = 96,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 Height = 34,
                 FlatStyle = FlatStyle.Flat,
                 BackColor = backColor,
                 ForeColor = Color.White,
-                Margin = new Padding(0, 0, 8, 0)
+                Margin = new Padding(0, 0, 8, 0),
+                Padding = new Padding(10, 0, 10, 0)
             };
             b.FlatAppearance.BorderSize = 0;
             b.Click += onClick;
@@ -547,6 +578,208 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     _grid.Columns[name].DisplayIndex = index;
                     index++;
                 }
+            }
+        }
+
+        private enum DepositActionKind
+        {
+            Confirm,
+            Return
+        }
+
+        private sealed class DepositActionDialog : Form
+        {
+            private readonly DepositActionKind _kind;
+            private readonly decimal _depositAmount;
+            private readonly DateTimePicker _dtDeposit;
+            private readonly NumericUpDown _numReturn;
+            private readonly DateTimePicker _dtReturn;
+            private readonly TextBox _txtNotes;
+
+            public DateTime? DepositDate { get; private set; }
+            public decimal? ReturnedAmount { get; private set; }
+            public DateTime? ReturnedDate { get; private set; }
+            public string Notes { get; private set; }
+
+            public DepositActionDialog(
+                DepositActionKind kind,
+                string tenantName,
+                string roomNumber,
+                decimal depositAmount,
+                DateTime? depositDate,
+                string notes)
+                : this(kind, tenantName, roomNumber, depositAmount, notes)
+            {
+                _dtDeposit.Value = depositDate ?? DateTime.Today;
+            }
+
+            public DepositActionDialog(
+                DepositActionKind kind,
+                string tenantName,
+                string roomNumber,
+                decimal depositAmount,
+                decimal? returnedAmount,
+                DateTime? returnedDate,
+                string notes)
+                : this(kind, tenantName, roomNumber, depositAmount, notes)
+            {
+                _numReturn.Value = returnedAmount.HasValue && returnedAmount.Value > 0 ? returnedAmount.Value : depositAmount;
+                _dtReturn.Value = returnedDate ?? DateTime.Today;
+            }
+
+            private DepositActionDialog(
+                DepositActionKind kind,
+                string tenantName,
+                string roomNumber,
+                decimal depositAmount,
+                string notes)
+            {
+                _kind = kind;
+                _depositAmount = depositAmount;
+
+                Text = kind == DepositActionKind.Confirm ? "Xác nhận cọc" : "Hoàn cọc";
+                StartPosition = FormStartPosition.CenterParent;
+                FormBorderStyle = FormBorderStyle.FixedDialog;
+                MaximizeBox = false;
+                MinimizeBox = false;
+                ClientSize = new Size(520, 320);
+                BackColor = Color.White;
+                Font = new Font("Segoe UI", 10F);
+
+                var lblTitle = new Label
+                {
+                    Text = kind == DepositActionKind.Confirm ? "Xác nhận đặt cọc" : "Hoàn cọc cho khách thuê",
+                    Font = new Font("Segoe UI", 11F, FontStyle.Bold),
+                    AutoSize = true,
+                    Location = new Point(16, 14)
+                };
+
+                var infoText = $"Khách thuê: {(string.IsNullOrWhiteSpace(tenantName) ? "—" : tenantName)}\n" +
+                               $"Phòng: {(string.IsNullOrWhiteSpace(roomNumber) ? "—" : roomNumber)}\n" +
+                               $"Tiền cọc: {depositAmount:N0}";
+                var lblInfo = new Label
+                {
+                    Text = infoText,
+                    AutoSize = true,
+                    Location = new Point(16, 44),
+                    ForeColor = Color.FromArgb(70, 70, 70)
+                };
+
+                var panel = new Panel
+                {
+                    Location = new Point(16, 108),
+                    Size = new Size(488, 140)
+                };
+
+                int leftLabel = 0;
+                int leftInput = 140;
+                int top = 4;
+                int line = 32;
+
+                _dtDeposit = new DateTimePicker { Format = DateTimePickerFormat.Short, Width = 140 };
+                _numReturn = new NumericUpDown
+                {
+                    DecimalPlaces = 0,
+                    Maximum = Math.Max(1000000000m, depositAmount),
+                    Minimum = 0,
+                    Increment = 100000,
+                    ThousandsSeparator = true,
+                    Width = 160
+                };
+                _dtReturn = new DateTimePicker { Format = DateTimePickerFormat.Short, Width = 140 };
+                _txtNotes = new TextBox { Width = 320, Height = 52, Multiline = true, ScrollBars = ScrollBars.Vertical };
+
+                if (kind == DepositActionKind.Confirm)
+                {
+                    var lblDate = new Label { Text = "Ngày cọc:", AutoSize = true, Location = new Point(leftLabel, top + 4) };
+                    _dtDeposit.Location = new Point(leftInput, top);
+                    panel.Controls.Add(lblDate);
+                    panel.Controls.Add(_dtDeposit);
+                    top += line;
+                }
+                else
+                {
+                    var lblAmount = new Label { Text = "Tiền hoàn:", AutoSize = true, Location = new Point(leftLabel, top + 4) };
+                    _numReturn.Location = new Point(leftInput, top);
+                    panel.Controls.Add(lblAmount);
+                    panel.Controls.Add(_numReturn);
+                    top += line;
+
+                    var lblReturnDate = new Label { Text = "Ngày hoàn:", AutoSize = true, Location = new Point(leftLabel, top + 4) };
+                    _dtReturn.Location = new Point(leftInput, top);
+                    panel.Controls.Add(lblReturnDate);
+                    panel.Controls.Add(_dtReturn);
+                    top += line;
+                }
+
+                var lblNotes = new Label { Text = "Ghi chú:", AutoSize = true, Location = new Point(leftLabel, top + 4) };
+                _txtNotes.Location = new Point(leftInput, top);
+                _txtNotes.Text = notes ?? string.Empty;
+                panel.Controls.Add(lblNotes);
+                panel.Controls.Add(_txtNotes);
+
+                var btnOk = new Button
+                {
+                    Text = "Xác nhận",
+                    Width = 110,
+                    Height = 32,
+                    BackColor = Color.FromArgb(0, 122, 204),
+                    ForeColor = Color.White,
+                    FlatStyle = FlatStyle.Flat,
+                    Location = new Point(274, 264)
+                };
+                btnOk.FlatAppearance.BorderSize = 0;
+                btnOk.Click += (s, e) => HandleSave();
+
+                var btnCancel = new Button
+                {
+                    Text = "Hủy",
+                    Width = 90,
+                    Height = 32,
+                    BackColor = Color.FromArgb(200, 200, 200),
+                    ForeColor = Color.Black,
+                    FlatStyle = FlatStyle.Flat,
+                    Location = new Point(394, 264),
+                    DialogResult = DialogResult.Cancel
+                };
+                btnCancel.FlatAppearance.BorderSize = 0;
+
+                Controls.Add(lblTitle);
+                Controls.Add(lblInfo);
+                Controls.Add(panel);
+                Controls.Add(btnOk);
+                Controls.Add(btnCancel);
+
+                AcceptButton = btnOk;
+                CancelButton = btnCancel;
+            }
+
+            private void HandleSave()
+            {
+                if (_kind == DepositActionKind.Return)
+                {
+                    if (_numReturn.Value <= 0)
+                    {
+                        MessageBox.Show("Tiền hoàn phải lớn hơn 0.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+                    if (_numReturn.Value > _depositAmount)
+                    {
+                        MessageBox.Show("Tiền hoàn không được vượt quá tiền cọc.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+
+                    ReturnedAmount = _numReturn.Value;
+                    ReturnedDate = _dtReturn.Value.Date;
+                }
+                else
+                {
+                    DepositDate = _dtDeposit.Value.Date;
+                }
+
+                Notes = _txtNotes.Text?.Trim();
+                DialogResult = DialogResult.OK;
+                Close();
             }
         }
 

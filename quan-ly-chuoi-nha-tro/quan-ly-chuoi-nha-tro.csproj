@@ -286,10 +286,25 @@
     <Compile Include="GUI\FrmInvoiceEditor.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="GUI\FrmInvoicePaymentUnified.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="GUI\FrmPaymentManager.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="GUI\FrmRoomPaymentSelector.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GUI\FrmBulkPaymentRunner.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="GUI\FrmPaymentEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GUI\FrmPaymentWithTenantInfo.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GUI\MonthlyInvoiceDialog.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="GUI\FrmDataViewer.cs">

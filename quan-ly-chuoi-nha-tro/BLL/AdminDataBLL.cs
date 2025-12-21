@@ -183,6 +183,10 @@ namespace QuanLyNhaTro.BLL
 
         public Task<bool> DeletePaymentAsync(int paymentId) => dbHelper.DeletePaymentAsync(paymentId);
 
+        // Alias for InsertPaymentAsync
+        public Task<int> InsertPaymentAsync(int invoiceId, DateTime paymentDate, decimal amount, string method, string reference, string notes)
+            => dbHelper.AddPaymentAsync(invoiceId, paymentDate, amount, method, reference, notes);
+
         // --- ROOM CRUD ---
         public async Task<int> AddRoomAsync(
             string roomNumber,
