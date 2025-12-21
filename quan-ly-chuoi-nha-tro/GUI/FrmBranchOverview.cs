@@ -251,7 +251,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             BackColor = Color.FromArgb(245, 247, 250);
             Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
 
-            _header = new Panel { Dock = DockStyle.Top, Height = 72, BackColor = Color.White, Padding = new Padding(14, 10, 14, 10) };
+            _header = new Panel { Dock = DockStyle.Top, Height = 100, BackColor = Color.White, Padding = new Padding(14, 10, 14, 10) };
             _lblTitle = new Label
             {
                 AutoSize = true,
@@ -3187,8 +3187,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Dock = DockStyle.Fill,
                 AutoScroll = true,
                 WrapContents = true,
-                FlowDirection = FlowDirection.TopDown,
-                BackColor = Color.White,
+                FlowDirection = FlowDirection.LeftToRight,
+                BackColor = Color.FromArgb(245, 247, 250),
                 Padding = new Padding(10)
             };
 
@@ -3255,76 +3255,128 @@ namespace quan_ly_chuoi_nha_tro.GUI
             string email = ReadString(staffRow, "Email");
             string address = TextFixer.FixUtf8Mojibake(ReadString(staffRow, "Address"));
             string role = ReadString(staffRow, "RoleName");
-            string branch = ReadString(staffRow, "BranchName");
             bool isActive = staffRow.Table.Columns.Contains("IsActive") && Convert.ToBoolean(staffRow["IsActive"] ?? false);
 
-            var rowPanel = new Panel
+            // Card panel
+            var card = new Panel
             {
-                Height = 50,
-                Dock = DockStyle.Top,
+                Width = 320,
+                Height = 200,
                 BackColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle,
-                Padding = new Padding(10),
-                Tag = staffRow,
+                Padding = new Padding(12),
+                Margin = new Padding(8),
                 Cursor = Cursors.Hand,
-                Margin = new Padding(0, 0, 0, 2)
+                Tag = staffRow
             };
 
-            var table = new TableLayoutPanel
+            card.Paint += (s, e) =>
             {
-                Dock = DockStyle.Fill,
-                ColumnCount = 6,
-                RowCount = 1,
-                BackColor = Color.Transparent
-            };
-            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 50));
-            table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20));
-            table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25));
-            table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20));
-            table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20));
-            table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 15));
-
-            var lblId = new Label { Text = staffId.ToString(), AutoSize = false, TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI", 9f, FontStyle.Bold), ForeColor = Color.FromArgb(0, 79, 159) };
-            var lblName = new Label { Text = NullDash(fullName), AutoSize = false, TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI", 9f) };
-            var lblPhone = new Label { Text = NullDash(phone), AutoSize = false, TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI", 9f) };
-            var lblRole = new Label { Text = NullDash(role), AutoSize = false, TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI", 9f) };
-            var lblEmail = new Label { Text = NullDash(email), AutoSize = false, TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI", 9f) };
-            var lblStatus = new Label { Text = isActive ? "✓" : "✕", AutoSize = false, TextAlign = ContentAlignment.MiddleCenter, Font = new Font("Segoe UI", 9f, FontStyle.Bold), ForeColor = isActive ? Color.FromArgb(40, 167, 69) : Color.FromArgb(220, 53, 69) };
-
-            table.Controls.Add(lblId, 0, 0);
-            table.Controls.Add(lblName, 1, 0);
-            table.Controls.Add(lblPhone, 2, 0);
-            table.Controls.Add(lblRole, 3, 0);
-            table.Controls.Add(lblEmail, 4, 0);
-            table.Controls.Add(lblStatus, 5, 0);
-
-            rowPanel.Controls.Add(table);
-
-            // Click to edit
-            rowPanel.Click += (s, e) =>
-            {
-                _selectedStaffId = staffId;
-                _selectedStaffRow = staffRow;
-                var btnPanel = _staffFormPanel.Controls.OfType<Panel>().FirstOrDefault(p => p.Controls.Contains(_btnStaffSave));
-                if (btnPanel != null)
+                using (var pen = new Pen(Color.FromArgb(200, 220, 240), 1.5f))
                 {
-                    btnPanel.Visible = true;
-                    // Show edit form
-                    var editForm = new FrmStaffEditor(_adminBll, staffRow);
-                    if (editForm.ShowDialog() == DialogResult.OK)
-                    {
-                        // Reload data
-                        _ = LoadAllAsync();
-                    }
+                    e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
                 }
             };
 
-            foreach (Control c in table.Controls)
+            var content = new TableLayoutPanel
             {
-                c.Cursor = Cursors.Hand;
-            }
+                Dock = DockStyle.Fill,
+                ColumnCount = 1,
+                RowCount = 6,
+                BackColor = Color.Transparent
+            };
+            content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            content.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
-            return rowPanel;
+            var lblName = new Label
+            {
+                Text = NullDash(fullName),
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 79, 159),
+                AutoSize = true,
+                Dock = DockStyle.Top,
+                Margin = new Padding(0, 0, 0, 4)
+            };
+
+            var lblRole = new Label
+            {
+                Text = $"Chức vụ: {NullDash(role)}",
+                Font = new Font("Segoe UI", 9f),
+                ForeColor = Color.FromArgb(100, 100, 100),
+                AutoSize = true,
+                Dock = DockStyle.Top,
+                Margin = new Padding(0, 0, 0, 3)
+            };
+
+            var lblPhone = new Label
+            {
+                Text = $"Điện thoại: {NullDash(phone)}",
+                Font = new Font("Segoe UI", 9f),
+                ForeColor = Color.FromArgb(100, 100, 100),
+                AutoSize = true,
+                Dock = DockStyle.Top,
+                Margin = new Padding(0, 0, 0, 3)
+            };
+
+            var lblEmail = new Label
+            {
+                Text = $"Email: {NullDash(email)}",
+                Font = new Font("Segoe UI", 9f),
+                ForeColor = Color.FromArgb(100, 100, 100),
+                AutoSize = true,
+                Dock = DockStyle.Top,
+                Margin = new Padding(0, 0, 0, 3)
+            };
+
+            var lblAddress = new Label
+            {
+                Text = $"Địa chỉ: {NullDash(address)}",
+                Font = new Font("Segoe UI", 8.5f),
+                ForeColor = Color.FromArgb(120, 120, 120),
+                AutoSize = true,
+                Dock = DockStyle.Top,
+                Margin = new Padding(0, 0, 0, 3)
+            };
+
+            var lblStatus = new Label
+            {
+                Text = isActive ? "✓ Hoạt động" : "✕ Vô hiệu",
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                ForeColor = isActive ? Color.FromArgb(40, 167, 69) : Color.FromArgb(220, 53, 69),
+                AutoSize = true,
+                Dock = DockStyle.Top,
+                Margin = new Padding(0, 4, 0, 0)
+            };
+
+            content.Controls.Add(lblName, 0, 0);
+            content.Controls.Add(lblRole, 0, 1);
+            content.Controls.Add(lblPhone, 0, 2);
+            content.Controls.Add(lblEmail, 0, 3);
+            content.Controls.Add(lblAddress, 0, 4);
+            content.Controls.Add(lblStatus, 0, 5);
+
+            card.Controls.Add(content);
+
+            // Click to edit
+            card.Click += (s, e) => OpenStaffEditor(staffId, staffRow);
+            foreach (Control c in content.Controls)
+                c.Click += (s, e) => OpenStaffEditor(staffId, staffRow);
+
+            return card;
+        }
+
+        private void OpenStaffEditor(int staffId, DataRow staffRow)
+        {
+            _selectedStaffId = staffId;
+            _selectedStaffRow = staffRow;
+            var editForm = new FrmStaffEditor(_adminBll, staffRow);
+            if (editForm.ShowDialog() == DialogResult.OK)
+            {
+                _ = LoadAllAsync();
+            }
         }
     }
 }
