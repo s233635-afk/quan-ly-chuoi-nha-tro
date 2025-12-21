@@ -135,7 +135,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 using (var pen = new Pen(Color.FromArgb(200, 200, 200), 1))
                 {
                     e.Graphics.DrawLine(pen, 0, 0, bottom.Width, 0);
-                }
+                    }
             };
             _lblCount.Location = new Point(0, 6);
             _lblCount.Font = new Font("Segoe UI", 10, FontStyle.Bold);

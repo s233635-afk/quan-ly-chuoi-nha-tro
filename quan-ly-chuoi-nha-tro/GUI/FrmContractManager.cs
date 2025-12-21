@@ -327,7 +327,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 if (frm.ShowDialog(this) == DialogResult.OK)
                 {
-                    LoadDataAsync(); // Load lại nếu có sửa đổi
+                    _ = LoadDataAsync(); // Load lại nếu có sửa đổi
                 }
             }
         }

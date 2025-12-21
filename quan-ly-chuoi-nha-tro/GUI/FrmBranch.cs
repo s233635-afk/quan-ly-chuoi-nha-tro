@@ -128,7 +128,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             FrmBranchDetail frm = new FrmBranchDetail();
             if (frm.ShowDialog() == DialogResult.OK)
             {
-                LoadBranches();
+                await Task.Run(() => LoadBranches());
                 AdminEvents.NotifyDataChanged();
             }
         }
@@ -145,7 +145,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             FrmBranchDetail frm = new FrmBranchDetail(branchId);
             if (frm.ShowDialog() == DialogResult.OK)
             {
-                LoadBranches();
+                await Task.Run(() => LoadBranches());
                 AdminEvents.NotifyDataChanged();
             }
         }
@@ -181,7 +181,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private async void btnRefresh_Click(object sender, EventArgs e)
         {
-            LoadBranches();
+            await Task.Run(() => LoadBranches());
         }
 
         private void btnSearch_Click(object sender, EventArgs e)

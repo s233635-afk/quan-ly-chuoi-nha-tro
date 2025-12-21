@@ -67,7 +67,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Panel _overviewInfo;
         private FlowLayoutPanel _overviewStaffPreview;
 
-        private DataGridView _gridRooms;
+        // private DataGridView _gridRooms; // Not used
         private FlowLayoutPanel _roomCardsHost;
         private Panel _roomDetails;
         private Label _lblRoomTitle;
@@ -77,8 +77,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Label _lblTenantInfo;
         private int _selectedRoomId;
         private bool _tenantVisible;
-        private DataTable _contractsAll;
-        private DataTable _tenantsHistoryAll;
+        // private DataTable _contractsAll; // Not used
+        // private DataTable _tenantsHistoryAll; // Not used
 
         private FlowLayoutPanel _tenantCardsHost;
         private Panel _tenantDetailPanel;
@@ -1770,7 +1770,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             await LoadAllAsync();
             _tabs.SelectedTab = _tabRooms;
-            SelectRoomInRoomsGrid(roomId);
+            // SelectRoomInRoomsGrid(roomId); // Method commented out
             ShowRoomQuickView(roomId);
         }
 
@@ -1816,31 +1816,31 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _roomQuickView.BringToFront();
         }
 
-        private void SelectRoomInRoomsGrid(int roomId)
-        {
-            if (_gridRooms == null || _gridRooms.Rows == null) return;
-
-            foreach (DataGridViewRow r in _gridRooms.Rows)
-            {
-                if (r?.DataBoundItem is DataRowView drv)
-                {
-                    int id = 0;
-                    try { id = Convert.ToInt32(drv.Row["RoomId"]); } catch { id = 0; }
-                    if (id == roomId)
-                    {
-                        _gridRooms.ClearSelection();
-                        r.Selected = true;
-                        _gridRooms.CurrentCell = r.Cells.Cast<DataGridViewCell>().FirstOrDefault(c => c.Visible) ?? r.Cells[0];
-                        _selectedRoomId = roomId;
-                        _tenantVisible = false;
-                        _tenantDetails.Visible = false;
-                        RenderRoomInfo(roomId);
-                        _gridRooms.FirstDisplayedScrollingRowIndex = Math.Max(0, r.Index - 2);
-                        return;
-                    }
-                }
-            }
-        }
+        // private void SelectRoomInRoomsGrid(int roomId)
+        // {
+        //     if (_gridRooms == null || _gridRooms.Rows == null) return;
+        //
+        //     foreach (DataGridViewRow r in _gridRooms.Rows)
+        //     {
+        //         if (r?.DataBoundItem is DataRowView drv)
+        //         {
+        //             int id = 0;
+        //             try { id = Convert.ToInt32(drv.Row["RoomId"]); } catch { id = 0; }
+        //             if (id == roomId)
+        //             {
+        //                 _gridRooms.ClearSelection();
+        //                 r.Selected = true;
+        //                 _gridRooms.CurrentCell = r.Cells.Cast<DataGridViewCell>().FirstOrDefault(c => c.Visible) ?? r.Cells[0];
+        //                 _selectedRoomId = roomId;
+        //                 _tenantVisible = false;
+        //                 _tenantDetails.Visible = false;
+        //                 RenderRoomInfo(roomId);
+        //                 _gridRooms.FirstDisplayedScrollingRowIndex = Math.Max(0, r.Index - 2);
+        //                 return;
+        //             }
+        //         }
+        //     }
+        // }
 
         private void GridRoomCellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
         {
@@ -2608,7 +2608,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 var frmType = Type.GetType("quan_ly_chuoi_nha_tro.GUI.FrmRoomDetailForm");
                 if (frmType != null)
                 {
-                    var frm = (Form)Activator.CreateInstance(frmType, _adminBll, row, _contractsBranch, _tenantsHistoryAll);
+                    // Pass null for tenant history since it's not populated
+                    var frm = (Form)Activator.CreateInstance(frmType, _adminBll, row, _contractsBranch, null);
                     if (frm.ShowDialog(this) == DialogResult.OK)
                     {
                         _ = LoadAllAsync();

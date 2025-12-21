@@ -223,6 +223,9 @@
     <Compile Include="GUI\FrmTenantEditor.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="GUI\FrmTenantDetail.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="GUI\FrmDependentEditor.cs">
       <SubType>Form</SubType>
     </Compile>

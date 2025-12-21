@@ -354,7 +354,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             if (cboRoom.SelectedItem is DataRowView row)
             {
                 decimal price = 0;
-                if (row["RoomPrice"] != DBNull.Value && decimal.TryParse(row["RoomPrice"].ToString(), out var p))
+                if (row["Price"] != DBNull.Value && decimal.TryParse(row["Price"].ToString(), out var p))
                 {
                     price = p;
                 }
