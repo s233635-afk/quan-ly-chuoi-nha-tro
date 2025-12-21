@@ -94,6 +94,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private Panel _summaryPanel;
         private Panel _overviewInfo;
+        private TextBox _txtBranchCode;
+        private TextBox _txtBranchName;
+        private TextBox _txtBranchAddress;
+        private TextBox _txtBranchPhone;
+        private TextBox _txtBranchHotline;
+        private TextBox _txtBranchHours;
+        private TextBox _txtBranchDesc;
 
         // private DataGridView _gridRooms; // Not used
         private FlowLayoutPanel _roomCardsHost;
@@ -1236,108 +1243,135 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 BackColor = Color.White
             };
 
-            var content = new Panel
-            {
-                Dock = DockStyle.Top,
-                AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                BackColor = Color.White
-            };
-
+            // Title
             var title = new Label
             {
                 AutoSize = true,
                 Text = "Thông tin chi nhánh",
                 Font = new Font("Segoe UI", 12, FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 79, 159),
-                Margin = new Padding(0, 0, 0, 10),
+                Margin = new Padding(14, 12, 14, 10),
                 Dock = DockStyle.Top
             };
 
-            var infoPanel = new Panel
+            // Card panel
+            var card = new Panel
             {
                 Dock = DockStyle.Top,
-                AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                BackColor = Color.FromArgb(250, 252, 255),
-                Padding = new Padding(12, 10, 12, 10),
-                Margin = new Padding(0, 0, 0, 12)
+                Height = 400,
+                BackColor = Color.White,
+                Padding = new Padding(14),
+                Margin = new Padding(14, 0, 14, 12)
             };
-            infoPanel.Paint += (s, e) =>
+
+            card.Paint += (s, e) =>
             {
                 using (var pen = new Pen(Color.FromArgb(200, 220, 240), 1.5f))
                 {
-                    var rect = new Rectangle(0, 0, infoPanel.Width - 1, infoPanel.Height - 1);
+                    var rect = new Rectangle(0, 0, card.Width - 1, card.Height - 1);
                     e.Graphics.DrawRectangle(pen, rect);
                 }
             };
 
-            var infoContent = new Label
+            // Form layout
+            var form = new TableLayoutPanel
             {
-                AutoSize = true,
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Regular),
-                ForeColor = Color.FromArgb(60, 60, 60),
-                Margin = new Padding(0),
-                Dock = DockStyle.Top
-            };
-
-            string line1 = $"🏢 Mã: {NullDash(code)}   |   Tên: {NullDash(name)}";
-            string line2 = $"📍 Địa chỉ: {NullDash(address)}";
-            string line3 = $"☎️ Điện thoại: {NullDash(phone)}   |   Hotline: {NullDash(hotline)}";
-            string line4 = $"🕐 Giờ hoạt động: {NullDash(hours)}";
-            string line5 = $"✓ Trạng thái: {NullDash(statusText)}";
-            string line6 = string.IsNullOrWhiteSpace(desc) ? null : $"📝 Mô tả: {desc}";
-            infoContent.Text = string.Join("\n", new[] { line1, line2, line3, line4, line5, line6 }.Where(x => !string.IsNullOrWhiteSpace(x)));
-            
-            infoPanel.Controls.Add(infoContent);
-
-            var staffPanel = new Panel
-            {
-                Dock = DockStyle.Top,
-                Height = 260,
-                BackColor = Color.White,
-                Margin = new Padding(0, 0, 0, 12)
-            };
-
-            var staffHeader = new Panel
-            {
-                Dock = DockStyle.Top,
-                Height = 36,
-                BackColor = Color.White,
-                Padding = new Padding(0, 0, 0, 0)
-            };
-
-            var staffTitle = new Label
-            {
-                AutoSize = true,
-                Text = "Nhân viên tại chi nhánh",
-                Font = new Font("Segoe UI", 11, FontStyle.Bold),
-                ForeColor = Color.FromArgb(0, 79, 159),
-                Dock = DockStyle.Left,
-                Padding = new Padding(0, 6, 0, 0)
-            };
-
-            var staffActions = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Right,
-                AutoSize = true,
-                WrapContents = false,
-                FlowDirection = FlowDirection.LeftToRight,
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 7,
                 BackColor = Color.Transparent
             };
-            staffActions.Controls.Add(_btnStaffEdit);
+            form.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 30));
+            form.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 70));
 
-            staffHeader.Controls.Add(staffActions);
-            staffHeader.Controls.Add(staffTitle);
-            staffPanel.Controls.Add(_gridStaffOverview);
-            staffPanel.Controls.Add(staffHeader);
+            // Code
+            var lblCode = new Label { Text = "Mã chi nhánh:", Font = new Font("Segoe UI", 9, FontStyle.Bold), ForeColor = Color.FromArgb(80, 80, 80), Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft };
+            _txtBranchCode = new TextBox { Text = code ?? "", Dock = DockStyle.Fill, Margin = new Padding(0, 2, 0, 8) };
+            form.Controls.Add(lblCode, 0, 0);
+            form.Controls.Add(_txtBranchCode, 1, 0);
 
-            content.Controls.Add(staffPanel);
-            content.Controls.Add(infoPanel);
-            content.Controls.Add(title);
+            // Name
+            var lblName = new Label { Text = "Tên chi nhánh:", Font = new Font("Segoe UI", 9, FontStyle.Bold), ForeColor = Color.FromArgb(80, 80, 80), Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft };
+            _txtBranchName = new TextBox { Text = name ?? "", Dock = DockStyle.Fill, Margin = new Padding(0, 2, 0, 8) };
+            form.Controls.Add(lblName, 0, 1);
+            form.Controls.Add(_txtBranchName, 1, 1);
 
-            scroll.Controls.Add(content);
+            // Address
+            var lblAddress = new Label { Text = "Địa chỉ:", Font = new Font("Segoe UI", 9, FontStyle.Bold), ForeColor = Color.FromArgb(80, 80, 80), Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft };
+            _txtBranchAddress = new TextBox { Text = address ?? "", Dock = DockStyle.Fill, Margin = new Padding(0, 2, 0, 8) };
+            form.Controls.Add(lblAddress, 0, 2);
+            form.Controls.Add(_txtBranchAddress, 1, 2);
+
+            // Phone & Hotline
+            var lblPhone = new Label { Text = "Điện thoại:", Font = new Font("Segoe UI", 9, FontStyle.Bold), ForeColor = Color.FromArgb(80, 80, 80), Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft };
+            var phonePanel = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent };
+            _txtBranchPhone = new TextBox { Text = phone ?? "", Width = 150, Margin = new Padding(0, 2, 10, 0) };
+            var lblHotline = new Label { Text = "Hotline:", Font = new Font("Segoe UI", 9f), ForeColor = Color.FromArgb(100, 100, 100), AutoSize = true, Margin = new Padding(10, 2, 0, 0) };
+            _txtBranchHotline = new TextBox { Text = hotline ?? "", Width = 150, Margin = new Padding(0, 2, 0, 0) };
+            phonePanel.Controls.Add(_txtBranchHotline);
+            phonePanel.Controls.Add(lblHotline);
+            phonePanel.Controls.Add(_txtBranchPhone);
+            form.Controls.Add(lblPhone, 0, 3);
+            form.Controls.Add(phonePanel, 1, 3);
+
+            // Hours
+            var lblHours = new Label { Text = "Giờ hoạt động:", Font = new Font("Segoe UI", 9, FontStyle.Bold), ForeColor = Color.FromArgb(80, 80, 80), Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft };
+            _txtBranchHours = new TextBox { Text = hours ?? "", Dock = DockStyle.Fill, Margin = new Padding(0, 2, 0, 8) };
+            form.Controls.Add(lblHours, 0, 4);
+            form.Controls.Add(_txtBranchHours, 1, 4);
+
+            // Description
+            var lblDesc = new Label { Text = "Mô tả:", Font = new Font("Segoe UI", 9, FontStyle.Bold), ForeColor = Color.FromArgb(80, 80, 80), Dock = DockStyle.Fill, TextAlign = ContentAlignment.TopLeft };
+            _txtBranchDesc = new TextBox { Text = desc ?? "", Dock = DockStyle.Fill, Multiline = true, Height = 60, Margin = new Padding(0, 2, 0, 8) };
+            form.Controls.Add(lblDesc, 0, 5);
+            form.Controls.Add(_txtBranchDesc, 1, 5);
+
+            // Buttons
+            var btnPanel = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, WrapContents = false, FlowDirection = FlowDirection.LeftToRight, BackColor = Color.Transparent, Margin = new Padding(0, 8, 0, 0) };
+            var btnSave = new Button { Text = "💾 Lưu", Width = 100, Height = 34, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(40, 167, 69), ForeColor = Color.White, Cursor = Cursors.Hand, Margin = new Padding(0, 0, 10, 0) };
+            btnSave.FlatAppearance.BorderSize = 0;
+            btnSave.Click += async (s, e) => await SaveBranchAsync();
+            var btnCancel = new Button { Text = "❌ Hủy", Width = 100, Height = 34, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(108, 117, 125), ForeColor = Color.White, Cursor = Cursors.Hand };
+            btnCancel.FlatAppearance.BorderSize = 0;
+            btnCancel.Click += (s, e) => ReloadBranchInfo();
+            btnPanel.Controls.Add(btnSave);
+            btnPanel.Controls.Add(btnCancel);
+            form.Controls.Add(btnPanel, 0, 6);
+
+            card.Controls.Add(form);
+
+            scroll.Controls.Add(card);
+            scroll.Controls.Add(title);
             _overviewInfo.Controls.Add(scroll);
+        }
+
+        private async Task SaveBranchAsync()
+        {
+            try
+            {
+                await _branchBll.UpdateBranchAsync(
+                    _branchId,
+                    _txtBranchCode.Text.Trim(),
+                    _txtBranchName.Text.Trim(),
+                    _txtBranchAddress.Text.Trim(),
+                    _txtBranchPhone.Text.Trim(),
+                    _txtBranchHotline.Text.Trim(),
+                    _txtBranchHours.Text.Trim(),
+                    _txtBranchDesc.Text.Trim(),
+                    true
+                );
+                MessageBox.Show("Lưu thông tin chi nhánh thành công!", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                await LoadAllAsync();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi lưu chi nhánh: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void ReloadBranchInfo()
+        {
+            _ = LoadAllAsync();
         }
 
         private Panel BuildOverviewNotice()
