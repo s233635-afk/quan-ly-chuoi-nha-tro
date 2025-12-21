@@ -449,9 +449,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _navBar = BuildNavBar();
             // Removed: Navigation bar is now replaced by action bar
             // Controls.Add(_navBar);
+            Controls.Add(_header);
             Controls.Add(_actionBarPanel);
             Controls.Add(_tabs);
-            Controls.Add(_header);
         }
 
         private void BuildSectionsTab()
