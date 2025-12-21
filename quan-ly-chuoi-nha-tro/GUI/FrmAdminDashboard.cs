@@ -336,7 +336,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             pnlModuleHost.Visible = false;
         }
 
-        private void LoadModule(Form module, string headerTitle)
+        private void LoadModule(Form module, string headerTitle, bool showHeaderTitle = true)
         {
             HideOverview();
             lblPlaceholder.Visible = false;
@@ -353,6 +353,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             pnlModuleHost.Visible = true;
             pnlModuleHost.BringToFront();
 
+            // Luôn hiển thị tiêu đề của module
             lblWelcome.Text = headerTitle;
             module.Show();
         }
@@ -430,11 +431,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
             await ShowOverviewAsync();
         }
 
-        private void LoadModuleSafe(Func<Form> create, string headerTitle)
+        private void LoadModuleSafe(Func<Form> create, string headerTitle, bool showHeaderTitle = true)
         {
             try
             {
-                LoadModule(create(), headerTitle);
+                LoadModule(create(), headerTitle, showHeaderTitle);
             }
             catch (Exception ex)
             {
@@ -500,13 +501,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private void btnMaintenance_Click(object sender, EventArgs e)
         {
             SetActiveNav(btnNavMaintenance);
-            LoadModuleSafe(() => new FrmMaintenanceManager(), "Bảo trì");
+            LoadModuleSafe(() => new FrmMaintenanceManager(), "Bảo trì - sự cố");
         }
 
         private void btnAsset_Click(object sender, EventArgs e)
         {
             SetActiveNav(btnNavAsset);
-            LoadModuleSafe(() => new FrmAssetManager(), "Tài sản");
+            LoadModuleSafe(() => new FrmAssetManager(), "Quản lý Tài Sản");
         }
 
         private void btnReport_Click(object sender, EventArgs e)
