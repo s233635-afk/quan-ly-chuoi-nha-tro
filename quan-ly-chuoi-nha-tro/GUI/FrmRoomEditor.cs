@@ -155,7 +155,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             btnSave = new Button
             {
-                Text = "Lưu",
+                Text = "cập nhật",
                 Width = 110,
                 Height = 34,
                 Anchor = AnchorStyles.Right | AnchorStyles.Bottom
