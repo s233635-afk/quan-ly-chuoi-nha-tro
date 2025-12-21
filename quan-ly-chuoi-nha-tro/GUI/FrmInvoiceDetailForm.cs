@@ -143,7 +143,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Dock = DockStyle.Top,
                 AutoSize = true,
                 ColumnCount = 2,
-                RowCount = 4,
+                RowCount = 6,
                 Padding = new Padding(0)
             };
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
@@ -152,6 +152,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             AddRow(layout, "Tiền phòng:", FormatMoney(ReadDecimal(_invoiceRow, "RentalCost")));
             AddRow(layout, "Tiền dịch vụ:", FormatMoney(ReadDecimal(_invoiceRow, "UtilityCost")));
             AddRow(layout, "Chi phí khác:", FormatMoney(ReadDecimal(_invoiceRow, "OtherCost")));
+            AddRow(layout, "Thuế (%):", FormatPercent(ReadDecimal(_invoiceRow, "TaxRate")));
+            AddRow(layout, "Tiền thuế:", FormatMoney(ReadDecimal(_invoiceRow, "TaxAmount")));
             AddRow(layout, "Tổng tiền:", FormatMoney(ReadDecimal(_invoiceRow, "TotalAmount")), true);
 
             panel.Controls.Add(layout);
@@ -250,6 +252,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private string FormatMoney(decimal amount)
         {
             return amount.ToString("N0");
+        }
+
+        private string FormatPercent(decimal value)
+        {
+            return value.ToString("N2") + "%";
         }
 
         private string FormatDate(string dateStr)

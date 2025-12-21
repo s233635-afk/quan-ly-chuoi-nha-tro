@@ -178,11 +178,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private TextBox _txtSectionSearch;
         private ComboBox _cboSectionFilter;
         private Label _lblSectionsCount;
+        private bool? _branchIsActive;
 
         public FrmBranchOverview(int branchId)
         {
             _branchId = branchId;
             InitializeComponent();
+            AdminEvents.DataChanged += HandleAdminDataChanged;
+            FormClosing += (s, e) => AdminEvents.DataChanged -= HandleAdminDataChanged;
             Load += async (s, e) => await LoadAllAsync();
         }
 
@@ -1200,6 +1203,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
         }
 
+        private async void HandleAdminDataChanged()
+        {
+            if (IsDisposed || !IsHandleCreated) return;
+            try
+            {
+                await LoadAllAsync();
+            }
+            catch
+            {
+                // ignore refresh errors
+            }
+        }
+
         private void ApplyBranchInfo(DataTable dt)
         {
             string code = null, name = null, address = null, phone = null, hotline = null, hours = null, desc = null;
@@ -1224,12 +1240,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _lblTitle.Text = string.IsNullOrWhiteSpace(code) ? (name ?? "Chi nhánh") : $"{code} - {name}";
 
             var statusText = isActive.HasValue ? (isActive.Value ? "Hoạt động" : "Vô hiệu") : "—";
-            _lblSub.Text = $"BranchId: {_branchId} | Trạng thái: {statusText}";
+            _lblSub.Text = $"Mã: {NullDash(code)} | Địa chỉ: {NullDash(address)} | BranchId: {_branchId} | Trạng thái: {statusText}";
 
             // Render overview info panel
             RenderOverviewInfo(code, name, address, phone, hotline, hours, desc, statusText);
-
-            RenderOverviewInfo(code, name, address, phone, hotline, hours, desc, statusText);
+            _branchIsActive = isActive;
         }
 
         private void RenderOverviewInfo(string code, string name, string address, string phone, string hotline, string hours, string desc, string statusText)
@@ -1254,11 +1269,79 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Dock = DockStyle.Top
             };
 
+            // Quick info strip
+            var quickInfo = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 36,
+                BackColor = Color.FromArgb(249, 252, 255),
+                Padding = new Padding(14, 6, 14, 6),
+                Margin = new Padding(14, 0, 14, 12)
+            };
+
+            var quickLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 4,
+                RowCount = 1,
+                BackColor = Color.Transparent
+            };
+            quickLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            quickLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 40));
+            quickLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            quickLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 60));
+
+            var lblCodeTitle = new Label
+            {
+                Text = "Mã chi nhánh:",
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                ForeColor = Color.FromArgb(80, 80, 80),
+                AutoSize = true,
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Margin = new Padding(0, 0, 8, 0)
+            };
+            var lblCodeValue = new Label
+            {
+                Text = NullDash(code),
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                ForeColor = Color.FromArgb(60, 60, 60),
+                AutoSize = true,
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            var lblAddressTitle = new Label
+            {
+                Text = "Địa chỉ:",
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                ForeColor = Color.FromArgb(80, 80, 80),
+                AutoSize = true,
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Margin = new Padding(16, 0, 8, 0)
+            };
+            var lblAddressValue = new Label
+            {
+                Text = NullDash(address),
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                ForeColor = Color.FromArgb(60, 60, 60),
+                AutoSize = true,
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+
+            quickLayout.Controls.Add(lblCodeTitle, 0, 0);
+            quickLayout.Controls.Add(lblCodeValue, 1, 0);
+            quickLayout.Controls.Add(lblAddressTitle, 2, 0);
+            quickLayout.Controls.Add(lblAddressValue, 3, 0);
+            quickInfo.Controls.Add(quickLayout);
+
             // Card panel
             var card = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 400,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 BackColor = Color.White,
                 Padding = new Padding(14),
                 Margin = new Padding(14, 0, 14, 12)
@@ -1279,10 +1362,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Dock = DockStyle.Fill,
                 ColumnCount = 2,
                 RowCount = 7,
-                BackColor = Color.Transparent
+                BackColor = Color.Transparent,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink
             };
             form.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 30));
             form.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 70));
+            form.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            form.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            form.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            form.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            form.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            form.RowStyles.Add(new RowStyle(SizeType.Absolute, 90));
+            form.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
             // Code
             var lblCode = new Label { Text = "Mã chi nhánh:", Font = new Font("Segoe UI", 9, FontStyle.Bold), ForeColor = Color.FromArgb(80, 80, 80), Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft };
@@ -1304,13 +1396,35 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             // Phone & Hotline
             var lblPhone = new Label { Text = "Điện thoại:", Font = new Font("Segoe UI", 9, FontStyle.Bold), ForeColor = Color.FromArgb(80, 80, 80), Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft };
-            var phonePanel = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent };
-            _txtBranchPhone = new TextBox { Text = phone ?? "", Width = 150, Margin = new Padding(0, 2, 10, 0) };
-            var lblHotline = new Label { Text = "Hotline:", Font = new Font("Segoe UI", 9f), ForeColor = Color.FromArgb(100, 100, 100), AutoSize = true, Margin = new Padding(10, 2, 0, 0) };
-            _txtBranchHotline = new TextBox { Text = hotline ?? "", Width = 150, Margin = new Padding(0, 2, 0, 0) };
-            phonePanel.Controls.Add(_txtBranchHotline);
-            phonePanel.Controls.Add(lblHotline);
-            phonePanel.Controls.Add(_txtBranchPhone);
+            var phonePanel = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 4,
+                RowCount = 1,
+                BackColor = Color.Transparent,
+                AutoSize = true
+            };
+            phonePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+            phonePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 10));
+            phonePanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            phonePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+
+            _txtBranchPhone = new TextBox { Text = phone ?? "", Dock = DockStyle.Fill, Margin = new Padding(0, 2, 0, 0) };
+            var spacer = new Panel { Width = 10, Dock = DockStyle.Fill };
+            var lblHotline = new Label
+            {
+                Text = "Hotline:",
+                Font = new Font("Segoe UI", 9f),
+                ForeColor = Color.FromArgb(100, 100, 100),
+                AutoSize = true,
+                Anchor = AnchorStyles.Left,
+                Margin = new Padding(0, 4, 6, 0)
+            };
+            _txtBranchHotline = new TextBox { Text = hotline ?? "", Dock = DockStyle.Fill, Margin = new Padding(0, 2, 0, 0) };
+            phonePanel.Controls.Add(_txtBranchPhone, 0, 0);
+            phonePanel.Controls.Add(spacer, 1, 0);
+            phonePanel.Controls.Add(lblHotline, 2, 0);
+            phonePanel.Controls.Add(_txtBranchHotline, 3, 0);
             form.Controls.Add(lblPhone, 0, 3);
             form.Controls.Add(phonePanel, 1, 3);
 
@@ -1322,7 +1436,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             // Description
             var lblDesc = new Label { Text = "Mô tả:", Font = new Font("Segoe UI", 9, FontStyle.Bold), ForeColor = Color.FromArgb(80, 80, 80), Dock = DockStyle.Fill, TextAlign = ContentAlignment.TopLeft };
-            _txtBranchDesc = new TextBox { Text = desc ?? "", Dock = DockStyle.Fill, Multiline = true, Height = 60, Margin = new Padding(0, 2, 0, 8) };
+            _txtBranchDesc = new TextBox { Text = desc ?? "", Dock = DockStyle.Fill, Multiline = true, Height = 70, ScrollBars = ScrollBars.Vertical, Margin = new Padding(0, 2, 0, 8) };
             form.Controls.Add(lblDesc, 0, 5);
             form.Controls.Add(_txtBranchDesc, 1, 5);
 
@@ -1340,9 +1454,65 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             card.Controls.Add(form);
 
+            scroll.Controls.Add(BuildStaffOverviewPanel());
             scroll.Controls.Add(card);
+            scroll.Controls.Add(quickInfo);
             scroll.Controls.Add(title);
             _overviewInfo.Controls.Add(scroll);
+            _overviewInfo.AutoScrollPosition = new Point(0, 0);
+            scroll.AutoScrollPosition = new Point(0, 0);
+        }
+
+        private Panel BuildStaffOverviewPanel()
+        {
+            var panel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 300,
+                BackColor = Color.White,
+                Padding = new Padding(14),
+                Margin = new Padding(14, 0, 14, 12)
+            };
+
+            panel.Paint += (s, e) =>
+            {
+                using (var pen = new Pen(Color.FromArgb(200, 220, 240), 1.5f))
+                {
+                    var rect = new Rectangle(0, 0, panel.Width - 1, panel.Height - 1);
+                    e.Graphics.DrawRectangle(pen, rect);
+                }
+            };
+
+            var header = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 34,
+                BackColor = Color.Transparent
+            };
+
+            var title = new Label
+            {
+                AutoSize = true,
+                Text = "Thông tin nhân viên",
+                Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 79, 159),
+                Dock = DockStyle.Left
+            };
+
+            _btnStaffEdit.Dock = DockStyle.Right;
+            _btnStaffEdit.Height = 30;
+
+            header.Controls.Add(_btnStaffEdit);
+            header.Controls.Add(title);
+
+            _gridStaffOverview.Dock = DockStyle.Fill;
+            _gridStaffOverview.ReadOnly = true;
+            _gridStaffOverview.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+
+            panel.Controls.Add(_gridStaffOverview);
+            panel.Controls.Add(header);
+
+            return panel;
         }
 
         private async Task SaveBranchAsync()
@@ -1358,7 +1528,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     _txtBranchHotline.Text.Trim(),
                     _txtBranchHours.Text.Trim(),
                     _txtBranchDesc.Text.Trim(),
-                    true
+                    _branchIsActive ?? true
                 );
                 MessageBox.Show("Lưu thông tin chi nhánh thành công!", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 await LoadAllAsync();

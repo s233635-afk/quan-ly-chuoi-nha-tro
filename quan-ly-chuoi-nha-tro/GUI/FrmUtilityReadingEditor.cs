@@ -28,12 +28,18 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private NumericUpDown numTotal;
         private TextBox txtNotes;
 
-        private PictureBox picMeter;
-        private Label lblImageHint;
-        private Button btnSelectImage;
-        private Button btnClearImage;
-        private string _selectedImagePath;
-        private bool _removeImageRequested;
+        private PictureBox picMeterElectric;
+        private PictureBox picMeterWater;
+        private Label lblImageHintElectric;
+        private Label lblImageHintWater;
+        private Button btnSelectImageElectric;
+        private Button btnSelectImageWater;
+        private Button btnClearImageElectric;
+        private Button btnClearImageWater;
+        private string _selectedElectricImagePath;
+        private string _selectedWaterImagePath;
+        private bool _removeElectricImageRequested;
+        private bool _removeWaterImageRequested;
 
         private Label lblCalcHint;
 
@@ -163,27 +169,27 @@ namespace quan_ly_chuoi_nha_tro.GUI
             pnlBody.Controls.Add(MakeInput(txtNotes, top));
             top += 110;
 
-            pnlBody.Controls.Add(MakeLabel("Ảnh đồng hồ (theo tháng)", top));
-            picMeter = new PictureBox
+            pnlBody.Controls.Add(MakeLabel("Ảnh đồng hồ điện (theo tháng)", top));
+            picMeterElectric = new PictureBox
             {
                 BorderStyle = BorderStyle.FixedSingle,
                 SizeMode = PictureBoxSizeMode.Zoom,
                 Width = 200,
                 Height = 140
             };
-            picMeter.Location = new Point(left + labelWidth, top);
-            pnlBody.Controls.Add(picMeter);
+            picMeterElectric.Location = new Point(left + labelWidth, top);
+            pnlBody.Controls.Add(picMeterElectric);
 
-            lblImageHint = new Label
+            lblImageHintElectric = new Label
             {
                 AutoSize = true,
                 ForeColor = Color.DimGray,
-                Text = "Chọn ảnh đồng hồ để lưu theo tháng.",
+                Text = "Chọn ảnh đồng hồ điện để lưu theo tháng.",
                 Location = new Point(left + labelWidth + 210, top + 4)
             };
-            pnlBody.Controls.Add(lblImageHint);
+            pnlBody.Controls.Add(lblImageHintElectric);
 
-            btnSelectImage = new Button
+            btnSelectImageElectric = new Button
             {
                 Text = "Chọn ảnh",
                 Width = 110,
@@ -193,11 +199,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 ForeColor = Color.White,
                 Location = new Point(left + labelWidth + 210, top + 34)
             };
-            btnSelectImage.FlatAppearance.BorderSize = 0;
-            btnSelectImage.Click += (s, e) => SelectImage();
-            pnlBody.Controls.Add(btnSelectImage);
+            btnSelectImageElectric.FlatAppearance.BorderSize = 0;
+            btnSelectImageElectric.Click += (s, e) => SelectImage(isElectric: true);
+            pnlBody.Controls.Add(btnSelectImageElectric);
 
-            btnClearImage = new Button
+            btnClearImageElectric = new Button
             {
                 Text = "Xóa ảnh",
                 Width = 110,
@@ -207,9 +213,58 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 ForeColor = Color.Black,
                 Location = new Point(left + labelWidth + 210, top + 74)
             };
-            btnClearImage.FlatAppearance.BorderSize = 0;
-            btnClearImage.Click += (s, e) => ClearSelectedImage();
-            pnlBody.Controls.Add(btnClearImage);
+            btnClearImageElectric.FlatAppearance.BorderSize = 0;
+            btnClearImageElectric.Click += (s, e) => ClearSelectedImage(isElectric: true);
+            pnlBody.Controls.Add(btnClearImageElectric);
+            top += 160;
+
+            pnlBody.Controls.Add(MakeLabel("Ảnh đồng hồ nước (theo tháng)", top));
+            picMeterWater = new PictureBox
+            {
+                BorderStyle = BorderStyle.FixedSingle,
+                SizeMode = PictureBoxSizeMode.Zoom,
+                Width = 200,
+                Height = 140
+            };
+            picMeterWater.Location = new Point(left + labelWidth, top);
+            pnlBody.Controls.Add(picMeterWater);
+
+            lblImageHintWater = new Label
+            {
+                AutoSize = true,
+                ForeColor = Color.DimGray,
+                Text = "Chọn ảnh đồng hồ nước để lưu theo tháng.",
+                Location = new Point(left + labelWidth + 210, top + 4)
+            };
+            pnlBody.Controls.Add(lblImageHintWater);
+
+            btnSelectImageWater = new Button
+            {
+                Text = "Chọn ảnh",
+                Width = 110,
+                Height = 32,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(0, 122, 204),
+                ForeColor = Color.White,
+                Location = new Point(left + labelWidth + 210, top + 34)
+            };
+            btnSelectImageWater.FlatAppearance.BorderSize = 0;
+            btnSelectImageWater.Click += (s, e) => SelectImage(isElectric: false);
+            pnlBody.Controls.Add(btnSelectImageWater);
+
+            btnClearImageWater = new Button
+            {
+                Text = "Xóa ảnh",
+                Width = 110,
+                Height = 32,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(200, 200, 200),
+                ForeColor = Color.Black,
+                Location = new Point(left + labelWidth + 210, top + 74)
+            };
+            btnClearImageWater.FlatAppearance.BorderSize = 0;
+            btnClearImageWater.Click += (s, e) => ClearSelectedImage(isElectric: false);
+            pnlBody.Controls.Add(btnClearImageWater);
 
             btnCancel = new Button
             {
@@ -496,7 +551,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                         txtNotes.Text.Trim());
                 }
 
-                SaveImageForDate(roomId, typeId, readingDate);
+                SaveImagesForDate(roomId, readingDate);
                 DialogResult = DialogResult.OK;
             }
             catch (Exception ex)
@@ -521,68 +576,107 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private void LoadImageForDate()
         {
             int roomId = GetSelectedId(cboRoom);
-            int typeId = GetSelectedId(cboType);
             DateTime? date = dtReadingDate.Checked ? (DateTime?)dtReadingDate.Value.Date : null;
-            if (roomId <= 0 || typeId <= 0 || !date.HasValue)
+            if (roomId <= 0 || !date.HasValue)
             {
-                SetMeterPreview(null);
+                SetMeterPreview(picMeterElectric, null);
+                SetMeterPreview(picMeterWater, null);
                 return;
             }
 
-            string existing = FindImagePath(roomId, typeId, date.Value);
-            _selectedImagePath = existing;
-            _removeImageRequested = false;
-            SetMeterPreview(existing);
+            string existingElectric = FindImagePathByKind(roomId, "elec", date.Value);
+            string existingWater = FindImagePathByKind(roomId, "water", date.Value);
+
+            if (string.IsNullOrWhiteSpace(existingElectric))
+            {
+                string legacy = FindLegacyImagePath(roomId, date.Value, isElectric: true);
+                if (!string.IsNullOrWhiteSpace(legacy)) existingElectric = legacy;
+            }
+            if (string.IsNullOrWhiteSpace(existingWater))
+            {
+                string legacy = FindLegacyImagePath(roomId, date.Value, isElectric: false);
+                if (!string.IsNullOrWhiteSpace(legacy)) existingWater = legacy;
+            }
+
+            _selectedElectricImagePath = existingElectric;
+            _selectedWaterImagePath = existingWater;
+            _removeElectricImageRequested = false;
+            _removeWaterImageRequested = false;
+            SetMeterPreview(picMeterElectric, existingElectric);
+            SetMeterPreview(picMeterWater, existingWater);
         }
 
-        private void SelectImage()
+        private void SelectImage(bool isElectric)
         {
             using (var ofd = new OpenFileDialog
             {
                 Filter = "Image Files|*.jpg;*.jpeg;*.png;*.bmp",
-                Title = "Chọn ảnh đồng hồ"
+                Title = isElectric ? "Chọn ảnh đồng hồ điện" : "Chọn ảnh đồng hồ nước"
             })
             {
                 if (ofd.ShowDialog(this) != DialogResult.OK) return;
-                _selectedImagePath = ofd.FileName;
-                _removeImageRequested = false;
-                SetMeterPreview(_selectedImagePath);
+                if (isElectric)
+                {
+                    _selectedElectricImagePath = ofd.FileName;
+                    _removeElectricImageRequested = false;
+                    SetMeterPreview(picMeterElectric, _selectedElectricImagePath);
+                }
+                else
+                {
+                    _selectedWaterImagePath = ofd.FileName;
+                    _removeWaterImageRequested = false;
+                    SetMeterPreview(picMeterWater, _selectedWaterImagePath);
+                }
             }
         }
 
-        private void ClearSelectedImage()
+        private void ClearSelectedImage(bool isElectric)
         {
-            _selectedImagePath = null;
-            _removeImageRequested = true;
-            SetMeterPreview(null);
+            if (isElectric)
+            {
+                _selectedElectricImagePath = null;
+                _removeElectricImageRequested = true;
+                SetMeterPreview(picMeterElectric, null);
+            }
+            else
+            {
+                _selectedWaterImagePath = null;
+                _removeWaterImageRequested = true;
+                SetMeterPreview(picMeterWater, null);
+            }
         }
 
-        private void SaveImageForDate(int roomId, int typeId, DateTime? readingDate)
+        private void SaveImagesForDate(int roomId, DateTime? readingDate)
         {
-            if (roomId <= 0 || typeId <= 0 || !readingDate.HasValue) return;
-            string folder = GetImageFolder();
-            string key = BuildImageKey(roomId, typeId, readingDate.Value);
-            string existing = FindImagePath(roomId, typeId, readingDate.Value);
+            if (roomId <= 0 || !readingDate.HasValue) return;
+            SaveImageByKind(roomId, readingDate.Value, "elec", ref _selectedElectricImagePath, ref _removeElectricImageRequested);
+            SaveImageByKind(roomId, readingDate.Value, "water", ref _selectedWaterImagePath, ref _removeWaterImageRequested);
+        }
 
-            if (_removeImageRequested && !string.IsNullOrWhiteSpace(existing) && File.Exists(existing))
+        private void SaveImageByKind(int roomId, DateTime readingDate, string kind, ref string selectedPath, ref bool removeRequested)
+        {
+            string existing = FindImagePathByKind(roomId, kind, readingDate);
+            if (removeRequested && !string.IsNullOrWhiteSpace(existing) && File.Exists(existing))
             {
                 try { File.Delete(existing); } catch { }
-                _removeImageRequested = false;
+                removeRequested = false;
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(_selectedImagePath) || !File.Exists(_selectedImagePath))
+            if (string.IsNullOrWhiteSpace(selectedPath) || !File.Exists(selectedPath))
                 return;
 
-            string ext = Path.GetExtension(_selectedImagePath);
+            string folder = GetImageFolder();
+            string key = BuildImageKey(roomId, kind, readingDate);
+            string ext = Path.GetExtension(selectedPath);
             if (string.IsNullOrWhiteSpace(ext)) ext = ".jpg";
             string dest = Path.Combine(folder, key + ext);
 
             try
             {
-                if (string.Equals(_selectedImagePath, dest, System.StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(selectedPath, dest, System.StringComparison.OrdinalIgnoreCase))
                     return;
-                File.Copy(_selectedImagePath, dest, true);
+                File.Copy(selectedPath, dest, true);
             }
             catch
             {
@@ -590,31 +684,31 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
         }
 
-        private void SetMeterPreview(string path)
+        private void SetMeterPreview(PictureBox target, string path)
         {
-            if (picMeter == null) return;
+            if (target == null) return;
             try
             {
-                if (picMeter.Image != null)
+                if (target.Image != null)
                 {
-                    var old = picMeter.Image;
-                    picMeter.Image = null;
+                    var old = target.Image;
+                    target.Image = null;
                     old.Dispose();
                 }
                 if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
                 {
-                    picMeter.Image = null;
+                    target.Image = null;
                     return;
                 }
 
                 using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                 {
-                    picMeter.Image = Image.FromStream(fs);
+                    target.Image = Image.FromStream(fs);
                 }
             }
             catch
             {
-                picMeter.Image = null;
+                target.Image = null;
             }
         }
 
@@ -625,17 +719,64 @@ namespace quan_ly_chuoi_nha_tro.GUI
             return root;
         }
 
-        private static string BuildImageKey(int roomId, int typeId, DateTime date)
+        private static string BuildImageKey(int roomId, string kind, DateTime date)
+        {
+            return $"{roomId}_{kind}_{date:yyyyMM}";
+        }
+
+        private static string FindImagePathByKind(int roomId, string kind, DateTime date)
+        {
+            string folder = GetImageFolder();
+            string key = BuildImageKey(roomId, kind, date);
+            var files = Directory.GetFiles(folder, key + ".*");
+            return files.Length > 0 ? files[0] : null;
+        }
+
+        private static string BuildLegacyImageKey(int roomId, int typeId, DateTime date)
         {
             return $"{roomId}_{typeId}_{date:yyyyMM}";
         }
 
-        private static string FindImagePath(int roomId, int typeId, DateTime date)
+        private static string FindLegacyImagePath(int roomId, int typeId, DateTime date)
         {
             string folder = GetImageFolder();
-            string key = BuildImageKey(roomId, typeId, date);
+            string key = BuildLegacyImageKey(roomId, typeId, date);
             var files = Directory.GetFiles(folder, key + ".*");
             return files.Length > 0 ? files[0] : null;
+        }
+
+        private string FindLegacyImagePath(int roomId, DateTime date, bool isElectric)
+        {
+            int typeId = FindUtilityTypeId(isElectric);
+            if (typeId <= 0) return null;
+            return FindLegacyImagePath(roomId, typeId, date);
+        }
+
+        private int FindUtilityTypeId(bool isElectric)
+        {
+            if (_typeTable == null) return 0;
+            foreach (DataRow r in _typeTable.Rows)
+            {
+                string name = r.Table.Columns.Contains("UtilityName") ? r["UtilityName"]?.ToString() : null;
+                string code = r.Table.Columns.Contains("UtilityCode") ? r["UtilityCode"]?.ToString() : null;
+                if (isElectric && IsElectric(code, name)) return ReadInt(r, "UtilityTypeId");
+                if (!isElectric && IsWater(code, name)) return ReadInt(r, "UtilityTypeId");
+            }
+            return 0;
+        }
+
+        private static bool IsElectric(string code, string name)
+        {
+            string codeUpper = (code ?? string.Empty).ToUpperInvariant();
+            string nameLower = (name ?? string.Empty).ToLowerInvariant();
+            return codeUpper.Contains("ELEC") || nameLower.Contains("dien") || nameLower.Contains("điện");
+        }
+
+        private static bool IsWater(string code, string name)
+        {
+            string codeUpper = (code ?? string.Empty).ToUpperInvariant();
+            string nameLower = (name ?? string.Empty).ToLowerInvariant();
+            return codeUpper.Contains("WATER") || nameLower.Contains("nuoc") || nameLower.Contains("nước");
         }
 
         private static NumericUpDown MakeNumber(bool readOnly = false)

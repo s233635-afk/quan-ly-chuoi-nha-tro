@@ -198,6 +198,7 @@
     <Compile Include="DAL\BranchDAL.cs" />
     <Compile Include="DAL\AdminDataDAL.cs" />
     <Compile Include="DAL\InvoicePaymentDAL.cs" />
+    <Compile Include="DAL\StaffDAL.cs" />
     <Compile Include="GUI\Admin.cs">
       <SubType>Form</SubType>
     </Compile>

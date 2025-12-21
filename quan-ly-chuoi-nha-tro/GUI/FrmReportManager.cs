@@ -24,12 +24,23 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Button _btnExport;
         private Button _btnRefresh;
 
+        private Panel _pnlTaxFilters;
+        private ComboBox _cboTaxPeriodType;
+        private NumericUpDown _numTaxYear;
+        private NumericUpDown _numTaxPeriod;
+        private NumericUpDown _numTaxRate;
+        private Button _btnTaxRecalc;
+        private Button _btnTaxSaveRate;
+        private Button _btnTaxOpenInvoices;
+
         private DataTable _raw;
 
         public FrmReportManager(AdminDataBLL bll)
         {
             _bll = bll ?? throw new ArgumentNullException(nameof(bll));
             InitializeComponent();
+            AdminEvents.DataChanged += HandleAdminDataChanged;
+            FormClosing += (s, e) => AdminEvents.DataChanged -= HandleAdminDataChanged;
         }
 
         private void InitializeComponent()
@@ -72,6 +83,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 "Hóa Đơn",
                 "Thanh Toán",
+                "Thuế Doanh Thu",
                 "Khách Thuê",
                 "Phòng",
                 "Hợp Đồng",
@@ -192,6 +204,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
             pnlToolbar.Controls.Add(pnlFilters);
             pnlToolbar.Controls.Add(pnlActions);
 
+            // ===== TAX FILTER PANEL (only for revenue tax report) =====
+            _pnlTaxFilters = BuildTaxFilterPanel();
+            _pnlTaxFilters.Dock = DockStyle.Top;
+            _pnlTaxFilters.Visible = false;
+
             // ===== GRID HOST =====
             var gridHost = new Panel 
             { 
@@ -224,6 +241,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             Controls.Add(gridHost);
             Controls.Add(pnlFooter);
+            Controls.Add(_pnlTaxFilters);
             Controls.Add(pnlToolbar);
             Controls.Add(pnlHeader);
 
@@ -238,6 +256,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 await EnsureAllowedBranchScopeAsync();
                 if (_raw != null && _raw.Columns.Contains("BranchId"))
                     _raw = AdminBranchScope.FilterByBranchIds(_raw, _allowedBranchIds);
+                ApplyTaxReportDefaults();
                 _grid.DataSource = _raw;
                 TranslateGridHeaders(_grid);
                 _lblCount.Text = $"Tổng: {_raw?.Rows.Count ?? 0}";
@@ -247,6 +266,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
             catch (Exception ex)
             {
                 MessageBox.Show("Lỗi tải báo cáo: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private async void HandleAdminDataChanged()
+        {
+            if (IsDisposed || !IsHandleCreated) return;
+            try
+            {
+                await LoadDataAsync();
+            }
+            catch
+            {
+                // ignore refresh errors
             }
         }
 
@@ -264,6 +296,28 @@ namespace quan_ly_chuoi_nha_tro.GUI
             // Generate summary based on report type
             switch (selected)
             {
+                case "Thuế Doanh Thu":
+                    if (_raw.Columns.Contains("Revenue"))
+                    {
+                        decimal totalRevenue = 0;
+                        foreach (DataRow row in _raw.Rows)
+                        {
+                            if (decimal.TryParse(row["Revenue"]?.ToString(), out decimal amt))
+                                totalRevenue += amt;
+                        }
+                        summaryParts.Add($"💰 Doanh Thu: {totalRevenue:N0}đ");
+                    }
+                    if (_raw.Columns.Contains("TaxAmount"))
+                    {
+                        decimal totalTax = 0;
+                        foreach (DataRow row in _raw.Rows)
+                        {
+                            if (decimal.TryParse(row["TaxAmount"]?.ToString(), out decimal amt))
+                                totalTax += amt;
+                        }
+                        summaryParts.Add($"🧾 Thuế: {totalTax:N0}đ");
+                    }
+                    break;
                 case "Hóa Đơn":
                     if (_raw.Columns.Contains("TotalAmount"))
                     {
@@ -274,6 +328,16 @@ namespace quan_ly_chuoi_nha_tro.GUI
                                 total += amt;
                         }
                         summaryParts.Add($"💰 Tổng Tiền: {total:N0}đ");
+                    }
+                    if (_raw.Columns.Contains("TaxAmount"))
+                    {
+                        decimal taxTotal = 0;
+                        foreach (DataRow row in _raw.Rows)
+                        {
+                            if (decimal.TryParse(row["TaxAmount"]?.ToString(), out decimal amt))
+                                taxTotal += amt;
+                        }
+                        summaryParts.Add($"🧾 Thuế: {taxTotal:N0}đ");
                     }
                     if (_raw.Columns.Contains("PaidAmount"))
                     {
@@ -368,6 +432,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 { "RentalCost", "Thuê" },
                 { "UtilityCost", "Tiện Ích" },
                 { "OtherCost", "Khác" },
+                { "TaxRate", "Thuế %" },
+                { "TaxAmount", "Thuế" },
                 { "TotalAmount", "Tổng" },
                 { "PaidAmount", "Đã TT" },
                 { "RemainingAmount", "Còn Nợ" },
@@ -451,7 +517,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 // System Settings columns
                 { "SettingKey", "Khóa" },
                 { "SettingValue", "Giá Trị" },
-                { "SettingDescription", "Mô Tả" }
+                { "SettingDescription", "Mô Tả" },
+
+                // Revenue tax report columns
+                { "PeriodLabel", "Kỳ" },
+                { "Revenue", "Doanh Thu" },
+                { "Year", "Năm" },
+                { "Period", "Tháng/Quý" }
             };
 
             foreach (DataGridViewColumn col in grid.Columns)
@@ -464,7 +536,21 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 {
                     col.HeaderText = translatedName2;
                 }
+
+                if (string.Equals(col.Name, "TaxRate", StringComparison.OrdinalIgnoreCase))
+                {
+                    col.DefaultCellStyle.Format = "N2";
+                    col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+                }
+                else if (string.Equals(col.Name, "TaxAmount", StringComparison.OrdinalIgnoreCase)
+                         || string.Equals(col.Name, "Revenue", StringComparison.OrdinalIgnoreCase))
+                {
+                    col.DefaultCellStyle.Format = "N0";
+                    col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+                }
             }
+
+            ApplyTaxGridPresentation(grid);
 
             // Auto-size columns with optimal width
             foreach (DataGridViewColumn col in grid.Columns)
@@ -475,6 +561,27 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 if (col.Width > 250)
                     col.Width = 250;
             }
+        }
+
+        private void ApplyTaxGridPresentation(DataGridView grid)
+        {
+            if (grid == null) return;
+            if ((_cboSource.SelectedItem?.ToString() ?? string.Empty) != "Thuế Doanh Thu")
+                return;
+
+            if (grid.Columns.Contains("Year")) grid.Columns["Year"].Visible = false;
+            if (grid.Columns.Contains("Period")) grid.Columns["Period"].Visible = false;
+
+            int displayIndex = 0;
+            if (grid.Columns.Contains("PeriodLabel")) grid.Columns["PeriodLabel"].DisplayIndex = displayIndex++;
+            if (grid.Columns.Contains("Revenue")) grid.Columns["Revenue"].DisplayIndex = displayIndex++;
+            if (grid.Columns.Contains("TaxRate")) grid.Columns["TaxRate"].DisplayIndex = displayIndex++;
+            if (grid.Columns.Contains("TaxAmount")) grid.Columns["TaxAmount"].DisplayIndex = displayIndex++;
+
+            if (grid.Columns.Contains("PeriodLabel")) grid.Columns["PeriodLabel"].Width = 90;
+            if (grid.Columns.Contains("Revenue")) grid.Columns["Revenue"].Width = 140;
+            if (grid.Columns.Contains("TaxRate")) grid.Columns["TaxRate"].Width = 90;
+            if (grid.Columns.Contains("TaxAmount")) grid.Columns["TaxAmount"].Width = 120;
         }
 
         private async System.Threading.Tasks.Task EnsureAllowedBranchScopeAsync()
@@ -501,6 +608,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     return _bll.GetInvoicesViewAsync();
                 case "Thanh Toán":
                     return _bll.GetPaymentsViewAsync();
+                case "Thuế Doanh Thu":
+                    return LoadRevenueTaxAsync();
                 case "Khách Thuê":
                     return _bll.GetTenantsAsync();
                 case "Phòng":
@@ -520,6 +629,22 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 default:
                     return _bll.GetInvoicesViewAsync();
             }
+        }
+
+        private async System.Threading.Tasks.Task<DataTable> LoadRevenueTaxAsync()
+        {
+            _pnlTaxFilters.Visible = true;
+            await EnsureDefaultTaxRateAsync();
+
+            string periodType = _cboTaxPeriodType.SelectedItem?.ToString() ?? "Tháng";
+            int year = (int)_numTaxYear.Value;
+            int? period = null;
+            if (periodType == "Tháng" || periodType == "Quý")
+                period = (int)_numTaxPeriod.Value;
+
+            var table = await _bll.GetRevenueByPeriodAsync(periodType, year, period);
+            ApplyTaxColumns(table, _numTaxRate.Value);
+            return table;
         }
 
         private void ApplyFilter()
@@ -596,6 +721,216 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     MessageBox.Show("Lỗi xuất CSV: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
+        }
+
+        private Panel BuildTaxFilterPanel()
+        {
+            var panel = new Panel
+            {
+                Height = 54,
+                BackColor = Color.White,
+                Padding = new Padding(15, 10, 15, 10),
+                BorderStyle = BorderStyle.FixedSingle
+            };
+
+            _cboTaxPeriodType = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Width = 120
+            };
+            _cboTaxPeriodType.Items.AddRange(new object[] { "Tháng", "Quý", "Năm" });
+            _cboTaxPeriodType.SelectedIndex = 0;
+            _cboTaxPeriodType.SelectedIndexChanged += (s, e) => UpdateTaxPeriodPicker();
+
+            _numTaxYear = new NumericUpDown
+            {
+                Minimum = 2000,
+                Maximum = 2100,
+                Width = 90,
+                Value = DateTime.Today.Year
+            };
+
+            _numTaxPeriod = new NumericUpDown
+            {
+                Minimum = 1,
+                Maximum = 12,
+                Width = 70,
+                Value = DateTime.Today.Month
+            };
+
+            _numTaxRate = new NumericUpDown
+            {
+                Minimum = 0,
+                Maximum = 100,
+                DecimalPlaces = 2,
+                Increment = 0.1m,
+                Width = 90
+            };
+            _numTaxRate.ValueChanged += (s, e) => RecalculateTaxReport();
+
+            _btnTaxRecalc = UiKit.MakeButton("Tính lại", UiKit.Primary, async (s, e) => await ReloadTaxReportAsync(), 100);
+            _btnTaxSaveRate = UiKit.MakeButton("Lưu % thuế", UiKit.Success, async (s, e) => await SaveDefaultTaxRateAsync(), 120);
+            _btnTaxOpenInvoices = UiKit.MakeButton("Sửa hóa đơn", UiKit.Warning, (s, e) => OpenInvoiceManager(), 120);
+
+            var flow = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                AutoSize = true,
+                WrapContents = false,
+                FlowDirection = FlowDirection.LeftToRight,
+                BackColor = Color.Transparent
+            };
+
+            flow.Controls.Add(new Label { Text = "Kỳ:", AutoSize = true, Margin = new Padding(0, 6, 6, 0) });
+            flow.Controls.Add(_cboTaxPeriodType);
+            flow.Controls.Add(new Label { Text = "Năm:", AutoSize = true, Margin = new Padding(10, 6, 6, 0) });
+            flow.Controls.Add(_numTaxYear);
+            flow.Controls.Add(new Label { Text = "Tháng/Quý:", AutoSize = true, Margin = new Padding(10, 6, 6, 0) });
+            flow.Controls.Add(_numTaxPeriod);
+            flow.Controls.Add(new Label { Text = "Thuế %:", AutoSize = true, Margin = new Padding(10, 6, 6, 0) });
+            flow.Controls.Add(_numTaxRate);
+            flow.Controls.Add(_btnTaxRecalc);
+            flow.Controls.Add(_btnTaxSaveRate);
+            flow.Controls.Add(_btnTaxOpenInvoices);
+
+            panel.Controls.Add(flow);
+            return panel;
+        }
+
+        private void UpdateTaxPeriodPicker()
+        {
+            string periodType = _cboTaxPeriodType.SelectedItem?.ToString() ?? "Tháng";
+            if (periodType == "Năm")
+            {
+                _numTaxPeriod.Enabled = false;
+            }
+            else
+            {
+                _numTaxPeriod.Enabled = true;
+                _numTaxPeriod.Maximum = periodType == "Quý" ? 4 : 12;
+            }
+
+            _ = ReloadTaxReportAsync();
+        }
+
+        private async System.Threading.Tasks.Task ReloadTaxReportAsync()
+        {
+            if ((_cboSource.SelectedItem?.ToString() ?? string.Empty) != "Thuế Doanh Thu")
+                return;
+
+            _raw = await LoadRevenueTaxAsync();
+            _grid.DataSource = _raw;
+            TranslateGridHeaders(_grid);
+            _lblCount.Text = $"Tổng: {_raw?.Rows.Count ?? 0}";
+            UpdateFooterSummary();
+            ApplyFilter();
+        }
+
+        private void ApplyTaxReportDefaults()
+        {
+            bool isTaxReport = (_cboSource.SelectedItem?.ToString() ?? string.Empty) == "Thuế Doanh Thu";
+            _pnlTaxFilters.Visible = isTaxReport;
+            if (!isTaxReport)
+                return;
+
+            UpdateTaxPeriodPicker();
+        }
+
+        private void ApplyTaxColumns(DataTable table, decimal taxRate)
+        {
+            if (table == null) return;
+            if (!table.Columns.Contains("TaxRate"))
+                table.Columns.Add("TaxRate", typeof(decimal));
+            if (!table.Columns.Contains("TaxAmount"))
+                table.Columns.Add("TaxAmount", typeof(decimal));
+            if (!table.Columns.Contains("PeriodLabel"))
+                table.Columns.Add("PeriodLabel", typeof(string));
+
+            foreach (DataRow row in table.Rows)
+            {
+                decimal revenue = 0m;
+                if (decimal.TryParse(row["Revenue"]?.ToString(), out var rev))
+                    revenue = rev;
+
+                row["TaxRate"] = taxRate;
+                row["TaxAmount"] = Math.Round(revenue * taxRate / 100m, 2, MidpointRounding.AwayFromZero);
+
+                int year = ReadInt(row, "Year");
+                int period = ReadInt(row, "Period");
+                row["PeriodLabel"] = BuildPeriodLabel(_cboTaxPeriodType.SelectedItem?.ToString(), year, period);
+            }
+        }
+
+        private void RecalculateTaxReport()
+        {
+            if ((_cboSource.SelectedItem?.ToString() ?? string.Empty) != "Thuế Doanh Thu")
+                return;
+            ApplyTaxColumns(_raw, _numTaxRate.Value);
+            _grid.Refresh();
+            UpdateFooterSummary();
+        }
+
+        private async System.Threading.Tasks.Task EnsureDefaultTaxRateAsync()
+        {
+            if (_numTaxRate.Value > 0) return;
+            try
+            {
+                var settings = await _bll.GetSystemSettingsAsync();
+                if (settings == null || !settings.Columns.Contains("SettingKey")) return;
+                var row = settings.AsEnumerable()
+                    .FirstOrDefault(r => string.Equals(r["SettingKey"]?.ToString(), "DefaultTaxRatePercent", StringComparison.OrdinalIgnoreCase));
+                if (row == null) return;
+                if (!decimal.TryParse(row["SettingValue"]?.ToString(), out var rate)) return;
+                _numTaxRate.Value = Math.Max(_numTaxRate.Minimum, Math.Min(_numTaxRate.Maximum, rate));
+            }
+            catch
+            {
+                // ignore
+            }
+        }
+
+        private async System.Threading.Tasks.Task SaveDefaultTaxRateAsync()
+        {
+            try
+            {
+                var settings = await _bll.GetSystemSettingsAsync();
+                var rateText = _numTaxRate.Value.ToString();
+                bool exists = settings != null && settings.AsEnumerable()
+                    .Any(r => string.Equals(r["SettingKey"]?.ToString(), "DefaultTaxRatePercent", StringComparison.OrdinalIgnoreCase));
+                if (exists)
+                    await _bll.UpdateSystemSettingAsync("DefaultTaxRatePercent", rateText, "Mức thuế (%) áp dụng theo doanh thu hóa đơn");
+                else
+                    await _bll.AddSystemSettingAsync("DefaultTaxRatePercent", rateText, "Mức thuế (%) áp dụng theo doanh thu hóa đơn");
+
+                MessageBox.Show("Đã lưu mức thuế.", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi lưu mức thuế: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void OpenInvoiceManager()
+        {
+            using (var frm = new FrmInvoiceManager())
+                frm.ShowDialog(this);
+        }
+
+        private static string BuildPeriodLabel(string periodType, int year, int period)
+        {
+            if (string.Equals(periodType, "Quý", StringComparison.OrdinalIgnoreCase))
+                return $"Q{Math.Max(1, period)}/{year}";
+            if (string.Equals(periodType, "Năm", StringComparison.OrdinalIgnoreCase))
+                return year.ToString();
+            return $"{period:00}/{year}";
+        }
+
+        private static int ReadInt(DataRow row, string col)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(col)) return 0;
+            var v = row[col];
+            if (v == null || v == DBNull.Value) return 0;
+            return int.TryParse(v.ToString(), out var parsed) ? parsed : 0;
         }
 
         private static string EscapeCsv(string value)

@@ -42,6 +42,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
         public FrmBranchCards()
         {
             InitializeComponent();
+            AdminEvents.DataChanged += HandleAdminDataChanged;
+            FormClosing += (s, e) => AdminEvents.DataChanged -= HandleAdminDataChanged;
             Load += async (s, e) => await LoadDataAsync();
             Shown += (s, e) => BeginInvoke((System.Action)ApplySplitterLayout);
             SizeChanged += (s, e) => ApplySplitterLayout();
@@ -248,6 +250,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
             finally
             {
                 _btnRefresh.Enabled = true;
+            }
+        }
+
+        private async void HandleAdminDataChanged()
+        {
+            if (IsDisposed || !IsHandleCreated) return;
+            try
+            {
+                await LoadDataAsync();
+            }
+            catch
+            {
+                // ignore refresh errors
             }
         }
 

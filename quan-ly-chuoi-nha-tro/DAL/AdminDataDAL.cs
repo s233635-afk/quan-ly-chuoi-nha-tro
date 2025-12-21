@@ -1875,6 +1875,8 @@ namespace QuanLyNhaTro.DAL
                          RentalCost,
                          UtilityCost,
                          OtherCost,
+                         TaxRate,
+                         TaxAmount,
                          TotalAmount,
                          PaidAmount,
                          RemainingAmount,
@@ -2419,15 +2421,89 @@ namespace QuanLyNhaTro.DAL
 
         public async Task<bool> DeleteTenantAsync(int tenantId)
         {
-            const string sql = @"DELETE FROM Tenants WHERE TenantId = @TenantId";
+            if (!await TableExistsAsync("Tenants"))
+                throw new Exception("Bảng Tenants không tồn tại.");
+
             using (var conn = new SqlConnection(connectionString))
             {
                 await conn.OpenAsync();
-                using (var cmd = new SqlCommand(sql, conn))
+                using (var tx = conn.BeginTransaction())
                 {
-                    cmd.Parameters.AddWithValue("@TenantId", tenantId);
-                    int affected = await cmd.ExecuteNonQueryAsync();
-                    return affected > 0;
+                    try
+                    {
+                        // Payments -> Invoices
+                        if (await TableExistsAsync("Payments") && await TableExistsAsync("Invoices"))
+                        {
+                            const string sqlPayments = @"
+                                DELETE FROM Payments
+                                WHERE InvoiceId IN (SELECT InvoiceId FROM Invoices WHERE TenantId = @TenantId);";
+                            using (var cmd = new SqlCommand(sqlPayments, conn, tx))
+                            {
+                                cmd.Parameters.AddWithValue("@TenantId", tenantId);
+                                await cmd.ExecuteNonQueryAsync();
+                            }
+                        }
+
+                        if (await TableExistsAsync("Invoices"))
+                        {
+                            using (var cmd = new SqlCommand("DELETE FROM Invoices WHERE TenantId = @TenantId", conn, tx))
+                            {
+                                cmd.Parameters.AddWithValue("@TenantId", tenantId);
+                                await cmd.ExecuteNonQueryAsync();
+                            }
+                        }
+
+                        if (await TableExistsAsync("Contracts"))
+                        {
+                            using (var cmd = new SqlCommand("DELETE FROM Contracts WHERE TenantId = @TenantId", conn, tx))
+                            {
+                                cmd.Parameters.AddWithValue("@TenantId", tenantId);
+                                await cmd.ExecuteNonQueryAsync();
+                            }
+                        }
+
+                        if (await TableExistsAsync("Deposits"))
+                        {
+                            using (var cmd = new SqlCommand("DELETE FROM Deposits WHERE TenantId = @TenantId", conn, tx))
+                            {
+                                cmd.Parameters.AddWithValue("@TenantId", tenantId);
+                                await cmd.ExecuteNonQueryAsync();
+                            }
+                        }
+
+                        if (await TableExistsAsync("TenantRoomHistory"))
+                        {
+                            using (var cmd = new SqlCommand("DELETE FROM TenantRoomHistory WHERE TenantId = @TenantId", conn, tx))
+                            {
+                                cmd.Parameters.AddWithValue("@TenantId", tenantId);
+                                await cmd.ExecuteNonQueryAsync();
+                            }
+                        }
+
+                        if (await TableExistsAsync("Dependents"))
+                        {
+                            using (var cmd = new SqlCommand("DELETE FROM Dependents WHERE TenantId = @TenantId", conn, tx))
+                            {
+                                cmd.Parameters.AddWithValue("@TenantId", tenantId);
+                                await cmd.ExecuteNonQueryAsync();
+                            }
+                        }
+
+                        int affected;
+                        using (var cmd = new SqlCommand("DELETE FROM Tenants WHERE TenantId = @TenantId", conn, tx))
+                        {
+                            cmd.Parameters.AddWithValue("@TenantId", tenantId);
+                            affected = await cmd.ExecuteNonQueryAsync();
+                        }
+
+                        tx.Commit();
+                        return affected > 0;
+                    }
+                    catch
+                    {
+                        tx.Rollback();
+                        throw;
+                    }
                 }
             }
         }

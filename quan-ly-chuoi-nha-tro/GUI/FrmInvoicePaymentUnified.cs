@@ -59,6 +59,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             _branchId = branchId;
             InitializeComponent();
+            AdminEvents.DataChanged += HandleAdminDataChanged;
+            FormClosing += (s, e) => AdminEvents.DataChanged -= HandleAdminDataChanged;
         }
 
         private void InitializeComponent()
@@ -466,9 +468,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 { "TenantName", "Khách" },
                 { "RoomNumber", "Phòng" },
                 { "PaymentDate", "Ngày TT" },
-                { "Amount", "Số tiền" },
-                { "Method", "Hình thức" },
-                { "Reference", "Tham chiếu" },
+                { "PaymentAmount", "Số tiền" },
+                { "PaymentMethod", "Hình thức" },
+                { "TransactionReference", "Tham chiếu" },
                 { "Notes", "Ghi chú" }
             };
 
@@ -477,7 +479,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 if (columnMapping.ContainsKey(col.Name))
                     col.HeaderText = columnMapping[col.Name];
 
-                if (col.Name == "Amount")
+                if (col.Name == "PaymentAmount")
                 {
                     col.DefaultCellStyle.Format = "N0";
                     col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
@@ -535,8 +537,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 if (kwFilters.Count > 0) filters.Add("(" + string.Join(" OR ", kwFilters) + ")");
             }
 
-            if (!string.IsNullOrWhiteSpace(method) && method != "Tất cả" && _paymentTable.Columns.Contains("Method"))
-                filters.Add($"Method = '{method.Replace("'", "''")}'");
+            if (!string.IsNullOrWhiteSpace(method) && method != "Tất cả" && _paymentTable.Columns.Contains("PaymentMethod"))
+                filters.Add($"PaymentMethod = '{method.Replace("'", "''")}'");
 
             if (_paymentTable.Columns.Contains("PaymentDate"))
             {
@@ -569,7 +571,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             decimal total = 0m;
             foreach (DataRowView view in _paymentTable.DefaultView)
             {
-                total += ReadDecimal(view.Row, "Amount");
+                total += ReadDecimal(view.Row, "PaymentAmount");
             }
             _lblPaymentTotal.Text = $"Tổng thu: {total:N0}";
         }
@@ -756,7 +758,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         // Payment Actions
         private void AddNewPayment()
         {
-            MessageBox.Show("Vui lòng chọn hóa đơn từ tab 'Hóa Đơn' rồi ấn nút 'Thu tiền'.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            _ = AddNewPaymentAsync();
         }
 
         private void OpenRoomPaymentSelector()
@@ -788,9 +790,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 return;
             }
 
-            // Get invoice info
-            int paymentId = Convert.ToInt32(row["PaymentId"]);
-            MessageBox.Show("Tính năng sửa thanh toán sẽ được cập nhật sớm.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            _ = EditSelectedPaymentAsync(row);
         }
 
         private async System.Threading.Tasks.Task DeleteSelectedPaymentAsync()
@@ -814,6 +814,183 @@ namespace quan_ly_chuoi_nha_tro.GUI
             catch (Exception ex)
             {
                 MessageBox.Show("Lỗi xóa thanh toán: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private async Task AddNewPaymentAsync()
+        {
+            try
+            {
+                var invoiceRow = await PickInvoiceForPaymentAsync();
+                if (invoiceRow == null)
+                {
+                    MessageBox.Show("Không chọn được hóa đơn để thu tiền.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                using (var frm = new FrmPaymentEditor(_bll, invoiceRow))
+                {
+                    if (frm.ShowDialog(this) == DialogResult.OK)
+                    {
+                        await LoadAllDataAsync();
+                        AdminEvents.NotifyDataChanged();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi thu tiền: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private async void HandleAdminDataChanged()
+        {
+            if (IsDisposed || !IsHandleCreated) return;
+            try
+            {
+                await LoadAllDataAsync();
+            }
+            catch
+            {
+                // ignore refresh errors
+            }
+        }
+
+        private async Task EditSelectedPaymentAsync(DataRow row)
+        {
+            try
+            {
+                if (!row.Table.Columns.Contains("PaymentId"))
+                {
+                    MessageBox.Show("Không xác định được PaymentId.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                int paymentId = Convert.ToInt32(row["PaymentId"]);
+                var rawRow = FindPaymentById(paymentId);
+                if (rawRow == null || !rawRow.Table.Columns.Contains("InvoiceId"))
+                {
+                    MessageBox.Show("Không tìm thấy dữ liệu gốc để sửa.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                int invoiceId = Convert.ToInt32(rawRow["InvoiceId"]);
+                if (_invoiceTable == null || _invoiceTable.Rows.Count == 0)
+                    await LoadInvoicesAsync();
+
+                var invoiceRow = _invoiceTable.AsEnumerable().FirstOrDefault(r => Convert.ToInt32(r["InvoiceId"]) == invoiceId);
+                if (invoiceRow == null)
+                {
+                    MessageBox.Show("Không tìm thấy hóa đơn để hiển thị.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                using (var frm = new FrmPaymentEditor(_bll, invoiceRow, rawRow))
+                {
+                    if (frm.ShowDialog(this) == DialogResult.OK)
+                    {
+                        await LoadAllDataAsync();
+                        AdminEvents.NotifyDataChanged();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi sửa thanh toán: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private DataRow FindPaymentById(int paymentId)
+        {
+            if (_paymentTable == null || !_paymentTable.Columns.Contains("PaymentId")) return null;
+            return _paymentTable.AsEnumerable().FirstOrDefault(r => Convert.ToInt32(r["PaymentId"]) == paymentId);
+        }
+
+        private async Task<DataRow> PickInvoiceForPaymentAsync()
+        {
+            if (_invoiceTable == null || _invoiceTable.Rows.Count == 0)
+                await LoadInvoicesAsync();
+            if (_invoiceTable == null || _invoiceTable.Rows.Count == 0) return null;
+
+            if (!_invoiceTable.Columns.Contains("InvoiceDisplay"))
+                _invoiceTable.Columns.Add("InvoiceDisplay", typeof(string));
+
+            foreach (DataRow r in _invoiceTable.Rows)
+            {
+                decimal remaining = ReadDecimal(r, "RemainingAmount");
+                string invNo = _invoiceTable.Columns.Contains("InvoiceNumber") ? r["InvoiceNumber"]?.ToString() : r["InvoiceId"]?.ToString();
+                string tenant = _invoiceTable.Columns.Contains("TenantName") ? r["TenantName"]?.ToString() : r["TenantId"]?.ToString();
+                string room = _invoiceTable.Columns.Contains("RoomNumber") ? r["RoomNumber"]?.ToString() : r["RoomId"]?.ToString();
+                r["InvoiceDisplay"] = $"{invNo} | {tenant} | Phòng {room} | Còn: {remaining:N0}";
+            }
+
+            var selectable = _invoiceTable.AsEnumerable().ToList();
+
+            if (_branchId.HasValue && _invoiceTable.Columns.Contains("BranchId"))
+                selectable = selectable.Where(r => int.TryParse(r["BranchId"]?.ToString(), out var b) && b == _branchId.Value).ToList();
+
+            if (selectable.Count == 0) return null;
+
+            using (var dlg = new PaymentInvoicePickerDialog(selectable.CopyToDataTable()))
+            {
+                if (dlg.ShowDialog(this) != DialogResult.OK) return null;
+                return dlg.SelectedRow;
+            }
+        }
+
+        private class PaymentInvoicePickerDialog : Form
+        {
+            private readonly DataTable _table;
+            private ComboBox _cbo;
+            private Button _btnOk;
+            private Button _btnCancel;
+            public DataRow SelectedRow { get; private set; }
+
+            public PaymentInvoicePickerDialog(DataTable table)
+            {
+                _table = table;
+                InitializeComponent();
+            }
+
+            private void InitializeComponent()
+            {
+                Text = "Chọn hóa đơn để thu tiền";
+                StartPosition = FormStartPosition.CenterParent;
+                FormBorderStyle = FormBorderStyle.FixedDialog;
+                MaximizeBox = false;
+                MinimizeBox = false;
+                ClientSize = new Size(640, 170);
+                BackColor = Color.White;
+
+                _cbo = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 600, Location = new Point(20, 20) };
+                _cbo.DataSource = _table;
+                _cbo.DisplayMember = _table.Columns.Contains("InvoiceDisplay") ? "InvoiceDisplay" : _table.Columns[0].ColumnName;
+                _cbo.ValueMember = _table.Columns.Contains("InvoiceId") ? "InvoiceId" : _table.Columns[0].ColumnName;
+
+                _btnOk = new Button { Text = "Chọn", Width = 110, Height = 34, Location = new Point(390, 100) };
+                _btnCancel = new Button { Text = "Hủy", Width = 110, Height = 34, Location = new Point(510, 100) };
+
+                _btnOk.FlatStyle = FlatStyle.Flat;
+                _btnOk.FlatAppearance.BorderSize = 0;
+                _btnOk.BackColor = Color.FromArgb(0, 122, 204);
+                _btnOk.ForeColor = Color.White;
+                _btnCancel.FlatStyle = FlatStyle.Flat;
+                _btnCancel.FlatAppearance.BorderSize = 1;
+
+                _btnOk.Click += (s, e) =>
+                {
+                    if (_cbo.SelectedItem is DataRowView drv)
+                        SelectedRow = drv.Row;
+                    DialogResult = SelectedRow != null ? DialogResult.OK : DialogResult.Cancel;
+                };
+                _btnCancel.Click += (s, e) => DialogResult = DialogResult.Cancel;
+
+                Controls.Add(_cbo);
+                Controls.Add(_btnOk);
+                Controls.Add(_btnCancel);
+
+                AcceptButton = _btnOk;
+                CancelButton = _btnCancel;
             }
         }
 

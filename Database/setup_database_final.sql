@@ -244,6 +244,8 @@ CREATE TABLE Invoices (
     RentalCost DECIMAL(15,2),
     UtilityCost DECIMAL(15,2),
     OtherCost DECIMAL(15,2),
+    TaxRate DECIMAL(6,2) DEFAULT 0,
+    TaxAmount DECIMAL(15,2) DEFAULT 0,
     TotalAmount DECIMAL(15,2),
     PaidAmount DECIMAL(15,2) DEFAULT 0,
     RemainingAmount DECIMAL(15,2),
@@ -442,16 +444,16 @@ VALUES
 -- Insert UtilityReadings
 INSERT INTO UtilityReadings (RoomId, UtilityTypeId, ReadingDate, PreviousReading, CurrentReading, UsageAmount, UnitPrice, TotalCost, Notes)
 VALUES
-(1, 1, '2024-06-01', 1000, 1100, 100, 3500, 350000, N'Điện tháng 6'),
-(1, 2, '2024-06-01', 200, 230, 30, 25000, 750000, N'Nước tháng 6'),
-(2, 1, '2024-06-01', 900, 980, 80, 3500, 280000, N'Điện tháng 6'),
-(2, 2, '2024-06-01', 150, 180, 30, 25000, 750000, N'Nước tháng 6'),
-(3, 1, '2024-06-01', 500, 560, 60, 3500, 210000, N'Điện tháng 6'),
-(3, 2, '2024-06-01', 120, 140, 20, 25000, 500000, N'Nước tháng 6'),
-(4, 1, '2024-06-01', 300, 360, 60, 3500, 210000, N'Điện tháng 6'),
-(4, 2, '2024-06-01', 80, 98, 18, 25000, 450000, N'Nước tháng 6'),
-(1, 1, '2024-07-01', 1100, 1180, 80, 3500, 280000, N'Điện tháng 7'),
-(1, 2, '2024-07-01', 230, 260, 30, 25000, 750000, N'Nước tháng 7');
+(1, 1, '2024-06-01', 1000, 1100, 100, 3500, 350000, NULL),
+(1, 2, '2024-06-01', 200, 230, 30, 25000, 750000, NULL),
+(2, 1, '2024-06-01', 900, 980, 80, 3500, 280000, NULL),
+(2, 2, '2024-06-01', 150, 180, 30, 25000, 750000, NULL),
+(3, 1, '2024-06-01', 500, 560, 60, 3500, 210000, NULL),
+(3, 2, '2024-06-01', 120, 140, 20, 25000, 500000, NULL),
+(4, 1, '2024-06-01', 300, 360, 60, 3500, 210000, NULL),
+(4, 2, '2024-06-01', 80, 98, 18, 25000, 450000, NULL),
+(1, 1, '2024-07-01', 1100, 1180, 80, 3500, 280000, NULL),
+(1, 2, '2024-07-01', 230, 260, 30, 25000, 750000, NULL);
 
 -- Insert Invoices
 INSERT INTO Invoices (InvoiceNumber, TenantId, RoomId, InvoiceDate, FromDate, ToDate, RentalCost, UtilityCost, OtherCost, TotalAmount, PaidAmount, RemainingAmount, Status, DueDate)
@@ -495,6 +497,7 @@ INSERT INTO Notifications (UserId, Title, Message, Status, CreatedDate) VALUES
 INSERT INTO SystemSettings (SettingKey, SettingValue, Description) VALUES
 (N'DefaultDepositRate', N'1_month', N'Cọc mức chuẩn 1 tháng tiền phòng'),
 (N'InvoiceDueDay', N'10', N'Ngày đáo hạn hóa đơn hằng tháng'),
+(N'DefaultTaxRatePercent', N'0', N'Mức thuế (%) áp dụng theo doanh thu hóa đơn'),
 (N'DefaultContractTemplate', N'HD_CHUOI_NHA_TRO_V1', N'Mẫu hợp đồng chuẩn'),
 (N'AutoReminderEnabled', N'true', N'Bật nhắc nhở tự động'),
 (N'DefaultUtilityPrice_ELEC', N'3500', N'Giá điện mức chuẩn');

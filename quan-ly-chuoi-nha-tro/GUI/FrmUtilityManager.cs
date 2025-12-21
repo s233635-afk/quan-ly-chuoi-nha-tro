@@ -45,6 +45,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
         public FrmUtilityManager()
         {
             InitializeComponent();
+            AdminEvents.DataChanged += HandleAdminDataChanged;
+            FormClosing += (s, e) => AdminEvents.DataChanged -= HandleAdminDataChanged;
         }
 
         private void InitializeComponent()
@@ -174,6 +176,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
             await LoadBranchesAsync();
             await LoadReadingsAsync();
             await LoadTypesAsync();
+        }
+
+        private async void HandleAdminDataChanged()
+        {
+            if (IsDisposed || !IsHandleCreated) return;
+            try
+            {
+                await LoadAllAsync();
+            }
+            catch
+            {
+                // ignore refresh errors
+            }
         }
 
         private async System.Threading.Tasks.Task LoadBranchesAsync()
@@ -322,6 +337,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
 
             var filtered = rows.Any() ? rows.CopyToDataTable() : _readingTable.Clone();
+            TextFixer.ForceFixDataTable(filtered, "RoomNumber", "UtilityName", "UtilityCode", "Notes");
             _gridReadings.DataSource = filtered;
             _lblReadingsCount.Text = $"Tổng: {filtered.Rows.Count}";
         }

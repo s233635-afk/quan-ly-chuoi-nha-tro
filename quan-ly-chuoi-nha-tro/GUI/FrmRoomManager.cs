@@ -37,6 +37,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private Button _btnSearch;
         private Button _btnRefresh;
+        private Button _btnAddRoom;
         private Button _btnChangeStatus;
         private Button _btnEdit;
 
@@ -48,6 +49,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _bll = bll ?? new AdminDataBLL();
             _branchId = branchId;
             InitializeComponent();
+            AdminEvents.DataChanged += HandleAdminDataChanged;
+            FormClosing += (s, e) => AdminEvents.DataChanged -= HandleAdminDataChanged;
         }
 
         public FrmRoomManager() : this(new AdminDataBLL(), null)
@@ -130,6 +133,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnRefresh.FlatAppearance.BorderSize = 0;
             _btnRefresh.Click += async (s, e) => await LoadRoomsAsync();
 
+            _btnAddRoom = new Button
+            {
+                Text = "Thêm phòng",
+                Width = 110,
+                Height = 32,
+                BackColor = Color.FromArgb(23, 162, 184),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Margin = new Padding(0, 4, 8, 0)
+            };
+            _btnAddRoom.FlatAppearance.BorderSize = 0;
+            _btnAddRoom.Click += async (s, e) => await AddRoomAsync();
+
             _btnChangeStatus = new Button
             {
                 Text = "Đổi trạng thái",
@@ -164,6 +180,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             filters.Controls.Add(_cboStatus);
             filters.Controls.Add(_btnSearch);
             filters.Controls.Add(_btnRefresh);
+            filters.Controls.Add(_btnAddRoom);
             filters.Controls.Add(_btnChangeStatus);
 
             var stats = new FlowLayoutPanel
@@ -243,8 +260,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 _btnEdit.Visible = false;
                 if (_splitContainer != null)
                 {
-                _splitContainer.Panel2Collapsed = true;
-            }
+                    _splitContainer.Panel2Collapsed = true;
+                }
 
                 _rooms = await _bll.GetRoomsAsync() ?? new DataTable();
                 _statuses = await _bll.GetRoomStatusesAsync() ?? new DataTable();
@@ -298,9 +315,22 @@ namespace quan_ly_chuoi_nha_tro.GUI
             foreach (DataRow row in _rooms.Rows)
             {
                 if (typeLookup != null && _rooms.Columns.Contains("RoomTypeId") && typeLookup.TryGetValue(row["RoomTypeId"], out var typeName))
-                    row["TypeName"] = typeName;
+                    row["TypeName"] = RoomTypeCatalog.Canonicalize(typeName);
                 if (statusLookup != null && _rooms.Columns.Contains("CurrentStatusId") && statusLookup.TryGetValue(row["CurrentStatusId"], out var statusName))
                     row["StatusName"] = statusName;
+            }
+        }
+
+        private async void HandleAdminDataChanged()
+        {
+            if (IsDisposed || !IsHandleCreated) return;
+            try
+            {
+                await LoadRoomsAsync();
+            }
+            catch
+            {
+                // ignore refresh errors
             }
         }
 
@@ -584,12 +614,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             card.Controls.Add(mainLayout);
 
-            card.Click += (s, e) => ShowRoomDetails(row, roomId);
-            lblRoom.Click += (s, e) => ShowRoomDetails(row, roomId);
-            lblPrice.Click += (s, e) => ShowRoomDetails(row, roomId);
-            lblTypeInfo.Click += (s, e) => ShowRoomDetails(row, roomId);
-            lblStatusInfo.Click += (s, e) => ShowRoomDetails(row, roomId);
-            lblOccupantsInfo.Click += (s, e) => ShowRoomDetails(row, roomId);
+            card.Click += (s, e) => ShowRoomDetailsForm(row, roomId);
+            lblRoom.Click += (s, e) => ShowRoomDetailsForm(row, roomId);
+            lblPrice.Click += (s, e) => ShowRoomDetailsForm(row, roomId);
+            lblTypeInfo.Click += (s, e) => ShowRoomDetailsForm(row, roomId);
+            lblStatusInfo.Click += (s, e) => ShowRoomDetailsForm(row, roomId);
+            lblOccupantsInfo.Click += (s, e) => ShowRoomDetailsForm(row, roomId);
 
             return card;
         }
@@ -630,17 +660,22 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void ShowRoomDetails(DataRow row, int roomId)
         {
-            _selectedRoomId = roomId;
-            _selectedRoomRow = row;
-            BuildRoomDetailsPanel();
-            ApplyFilter();
-            _btnEdit.Visible = true;
+            ShowRoomDetailsForm(row, roomId);
+        }
 
-            if (_splitContainer != null)
+        private async Task AddRoomAsync()
+        {
+            using (var frm = new FrmRoomEditor(_bll))
             {
-                _splitContainer.Panel2Collapsed = false;
-                var desired = Math.Max(600, _splitContainer.Width - 420);
-                if (desired > 0) _splitContainer.SplitterDistance = Math.Min(desired, _splitContainer.Width - 280);
+                if (frm.ShowDialog(this) != DialogResult.OK) return;
+                await LoadRoomsAsync();
+                AdminEvents.NotifyDataChanged();
+                var syncType = Type.GetType("quan_ly_chuoi_nha_tro.GUI.DataSyncManager");
+                if (syncType != null)
+                {
+                    var method = syncType.GetMethod("NotifyRoomsChanged");
+                    method?.Invoke(null, null);
+                }
             }
         }
 
@@ -1099,6 +1134,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                     await _bll.UpdateRoomAsync(roomId, roomNumber, branchId, sectionId, roomTypeId, price, statusId, floor, area, isActive, occupants);
                     await LoadRoomsAsync();
+                    AdminEvents.NotifyDataChanged();
                 }
                 catch (Exception ex)
                 {
@@ -1121,6 +1157,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             bool? isActive = TryGetBool(_selectedRoomRow, "IsActive");
 
             await _bll.UpdateRoomAsync(roomId, roomNumber, branchId, sectionId, roomTypeId, price, newStatusId, floor, area, isActive, TryGetInt(_selectedRoomRow, "Occupants"));
+            AdminEvents.NotifyDataChanged();
         }
 
         private static int TryGetInt(DataRow row, string column)
@@ -1313,9 +1350,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 var roomTypeSrc = new DataTable();
                 roomTypeSrc.Columns.Add("RoomTypeId", typeof(int));
                 roomTypeSrc.Columns.Add("RoomTypeName", typeof(string));
-                if (_roomTypes != null && _roomTypes.Columns.Contains("RoomTypeId"))
+                var filteredTypes = RoomTypeCatalog.FilterToCanonicalTypes(_roomTypes);
+                if (filteredTypes != null && filteredTypes.Columns.Contains("RoomTypeId"))
                 {
-                    foreach (DataRow r in _roomTypes.Rows)
+                    foreach (DataRow r in filteredTypes.Rows)
                     {
                         if (!int.TryParse(r["RoomTypeId"]?.ToString(), out var id)) continue;
                         roomTypeSrc.Rows.Add(id, r["RoomTypeName"]?.ToString());

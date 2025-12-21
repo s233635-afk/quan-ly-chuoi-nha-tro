@@ -34,6 +34,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _bll = bll ?? new AdminDataBLL();
             _branchId = branchId;
             InitializeComponent();
+            AdminEvents.DataChanged += HandleAdminDataChanged;
+            FormClosing += (s, e) => AdminEvents.DataChanged -= HandleAdminDataChanged;
         }
 
         public FrmTenantManager() : this(new AdminDataBLL(), null)
@@ -314,8 +316,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             panel.Controls.Add(lblInfo);
             panel.Controls.Add(lblName);
 
-            // Click handler - set selected tenant
-            EventHandler onClick = (s, e) => { _selectedTenantId = tenantId; };
+            // Click handler - open edit form with full info
+            EventHandler onClick = (s, e) =>
+            {
+                _selectedTenantId = tenantId;
+                OpenTenantEditor();
+            };
             panel.Click += onClick;
             foreach (Control ctl in panel.Controls)
             {
@@ -378,6 +384,37 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
         }
 
+        private async void HandleAdminDataChanged()
+        {
+            if (IsDisposed || !IsHandleCreated) return;
+            try
+            {
+                await LoadDataAsync();
+            }
+            catch
+            {
+                // ignore refresh errors
+            }
+        }
+
+        private void OpenTenantEditor()
+        {
+            var row = GetSelectedTenant();
+            if (row == null)
+            {
+                MessageBox.Show("Chọn khách thuê trước.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using (var frm = new FrmTenantEditor(_bll, row))
+            {
+                if (frm.ShowDialog(this) == DialogResult.OK)
+                {
+                    _ = LoadDataAsync();
+                }
+            }
+        }
+
         private string ReadString(DataRow r, string col)
         {
             if (r == null || r.Table == null || !r.Table.Columns.Contains(col)) return null;
@@ -412,6 +449,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 if (frm.ShowDialog(this) == DialogResult.OK)
                 {
                     _ = LoadDataAsync();
+                    AdminEvents.NotifyDataChanged();
                 }
             }
         }
@@ -430,6 +468,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 if (frm.ShowDialog(this) == DialogResult.OK)
                 {
                     _ = LoadDataAsync();
+                    AdminEvents.NotifyDataChanged();
                 }
             }
         }
@@ -454,6 +493,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 await _bll.DeleteTenantAsync(_selectedTenantId);
                 await LoadDataAsync();
+                AdminEvents.NotifyDataChanged();
             }
             catch (Exception ex)
             {

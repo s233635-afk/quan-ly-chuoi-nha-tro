@@ -2,6 +2,7 @@ using System;
 using System.Data;
 using System.Drawing;
 using System.Globalization;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
@@ -23,6 +24,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private NumericUpDown numRental;
         private NumericUpDown numUtility;
         private NumericUpDown numOther;
+        private NumericUpDown numTaxRate;
+        private NumericUpDown numTaxAmount;
         private Label lblTotal;
         private Label lblHint;
         private Button btnSave;
@@ -30,6 +33,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private DataTable _tenantTable;
         private DataTable _roomTable;
+        private bool _syncingTax;
 
         public FrmInvoiceEditor(AdminDataBLL bll, DataRow existing = null)
         {
@@ -46,7 +50,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
-            ClientSize = new Size(620, 420);
+            ClientSize = new Size(620, 500);
 
             int labelWidth = 160;
             int inputWidth = 380;
@@ -89,10 +93,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
             numRental = MakeMoney();
             numUtility = MakeMoney();
             numOther = MakeMoney();
+            numTaxRate = MakePercent();
+            numTaxAmount = MakeMoney();
 
-            numRental.ValueChanged += (s, e) => UpdateTotal();
-            numUtility.ValueChanged += (s, e) => UpdateTotal();
-            numOther.ValueChanged += (s, e) => UpdateTotal();
+            numRental.ValueChanged += (s, e) => SyncTaxAmountFromRate();
+            numUtility.ValueChanged += (s, e) => SyncTaxAmountFromRate();
+            numOther.ValueChanged += (s, e) => SyncTaxAmountFromRate();
+            numTaxRate.ValueChanged += (s, e) => SyncTaxAmountFromRate();
+            numTaxAmount.ValueChanged += (s, e) => SyncTaxRateFromAmount();
 
             lblTotal = new Label { AutoSize = true, Font = new Font("Segoe UI", 10F, FontStyle.Bold) };
 
@@ -137,6 +145,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
             Controls.Add(MakeInput(numOther, top));
             top += line;
 
+            Controls.Add(MakeLabel("Thuế (%)", top));
+            Controls.Add(MakeInput(numTaxRate, top));
+            top += line;
+
+            Controls.Add(MakeLabel("Tiền thuế", top));
+            Controls.Add(MakeInput(numTaxAmount, top));
+            top += line;
+
             Controls.Add(MakeLabel("Tổng cộng", top));
             lblTotal.Location = new Point(left + labelWidth, top + 6);
             Controls.Add(lblTotal);
@@ -177,6 +193,18 @@ namespace quan_ly_chuoi_nha_tro.GUI
             };
         }
 
+        private static NumericUpDown MakePercent()
+        {
+            return new NumericUpDown
+            {
+                Minimum = 0,
+                Maximum = 100,
+                DecimalPlaces = 2,
+                Increment = 0.1m,
+                ThousandsSeparator = true
+            };
+        }
+
         private async Task LoadLookupAsync()
         {
             try
@@ -212,6 +240,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 cboRoom.ValueMember = _roomTable.Columns.Contains("RoomId") ? "RoomId" : _roomTable.Columns[0].ColumnName;
 
                 LoadExisting();
+                if (_existing == null)
+                    await LoadDefaultTaxRateAsync();
                 UpdateTotal();
             }
             catch (Exception ex)
@@ -260,6 +290,53 @@ namespace quan_ly_chuoi_nha_tro.GUI
             numRental.Value = ClampMoney(ReadDecimal(_existing, "RentalCost"));
             numUtility.Value = ClampMoney(ReadDecimal(_existing, "UtilityCost"));
             numOther.Value = ClampMoney(ReadDecimal(_existing, "OtherCost"));
+
+            _syncingTax = true;
+            decimal baseAmount = numRental.Value + numUtility.Value + numOther.Value;
+            decimal taxRate = ReadDecimal(_existing, "TaxRate");
+            decimal taxAmount = ReadDecimal(_existing, "TaxAmount");
+            if (taxRate <= 0m && taxAmount > 0m && baseAmount > 0m)
+                taxRate = Math.Round(taxAmount / baseAmount * 100m, 2, MidpointRounding.AwayFromZero);
+
+            numTaxRate.Value = ClampPercent(taxRate);
+            numTaxAmount.Value = ClampMoney(taxAmount);
+            _syncingTax = false;
+
+            if (taxAmount <= 0m && taxRate > 0m)
+                SyncTaxAmountFromRate();
+        }
+
+        private async Task LoadDefaultTaxRateAsync()
+        {
+            try
+            {
+                var settings = await _bll.GetSystemSettingsAsync();
+                if (settings == null || !settings.Columns.Contains("SettingKey")) return;
+
+                var row = settings.AsEnumerable()
+                    .FirstOrDefault(r => string.Equals(r["SettingKey"]?.ToString(), "DefaultTaxRatePercent", StringComparison.OrdinalIgnoreCase));
+                if (row == null) return;
+
+                var value = row.Table.Columns.Contains("SettingValue") ? row["SettingValue"]?.ToString() : null;
+                if (!TryParseDecimal(value, out var rate)) return;
+
+                _syncingTax = true;
+                numTaxRate.Value = ClampPercent(rate);
+                _syncingTax = false;
+                SyncTaxAmountFromRate();
+            }
+            catch
+            {
+                // Ignore default tax rate if settings are missing.
+            }
+        }
+
+        private static bool TryParseDecimal(string value, out decimal result)
+        {
+            result = 0m;
+            if (string.IsNullOrWhiteSpace(value)) return false;
+            if (decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out result)) return true;
+            return decimal.TryParse(value, NumberStyles.Any, CultureInfo.CurrentCulture, out result);
         }
 
         private static bool TryReadDate(DataRow row, string col, out DateTime date)
@@ -294,9 +371,51 @@ namespace quan_ly_chuoi_nha_tro.GUI
             return value;
         }
 
+        private decimal ClampPercent(decimal value)
+        {
+            if (value < (decimal)numTaxRate.Minimum) return numTaxRate.Minimum;
+            if (value > (decimal)numTaxRate.Maximum) return numTaxRate.Maximum;
+            return value;
+        }
+
+        private decimal GetBaseAmount()
+        {
+            return numRental.Value + numUtility.Value + numOther.Value;
+        }
+
+        private void SyncTaxAmountFromRate()
+        {
+            if (_syncingTax) return;
+            _syncingTax = true;
+            decimal taxAmount = CalculateTaxAmount();
+            numTaxAmount.Value = ClampMoney(taxAmount);
+            _syncingTax = false;
+            UpdateTotal();
+        }
+
+        private void SyncTaxRateFromAmount()
+        {
+            if (_syncingTax) return;
+            _syncingTax = true;
+            decimal baseAmount = GetBaseAmount();
+            decimal rate = baseAmount <= 0m
+                ? 0m
+                : Math.Round(numTaxAmount.Value / baseAmount * 100m, 2, MidpointRounding.AwayFromZero);
+            numTaxRate.Value = ClampPercent(rate);
+            _syncingTax = false;
+            UpdateTotal();
+        }
+
+        private decimal CalculateTaxAmount()
+        {
+            decimal baseAmount = GetBaseAmount();
+            decimal rate = numTaxRate.Value;
+            return Math.Round(baseAmount * rate / 100m, 2, MidpointRounding.AwayFromZero);
+        }
+
         private void UpdateTotal()
         {
-            decimal total = numRental.Value + numUtility.Value + numOther.Value;
+            decimal total = GetBaseAmount() + numTaxAmount.Value;
             lblTotal.Text = $"{total:N0} VNĐ";
         }
 
@@ -320,17 +439,18 @@ namespace quan_ly_chuoi_nha_tro.GUI
             decimal rental = numRental.Value;
             decimal utility = numUtility.Value;
             decimal other = numOther.Value;
+            decimal taxRate = numTaxRate.Value;
 
             try
             {
                 if (_existing == null)
                 {
-                    await _bll.AddInvoiceAsync(invoiceNumber, tenantId, roomId, invoiceDate, fromDate, toDate, rental, utility, other, dueDate);
+                    await _bll.AddInvoiceAsync(invoiceNumber, tenantId, roomId, invoiceDate, fromDate, toDate, rental, utility, other, dueDate, taxRate);
                 }
                 else
                 {
                     int invoiceId = Convert.ToInt32(_existing["InvoiceId"]);
-                    await _bll.UpdateInvoiceAsync(invoiceId, invoiceNumber, tenantId, roomId, invoiceDate, fromDate, toDate, rental, utility, other, dueDate);
+                    await _bll.UpdateInvoiceAsync(invoiceId, invoiceNumber, tenantId, roomId, invoiceDate, fromDate, toDate, rental, utility, other, dueDate, taxRate);
                 }
 
                 DialogResult = DialogResult.OK;

@@ -40,6 +40,11 @@ namespace QuanLyNhaTro.DAL
             }
         }
 
+        public Task<int> UpdateRoomOccupancyStatusAsync(int roomId, int statusId)
+        {
+            return UpdateRoomStatusAsync(roomId, statusId);
+        }
+
         #endregion
 
         #region Tenant Management - Branch Filter
@@ -80,11 +85,6 @@ namespace QuanLyNhaTro.DAL
             
             query += " ORDER BY c.ContractNumber DESC";
             return await ExecuteQueryAsync(query);
-        }
-
-        public async Task<DataTable> GetContractByIdAsync(int contractId)
-        {
-            return await ExecuteQueryAsync($"SELECT * FROM Contracts WHERE ContractId = {contractId}");
         }
 
         #endregion
