@@ -1219,6 +1219,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var statusText = isActive.HasValue ? (isActive.Value ? "Hoạt động" : "Vô hiệu") : "—";
             _lblSub.Text = $"BranchId: {_branchId} | Trạng thái: {statusText}";
 
+            // Render overview info panel
+            RenderOverviewInfo(code, name, address, phone, hotline, hours, desc, statusText);
+
             RenderOverviewInfo(code, name, address, phone, hotline, hours, desc, statusText);
         }
 
@@ -3004,7 +3007,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _actionBarPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 50,
+                Height = 60,
                 BackColor = Color.FromArgb(240, 244, 250),
                 BorderStyle = BorderStyle.FixedSingle,
                 Padding = new Padding(10, 8, 10, 8)
