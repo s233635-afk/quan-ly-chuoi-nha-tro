@@ -67,11 +67,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         // Staff Form Controls
         private Panel _staffFormPanel;
-        private Panel _staffListPanel;
         private FlowLayoutPanel _staffCardsHost;
         private Label _lblStaffTitle;
         private Label _lblStaffCount;
-        private TextBox _txtStaffSearch;
         private TextBox _txtStaffFullName;
         private TextBox _txtStaffPhone;
         private TextBox _txtStaffEmail;
@@ -3026,22 +3024,30 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 AutoScroll = true
             };
 
-            // Create action buttons
+            // Create action buttons (12 items)
             _btnActionBranch = CreateActionButton("Chi nhánh", () => _tabs.SelectedTab = _tabOverview);
+            var btnActionSections = CreateActionButton("Khu/Dãy", () => _tabs.SelectedTab = _tabSections);
             _btnActionRooms = CreateActionButton("Phòng", () => _tabs.SelectedTab = _tabRooms);
             _btnActionTenants = CreateActionButton("Khách thuê", () => _tabs.SelectedTab = _tabTenants);
             _btnActionContracts = CreateActionButton("Hợp đồng", () => _tabs.SelectedTab = _tabContracts);
             _btnActionDeposits = CreateActionButton("Đặt cọc", () => _tabs.SelectedTab = _tabDeposits);
             _btnActionUtilities = CreateActionButton("Điện/Nước/DV", () => _tabs.SelectedTab = _tabUtilities);
+            var btnActionMaintenance = CreateActionButton("Bảo trì", () => _tabs.SelectedTab = _tabMaintenance);
+            var btnActionAssets = CreateActionButton("Tài sản", () => _tabs.SelectedTab = _tabAssets);
+            var btnActionReports = CreateActionButton("Báo cáo", () => _tabs.SelectedTab = _tabReports);
             _btnActionInvoices = CreateActionButton("Hóa đơn/Thanh", () => _tabs.SelectedTab = _tabInvoices);
             _btnActionNotifications = CreateActionButton("Thông báo", () => _tabs.SelectedTab = _tabNotifications);
 
             _actionBar.Controls.Add(_btnActionBranch);
+            _actionBar.Controls.Add(btnActionSections);
             _actionBar.Controls.Add(_btnActionRooms);
             _actionBar.Controls.Add(_btnActionTenants);
             _actionBar.Controls.Add(_btnActionContracts);
             _actionBar.Controls.Add(_btnActionDeposits);
             _actionBar.Controls.Add(_btnActionUtilities);
+            _actionBar.Controls.Add(btnActionMaintenance);
+            _actionBar.Controls.Add(btnActionAssets);
+            _actionBar.Controls.Add(btnActionReports);
             _actionBar.Controls.Add(_btnActionInvoices);
             _actionBar.Controls.Add(_btnActionNotifications);
 
@@ -3071,36 +3077,27 @@ namespace quan_ly_chuoi_nha_tro.GUI
         // ==================== STAFF FORM METHODS ====================
         private void BuildStaffTabForm()
         {
+            // Create a simple DataGridView with edit capability
             _staffFormPanel = new Panel
             {
                 Dock = DockStyle.Fill,
-                BackColor = Color.White,
-                AutoScroll = true
+                BackColor = Color.White
             };
 
-            var layout = new TableLayoutPanel
-            {
-                Dock = DockStyle.Top,
-                ColumnCount = 1,
-                RowCount = 3,
-                AutoSize = true,
-                BackColor = Color.White,
-                Padding = new Padding(14)
-            };
-
-            // Header panel
+            // Header
             var headerPanel = new Panel
             {
-                Height = 50,
                 Dock = DockStyle.Top,
+                Height = 50,
                 BackColor = Color.FromArgb(245, 249, 255),
-                Padding = new Padding(10)
+                Padding = new Padding(10),
+                BorderStyle = BorderStyle.FixedSingle
             };
 
             _lblStaffTitle = new Label
             {
                 AutoSize = true,
-                Text = "Danh sách nhân viên",
+                Text = "Quản lý nhân viên",
                 Font = new Font("Segoe UI", 11, FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 79, 159),
                 Dock = DockStyle.Left
@@ -3116,26 +3113,73 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Margin = new Padding(10, 0, 0, 0)
             };
 
-            _txtStaffSearch = new TextBox
-            {
-                Width = 200,
-                Height = 30,
-                Dock = DockStyle.Right,
-                Margin = new Padding(0, 0, 10, 0)
-            };
-            _txtStaffSearch.TextChanged += (s, e) => FilterStaffCards();
-
             headerPanel.Controls.Add(_lblStaffCount);
-            headerPanel.Controls.Add(_txtStaffSearch);
             headerPanel.Controls.Add(_lblStaffTitle);
 
-            // Staff list (cards)
-            _staffListPanel = new Panel
+            // Action buttons panel
+            var btnPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 300,
-                BackColor = Color.FromArgb(245, 247, 250),
-                Padding = new Padding(14),
+                Height = 50,
+                BackColor = Color.White,
+                Padding = new Padding(10),
+                BorderStyle = BorderStyle.FixedSingle
+            };
+
+            _btnStaffSave = new Button
+            {
+                Text = "💾 Lưu",
+                Width = 100,
+                Height = 34,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(40, 167, 69),
+                ForeColor = Color.White,
+                Cursor = Cursors.Hand,
+                Margin = new Padding(0, 0, 10, 0)
+            };
+            _btnStaffSave.FlatAppearance.BorderSize = 0;
+            _btnStaffSave.Click += SaveStaffChanges;
+            _btnStaffSave.Visible = false;
+
+            _btnStaffDelete = new Button
+            {
+                Text = "🗑️ Xóa",
+                Width = 100,
+                Height = 34,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(220, 53, 69),
+                ForeColor = Color.White,
+                Cursor = Cursors.Hand,
+                Margin = new Padding(0, 0, 10, 0)
+            };
+            _btnStaffDelete.FlatAppearance.BorderSize = 0;
+            _btnStaffDelete.Click += (s, e) => MessageBox.Show("Chức năng xóa sẽ được cập nhập", "Thông báo");
+            _btnStaffDelete.Visible = false;
+
+            var btnCancel = new Button
+            {
+                Text = "❌ Hủy",
+                Width = 100,
+                Height = 34,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(108, 117, 125),
+                ForeColor = Color.White,
+                Cursor = Cursors.Hand
+            };
+            btnCancel.FlatAppearance.BorderSize = 0;
+            btnCancel.Click += (s, e) => CancelStaffEdit();
+            btnCancel.Visible = false;
+
+            btnPanel.Controls.Add(btnCancel);
+            btnPanel.Controls.Add(_btnStaffDelete);
+            btnPanel.Controls.Add(_btnStaffSave);
+            btnPanel.Visible = false;
+
+            // Create custom staff grid
+            var gridPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White,
                 AutoScroll = true
             };
 
@@ -3144,168 +3188,36 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Dock = DockStyle.Fill,
                 AutoScroll = true,
                 WrapContents = true,
-                FlowDirection = FlowDirection.LeftToRight,
-                BackColor = Color.Transparent
-            };
-
-            _staffListPanel.Controls.Add(_staffCardsHost);
-
-            // Staff detail form
-            var formPanel = new Panel
-            {
-                Dock = DockStyle.Top,
-                Height = 400,
+                FlowDirection = FlowDirection.TopDown,
                 BackColor = Color.White,
-                Padding = new Padding(14),
-                AutoScroll = true,
-                BorderStyle = BorderStyle.FixedSingle
+                Padding = new Padding(10)
             };
 
-            var formLayout = new TableLayoutPanel
-            {
-                Dock = DockStyle.Top,
-                ColumnCount = 2,
-                RowCount = 5,
-                AutoSize = true,
-                BackColor = Color.Transparent,
-                Padding = new Padding(0)
-            };
-            formLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-            formLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            gridPanel.Controls.Add(_staffCardsHost);
 
-            // Labels and textboxes
-            var lblFullName = new Label { Text = "Họ tên:", AutoSize = true, Font = new Font("Segoe UI", 9f) };
-            _txtStaffFullName = new TextBox { Dock = DockStyle.Fill, Height = 28, Margin = new Padding(10, 4, 0, 4), ReadOnly = true };
-
-            var lblPhone = new Label { Text = "Điện thoại:", AutoSize = true, Font = new Font("Segoe UI", 9f) };
-            _txtStaffPhone = new TextBox { Dock = DockStyle.Fill, Height = 28, Margin = new Padding(10, 4, 0, 4), ReadOnly = true };
-
-            var lblEmail = new Label { Text = "Email:", AutoSize = true, Font = new Font("Segoe UI", 9f) };
-            _txtStaffEmail = new TextBox { Dock = DockStyle.Fill, Height = 28, Margin = new Padding(10, 4, 0, 4), ReadOnly = true };
-
-            var lblAddress = new Label { Text = "Địa chỉ:", AutoSize = true, Font = new Font("Segoe UI", 9f) };
-            _txtStaffAddress = new TextBox { Dock = DockStyle.Fill, Height = 28, Margin = new Padding(10, 4, 0, 4), ReadOnly = true };
-
-            var lblRole = new Label { Text = "Chức vụ:", AutoSize = true, Font = new Font("Segoe UI", 9f) };
-            _cboStaffRole = new ComboBox { Dock = DockStyle.Fill, Height = 28, Margin = new Padding(10, 4, 0, 4), Enabled = false };
-
-            formLayout.Controls.Add(lblFullName, 0, 0);
-            formLayout.Controls.Add(_txtStaffFullName, 1, 0);
-            formLayout.Controls.Add(lblPhone, 0, 1);
-            formLayout.Controls.Add(_txtStaffPhone, 1, 1);
-            formLayout.Controls.Add(lblEmail, 0, 2);
-            formLayout.Controls.Add(_txtStaffEmail, 1, 2);
-            formLayout.Controls.Add(lblAddress, 0, 3);
-            formLayout.Controls.Add(_txtStaffAddress, 1, 3);
-            formLayout.Controls.Add(lblRole, 0, 4);
-            formLayout.Controls.Add(_cboStaffRole, 1, 4);
-
-            formPanel.Controls.Add(formLayout);
-
-            // Action buttons
-            var btnPanel = new Panel
-            {
-                Dock = DockStyle.Top,
-                Height = 40,
-                BackColor = Color.White,
-                Padding = new Padding(14, 10, 14, 0)
-            };
-
-            _btnStaffSave = new Button
-            {
-                Text = "Sửa",
-                Width = 90,
-                Height = 34,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(255, 193, 7),
-                ForeColor = Color.Black,
-                Cursor = Cursors.Hand,
-                Margin = new Padding(0, 0, 10, 0)
-            };
-            _btnStaffSave.FlatAppearance.BorderSize = 0;
-            _btnStaffSave.Click += EditSelectedStaff;
-
-            _btnStaffDelete = new Button
-            {
-                Text = "Xóa",
-                Width = 90,
-                Height = 34,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(220, 53, 69),
-                ForeColor = Color.White,
-                Cursor = Cursors.Hand
-            };
-            _btnStaffDelete.FlatAppearance.BorderSize = 0;
-            _btnStaffDelete.Click += DeleteSelectedStaff;
-
-            btnPanel.Controls.Add(_btnStaffDelete);
-            btnPanel.Controls.Add(_btnStaffSave);
-
+            _staffFormPanel.Controls.Add(gridPanel);
             _staffFormPanel.Controls.Add(btnPanel);
-            _staffFormPanel.Controls.Add(formPanel);
-            _staffFormPanel.Controls.Add(_staffListPanel);
             _staffFormPanel.Controls.Add(headerPanel);
 
             _tabStaff.Controls.Add(_staffFormPanel);
         }
 
-        private void FilterStaffCards()
+        private void CancelStaffEdit()
         {
-            if (_staffCardsHost == null) return;
-            string filter = _txtStaffSearch?.Text.ToLower() ?? "";
-            foreach (Control card in _staffCardsHost.Controls)
-            {
-                if (card is Panel p && p.Tag is DataRow row)
-                {
-                    string name = TextFixer.FixUtf8Mojibake(ReadString(row, "FullName")).ToLower();
-                    string phone = ReadString(row, "PhoneNumber").ToLower();
-                    p.Visible = string.IsNullOrEmpty(filter) || name.Contains(filter) || phone.Contains(filter);
-                }
-            }
+            // Hide edit controls
+            var btnPanel = _staffFormPanel.Controls.OfType<Panel>().FirstOrDefault(p => p.Controls.Contains(_btnStaffSave));
+            if (btnPanel != null) btnPanel.Visible = false;
+            _selectedStaffId = 0;
         }
 
-        private void EditSelectedStaff(object sender, EventArgs e)
+        private void SaveStaffChanges(object sender, EventArgs e)
         {
             if (_selectedStaffId == 0)
             {
-                MessageBox.Show("Vui lòng chọn nhân viên để sửa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Vui lòng chọn nhân viên để sửa.", "Thông báo");
                 return;
             }
-            // TODO: Implement edit staff form
-            MessageBox.Show("Chức năng sửa nhân viên sẽ được cập nhập.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
-
-        private void DeleteSelectedStaff(object sender, EventArgs e)
-        {
-            if (_selectedStaffId == 0)
-            {
-                MessageBox.Show("Vui lòng chọn nhân viên để xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-            // TODO: Implement delete staff
-            MessageBox.Show("Chức năng xóa nhân viên sẽ được cập nhập.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
-
-        private void DisplayStaffForm(DataRow staffRow)
-        {
-            if (staffRow == null)
-            {
-                _txtStaffFullName.Text = "";
-                _txtStaffPhone.Text = "";
-                _txtStaffEmail.Text = "";
-                _txtStaffAddress.Text = "";
-                _cboStaffRole.SelectedIndex = -1;
-                return;
-            }
-
-            _selectedStaffId = TryReadInt(staffRow, "UserId");
-            _selectedStaffRow = staffRow;
-            _txtStaffFullName.Text = TextFixer.FixUtf8Mojibake(ReadString(staffRow, "FullName"));
-            _txtStaffPhone.Text = ReadString(staffRow, "PhoneNumber");
-            _txtStaffEmail.Text = ReadString(staffRow, "Email");
-            _txtStaffAddress.Text = TextFixer.FixUtf8Mojibake(ReadString(staffRow, "Address"));
-            string roleName = ReadString(staffRow, "RoleName");
-            _cboStaffRole.SelectedItem = roleName;
+            MessageBox.Show("Chức năng sửa nhân viên sẽ được cập nhập.", "Thông báo");
         }
 
         private void RenderStaffCards(DataTable staffTable)
@@ -3328,71 +3240,92 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 return;
             }
 
+            // Create a table-like layout for staff
             foreach (DataRow row in staffTable.Rows)
             {
-                var card = CreateStaffCard(row);
-                _staffCardsHost.Controls.Add(card);
-                if (_selectedStaffId == 0)
-                {
-                    DisplayStaffForm(row);
-                    _selectedStaffId = TryReadInt(row, "UserId");
-                }
+                var rowPanel = CreateStaffRowPanel(row);
+                _staffCardsHost.Controls.Add(rowPanel);
             }
         }
 
-        private Control CreateStaffCard(DataRow staffRow)
+        private Panel CreateStaffRowPanel(DataRow staffRow)
         {
-            var panel = new Panel
+            int staffId = TryReadInt(staffRow, "UserId");
+            string fullName = TextFixer.FixUtf8Mojibake(ReadString(staffRow, "FullName") ?? "");
+            string phone = ReadString(staffRow, "PhoneNumber");
+            string email = ReadString(staffRow, "Email");
+            string address = TextFixer.FixUtf8Mojibake(ReadString(staffRow, "Address"));
+            string role = ReadString(staffRow, "RoleName");
+            string branch = ReadString(staffRow, "BranchName");
+            bool isActive = staffRow.Table.Columns.Contains("IsActive") && Convert.ToBoolean(staffRow["IsActive"] ?? false);
+
+            var rowPanel = new Panel
             {
-                Width = 220,
-                Height = 120,
+                Height = 50,
+                Dock = DockStyle.Top,
                 BackColor = Color.White,
-                Margin = new Padding(8),
-                Padding = new Padding(12),
+                BorderStyle = BorderStyle.FixedSingle,
+                Padding = new Padding(10),
+                Tag = staffRow,
                 Cursor = Cursors.Hand,
-                Tag = staffRow
+                Margin = new Padding(0, 0, 0, 2)
             };
-            panel.Paint += (s, e) =>
+
+            var table = new TableLayoutPanel
             {
-                using (var pen = new Pen(Color.FromArgb(210, 220, 230)))
+                Dock = DockStyle.Fill,
+                ColumnCount = 6,
+                RowCount = 1,
+                BackColor = Color.Transparent
+            };
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 50));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 15));
+
+            var lblId = new Label { Text = staffId.ToString(), AutoSize = false, TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI", 9f, FontStyle.Bold), ForeColor = Color.FromArgb(0, 79, 159) };
+            var lblName = new Label { Text = NullDash(fullName), AutoSize = false, TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI", 9f) };
+            var lblPhone = new Label { Text = NullDash(phone), AutoSize = false, TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI", 9f) };
+            var lblRole = new Label { Text = NullDash(role), AutoSize = false, TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI", 9f) };
+            var lblEmail = new Label { Text = NullDash(email), AutoSize = false, TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI", 9f) };
+            var lblStatus = new Label { Text = isActive ? "✓" : "✕", AutoSize = false, TextAlign = ContentAlignment.MiddleCenter, Font = new Font("Segoe UI", 9f, FontStyle.Bold), ForeColor = isActive ? Color.FromArgb(40, 167, 69) : Color.FromArgb(220, 53, 69) };
+
+            table.Controls.Add(lblId, 0, 0);
+            table.Controls.Add(lblName, 1, 0);
+            table.Controls.Add(lblPhone, 2, 0);
+            table.Controls.Add(lblRole, 3, 0);
+            table.Controls.Add(lblEmail, 4, 0);
+            table.Controls.Add(lblStatus, 5, 0);
+
+            rowPanel.Controls.Add(table);
+
+            // Click to edit
+            rowPanel.Click += (s, e) =>
+            {
+                _selectedStaffId = staffId;
+                _selectedStaffRow = staffRow;
+                var btnPanel = _staffFormPanel.Controls.OfType<Panel>().FirstOrDefault(p => p.Controls.Contains(_btnStaffSave));
+                if (btnPanel != null)
                 {
-                    var rect = new Rectangle(0, 0, panel.Width - 1, panel.Height - 1);
-                    e.Graphics.DrawRectangle(pen, rect);
+                    btnPanel.Visible = true;
+                    // Show edit form
+                    var editForm = new FrmStaffEditor(_adminBll, staffRow);
+                    if (editForm.ShowDialog() == DialogResult.OK)
+                    {
+                        // Reload data
+                        _ = LoadAllAsync();
+                    }
                 }
             };
 
-            int staffId = TryReadInt(staffRow, "UserId");
-            string name = TextFixer.FixUtf8Mojibake(ReadString(staffRow, "FullName") ?? "");
-            string phone = ReadString(staffRow, "PhoneNumber");
-            string role = ReadString(staffRow, "RoleName");
-
-            var lblName = new Label
+            foreach (Control c in table.Controls)
             {
-                Dock = DockStyle.Top,
-                Height = 24,
-                Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                Text = $"{staffId} · {NullDash(name)}",
-                ForeColor = Color.FromArgb(0, 79, 159)
-            };
+                c.Cursor = Cursors.Hand;
+            }
 
-            var lblInfo = new Label
-            {
-                Dock = DockStyle.Top,
-                Height = 46,
-                Font = new Font("Segoe UI", 9f),
-                ForeColor = Color.FromArgb(70, 70, 70),
-                Text = $"☎ {NullDash(phone)}\n👔 {NullDash(role)}",
-                AutoSize = false
-            };
-
-            panel.Controls.Add(lblInfo);
-            panel.Controls.Add(lblName);
-
-            panel.Click += (s, e) => DisplayStaffForm(staffRow);
-            lblName.Click += (s, e) => DisplayStaffForm(staffRow);
-            lblInfo.Click += (s, e) => DisplayStaffForm(staffRow);
-
-            return panel;
+            return rowPanel;
         }
     }
 }
