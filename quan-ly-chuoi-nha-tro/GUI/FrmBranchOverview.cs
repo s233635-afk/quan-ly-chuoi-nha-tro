@@ -32,6 +32,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private const int RoomDetailsCollapsedHeight = 190;
         private const int RoomDetailsExpandedHeight = 270;
+        private const int TenantSplitMinLeft = 260;
+        private const int TenantSplitMinRight = 320;
+        private const int InvoiceSplitMinTop = 200;
+        private const int InvoiceSplitMinBottom = 200;
 
         private readonly int _branchId;
         private readonly BranchBLL _branchBll = new BranchBLL();
@@ -40,6 +44,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private FrmRoomTenantQuickView _roomQuickView;
 
         private Panel _header;
+        private Panel _navBar;
         private Label _lblTitle;
         private Label _lblSub;
         private Button _btnEdit;
@@ -105,6 +110,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private DataGridView _gridUtilities;
         private DataGridView _gridMaintenance;
         private DataGridView _gridAssets;
+        private SplitContainer _invoicePaymentSplit;
+        private SplitContainer _tenantSplit;
 
         private DataTable _roomsAll;
         private DataTable _roomsBranch;
@@ -272,6 +279,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             _tabs = new TabControl { Dock = DockStyle.Fill };
             StyleTabs(_tabs);
+            HideTabHeaders(_tabs);
             _tabOverview = new TabPage("Tổng quan");
             _tabRooms = new TabPage("Phòng");
             _tabSections = new TabPage("Khu/Dãy");
@@ -279,13 +287,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _tabStaff = new TabPage("Nhân viên");
             _tabContracts = new TabPage("Hợp đồng");
             _tabDeposits = new TabPage("Đặt cọc");
-            _tabInvoices = new TabPage("Hóa đơn");
-            _tabPayments = new TabPage("Thanh toán");
+            _tabInvoices = new TabPage("Hóa đơn/Thanh toán");
+            _tabPayments = _tabInvoices;
             _tabUtilities = new TabPage("Điện/Nước/DV");
             _tabMaintenance = new TabPage("Bảo trì");
             _tabAssets = new TabPage("Tài sản");
 
-            _tabs.TabPages.AddRange(new[] { _tabOverview, _tabRooms, _tabSections, _tabTenants, _tabStaff, _tabContracts, _tabDeposits, _tabInvoices, _tabPayments, _tabUtilities, _tabMaintenance, _tabAssets });
+            _tabs.TabPages.AddRange(new[] { _tabOverview, _tabRooms, _tabSections, _tabTenants, _tabStaff, _tabContracts, _tabDeposits, _tabInvoices, _tabUtilities, _tabMaintenance, _tabAssets });
             foreach (TabPage p in _tabs.TabPages) p.BackColor = Color.White;
 
             _overviewInfo = new Panel { Dock = DockStyle.Top, Height = 400, BackColor = Color.White, Padding = new Padding(14), AutoScroll = true };
@@ -340,13 +348,30 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _gridStaff = CreateGrid(); _gridStaff.Dock = DockStyle.Fill; _gridStaff.CellFormatting += GridActiveCellFormatting; _tabStaff.Controls.Add(_gridStaff);
             _gridContracts = CreateGrid(); _gridContracts.Dock = DockStyle.Fill; _tabContracts.Controls.Add(_gridContracts);
             _gridDeposits = CreateGrid(); _gridDeposits.Dock = DockStyle.Fill; _tabDeposits.Controls.Add(_gridDeposits);
-            _gridInvoices = CreateGrid(); _gridInvoices.Dock = DockStyle.Fill; _tabInvoices.Controls.Add(_gridInvoices);
-            _gridPayments = CreateGrid(); _gridPayments.Dock = DockStyle.Fill; _tabPayments.Controls.Add(_gridPayments);
+            _gridInvoices = CreateGrid();
+            _gridPayments = CreateGrid();
+            _invoicePaymentSplit = new SplitContainer
+            {
+                Dock = DockStyle.Fill,
+                Orientation = Orientation.Horizontal,
+                SplitterWidth = 6,
+                Panel1MinSize = 0,
+                Panel2MinSize = 0,
+                BackColor = Color.FromArgb(245, 247, 250)
+            };
+            _invoicePaymentSplit.Panel1.Controls.Add(BuildLabeledGridPanel("Hóa đơn", _gridInvoices));
+            _invoicePaymentSplit.Panel2.Controls.Add(BuildLabeledGridPanel("Thanh toán", _gridPayments));
+            _invoicePaymentSplit.HandleCreated += (s, e) => FixInvoicePaymentSplitter();
+            _invoicePaymentSplit.SizeChanged += (s, e) => FixInvoicePaymentSplitter();
+            _tabInvoices.Controls.Add(_invoicePaymentSplit);
+
             _gridUtilities = CreateGrid(); _gridUtilities.Dock = DockStyle.Fill; _tabUtilities.Controls.Add(_gridUtilities);
             _gridMaintenance = CreateGrid(); _gridMaintenance.Dock = DockStyle.Fill; _tabMaintenance.Controls.Add(_gridMaintenance);
             _gridAssets = CreateGrid(); _gridAssets.Dock = DockStyle.Fill; _tabAssets.Controls.Add(_gridAssets);
 
+            _navBar = BuildNavBar();
             Controls.Add(_tabs);
+            Controls.Add(_navBar);
             Controls.Add(_header);
         }
 
@@ -460,13 +485,16 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             top.Controls.Add(flow);
 
-            var host = new SplitContainer
+            _tenantSplit = new SplitContainer
             {
                 Dock = DockStyle.Fill,
-                SplitterDistance = 400,
                 SplitterWidth = 6,
+                Panel1MinSize = 0,
+                Panel2MinSize = 0,
                 BackColor = Color.White
             };
+            _tenantSplit.HandleCreated += (s, e) => FixTenantSplitter();
+            _tenantSplit.SizeChanged += (s, e) => FixTenantSplitter();
 
             _tenantCardsHost = new FlowLayoutPanel
             {
@@ -477,13 +505,147 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 BackColor = Color.WhiteSmoke,
                 Padding = new Padding(6)
             };
-            host.Panel1.Controls.Add(_tenantCardsHost);
+            _tenantSplit.Panel1.Controls.Add(_tenantCardsHost);
 
             BuildTenantDetailsPanel();
-            host.Panel2.Controls.Add(_tenantDetailPanel);
+            _tenantSplit.Panel2.Controls.Add(_tenantDetailPanel);
 
-            _tabTenants.Controls.Add(host);
+            _tabTenants.Controls.Add(_tenantSplit);
             _tabTenants.Controls.Add(top);
+        }
+
+        private Panel BuildNavBar()
+        {
+            var nav = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 54,
+                BackColor = Color.White,
+                Padding = new Padding(12, 8, 12, 8)
+            };
+            nav.Controls.Add(new Panel { Dock = DockStyle.Bottom, Height = 1, BackColor = Color.FromArgb(230, 235, 240) });
+
+            var flow = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                AutoSize = false,
+                WrapContents = false,
+                FlowDirection = FlowDirection.LeftToRight,
+                BackColor = Color.Transparent
+            };
+
+            flow.Controls.Add(MakeNavButton("Tổng quan", () => _tabs.SelectedTab = _tabOverview));
+            flow.Controls.Add(MakeNavButton("Phòng", () => _tabs.SelectedTab = _tabRooms));
+            flow.Controls.Add(MakeNavButton("Khu/Dãy", () => _tabs.SelectedTab = _tabSections));
+            flow.Controls.Add(MakeNavButton("Khách thuê", () => _tabs.SelectedTab = _tabTenants));
+            flow.Controls.Add(MakeNavButton("Nhân viên", () => _tabs.SelectedTab = _tabStaff));
+            flow.Controls.Add(MakeNavButton("Hợp đồng", () => _tabs.SelectedTab = _tabContracts));
+            flow.Controls.Add(MakeNavButton("Đặt cọc", () => _tabs.SelectedTab = _tabDeposits));
+            flow.Controls.Add(MakeNavButton("Hóa đơn/Thanh toán", () => _tabs.SelectedTab = _tabInvoices));
+            flow.Controls.Add(MakeNavButton("Điện/Nước/DV", () => _tabs.SelectedTab = _tabUtilities));
+            flow.Controls.Add(MakeNavButton("Bảo trì", () => _tabs.SelectedTab = _tabMaintenance));
+            flow.Controls.Add(MakeNavButton("Tài sản", () => _tabs.SelectedTab = _tabAssets));
+
+            nav.Controls.Add(flow);
+            return nav;
+        }
+
+        private void FixInvoicePaymentSplitter()
+        {
+            if (_invoicePaymentSplit == null) return;
+            if (_invoicePaymentSplit.Orientation != Orientation.Horizontal) return;
+
+            int total = _invoicePaymentSplit.ClientSize.Height;
+            if (total <= 0) return;
+
+            int minTop = InvoiceSplitMinTop;
+            int minBottom = InvoiceSplitMinBottom;
+            if (total < minTop + minBottom)
+            {
+                _invoicePaymentSplit.Panel1MinSize = 0;
+                _invoicePaymentSplit.Panel2MinSize = 0;
+                minTop = 0;
+                minBottom = 0;
+            }
+            else
+            {
+                _invoicePaymentSplit.Panel1MinSize = minTop;
+                _invoicePaymentSplit.Panel2MinSize = minBottom;
+            }
+            int maxTop = Math.Max(minTop, total - minBottom);
+            int target = total / 2;
+
+            if (target < minTop) target = minTop;
+            if (target > maxTop) target = maxTop;
+
+            if (_invoicePaymentSplit.SplitterDistance != target)
+                _invoicePaymentSplit.SplitterDistance = target;
+        }
+
+        private void FixTenantSplitter()
+        {
+            if (_tenantSplit == null) return;
+            if (_tenantSplit.Orientation != Orientation.Vertical) return;
+
+            int total = _tenantSplit.ClientSize.Width;
+            if (total <= 0) return;
+
+            int minLeft = TenantSplitMinLeft;
+            int minRight = TenantSplitMinRight;
+            if (total < minLeft + minRight)
+            {
+                _tenantSplit.Panel1MinSize = 0;
+                _tenantSplit.Panel2MinSize = 0;
+                minLeft = 0;
+                minRight = 0;
+            }
+            else
+            {
+                _tenantSplit.Panel1MinSize = minLeft;
+                _tenantSplit.Panel2MinSize = minRight;
+            }
+            int maxLeft = Math.Max(minLeft, total - minRight);
+            int target = total / 2;
+
+            if (target < minLeft) target = minLeft;
+            if (target > maxLeft) target = maxLeft;
+
+            if (_tenantSplit.SplitterDistance != target)
+                _tenantSplit.SplitterDistance = target;
+        }
+
+        private Button MakeNavButton(string text, Action onClick)
+        {
+            var btn = UiKit.MakeButton(text, UiKit.Primary, (s, e) => onClick?.Invoke(), 130);
+            btn.Margin = new Padding(0, 0, 8, 0);
+            return btn;
+        }
+
+        private Panel BuildLabeledGridPanel(string title, DataGridView grid)
+        {
+            var panel = new Panel { Dock = DockStyle.Fill, BackColor = Color.White };
+            var header = new Panel { Dock = DockStyle.Top, Height = 36, BackColor = Color.White, Padding = new Padding(12, 8, 12, 0) };
+            var label = new Label
+            {
+                AutoSize = true,
+                Text = title,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 79, 159)
+            };
+            header.Controls.Add(label);
+            panel.Controls.Add(grid);
+            panel.Controls.Add(header);
+            grid.Dock = DockStyle.Fill;
+            return panel;
+        }
+
+        private static void HideTabHeaders(TabControl tabControl)
+        {
+            if (tabControl == null) return;
+            tabControl.Appearance = TabAppearance.FlatButtons;
+            tabControl.ItemSize = new Size(0, 1);
+            tabControl.SizeMode = TabSizeMode.Fixed;
+            tabControl.Multiline = true;
         }
 
         private void BuildTenantDetailsPanel()

@@ -2,6 +2,7 @@ using System;
 using System.Data;
 using System.Drawing;
 using System.Globalization;
+using System.IO;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
 
@@ -13,8 +14,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private readonly DataRow _existingRow;
 
         private DataTable _roomTable;
+        private DataView _roomView;
         private DataTable _typeTable;
 
+        private TextBox txtRoomSearch;
         private ComboBox cboRoom;
         private ComboBox cboType;
         private DateTimePicker dtReadingDate;
@@ -24,6 +27,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private NumericUpDown numUnitPrice;
         private NumericUpDown numTotal;
         private TextBox txtNotes;
+
+        private PictureBox picMeter;
+        private Label lblImageHint;
+        private Button btnSelectImage;
+        private Button btnClearImage;
+        private string _selectedImagePath;
+        private bool _removeImageRequested;
 
         private Label lblCalcHint;
 
@@ -86,10 +96,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
 
             cboRoom = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
+            cboRoom.SelectedIndexChanged += (s, e) => LoadImageForDate();
             cboType = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
             cboType.SelectedIndexChanged += (s, e) => ApplyDefaultPriceFromType();
+            cboType.SelectedIndexChanged += (s, e) => LoadImageForDate();
 
             dtReadingDate = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true, Checked = true, Value = DateTime.Today };
+            dtReadingDate.ValueChanged += (s, e) => LoadImageForDate();
 
             numPrev = MakeNumber();
             numCurr = MakeNumber();
@@ -102,7 +115,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
             numUnitPrice.ValueChanged += (s, e) => Recalc();
 
             txtNotes = new TextBox { Multiline = true, Height = 90, ScrollBars = ScrollBars.Vertical };
-            lblCalcHint = new Label { AutoSize = true, ForeColor = Color.DimGray, Text = "Tiêu thụ = chỉ số mới - chỉ số cũ; Thành tiền = tiêu thụ × đơn giá" };
+            lblCalcHint = new Label { AutoSize = true, ForeColor = Color.DimGray, Text = "Tiêu thụ = chỉ số mới - chỉ số cũ; Thành tiền = tiêu thụ x đơn giá" };
+
+            pnlBody.Controls.Add(MakeLabel("Tìm phòng", top));
+            txtRoomSearch = new TextBox { Width = inputWidth };
+            txtRoomSearch.TextChanged += (s, e) => ApplyRoomFilter();
+            pnlBody.Controls.Add(MakeInput(txtRoomSearch, top));
+            top += line;
 
             pnlBody.Controls.Add(MakeLabel("Phòng (*)", top));
             pnlBody.Controls.Add(MakeInput(cboRoom, top));
@@ -142,6 +161,55 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             pnlBody.Controls.Add(MakeLabel("Ghi chú", top));
             pnlBody.Controls.Add(MakeInput(txtNotes, top));
+            top += 110;
+
+            pnlBody.Controls.Add(MakeLabel("Ảnh đồng hồ (theo tháng)", top));
+            picMeter = new PictureBox
+            {
+                BorderStyle = BorderStyle.FixedSingle,
+                SizeMode = PictureBoxSizeMode.Zoom,
+                Width = 200,
+                Height = 140
+            };
+            picMeter.Location = new Point(left + labelWidth, top);
+            pnlBody.Controls.Add(picMeter);
+
+            lblImageHint = new Label
+            {
+                AutoSize = true,
+                ForeColor = Color.DimGray,
+                Text = "Chọn ảnh đồng hồ để lưu theo tháng.",
+                Location = new Point(left + labelWidth + 210, top + 4)
+            };
+            pnlBody.Controls.Add(lblImageHint);
+
+            btnSelectImage = new Button
+            {
+                Text = "Chọn ảnh",
+                Width = 110,
+                Height = 32,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(0, 122, 204),
+                ForeColor = Color.White,
+                Location = new Point(left + labelWidth + 210, top + 34)
+            };
+            btnSelectImage.FlatAppearance.BorderSize = 0;
+            btnSelectImage.Click += (s, e) => SelectImage();
+            pnlBody.Controls.Add(btnSelectImage);
+
+            btnClearImage = new Button
+            {
+                Text = "Xóa ảnh",
+                Width = 110,
+                Height = 32,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(200, 200, 200),
+                ForeColor = Color.Black,
+                Location = new Point(left + labelWidth + 210, top + 74)
+            };
+            btnClearImage.FlatAppearance.BorderSize = 0;
+            btnClearImage.Click += (s, e) => ClearSelectedImage();
+            pnlBody.Controls.Add(btnClearImage);
 
             btnCancel = new Button
             {
@@ -195,6 +263,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 ApplyDefaultPriceFromType(force: true);
                 Recalc();
+                LoadImageForDate();
                 return;
             }
 
@@ -223,6 +292,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             txtNotes.Text = ReadString(_existingRow, "Notes") ?? string.Empty;
 
             Recalc();
+            LoadImageForDate();
         }
 
         private async System.Threading.Tasks.Task LoadRoomsAsync()
@@ -258,10 +328,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     }
                 }
 
-                cboRoom.DataSource = _roomTable;
+                _roomView = _roomTable.DefaultView;
+                cboRoom.DataSource = _roomView;
                 cboRoom.DisplayMember = "RoomDisplay";
                 cboRoom.ValueMember = "RoomId";
                 cboRoom.SelectedValue = 0;
+                ApplyRoomFilter();
             }
             catch
             {
@@ -286,8 +358,45 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 typeSelect.Columns.Add("DefaultPrice", typeof(decimal));
 
                 typeSelect.Rows.Add(0, "— Chọn loại —", 0m);
+            if (_typeTable != null && _typeTable.Columns.Contains("UtilityTypeId"))
+            {
+                DataRow elecRow = null;
+                DataRow waterRow = null;
+                DataRow internetRow = null;
 
-                if (_typeTable != null && _typeTable.Columns.Contains("UtilityTypeId"))
+                foreach (DataRow r in view?.ToTable()?.Rows ?? _typeTable.Rows)
+                {
+                    string name = r.Table.Columns.Contains("UtilityName") ? r["UtilityName"]?.ToString() : null;
+                    string code = r.Table.Columns.Contains("UtilityCode") ? r["UtilityCode"]?.ToString() : null;
+                    string codeUpper = (code ?? string.Empty).ToUpperInvariant();
+                    string nameLower = (name ?? string.Empty).ToLowerInvariant();
+
+                    if (internetRow == null && (codeUpper.Contains("INTERNET") || codeUpper == "NET" || nameLower.Contains("internet")))
+                        internetRow = r;
+                    if (elecRow == null && (codeUpper.Contains("ELEC") || nameLower.Contains("dien")))
+                        elecRow = r;
+                    if (waterRow == null && (codeUpper.Contains("WATER") || nameLower.Contains("nuoc")))
+                        waterRow = r;
+                }
+
+                var mainRow = elecRow ?? waterRow;
+                if (mainRow != null)
+                {
+                    int id = 0;
+                    try { id = Convert.ToInt32(mainRow["UtilityTypeId"]); } catch { }
+                    decimal def = ReadDecimal(mainRow, "DefaultPrice");
+                    typeSelect.Rows.Add(id, "Điện/Nước", def);
+                }
+
+                if (internetRow != null)
+                {
+                    int id = 0;
+                    try { id = Convert.ToInt32(internetRow["UtilityTypeId"]); } catch { }
+                    decimal def = ReadDecimal(internetRow, "DefaultPrice");
+                    typeSelect.Rows.Add(id, "Internet", def);
+                }
+
+                if (typeSelect.Rows.Count <= 1)
                 {
                     foreach (DataRow r in view?.ToTable()?.Rows ?? _typeTable.Rows)
                     {
@@ -299,10 +408,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
                         string display = string.IsNullOrWhiteSpace(code) ? name : $"{name} ({code})";
                         if (string.IsNullOrWhiteSpace(display)) display = "Loại " + id;
                         typeSelect.Rows.Add(id, display, def);
+                        if (typeSelect.Rows.Count >= 3) break;
                     }
                 }
+            }
 
-                cboType.DataSource = typeSelect;
+            cboType.DataSource = typeSelect;
                 cboType.DisplayMember = "TypeDisplay";
                 cboType.ValueMember = "UtilityTypeId";
                 cboType.SelectedValue = 0;
@@ -385,12 +496,146 @@ namespace quan_ly_chuoi_nha_tro.GUI
                         txtNotes.Text.Trim());
                 }
 
+                SaveImageForDate(roomId, typeId, readingDate);
                 DialogResult = DialogResult.OK;
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Lỗi lưu chỉ số: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void ApplyRoomFilter()
+        {
+            if (_roomView == null) return;
+            string keyword = (txtRoomSearch?.Text ?? string.Empty).Trim().Replace("'", "''");
+            if (string.IsNullOrWhiteSpace(keyword))
+            {
+                _roomView.RowFilter = string.Empty;
+                return;
+            }
+
+            _roomView.RowFilter = $"RoomDisplay LIKE '%{keyword}%'";
+        }
+
+        private void LoadImageForDate()
+        {
+            int roomId = GetSelectedId(cboRoom);
+            int typeId = GetSelectedId(cboType);
+            DateTime? date = dtReadingDate.Checked ? (DateTime?)dtReadingDate.Value.Date : null;
+            if (roomId <= 0 || typeId <= 0 || !date.HasValue)
+            {
+                SetMeterPreview(null);
+                return;
+            }
+
+            string existing = FindImagePath(roomId, typeId, date.Value);
+            _selectedImagePath = existing;
+            _removeImageRequested = false;
+            SetMeterPreview(existing);
+        }
+
+        private void SelectImage()
+        {
+            using (var ofd = new OpenFileDialog
+            {
+                Filter = "Image Files|*.jpg;*.jpeg;*.png;*.bmp",
+                Title = "Chọn ảnh đồng hồ"
+            })
+            {
+                if (ofd.ShowDialog(this) != DialogResult.OK) return;
+                _selectedImagePath = ofd.FileName;
+                _removeImageRequested = false;
+                SetMeterPreview(_selectedImagePath);
+            }
+        }
+
+        private void ClearSelectedImage()
+        {
+            _selectedImagePath = null;
+            _removeImageRequested = true;
+            SetMeterPreview(null);
+        }
+
+        private void SaveImageForDate(int roomId, int typeId, DateTime? readingDate)
+        {
+            if (roomId <= 0 || typeId <= 0 || !readingDate.HasValue) return;
+            string folder = GetImageFolder();
+            string key = BuildImageKey(roomId, typeId, readingDate.Value);
+            string existing = FindImagePath(roomId, typeId, readingDate.Value);
+
+            if (_removeImageRequested && !string.IsNullOrWhiteSpace(existing) && File.Exists(existing))
+            {
+                try { File.Delete(existing); } catch { }
+                _removeImageRequested = false;
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(_selectedImagePath) || !File.Exists(_selectedImagePath))
+                return;
+
+            string ext = Path.GetExtension(_selectedImagePath);
+            if (string.IsNullOrWhiteSpace(ext)) ext = ".jpg";
+            string dest = Path.Combine(folder, key + ext);
+
+            try
+            {
+                if (string.Equals(_selectedImagePath, dest, System.StringComparison.OrdinalIgnoreCase))
+                    return;
+                File.Copy(_selectedImagePath, dest, true);
+            }
+            catch
+            {
+                // ignore copy errors
+            }
+        }
+
+        private void SetMeterPreview(string path)
+        {
+            if (picMeter == null) return;
+            try
+            {
+                if (picMeter.Image != null)
+                {
+                    var old = picMeter.Image;
+                    picMeter.Image = null;
+                    old.Dispose();
+                }
+                if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+                {
+                    picMeter.Image = null;
+                    return;
+                }
+
+                using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                {
+                    picMeter.Image = Image.FromStream(fs);
+                }
+            }
+            catch
+            {
+                picMeter.Image = null;
+            }
+        }
+
+        private static string GetImageFolder()
+        {
+            string root = Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "Data", "UtilityMeterImages");
+            Directory.CreateDirectory(root);
+            return root;
+        }
+
+        private static string BuildImageKey(int roomId, int typeId, DateTime date)
+        {
+            return $"{roomId}_{typeId}_{date:yyyyMM}";
+        }
+
+        private static string FindImagePath(int roomId, int typeId, DateTime date)
+        {
+            string folder = GetImageFolder();
+            string key = BuildImageKey(roomId, typeId, date);
+            var files = Directory.GetFiles(folder, key + ".*");
+            return files.Length > 0 ? files[0] : null;
         }
 
         private static NumericUpDown MakeNumber(bool readOnly = false)
