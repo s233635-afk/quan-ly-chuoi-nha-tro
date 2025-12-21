@@ -14,7 +14,7 @@ namespace QuanLyNhaTro.DAL
         private const int DefaultDbCommandTimeoutSeconds = 10;
 
         private const string FallbackConnectionString =
-            "Data Source=SQL9001.site4now.net;Initial Catalog=db_ac1f11_quanlynhatro;User Id=db_ac1f11_quanlynhatro_admin;Password=admin123";
+            "Data Source=(LocalDB)\\MSSQLLocalDB;Initial Catalog=db_ac1f11_quanlynhatro;Integrated Security=True";
 
         private readonly string connectionString;
         private readonly int commandTimeoutSeconds;
@@ -22,6 +22,16 @@ namespace QuanLyNhaTro.DAL
         public DatabaseHelper()
         {
             connectionString = ResolveConnectionString();
+            bool useLocalDb = ReadBoolAppSetting("UseLocalDb", false);
+            if (useLocalDb)
+            {
+                var builder = new SqlConnectionStringBuilder(connectionString);
+                if (DatabaseInitializer.IsLocalDatabaseSource(builder.DataSource))
+                {
+                    DatabaseInitializer.EnsureInitializedAsync(connectionString, DefaultDbCommandTimeoutSeconds).GetAwaiter().GetResult();
+                }
+            }
+
             commandTimeoutSeconds = ReadIntAppSetting("DbCommandTimeoutSeconds", DefaultDbCommandTimeoutSeconds);
         }
 
@@ -31,6 +41,21 @@ namespace QuanLyNhaTro.DAL
             {
                 var raw = ConfigurationManager.AppSettings[key];
                 if (int.TryParse(raw, out int value) && value > 0) return value;
+            }
+            catch
+            {
+                // ignore
+            }
+
+            return fallback;
+        }
+
+        private static bool ReadBoolAppSetting(string key, bool fallback)
+        {
+            try
+            {
+                var raw = ConfigurationManager.AppSettings[key];
+                if (bool.TryParse(raw, out bool value)) return value;
             }
             catch
             {

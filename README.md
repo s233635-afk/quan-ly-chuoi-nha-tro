@@ -93,14 +93,13 @@ quan-ly-chuoi-nha-tro/
 
 ## 🗄️ Database
 
-**SQL Server**: SmarterASP.NET
-- Host: `SQL9001.site4now.net`
-- Database: `db_ac1f11_quanlynhatro`
-- User: `db_ac1f11_quanlynhatro_admin`
+**SQL Server**: SmarterASP.NET (mặc định)
+- Host: SQL9001.site4now.net
+- Database: db_ac1f11_quanlynhatro
+- User: db_ac1f11_quanlynhatro_admin (password dmin123)
+- Connection string mặc định trong quan-ly-chuoi-nha-tro/App.config.
 
-Scripts:
-- `Database/setup_database_final.sql` (schema)
-- `sample_data.sql` (dữ liệu mẫu)
+Nếu cần chạy app offline (không có kết nối SmarterASP.NET), đặt UseLocalDb=true trong ppSettings và đổi chuỗi QuanLyNhaTro về (LocalDB)\MSSQLLocalDB;Initial Catalog=db_ac1f11_quanlynhatro;Integrated Security=True. Khi tùy chọn bật, dotnet run sẽ tự động chạy Database/setup_database_final.sql và sample_data.sql nếu LocalDB chưa có database, hoặc bạn có thể chạy hai script bằng tay trong SSMS/sqlcmd để tái tạo schema và dữ liệu.
 
 **Các bảng chính (20 bảng)**:
 - Roles, Users
@@ -112,7 +111,6 @@ Scripts:
 - Invoices, Payments
 - MaintenanceTickets, Assets
 - Notifications, SystemSettings
-
 ## 🔐 Role-Based Access Control
 
 ```
@@ -128,6 +126,8 @@ RoleId = 1: Admin (Truy cập tất cả - app chỉ cho phép role này đăng 
 -- 2) Chạy sample_data.sql
 -- Đã có sẵn: admin / 123456
 ```
+
+Nếu bạn đang kết nối tới SmarterASP.NET thì database đã có sẵn và không cần chạy script này. Chỉ chạy hai tập tin SQL khi bạn bật `UseLocalDb=true` và chuyển chuỗi `QuanLyNhaTro` về LocalDB (`(LocalDB)\MSSQLLocalDB;Initial Catalog=db_ac1f11_quanlynhatro;Integrated Security=True`).
 
 ### 2. Build Project
 

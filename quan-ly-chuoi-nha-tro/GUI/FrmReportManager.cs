@@ -1,5 +1,6 @@
 using System;
 using System.Data;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -19,6 +20,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private TextBox _txtSearch;
         private DataGridView _grid;
         private Label _lblCount;
+        private Label _lblFooterSummary;
         private Button _btnExport;
         private Button _btnRefresh;
 
@@ -32,37 +34,79 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void InitializeComponent()
         {
-            Text = "Báo cáo & Thống kê";
+            Text = "Báo Cáo & Thống Kê";
             StartPosition = FormStartPosition.CenterParent;
-            Width = 1200;
-            Height = 700;
-            BackColor = UiKit.AppBackground;
+            Width = 1400;
+            Height = 850;
+            BackColor = Color.FromArgb(245, 247, 250);
+            this.DoubleBuffered = true;
 
-            _cboSource = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 220 };
+            // ===== HEADER PANEL WITH TITLE =====
+            var pnlHeader = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 40,
+                BackColor = Color.FromArgb(0, 120, 215),
+                Padding = new Padding(20, 8, 20, 8)
+            };
+            var lblTitle = new Label
+            {
+                Text = "📊",
+                Font = new Font("Segoe UI", 18, FontStyle.Bold),
+                ForeColor = Color.White,
+                AutoSize = true,
+                Dock = DockStyle.Left
+            };
+            pnlHeader.Controls.Add(lblTitle);
+
+            _cboSource = new ComboBox 
+            { 
+                DropDownStyle = ComboBoxStyle.DropDownList, 
+                Width = 200,
+                Height = 32,
+                Font = new Font("Segoe UI", 10),
+                BackColor = Color.White,
+                ForeColor = Color.Black
+            };
             _cboSource.Items.AddRange(new object[]
             {
-                "Hóa đơn",
-                "Thanh toán",
-                "Khách thuê",
+                "Hóa Đơn",
+                "Thanh Toán",
+                "Khách Thuê",
                 "Phòng",
-                "Hợp đồng",
-                "Đặt cọc",
-                "Bảo trì",
-                "Tài sản",
-                "Thông báo",
-                "Cấu hình hệ thống"
+                "Hợp Đồng",
+                "Đặt Cọc",
+                "Bảo Trì",
+                "Tài Sản",
+                "Thông Báo",
+                "Cấu Hình Hệ Thống"
             });
             _cboSource.SelectedIndex = 0;
             _cboSource.SelectedIndexChanged += async (s, e) => await LoadDataAsync();
 
-            _txtSearch = new TextBox { Width = 320 };
-            var pnlSearch = UiKit.MakeSearchPanel(_txtSearch, 360, SearchPlaceholder, ApplyFilter);
+            _txtSearch = new TextBox 
+            { 
+                Width = 300,
+                Height = 32,
+                Font = new Font("Segoe UI", 10),
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle
+            };
+            var pnlSearch = UiKit.MakeSearchPanel(_txtSearch, 340, SearchPlaceholder, ApplyFilter);
 
-            _btnExport = UiKit.MakeButton("Xuất CSV", UiKit.Purple, (s, e) => ExportCsv(), 100);
-            _btnRefresh = UiKit.MakeButton("Tải lại", UiKit.Primary, async (s, e) => await LoadDataAsync(), 92);
+            _btnExport = UiKit.MakeButton("📥 Xuất CSV", UiKit.Purple, (s, e) => ExportCsv(), 120);
+            _btnRefresh = UiKit.MakeButton("🔄 Tải Lại", UiKit.Primary, async (s, e) => await LoadDataAsync(), 120);
 
-            _lblCount = new Label { AutoSize = true, Text = "Tổng: 0", Font = new System.Drawing.Font("Segoe UI", 10, System.Drawing.FontStyle.Bold) };
+            _lblCount = new Label 
+            { 
+                AutoSize = true, 
+                Text = "Tổng: 0", 
+                Font = new Font("Segoe UI", 11, FontStyle.Bold), 
+                ForeColor = Color.FromArgb(0, 120, 215),
+                Margin = new Padding(20, 0, 0, 0)
+            };
 
+            // ===== GRID =====
             _grid = new DataGridView
             {
                 Dock = DockStyle.Fill,
@@ -73,54 +117,115 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 AllowUserToAddRows = false,
                 AllowUserToDeleteRows = false,
                 RowHeadersVisible = false,
-                BackgroundColor = System.Drawing.Color.White,
-                BorderStyle = BorderStyle.None
+                BackgroundColor = Color.White,
+                BorderStyle = BorderStyle.None,
+                ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize,
+                RowTemplate = { Height = 28 }
             };
-            UiKit.StyleGrid(_grid);
+            _grid.EnableHeadersVisualStyles = false;
+            _grid.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(0, 120, 215);
+            _grid.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            _grid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 11, FontStyle.Bold);
+            _grid.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            _grid.DefaultCellStyle.Font = new Font("Segoe UI", 10);
+            _grid.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            _grid.DefaultCellStyle.ForeColor = Color.FromArgb(50, 50, 50);
+            _grid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 249, 255);
+            _grid.GridColor = Color.FromArgb(220, 230, 240);
+            _grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(179, 211, 247);
+            _grid.DefaultCellStyle.SelectionForeColor = Color.Black;
 
-            var top = new Panel { Dock = DockStyle.Top, Height = 64, Padding = new Padding(12, 10, 12, 10), BackColor = System.Drawing.Color.White };
-            var actions = new FlowLayoutPanel
+            // ===== TOOLBAR PANEL =====
+            var pnlToolbar = new Panel 
+            { 
+                Dock = DockStyle.Top, 
+                Height = 50, 
+                Padding = new Padding(15, 8, 15, 8), 
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle
+            };
+
+            var pnlActions = new FlowLayoutPanel
             {
                 Dock = DockStyle.Right,
                 AutoSize = true,
                 WrapContents = false,
                 FlowDirection = FlowDirection.LeftToRight,
-                BackColor = System.Drawing.Color.Transparent
+                BackColor = Color.Transparent,
+                Margin = new Padding(0)
             };
-            actions.Controls.Add(_btnExport);
-            actions.Controls.Add(_btnRefresh);
+            pnlActions.Controls.Add(_btnExport);
+            pnlActions.Controls.Add(_btnRefresh);
+            pnlActions.Controls.Add(_lblCount);
 
-            var filter = new Panel { Dock = DockStyle.Fill, BackColor = System.Drawing.Color.Transparent };
-            var lblSource = new Label { Text = "Dữ liệu:", AutoSize = true, ForeColor = UiKit.MutedText, Location = new System.Drawing.Point(0, 9) };
-            _cboSource.Location = new System.Drawing.Point(lblSource.Right + 6, 6);
-            var lblSearch = new Label { Text = "Tìm:", AutoSize = true, ForeColor = UiKit.MutedText };
-            lblSearch.Location = new System.Drawing.Point(_cboSource.Right + 14, 9);
-            pnlSearch.Location = new System.Drawing.Point(lblSearch.Right + 6, 10);
-
-            filter.Controls.Add(lblSource);
-            filter.Controls.Add(_cboSource);
-            filter.Controls.Add(lblSearch);
-            filter.Controls.Add(pnlSearch);
-            filter.Resize += (s, e) =>
+            var pnlFilters = new FlowLayoutPanel
             {
-                _cboSource.Location = new System.Drawing.Point(lblSource.Right + 6, 6);
-                lblSearch.Location = new System.Drawing.Point(_cboSource.Right + 14, 9);
-                pnlSearch.Location = new System.Drawing.Point(lblSearch.Right + 6, 10);
+                Dock = DockStyle.Left,
+                AutoSize = true,
+                WrapContents = false,
+                FlowDirection = FlowDirection.LeftToRight,
+                BackColor = Color.Transparent
             };
+            
+            var lblSource = new Label 
+            { 
+                Text = "📋 Báo Cáo:", 
+                AutoSize = true, 
+                ForeColor = Color.FromArgb(70, 70, 70), 
+                Font = new Font("Segoe UI", 10),
+                Margin = new Padding(0, 6, 8, 0)
+            };
+            var lblSearch = new Label 
+            { 
+                Text = "🔍 Tìm:", 
+                AutoSize = true, 
+                ForeColor = Color.FromArgb(70, 70, 70), 
+                Font = new Font("Segoe UI", 10),
+                Margin = new Padding(15, 6, 8, 0)
+            };
+            
+            pnlFilters.Controls.Add(lblSource);
+            pnlFilters.Controls.Add(_cboSource);
+            pnlFilters.Controls.Add(lblSearch);
+            pnlFilters.Controls.Add(pnlSearch);
 
-            var summary = new Panel { Dock = DockStyle.Left, Width = 150, BackColor = System.Drawing.Color.Transparent };
-            _lblCount.Location = new System.Drawing.Point(0, 16);
-            summary.Controls.Add(_lblCount);
+            pnlToolbar.Controls.Add(pnlFilters);
+            pnlToolbar.Controls.Add(pnlActions);
 
-            top.Controls.Add(filter);
-            top.Controls.Add(actions);
-            top.Controls.Add(summary);
-
-            var gridHost = new Panel { Dock = DockStyle.Fill, Padding = new Padding(12), BackColor = BackColor };
+            // ===== GRID HOST =====
+            var gridHost = new Panel 
+            { 
+                Dock = DockStyle.Fill, 
+                Padding = new Padding(12), 
+                BackColor = BackColor 
+            };
             gridHost.Controls.Add(_grid);
 
+            // ===== FOOTER PANEL =====
+            var pnlFooter = new Panel
+            {
+                Dock = DockStyle.Bottom,
+                Height = 50,
+                BackColor = Color.FromArgb(248, 249, 250),
+                Padding = new Padding(15, 10, 15, 10),
+                BorderStyle = BorderStyle.FixedSingle
+            };
+
+            _lblFooterSummary = new Label
+            {
+                Text = "",
+                AutoSize = false,
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI", 10),
+                ForeColor = Color.FromArgb(50, 50, 50),
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            pnlFooter.Controls.Add(_lblFooterSummary);
+
             Controls.Add(gridHost);
-            Controls.Add(top);
+            Controls.Add(pnlFooter);
+            Controls.Add(pnlToolbar);
+            Controls.Add(pnlHeader);
 
             Load += async (s, e) => await LoadDataAsync();
         }
@@ -134,12 +239,241 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 if (_raw != null && _raw.Columns.Contains("BranchId"))
                     _raw = AdminBranchScope.FilterByBranchIds(_raw, _allowedBranchIds);
                 _grid.DataSource = _raw;
+                TranslateGridHeaders(_grid);
                 _lblCount.Text = $"Tổng: {_raw?.Rows.Count ?? 0}";
+                UpdateFooterSummary();
                 ApplyFilter();
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Lỗi tải báo cáo: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void UpdateFooterSummary()
+        {
+            if (_raw == null || _raw.Rows.Count == 0)
+            {
+                _lblFooterSummary.Text = "";
+                return;
+            }
+
+            var summaryParts = new System.Collections.Generic.List<string>();
+            var selected = _cboSource.SelectedItem?.ToString() ?? "Hóa Đơn";
+
+            // Generate summary based on report type
+            switch (selected)
+            {
+                case "Hóa Đơn":
+                    if (_raw.Columns.Contains("TotalAmount"))
+                    {
+                        decimal total = 0;
+                        foreach (DataRow row in _raw.Rows)
+                        {
+                            if (decimal.TryParse(row["TotalAmount"]?.ToString(), out decimal amt))
+                                total += amt;
+                        }
+                        summaryParts.Add($"💰 Tổng Tiền: {total:N0}đ");
+                    }
+                    if (_raw.Columns.Contains("PaidAmount"))
+                    {
+                        decimal paid = 0;
+                        foreach (DataRow row in _raw.Rows)
+                        {
+                            if (decimal.TryParse(row["PaidAmount"]?.ToString(), out decimal amt))
+                                paid += amt;
+                        }
+                        summaryParts.Add($"✓ Đã Thanh Toán: {paid:N0}đ");
+                    }
+                    if (_raw.Columns.Contains("RemainingAmount"))
+                    {
+                        decimal remaining = 0;
+                        foreach (DataRow row in _raw.Rows)
+                        {
+                            if (decimal.TryParse(row["RemainingAmount"]?.ToString(), out decimal amt))
+                                remaining += amt;
+                        }
+                        summaryParts.Add($"📌 Còn Nợ: {remaining:N0}đ");
+                    }
+                    break;
+
+                case "Thanh Toán":
+                    if (_raw.Columns.Contains("PaymentAmount"))
+                    {
+                        decimal total = 0;
+                        foreach (DataRow row in _raw.Rows)
+                        {
+                            if (decimal.TryParse(row["PaymentAmount"]?.ToString(), out decimal amt))
+                                total += amt;
+                        }
+                        summaryParts.Add($"💰 Tổng Thanh Toán: {total:N0}đ");
+                    }
+                    break;
+
+                case "Đặt Cọc":
+                    if (_raw.Columns.Contains("DepositAmount"))
+                    {
+                        decimal total = 0;
+                        foreach (DataRow row in _raw.Rows)
+                        {
+                            if (decimal.TryParse(row["DepositAmount"]?.ToString(), out decimal amt))
+                                total += amt;
+                        }
+                        summaryParts.Add($"💰 Tổng Cọc: {total:N0}đ");
+                    }
+                    break;
+
+                case "Phòng":
+                    int occupied = 0;
+                    if (_raw.Columns.Contains("Occupied"))
+                    {
+                        foreach (DataRow row in _raw.Rows)
+                        {
+                            if (row["Occupied"] != null && row["Occupied"] != DBNull.Value)
+                            {
+                                if (bool.TryParse(row["Occupied"].ToString(), out bool isOccupied) && isOccupied)
+                                    occupied++;
+                            }
+                        }
+                        summaryParts.Add($"👥 Phòng Đã Cho Thuê: {occupied}");
+                    }
+                    summaryParts.Add($"🏠 Tổng Phòng: {_raw.Rows.Count}");
+                    break;
+
+                default:
+                    summaryParts.Add($"📋 Tổng Bản Ghi: {_raw.Rows.Count}");
+                    break;
+            }
+
+            _lblFooterSummary.Text = string.Join(" | ", summaryParts);
+        }
+
+        private void TranslateGridHeaders(DataGridView grid)
+        {
+            if (grid == null || grid.Columns.Count == 0) return;
+
+            // Comprehensive translation dictionary for all reports
+            var columnMap = new System.Collections.Generic.Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                // Invoice columns
+                { "InvoiceId", "#" },
+                { "InvoiceNumber", "SốHĐ" },
+                { "TenantId", "KH#" },
+                { "TenantName", "Tên KH" },
+                { "RoomId", "P#" },
+                { "RoomNumber", "Phòng" },
+                { "InvoiceDate", "Ngày" },
+                { "FromDate", "Từ" },
+                { "ToDate", "Đến" },
+                { "RentalCost", "Thuê" },
+                { "UtilityCost", "Tiện Ích" },
+                { "OtherCost", "Khác" },
+                { "TotalAmount", "Tổng" },
+                { "PaidAmount", "Đã TT" },
+                { "RemainingAmount", "Còn Nợ" },
+                { "Status", "TT" },
+                { "DueDate", "Hạn" },
+                { "CreatedDate", "Tạo" },
+                { "UpdatedDate", "Sửa" },
+                
+                // Payment columns
+                { "PaymentId", "#" },
+                { "PaymentDate", "Ngày TT" },
+                { "PaymentAmount", "Tiền" },
+                { "PaymentMethod", "PT" },
+                { "TransactionReference", "Ref" },
+                { "Notes", "GC" },
+                
+                // Tenant columns
+                { "FullName", "Tên KH" },
+                { "IdentityCard", "CMND" },
+                { "PhoneNumber", "ĐT" },
+                { "Email", "Email" },
+                { "BirthDate", "Sinh" },
+                { "Address", "ĐC" },
+                { "TempReg", "Tạm Trú" },
+                { "TempRegDate", "Từ TT" },
+                { "TempRegExpiry", "Hết TT" },
+                { "IsActive", "Hoạt" },
+                { "CreatedBy", "Người TL" },
+                
+                // Room columns
+                { "RoomTypeId", "LP#" },
+                { "BranchId", "Chi Nhánh" },
+                { "SectionId", "KV#" },
+                { "RoomStatusId", "TT#" },
+                { "RoomPrice", "Giá" },
+                { "Capacity", "Sức" },
+                { "Occupied", "Sử Dụng" },
+                
+                // Contract columns
+                { "ContractId", "HĐ#" },
+                { "ContractNumber", "Số HĐ" },
+                { "ContractType", "Loại" },
+                { "SignDate", "Ký" },
+                { "StartDate", "Từ" },
+                { "EndDate", "Đến" },
+                { "RentalPrice", "Giá" },
+                { "DepositRequired", "Cọc" },
+                { "Terms", "ĐK" },
+                { "ContractPdfPath", "PDF" },
+                
+                // Deposit columns
+                { "DepositId", "Cọc#" },
+                { "DepositAmount", "Tiền" },
+                { "DepositDate", "Ngày" },
+                { "DepositType", "Loại" },
+                { "ReturnedAmount", "Hoàn" },
+                { "ReturnedDate", "Ngày Hoàn" },
+                
+                // Maintenance columns
+                { "MaintenanceId", "BT#" },
+                { "RequestDate", "Yêu Cầu" },
+                { "CompletionDate", "Hoàn" },
+                { "Cost", "CP" },
+                { "Category", "DM" },
+                { "Description", "Mô Tả" },
+                
+                // Asset columns
+                { "AssetId", "TS#" },
+                { "AssetName", "Tên TS" },
+                { "AssetValue", "Giá" },
+                { "Condition", "TT" },
+                { "PurchaseDate", "Mua" },
+                
+                // Notification columns
+                { "NotificationId", "TB#" },
+                { "NotificationTitle", "Tiêu Đề" },
+                { "NotificationContent", "Nội Dung" },
+                { "NotificationDate", "Gửi" },
+                { "RecipientType", "Loại" },
+                
+                // System Settings columns
+                { "SettingKey", "Khóa" },
+                { "SettingValue", "Giá Trị" },
+                { "SettingDescription", "Mô Tả" }
+            };
+
+            foreach (DataGridViewColumn col in grid.Columns)
+            {
+                if (columnMap.TryGetValue(col.Name, out var translatedName))
+                {
+                    col.HeaderText = translatedName;
+                }
+                else if (columnMap.TryGetValue(col.HeaderText, out var translatedName2))
+                {
+                    col.HeaderText = translatedName2;
+                }
+            }
+
+            // Auto-size columns with optimal width
+            foreach (DataGridViewColumn col in grid.Columns)
+            {
+                col.AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
+                if (col.Width < 60)
+                    col.Width = 60;
+                if (col.Width > 250)
+                    col.Width = 250;
             }
         }
 
@@ -160,27 +494,28 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private System.Threading.Tasks.Task<DataTable> LoadSelectedAsync()
         {
             var selected = _cboSource.SelectedItem?.ToString() ?? string.Empty;
+            
             switch (selected)
             {
-                case "Hóa đơn":
+                case "Hóa Đơn":
                     return _bll.GetInvoicesViewAsync();
-                case "Thanh toán":
+                case "Thanh Toán":
                     return _bll.GetPaymentsViewAsync();
-                case "Khách thuê":
+                case "Khách Thuê":
                     return _bll.GetTenantsAsync();
                 case "Phòng":
                     return _bll.GetRoomsAsync();
-                case "Hợp đồng":
+                case "Hợp Đồng":
                     return _bll.GetContractsAsync();
-                case "Đặt cọc":
+                case "Đặt Cọc":
                     return _bll.GetDepositsAsync();
-                case "Bảo trì":
+                case "Bảo Trì":
                     return _bll.GetMaintenanceAsync();
-                case "Tài sản":
+                case "Tài Sản":
                     return _bll.GetAssetsAsync();
-                case "Thông báo":
+                case "Thông Báo":
                     return _bll.GetNotificationsAsync();
-                case "Cấu hình hệ thống":
+                case "Cấu Hình Hệ Thống":
                     return _bll.GetSystemSettingsAsync();
                 default:
                     return _bll.GetInvoicesViewAsync();

@@ -36,36 +36,61 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void InitializeComponent()
         {
-            Text = "Bảo trì & Sự cố";
+            Text = "Bảo Trì";
             StartPosition = FormStartPosition.CenterParent;
-            Width = 1280;
-            Height = 720;
+            Width = 1400;
+            Height = 800;
             BackColor = Color.FromArgb(245, 247, 250);
+            Font = new Font("Segoe UI", 10F);
 
-            _grid = MakeGrid();
-            _grid.Dock = DockStyle.Fill;
-            _grid.DoubleClick += async (s, e) => await EditSelectedAsync();
+            // ===== TOOLBAR PANEL WITH TITLE =====
+            var pnlToolbar = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 85,
+                BackColor = Color.White,
+                Padding = new Padding(0),
+                BorderStyle = BorderStyle.None
+            };
 
-            _txtSearch = MakeSearchBox(SearchPlaceholder, () => ApplyFilter());
+            // Title bar inside toolbar
+            var pnlTitleBar = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 45,
+                BackColor = Color.FromArgb(255, 245, 245),
+                Padding = new Padding(20, 10, 20, 10),
+                BorderStyle = BorderStyle.None
+            };
+            var lblTitle = new Label
+            {
+                Text = "🔧 Bảo Trì",
+                Font = new Font("Segoe UI", 15, FontStyle.Bold),
+                ForeColor = Color.FromArgb(229, 57, 53),
+                AutoSize = true,
+                Dock = DockStyle.Left
+            };
+            pnlTitleBar.Controls.Add(lblTitle);
+            pnlToolbar.Controls.Add(pnlTitleBar);
 
-            _cboBranch = new ComboBox { Width = 220, DropDownStyle = ComboBoxStyle.DropDownList };
-            _cboBranch.SelectedIndexChanged += (s, e) => ApplyFilter();
+            // Actions bar inside toolbar
+            var pnlActionBar = new Panel
+            {
+                Dock = DockStyle.Bottom,
+                Height = 40,
+                BackColor = Color.White,
+                Padding = new Padding(12, 5, 12, 5),
+                BorderStyle = BorderStyle.FixedSingle
+            };
 
-            _cboStatus = new ComboBox { Width = 160, DropDownStyle = ComboBoxStyle.DropDownList };
-            _cboStatus.Items.AddRange(new object[] { "Tất cả", "Created", "InProgress", "Completed", "Cancelled" });
-            _cboStatus.SelectedIndex = 0;
-            _cboStatus.SelectedIndexChanged += (s, e) => ApplyFilter();
+            // Buttons
+            _btnAdd = MakeButton("➕ Thêm", Color.FromArgb(0, 122, 204), async (s, e) => await AddNewAsync());
+            _btnEdit = MakeButton("✎ Sửa", Color.FromArgb(0, 122, 204), async (s, e) => await EditSelectedAsync());
+            _btnDelete = MakeButton("🗑 Xóa", Color.FromArgb(211, 47, 47), async (s, e) => await DeleteSelectedAsync());
+            _btnDone = MakeButton("✓ Hoàn tất", Color.FromArgb(46, 125, 50), async (s, e) => await MarkDoneAsync());
+            _btnRefresh = MakeButton("⟳ Tải lại", Color.FromArgb(0, 122, 204), async (s, e) => await LoadAsync());
 
-            _lblCount = new Label { AutoSize = true, Text = "Tổng: 0", Font = new Font("Segoe UI", 10, FontStyle.Bold) };
-
-            _btnAdd = MakeButton("Thêm", Color.FromArgb(0, 122, 204), async (s, e) => await AddNewAsync());
-            _btnEdit = MakeButton("Sửa", Color.FromArgb(0, 122, 204), async (s, e) => await EditSelectedAsync());
-            _btnDelete = MakeButton("Xóa", Color.FromArgb(211, 47, 47), async (s, e) => await DeleteSelectedAsync());
-            _btnDone = MakeButton("Hoàn tất", Color.FromArgb(46, 125, 50), async (s, e) => await MarkDoneAsync());
-            _btnRefresh = MakeButton("Tải lại", Color.FromArgb(0, 122, 204), async (s, e) => await LoadAsync());
-
-            var top = new Panel { Dock = DockStyle.Top, Height = 64, Padding = new Padding(12, 10, 12, 10), BackColor = Color.White };
-            var actions = new FlowLayoutPanel
+            var pnlActions = new FlowLayoutPanel
             {
                 Dock = DockStyle.Left,
                 AutoSize = true,
@@ -73,35 +98,77 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 FlowDirection = FlowDirection.LeftToRight,
                 BackColor = Color.Transparent
             };
-            actions.Controls.Add(_btnAdd);
-            actions.Controls.Add(_btnEdit);
-            actions.Controls.Add(_btnDelete);
-            actions.Controls.Add(_btnDone);
-            actions.Controls.Add(_btnRefresh);
+            pnlActions.Controls.Add(_btnAdd);
+            pnlActions.Controls.Add(_btnEdit);
+            pnlActions.Controls.Add(_btnDelete);
+            pnlActions.Controls.Add(_btnDone);
+            pnlActions.Controls.Add(_btnRefresh);
 
-            var filters = new FlowLayoutPanel
+            // Search and Filters
+            _txtSearch = MakeSearchBox(SearchPlaceholder, () => ApplyFilter());
+            _cboBranch = new ComboBox
+            {
+                Width = 180,
+                Height = 28,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                BackColor = Color.White,
+                ForeColor = Color.Black,
+                Font = new Font("Segoe UI", 9)
+            };
+            _cboBranch.SelectedIndexChanged += (s, e) => ApplyFilter();
+
+            _cboStatus = new ComboBox
+            {
+                Width = 160,
+                Height = 28,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                BackColor = Color.White,
+                ForeColor = Color.Black,
+                Font = new Font("Segoe UI", 9)
+            };
+            _cboStatus.Items.AddRange(new object[] { "Tất cả", "Created", "InProgress", "Completed", "Cancelled" });
+            _cboStatus.SelectedIndex = 0;
+            _cboStatus.SelectedIndexChanged += (s, e) => ApplyFilter();
+
+            _lblCount = new Label
+            {
+                AutoSize = true,
+                Text = "Tổng: 0",
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                ForeColor = Color.FromArgb(229, 57, 53),
+                Margin = new Padding(15, 4, 0, 0)
+            };
+
+            var pnlFilters = new FlowLayoutPanel
             {
                 Dock = DockStyle.Right,
                 AutoSize = true,
                 WrapContents = false,
                 FlowDirection = FlowDirection.LeftToRight,
                 BackColor = Color.Transparent,
-                Padding = new Padding(0, 6, 0, 0)
+                Padding = new Padding(0, 3, 0, 0)
             };
-            filters.Controls.Add(new Label { Text = "Tìm:", AutoSize = true, Margin = new Padding(0, 6, 6, 0) });
-            filters.Controls.Add(_txtSearch);
-            filters.Controls.Add(new Label { Text = "Chi nhánh:", AutoSize = true, Margin = new Padding(12, 6, 6, 0) });
-            filters.Controls.Add(_cboBranch);
-            filters.Controls.Add(new Label { Text = "Trạng thái:", AutoSize = true, Margin = new Padding(12, 6, 6, 0) });
-            filters.Controls.Add(_cboStatus);
-            filters.Controls.Add(new Label { Text = "  ", AutoSize = true });
-            filters.Controls.Add(_lblCount);
+            pnlFilters.Controls.Add(new Label { Text = "🔍 Tìm:", AutoSize = true, Margin = new Padding(0, 4, 6, 0), Font = new Font("Segoe UI", 9) });
+            pnlFilters.Controls.Add(_txtSearch);
+            pnlFilters.Controls.Add(new Label { Text = "Chi nhánh:", AutoSize = true, Margin = new Padding(15, 4, 6, 0), Font = new Font("Segoe UI", 9) });
+            pnlFilters.Controls.Add(_cboBranch);
+            pnlFilters.Controls.Add(new Label { Text = "Trạng thái:", AutoSize = true, Margin = new Padding(15, 4, 6, 0), Font = new Font("Segoe UI", 9) });
+            pnlFilters.Controls.Add(_cboStatus);
+            pnlFilters.Controls.Add(_lblCount);
 
-            top.Controls.Add(actions);
-            top.Controls.Add(filters);
+            pnlActionBar.Controls.Add(pnlActions);
+            pnlActionBar.Controls.Add(pnlFilters);
+            pnlToolbar.Controls.Add(pnlActionBar);
 
+            // ===== GRID =====
+            _grid = MakeGrid();
+            _grid.Dock = DockStyle.Fill;
+            _grid.DoubleClick += async (s, e) => await EditSelectedAsync();
+
+            // Add all controls
             Controls.Add(_grid);
-            Controls.Add(top);
+            Controls.Add(pnlToolbar);
+
             Load += async (s, e) => await LoadAsync();
         }
 
@@ -166,15 +233,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
             SetHeader("TicketId", "ID");
             SetHeader("TicketNumber", "Số phiếu");
             SetHeader("RoomNumber", "Phòng");
-            SetHeader("RequestorType", "Nguồn");
-            SetHeader("RequestorId", "Nguồn ID");
-            SetHeader("IssueDescription", "Sự cố");
             SetHeader("Priority", "Ưu tiên");
-            SetHeader("AssignedToUserId", "NV xử lý");
             SetHeader("Status", "Trạng thái");
+            SetHeader("IssueDescription", "Mô tả sự cố");
+            SetHeader("AssignedToUserId", "NV xử lý");
             SetHeader("CreatedDate", "Tạo lúc");
             SetHeader("CompletedDate", "Hoàn tất");
             SetHeader("Notes", "Ghi chú");
+            SetHeader("RequestorType", "Nguồn");
+            SetHeader("RequestorId", "Nguồn ID");
 
             HideIfExists("RoomId");
             HideIfExists("BranchId");
@@ -192,9 +259,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 "AssignedToUserId",
                 "CreatedDate",
                 "CompletedDate",
-                "Notes",
-                "RequestorType",
-                "RequestorId"
+                "Notes"
             );
 
             if (_grid.Columns.Contains("IssueDescription"))
@@ -358,16 +423,21 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 AllowUserToDeleteRows = false,
                 RowHeadersVisible = false,
                 BackgroundColor = Color.White,
-                BorderStyle = BorderStyle.None
+                BorderStyle = BorderStyle.None,
+                RowTemplate = { Height = 28 }
             };
             g.EnableHeadersVisualStyles = false;
-            g.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(0, 120, 215);
+            g.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(229, 57, 53);
             g.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            g.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+            g.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 11, FontStyle.Bold);
+            g.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            g.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             g.DefaultCellStyle.Font = new Font("Segoe UI", 10, FontStyle.Regular);
-            g.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 249, 255);
-            g.DefaultCellStyle.SelectionBackColor = Color.FromArgb(232, 244, 252);
+            g.DefaultCellStyle.ForeColor = Color.FromArgb(50, 50, 50);
+            g.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(255, 250, 240);
+            g.DefaultCellStyle.SelectionBackColor = Color.FromArgb(255, 193, 7);
             g.DefaultCellStyle.SelectionForeColor = Color.Black;
+            g.GridColor = Color.FromArgb(220, 230, 240);
             return g;
         }
 
@@ -376,21 +446,43 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var b = new Button
             {
                 Text = text,
-                Width = 96,
-                Height = 34,
+                Width = 110,
+                Height = 36,
                 FlatStyle = FlatStyle.Flat,
                 BackColor = backColor,
                 ForeColor = Color.White,
-                Margin = new Padding(0, 0, 8, 0)
+                Margin = new Padding(0, 0, 6, 0),
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                Cursor = Cursors.Hand
             };
             b.FlatAppearance.BorderSize = 0;
+            b.FlatAppearance.MouseOverBackColor = ColorAdjust(backColor, 10);
             b.Click += onClick;
             return b;
         }
 
+        private static Color ColorAdjust(Color c, int delta)
+        {
+            return Color.FromArgb(
+                Math.Max(0, Math.Min(255, c.R + delta)),
+                Math.Max(0, Math.Min(255, c.G + delta)),
+                Math.Max(0, Math.Min(255, c.B + delta))
+            );
+        }
+
         private static TextBox MakeSearchBox(string placeholder, Action onChanged)
         {
-            var tb = new TextBox { Width = 320, ForeColor = Color.Gray, Text = placeholder };
+            var tb = new TextBox
+            {
+                Width = 280,
+                Height = 32,
+                ForeColor = Color.Gray,
+                Text = placeholder,
+                Font = new Font("Segoe UI", 10),
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle,
+                Padding = new Padding(5)
+            };
             tb.GotFocus += (s, e) =>
             {
                 if (tb.Text == placeholder)

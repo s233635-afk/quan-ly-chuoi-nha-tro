@@ -39,147 +39,179 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void InitializeComponent()
         {
-            Text = _existingRow == null ? "Thêm tài sản" : "Cập nhật tài sản";
+            Text = _existingRow == null ? "➕ Thêm Tài Sản" : "✎ Cập Nhật Tài Sản";
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
-            ClientSize = new Size(820, 560);
+            ClientSize = new Size(900, 680);
             BackColor = Color.White;
+            Font = new Font("Segoe UI", 10F);
 
+            // ===== HEADER =====
+            var pnlHeader = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 50,
+                BackColor = Color.FromArgb(0, 120, 215),
+                Padding = new Padding(20, 12, 20, 12)
+            };
+            var lblTitle = new Label
+            {
+                Text = _existingRow == null ? "Thêm Tài Sản Mới" : "Chỉnh Sửa Tài Sản",
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                ForeColor = Color.White,
+                AutoSize = true
+            };
+            pnlHeader.Controls.Add(lblTitle);
+
+            // ===== BOTTOM BUTTONS =====
             var pnlBottom = new Panel
             {
                 Dock = DockStyle.Bottom,
-                Height = 58,
-                Padding = new Padding(12, 10, 12, 10),
-                BackColor = Color.White
+                Height = 60,
+                Padding = new Padding(20, 12, 20, 12),
+                BackColor = Color.FromArgb(245, 247, 250),
+                BorderStyle = BorderStyle.FixedSingle
             };
-
-            var pnlBody = new Panel
-            {
-                Dock = DockStyle.Fill,
-                Padding = new Padding(18, 18, 18, 10),
-                AutoScroll = true,
-                BackColor = Color.White
-            };
-
-            int labelWidth = 200;
-            int inputWidth = 520;
-            int top = 10;
-            int left = 6;
-            int line = 34;
-
-            Label MakeLabel(string text, int y) => new Label
-            {
-                Text = text,
-                Location = new Point(left, y),
-                Width = labelWidth,
-                TextAlign = ContentAlignment.MiddleLeft
-            };
-
-            Control MakeInput(Control ctl, int y)
-            {
-                ctl.Location = new Point(left + labelWidth, y);
-                ctl.Width = inputWidth;
-                return ctl;
-            }
-
-            txtCode = new TextBox();
-            txtName = new TextBox();
-            txtCategory = new TextBox();
-            cboRoom = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
-            numQty = new NumericUpDown { Minimum = 1, Maximum = 100000, DecimalPlaces = 0, Value = 1, ThousandsSeparator = true };
-            cboCondition = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
-            cboCondition.Items.AddRange(new object[] { "Good", "Fair", "Poor", "Damaged" });
-            cboCondition.SelectedIndex = 0;
-            dtPurchase = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true, Checked = false };
-            numPrice = new NumericUpDown { Minimum = 0, Maximum = 100000000000, DecimalPlaces = 0, ThousandsSeparator = true };
-            chkActive = new CheckBox { Text = "Kích hoạt", AutoSize = true, Checked = true };
-            txtDesc = new TextBox { Multiline = true, Height = 90, ScrollBars = ScrollBars.Vertical };
-
-            pnlBody.Controls.Add(MakeLabel("Mã tài sản (*)", top));
-            pnlBody.Controls.Add(MakeInput(txtCode, top));
-            top += line;
-
-            pnlBody.Controls.Add(MakeLabel("Tên tài sản (*)", top));
-            pnlBody.Controls.Add(MakeInput(txtName, top));
-            top += line;
-
-            pnlBody.Controls.Add(MakeLabel("Nhóm/Loại", top));
-            pnlBody.Controls.Add(MakeInput(txtCategory, top));
-            top += line;
-
-            pnlBody.Controls.Add(MakeLabel("Phòng", top));
-            pnlBody.Controls.Add(MakeInput(cboRoom, top));
-            top += line;
-
-            pnlBody.Controls.Add(MakeLabel("Số lượng", top));
-            pnlBody.Controls.Add(MakeInput(numQty, top));
-            top += line;
-
-            pnlBody.Controls.Add(MakeLabel("Tình trạng", top));
-            pnlBody.Controls.Add(MakeInput(cboCondition, top));
-            top += line;
-
-            pnlBody.Controls.Add(MakeLabel("Ngày mua", top));
-            pnlBody.Controls.Add(MakeInput(dtPurchase, top));
-            top += line;
-
-            pnlBody.Controls.Add(MakeLabel("Giá mua", top));
-            pnlBody.Controls.Add(MakeInput(numPrice, top));
-            top += line;
-
-            var pnlActive = new Panel { Location = new Point(left + labelWidth, top), Width = inputWidth, Height = 26 };
-            chkActive.Parent = pnlActive;
-            chkActive.Location = new Point(0, 3);
-            pnlBody.Controls.Add(MakeLabel("Trạng thái", top));
-            pnlBody.Controls.Add(pnlActive);
-            top += line;
-
-            pnlBody.Controls.Add(MakeLabel("Mô tả", top));
-            pnlBody.Controls.Add(MakeInput(txtDesc, top));
 
             btnCancel = new Button
             {
-                Text = "Hủy",
-                Width = 110,
-                Height = 34,
-                Anchor = AnchorStyles.Right | AnchorStyles.Top,
+                Text = "❌ Hủy",
+                Width = 120,
+                Height = 36,
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.White
+                BackColor = Color.White,
+                ForeColor = Color.FromArgb(100, 100, 100),
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                Cursor = Cursors.Hand,
+                Margin = new Padding(10, 0, 0, 0)
             };
-            btnCancel.FlatAppearance.BorderColor = Color.FromArgb(210, 210, 210);
+            btnCancel.FlatAppearance.BorderColor = Color.FromArgb(200, 200, 200);
             btnCancel.FlatAppearance.BorderSize = 1;
             btnCancel.Click += (s, e) => DialogResult = DialogResult.Cancel;
 
             btnSave = new Button
             {
-                Text = "Lưu",
-                Width = 110,
-                Height = 34,
-                Anchor = AnchorStyles.Right | AnchorStyles.Top,
+                Text = "✓ Lưu",
+                Width = 120,
+                Height = 36,
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(0, 122, 204),
-                ForeColor = Color.White
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                Cursor = Cursors.Hand,
+                Margin = new Padding(10, 0, 0, 0)
             };
             btnSave.FlatAppearance.BorderSize = 0;
+            btnSave.FlatAppearance.MouseOverBackColor = Color.FromArgb(0, 100, 180);
             btnSave.Click += async (s, e) => await SaveAsync();
 
-            pnlBottom.Controls.Add(btnCancel);
-            pnlBottom.Controls.Add(btnSave);
-            btnCancel.Location = new Point(pnlBottom.Width - btnCancel.Width - 12, 12);
-            btnSave.Location = new Point(btnCancel.Left - btnSave.Width - 10, 12);
-            pnlBottom.Resize += (s, e) =>
+            var btnGroup = new FlowLayoutPanel
             {
-                btnCancel.Location = new Point(pnlBottom.Width - btnCancel.Width - 12, 12);
-                btnSave.Location = new Point(btnCancel.Left - btnSave.Width - 10, 12);
+                Dock = DockStyle.Right,
+                FlowDirection = FlowDirection.RightToLeft,
+                AutoSize = true,
+                WrapContents = false,
+                Margin = new Padding(0),
+                Padding = new Padding(0)
             };
+            btnGroup.Controls.Add(btnCancel);
+            btnGroup.Controls.Add(btnSave);
+            pnlBottom.Controls.Add(btnGroup);
+
+            // ===== BODY CONTENT =====
+            var pnlBody = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(24, 24, 24, 20),
+                AutoScroll = true,
+                BackColor = Color.White
+            };
+
+            txtCode = new TextBox { BorderStyle = BorderStyle.FixedSingle };
+            txtName = new TextBox { BorderStyle = BorderStyle.FixedSingle };
+            txtCategory = new TextBox { BorderStyle = BorderStyle.FixedSingle };
+            cboRoom = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.White };
+            numQty = new NumericUpDown { Minimum = 1, Maximum = 100000, DecimalPlaces = 0, Value = 1, ThousandsSeparator = true, BorderStyle = BorderStyle.FixedSingle };
+            cboCondition = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.White };
+            cboCondition.Items.AddRange(new object[] { "Good", "Fair", "Poor", "Damaged" });
+            cboCondition.SelectedIndex = 0;
+            dtPurchase = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true, Checked = false };
+            numPrice = new NumericUpDown { Minimum = 0, Maximum = 100000000000, DecimalPlaces = 0, ThousandsSeparator = true, BorderStyle = BorderStyle.FixedSingle };
+            chkActive = new CheckBox { Text = "✓ Kích hoạt", AutoSize = true, Checked = true, Font = new Font("Segoe UI", 10) };
+            txtDesc = new TextBox { Multiline = true, Height = 120, ScrollBars = ScrollBars.Vertical, BorderStyle = BorderStyle.FixedSingle };
+
+            var tblBody = new TableLayoutPanel
+            {
+                ColumnCount = 2,
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                CellBorderStyle = TableLayoutPanelCellBorderStyle.None,
+                ColumnStyles =
+                {
+                    new ColumnStyle(SizeType.Absolute, 150F),
+                    new ColumnStyle(SizeType.Percent, 100F)
+                },
+                Margin = new Padding(0),
+                Padding = new Padding(0)
+            };
+
+            void AddField(string labelText, Control control)
+            {
+                var lbl = new Label
+                {
+                    Text = labelText,
+                    AutoSize = true,
+                    Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                    ForeColor = Color.FromArgb(50, 50, 50),
+                    Anchor = AnchorStyles.Left | AnchorStyles.Top,
+                    Margin = new Padding(0, 12, 0, 0)
+                };
+
+                control.Margin = new Padding(0, 8, 0, 0);
+                control.Anchor = control is CheckBox ? (AnchorStyles.Left | AnchorStyles.Top) : (AnchorStyles.Left | AnchorStyles.Right);
+                if (control is TextBox tb)
+                {
+                    tb.Height = tb.Multiline ? 120 : 34;
+                }
+                else if (control is CheckBox chk)
+                {
+                    chk.Height = chk.PreferredSize.Height;
+                }
+                else
+                {
+                    control.Height = 34;
+                }
+                control.Dock = control is CheckBox ? DockStyle.None : DockStyle.Fill;
+
+                int rowIndex = tblBody.RowCount;
+                tblBody.RowCount++;
+                tblBody.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+                tblBody.Controls.Add(lbl, 0, rowIndex);
+                tblBody.Controls.Add(control, 1, rowIndex);
+            }
+
+            AddField("Mã Tài Sản (*)", txtCode);
+            AddField("Tên Tài Sản (*)", txtName);
+            AddField("Nhóm/Loại", txtCategory);
+            AddField("Phòng", cboRoom);
+            AddField("Số Lượng", numQty);
+            AddField("Tình Trạng", cboCondition);
+            AddField("Ngày Mua", dtPurchase);
+            AddField("Giá Mua", numPrice);
+            AddField("Trạng Thái", chkActive);
+            AddField("Mô Tả", txtDesc);
+
+            pnlBody.Controls.Add(tblBody);
 
             AcceptButton = btnSave;
             CancelButton = btnCancel;
 
             Controls.Add(pnlBody);
             Controls.Add(pnlBottom);
+            Controls.Add(pnlHeader);
         }
 
         private async System.Threading.Tasks.Task LoadAsync()
