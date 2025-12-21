@@ -70,11 +70,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private FlowLayoutPanel _staffCardsHost;
         private Label _lblStaffTitle;
         private Label _lblStaffCount;
-        private TextBox _txtStaffFullName;
-        private TextBox _txtStaffPhone;
-        private TextBox _txtStaffEmail;
-        private TextBox _txtStaffAddress;
-        private ComboBox _cboStaffRole;
         private Button _btnStaffSave;
         private Button _btnStaffDelete;
         private int _selectedStaffId;
