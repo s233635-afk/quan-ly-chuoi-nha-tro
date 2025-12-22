@@ -18,6 +18,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
     {
         private const string SearchPlaceholder = "Tìm theo số phòng/loại...";
         private const int DefaultDisplayedRooms = 20;
+        private const int RoomsPerSection = DefaultDisplayedRooms / 2;
+        private const int RoomCardDefaultWidth = 300;
+        private const int RoomCardMinWidth = 240;
+        private const int RoomCardMaxWidth = 340;
+        private const int RoomCardHorizontalMargin = 20;
+        private const string PlaceholderFlagColumn = "IsPlaceholder";
 
         private readonly AdminDataBLL _bll;
         private readonly int? _branchId;
@@ -147,7 +153,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 BackColor = Color.FromArgb(0, 122, 204),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Margin = new Padding(0, 4, 6, 0)
+                Margin = new Padding(0, 4, 6, 0),
+                Visible = false
             };
             _btnSearch.FlatAppearance.BorderSize = 0;
             _btnSearch.Click += (s, e) => ApplyFilter();
@@ -173,7 +180,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 BackColor = Color.FromArgb(23, 162, 184),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Margin = new Padding(0, 4, 6, 0)
+                Margin = new Padding(0, 4, 6, 0),
+                Visible = false
             };
             _btnAddRoom.FlatAppearance.BorderSize = 0;
             _btnAddRoom.Click += async (s, e) => await AddRoomAsync();
@@ -215,7 +223,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Margin = new Padding(0, 4, 0, 0),
-                Visible = true,
+                Visible = false,
                 Enabled = true
             };
             _btnDelete.FlatAppearance.BorderSize = 0;
@@ -228,12 +236,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             filters.Controls.Add(lblLimit);
             filters.Controls.Add(_numDisplayLimit);
 
-            actions.Controls.Add(_btnSearch);
             actions.Controls.Add(_btnRefresh);
-            actions.Controls.Add(_btnAddRoom);
-            actions.Controls.Add(_btnEdit);
-            actions.Controls.Add(_btnChangeStatus);
-            actions.Controls.Add(_btnDelete);
 
             var stats = new FlowLayoutPanel
             {
@@ -263,7 +266,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             stats.Controls.Add(_lblRoomCount);
 
             toolbar.Controls.Add(actions);
-            toolbar.Controls.Add(stats);
             toolbar.Controls.Add(filters);
 
             _splitContainer = new SplitContainer
@@ -431,7 +433,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 var current = 0;
                 if (row.Table.Columns.Contains("Occupants") && int.TryParse(row["Occupants"]?.ToString(), out var stored))
                     current = stored;
-                row["Occupants"] = activeByRoom.TryGetValue(rid, out var count) ? count : current;
+                if (activeByRoom.TryGetValue(rid, out var count))
+                {
+                    if (current <= 0)
+                        row["Occupants"] = count;
+                }
+                else
+                {
+                    row["Occupants"] = current;
+                }
             }
         }
 
@@ -532,20 +542,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 var roomsA = list
                     .Where(r => (SafeToString(r, "RoomNumber") ?? string.Empty).StartsWith("A", StringComparison.OrdinalIgnoreCase))
-                    .OrderBy(r => GetRoomSortKey(SafeToString(r, "RoomNumber"))
-                    .Take(RoomsPerSection);
-
+                    .OrderBy(r => GetRoomSortKey(SafeToString(r, "RoomNumber")))
                     .Take(limitA);
-
 
                 var roomsB = list
                     .Where(r => (SafeToString(r, "RoomNumber") ?? string.Empty).StartsWith("B", StringComparison.OrdinalIgnoreCase))
                     .OrderBy(r => GetRoomSortKey(SafeToString(r, "RoomNumber")))
-
-                    .Take(RoomsPerSection);
-
                     .Take(limitB);
-
 
                 return roomsA.Concat(roomsB).ToList();
             }
@@ -566,7 +569,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                 .ToList();
 
-            var selectedA = SelectRoomsForSectionA(roomsAStaff);
+            var selectedA = SelectRoomsForSectionA(roomsAStaff, RoomsPerSection);
             if (!ShouldPadStaffRooms())
                 return selectedA.Concat(roomsBStaff.Take(RoomsPerSection)).ToList();
 
@@ -677,13 +680,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             char code = char.ToUpperInvariant(prefix);
             for (int i = 1; i <= RoomsPerSection; i++)
                 yield return $"{code}{i:00}";
-
-                .Take(limitB)
-                .ToList();
-
-            var selectedA = SelectRoomsForSectionA(roomsAStaff, limitA);
-            return selectedA.Concat(roomsBStaff).ToList();
-
         }
 
         private void RenderRoomCards(IEnumerable<DataRow> displayedRows)
@@ -1018,14 +1014,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
 
             Action handleClick = () =>
-
-
-            card.Click += (s, e) =>
-
             {
                 ShowRoomDetails(row, roomId);
-                ShowRoomInfoForm(row, roomId);
             };
+
             if (_branchId.HasValue)
             {
                 RegisterRoomCardClick(card, handleClick);
@@ -1277,10 +1269,9 @@ private DataRow CreatePlaceholderRow(DataTable table, string roomNumber, char pr
             }
             _inspectingRoomId = roomId;
             ApplyFilter();
-            _btnEdit.Visible = _selectedRoomRow != null && !IsPlaceholderRow(_selectedRoomRow);
-            if (_splitContainer != null) _splitContainer.Panel2Collapsed = false;
-            BuildRoomDetailsPanel();
-
+            _btnEdit.Visible = false;
+            _btnDelete.Enabled = false;
+            if (_splitContainer != null) _splitContainer.Panel2Collapsed = true;
             ShowRoomDetailsForm(row, roomId);
         }
 
@@ -1727,8 +1718,6 @@ private DataRow CreatePlaceholderRow(DataTable table, string roomNumber, char pr
 
             int occupied = list.Count(r =>
                 IsOccupiedStatusName(r["StatusName"]?.ToString()) && TryGetInt(r, "Occupants") >= 1);
-
-            _lblSummary.Text = $"\u0110ang \u1edf/T\u1ed5ng: {occupied}/{MaxDisplayedRooms} ph\u00f2ng";
 
             _lblSummary.Text = $"Đang ở/Tổng: {occupied}/{GetLimitText()} phòng";
         }
@@ -2576,18 +2565,12 @@ private void UpdateRowValues(DataRow row, string roomNumber, int? roomTypeId, de
                     }
                 }
 
-                if (_isStaffMode)
+                if (_isStaffMode && statusSrc.Rows.Count == 0 && _statuses != null && _statuses.Columns.Contains("StatusId"))
                 {
-                    bool hasOccupied = statusSrc.AsEnumerable()
-                        .Select(r => r["StatusName"]?.ToString() ?? string.Empty)
-                        .Any(name => NormalizeStatusKey(name).Contains("dang o"));
-                    if (!hasOccupied)
+                    foreach (DataRow r in _statuses.Rows)
                     {
-                        MessageBox.Show("Thi\u1ebfu tr\u1ea1ng th\u00e1i \"\u0110ang \u1edf\". Vui l\u00f2ng ch\u1ea1y seed_room_statuses.sql tr\u01b0\u1edbc khi ch\u1ec9nh s\u1eeda.",
-                            "Th\u00f4ng b\u00e1o", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        DialogResult = DialogResult.Cancel;
-                        Close();
-                        return;
+                        if (!int.TryParse(r["StatusId"]?.ToString(), out var id)) continue;
+                        statusSrc.Rows.Add(id, r["StatusName"]?.ToString());
                     }
                 }
 

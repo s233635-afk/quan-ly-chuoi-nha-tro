@@ -754,12 +754,17 @@ namespace QuanLyNhaTro.DAL
 
         #endregion
 
-        public Task<DataTable> GetRoomsAsync()
+        public async Task<DataTable> GetRoomsAsync()
         {
-            return GetTableSafeAsync(
-                "Rooms",
-                null,
-                @"SELECT r.RoomId,
+            var occupantsSelect = string.Empty;
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                if (await ColumnExistsAsync(conn, "Rooms", "Occupants"))
+                    occupantsSelect = ", r.Occupants";
+            }
+
+            var sql = $@"SELECT r.RoomId,
                          r.RoomNumber,
                          r.BranchId,
                          b.BranchName,
@@ -774,13 +779,18 @@ namespace QuanLyNhaTro.DAL
                          r.Area,
                          r.IsActive,
                          r.CreatedDate,
-                         r.UpdatedDate
+                         r.UpdatedDate{occupantsSelect}
                   FROM Rooms r
                   LEFT JOIN Branches b ON b.BranchId = r.BranchId
                   LEFT JOIN BranchSections s ON s.SectionId = r.SectionId
                   LEFT JOIN RoomTypes rt ON rt.RoomTypeId = r.RoomTypeId
                   LEFT JOIN RoomStatuses st ON st.StatusId = r.CurrentStatusId
-                  ORDER BY r.RoomNumber",
+                  ORDER BY r.RoomNumber";
+
+            return await GetTableSafeAsync(
+                "Rooms",
+                null,
+                sql,
                 "SELECT * FROM Rooms"
             );
         }
