@@ -31,6 +31,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
         public FrmAssetManager()
         {
             InitializeComponent();
+            AdminEvents.DataChanged += HandleAdminDataChanged;
+            FormClosing += (s, e) => AdminEvents.DataChanged -= HandleAdminDataChanged;
         }
 
         private void InitializeComponent()
@@ -46,36 +48,16 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var pnlToolbar = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 85,
+                Height = 45,
                 BackColor = Color.White,
                 Padding = new Padding(0),
                 BorderStyle = BorderStyle.None
             };
 
-            // Title bar inside toolbar
-            var pnlTitleBar = new Panel
-            {
-                Dock = DockStyle.Top,
-                Height = 45,
-                BackColor = Color.FromArgb(248, 249, 250),
-                Padding = new Padding(20, 10, 20, 10),
-                BorderStyle = BorderStyle.None
-            };
-            var lblTitle = new Label
-            {
-                Text = "📦 Tài Sản",
-                Font = new Font("Segoe UI", 15, FontStyle.Bold),
-                ForeColor = Color.FromArgb(0, 120, 215),
-                AutoSize = true,
-                Dock = DockStyle.Left
-            };
-            pnlTitleBar.Controls.Add(lblTitle);
-            pnlToolbar.Controls.Add(pnlTitleBar);
-
-            // Actions bar inside toolbar
+            // Actions bar
             var pnlActionBar = new Panel
             {
-                Dock = DockStyle.Bottom,
+                Dock = DockStyle.Fill,
                 Height = 40,
                 BackColor = Color.White,
                 Padding = new Padding(12, 5, 12, 5),
@@ -186,6 +168,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
             catch (Exception ex)
             {
                 MessageBox.Show("Lỗi tải tài sản: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private async void HandleAdminDataChanged()
+        {
+            if (IsDisposed || !IsHandleCreated) return;
+            try
+            {
+                await LoadAsync();
+            }
+            catch
+            {
+                // ignore refresh errors
             }
         }
 

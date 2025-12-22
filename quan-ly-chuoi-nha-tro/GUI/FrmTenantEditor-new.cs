@@ -1,7 +1,6 @@
 using System;
 using System.Data;
 using System.Drawing;
-using System.Globalization;
 using System.Linq;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
@@ -355,7 +354,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             if (cboRoom.SelectedItem is DataRowView row)
             {
                 decimal price = 0;
-                if (row["RoomPrice"] != DBNull.Value && decimal.TryParse(row["RoomPrice"].ToString(), out var p))
+                if (row["Price"] != DBNull.Value && decimal.TryParse(row["Price"].ToString(), out var p))
                 {
                     price = p;
                 }
@@ -432,27 +431,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 return;
             }
 
-            if (_existingRow == null)
-            {
-                if (string.IsNullOrWhiteSpace(txtContractId.Text))
-                {
-                    MessageBox.Show("Vui lòng nhập Mã Hợp Đồng.", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-
-                if (!(cboRoom.SelectedValue is int roomId) || roomId <= 0)
-                {
-                    MessageBox.Show("Vui lòng chọn Phòng.", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-
-                if (!dtStartDate.Checked)
-                {
-                    MessageBox.Show("Vui lòng chọn Ngày bắt đầu.", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-            }
-
             try
             {
                 if (_existingRow == null)
@@ -473,39 +451,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
                         txtBackIdPhoto.Text.Trim()
                     );
                     SavedTenantId = newId;
-
-                    int roomId = Convert.ToInt32(cboRoom.SelectedValue);
-                    DateTime startDate = dtStartDate.Checked ? dtStartDate.Value.Date : DateTime.Today;
-                    DateTime endDate = dtEndDate.Value.Date;
-                    if (endDate < startDate)
-                        endDate = startDate;
-
-                    DateTime? signDate = dtContractDate.Checked ? (DateTime?)dtContractDate.Value.Date : null;
-                    decimal rentalPrice = ReadMoney(txtRentalPrice.Text);
-                    decimal depositAmount = ReadMoney(txtDeposit.Text);
-
-                    await _bll.AddContractAsync(
-                        txtContractId.Text.Trim(),
-                        newId,
-                        roomId,
-                        signDate,
-                        startDate,
-                        endDate,
-                        rentalPrice,
-                        depositAmount,
-                        "Tạo từ form khách thuê",
-                        null,
-                        "Active");
-
-                    await _bll.AddTenantHistoryAsync(
-                        newId,
-                        roomId,
-                        startDate,
-                        null,
-                        "Active",
-                        "Tạo từ form khách thuê");
-
-                    await _bll.UpdateRoomOccupancyStatusAsync(roomId, 2);
                 }
                 else
                 {
@@ -541,14 +486,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 MessageBox.Show($"Lỗi lưu khách thuê: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-        }
-
-        private static decimal ReadMoney(string raw)
-        {
-            if (string.IsNullOrWhiteSpace(raw)) return 0m;
-            if (decimal.TryParse(raw, NumberStyles.Any, CultureInfo.InvariantCulture, out var v)) return v;
-            if (decimal.TryParse(raw, NumberStyles.Any, CultureInfo.CurrentCulture, out v)) return v;
-            return 0m;
         }
     }
 }

@@ -38,6 +38,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             _branchId = branchId;
             InitializeComponent();
+            AdminEvents.DataChanged += HandleAdminDataChanged;
+            FormClosing += (s, e) => AdminEvents.DataChanged -= HandleAdminDataChanged;
         }
 
         private void InitializeComponent()
@@ -179,6 +181,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
             catch (Exception ex)
             {
                 MessageBox.Show("Lỗi: " + ex.Message);
+            }
+        }
+
+        private async void HandleAdminDataChanged()
+        {
+            if (IsDisposed || !IsHandleCreated) return;
+            try
+            {
+                await LoadDataAsync();
+            }
+            catch
+            {
+                // ignore refresh errors
             }
         }
 
@@ -327,7 +342,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 if (frm.ShowDialog(this) == DialogResult.OK)
                 {
-                    LoadDataAsync(); // Load lại nếu có sửa đổi
+                    _ = LoadDataAsync(); // Load lại nếu có sửa đổi
                 }
             }
         }

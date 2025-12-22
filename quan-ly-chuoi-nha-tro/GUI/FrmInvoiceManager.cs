@@ -34,6 +34,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             _branchId = branchId;
             InitializeComponent();
+            AdminEvents.DataChanged += HandleAdminDataChanged;
+            FormClosing += (s, e) => AdminEvents.DataChanged -= HandleAdminDataChanged;
         }
 
         private void InitializeComponent()
@@ -135,7 +137,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 using (var pen = new Pen(Color.FromArgb(200, 200, 200), 1))
                 {
                     e.Graphics.DrawLine(pen, 0, 0, bottom.Width, 0);
-                }
+                    }
             };
             _lblCount.Location = new Point(0, 6);
             _lblCount.Font = new Font("Segoe UI", 10, FontStyle.Bold);
@@ -184,6 +186,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
         }
 
+        private async void HandleAdminDataChanged()
+        {
+            if (IsDisposed || !IsHandleCreated) return;
+            try
+            {
+                await LoadDataAsync();
+            }
+            catch
+            {
+                // ignore refresh errors
+            }
+        }
+
         private static DataTable FilterByBranch(DataTable dt, int? branchId)
         {
             if (dt == null) return dt;
@@ -217,6 +232,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 { "RentalCost", "Tiền phòng" },
                 { "UtilityCost", "Tiền dịch vụ" },
                 { "OtherCost", "Chi phí khác" },
+                { "TaxRate", "Thuế (%)" },
+                { "TaxAmount", "Tiền thuế" },
                 { "TotalAmount", "Tổng tiền" },
                 { "PaidAmount", "Đã thu" },
                 { "RemainingAmount", "Còn nợ" },
@@ -234,10 +251,16 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 }
 
                 // Format số tiền
-                if (col.Name == "RentalCost" || col.Name == "UtilityCost" || col.Name == "OtherCost" || 
-                    col.Name == "TotalAmount" || col.Name == "PaidAmount" || col.Name == "RemainingAmount")
+                if (col.Name == "RentalCost" || col.Name == "UtilityCost" || col.Name == "OtherCost" ||
+                    col.Name == "TaxAmount" || col.Name == "TotalAmount" || col.Name == "PaidAmount" || col.Name == "RemainingAmount")
                 {
                     col.DefaultCellStyle.Format = "N0";
+                    col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+                }
+
+                if (col.Name == "TaxRate")
+                {
+                    col.DefaultCellStyle.Format = "N2";
                     col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
                 }
 

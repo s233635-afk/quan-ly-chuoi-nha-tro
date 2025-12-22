@@ -15,7 +15,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private readonly AdminDataBLL _bll = new AdminDataBLL();
 
         private DataTable _readingTable;
+        private DataTable _readingTableRaw;
         private DataTable _typeTable;
+        private DataTable _typeTableRaw;
         private DataTable _branchTable;
         private System.Collections.Generic.HashSet<int> _allowedBranchIds;
 
@@ -43,6 +45,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
         public FrmUtilityManager()
         {
             InitializeComponent();
+            AdminEvents.DataChanged += HandleAdminDataChanged;
+            FormClosing += (s, e) => AdminEvents.DataChanged -= HandleAdminDataChanged;
         }
 
         private void InitializeComponent()
@@ -174,6 +178,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
             await LoadTypesAsync();
         }
 
+        private async void HandleAdminDataChanged()
+        {
+            if (IsDisposed || !IsHandleCreated) return;
+            try
+            {
+                await LoadAllAsync();
+            }
+            catch
+            {
+                // ignore refresh errors
+            }
+        }
+
         private async System.Threading.Tasks.Task LoadBranchesAsync()
         {
             try
@@ -216,9 +233,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             try
             {
-                _readingTable = await _bll.GetUtilitiesAsync();
-                TextFixer.FixDataTable(_readingTable, "RoomNumber", "UtilityName", "UtilityCode", "Notes");
-                _readingTable = AdminBranchScope.FilterByBranchIds(_readingTable, _allowedBranchIds);
+                _readingTableRaw = await _bll.GetUtilitiesAsync();
+                TextFixer.ForceFixDataTable(_readingTableRaw, "RoomNumber", "UtilityName", "UtilityCode", "Notes");
+                _readingTableRaw = AdminBranchScope.FilterByBranchIds(_readingTableRaw, _allowedBranchIds);
+                _readingTable = BuildReadingsDisplayTable(_readingTableRaw);
                 _gridReadings.DataSource = _readingTable;
                 ApplyReadingsGridPresentation();
                 ApplyReadingsFilter();
@@ -233,7 +251,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             try
             {
-                _typeTable = await _bll.GetUtilityTypesAsync();
+                _typeTableRaw = await _bll.GetUtilityTypesAsync();
+                TextFixer.ForceFixDataTable(_typeTableRaw, "UtilityName", "UtilityCode", "Unit", "Description");
+                _typeTable = BuildTypesDisplayTable(_typeTableRaw);
                 _gridTypes.DataSource = _typeTable;
                 ApplyTypesGridPresentation();
                 ApplyTypesFilter();
@@ -317,6 +337,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
 
             var filtered = rows.Any() ? rows.CopyToDataTable() : _readingTable.Clone();
+            TextFixer.ForceFixDataTable(filtered, "RoomNumber", "UtilityName", "UtilityCode", "Notes");
             _gridReadings.DataSource = filtered;
             _lblReadingsCount.Text = $"Tổng: {filtered.Rows.Count}";
         }
@@ -410,7 +431,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private async System.Threading.Tasks.Task EditTypeAsync()
         {
-            var row = GetCurrentRow(_gridTypes);
+            var row = GetSelectedTypeRow();
             if (row == null)
             {
                 MessageBox.Show("Chọn một dòng để sửa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -426,7 +447,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private async System.Threading.Tasks.Task DeleteTypeAsync()
         {
-            var row = GetCurrentRow(_gridTypes);
+            var row = GetSelectedTypeRow();
             if (row == null)
             {
                 MessageBox.Show("Chọn một dòng để xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -521,6 +542,158 @@ namespace quan_ly_chuoi_nha_tro.GUI
             if (grid?.CurrentRow == null || grid.CurrentRow.DataBoundItem == null) return null;
             if (grid.CurrentRow.DataBoundItem is DataRowView drv) return drv.Row;
             return null;
+        }
+
+        private DataRow GetSelectedTypeRow()
+        {
+            var row = GetCurrentRow(_gridTypes);
+            if (row == null) return null;
+            int id = ReadInt(row, "UtilityTypeId");
+            if (_typeTableRaw == null || id <= 0) return row;
+            var matches = _typeTableRaw.Select($"UtilityTypeId = {id}");
+            return matches.Length > 0 ? matches[0] : row;
+        }
+
+        private static DataTable BuildReadingsDisplayTable(DataTable source)
+        {
+            if (source == null) return null;
+            var table = source.Clone();
+
+            foreach (DataRow r in source.Rows)
+            {
+                string code = ReadString(r, "UtilityCode");
+                string name = ReadString(r, "UtilityName");
+                if (IsElectricOrWater(code, name))
+                {
+                    var newRow = table.NewRow();
+                    newRow.ItemArray = r.ItemArray.Clone() as object[];
+                    FixTextColumns(newRow, "RoomNumber", "UtilityName", "UtilityCode", "Notes");
+                    if (table.Columns.Contains("UtilityName"))
+                        newRow["UtilityName"] = "Điện/Nước";
+                    table.Rows.Add(newRow);
+                }
+                else if (IsInternet(code, name))
+                {
+                    var newRow = table.NewRow();
+                    newRow.ItemArray = r.ItemArray.Clone() as object[];
+                    FixTextColumns(newRow, "RoomNumber", "UtilityName", "UtilityCode", "Notes");
+                    if (table.Columns.Contains("UtilityName"))
+                        newRow["UtilityName"] = "Internet";
+                    table.Rows.Add(newRow);
+                }
+            }
+
+            return table;
+        }
+
+        private static DataTable BuildTypesDisplayTable(DataTable source)
+        {
+            if (source == null) return null;
+            var table = source.Clone();
+            if (!source.Columns.Contains("UtilityTypeId")) return table;
+
+            DataRow elecRow = null;
+            DataRow waterRow = null;
+            DataRow internetRow = null;
+
+            foreach (DataRow r in source.Rows)
+            {
+                string code = ReadString(r, "UtilityCode");
+                string name = ReadString(r, "UtilityName");
+                if (internetRow == null && IsInternet(code, name)) internetRow = r;
+                if (elecRow == null && IsElectric(code, name)) elecRow = r;
+                if (waterRow == null && IsWater(code, name)) waterRow = r;
+            }
+
+            var mainRow = elecRow ?? waterRow;
+            if (mainRow != null)
+            {
+                var newRow = table.NewRow();
+                newRow.ItemArray = mainRow.ItemArray.Clone() as object[];
+                if (table.Columns.Contains("UtilityName"))
+                    newRow["UtilityName"] = "Điện/Nước";
+                if (table.Columns.Contains("UtilityCode"))
+                    newRow["UtilityCode"] = "ELEC/WATER";
+                table.Rows.Add(newRow);
+            }
+
+            if (internetRow != null)
+            {
+                var newRow = table.NewRow();
+                newRow.ItemArray = internetRow.ItemArray.Clone() as object[];
+                if (table.Columns.Contains("UtilityName"))
+                    newRow["UtilityName"] = "Internet";
+                table.Rows.Add(newRow);
+            }
+
+            if (table.Rows.Count == 0)
+            {
+                foreach (DataRow r in source.Rows)
+                {
+                    var newRow = table.NewRow();
+                    newRow.ItemArray = r.ItemArray.Clone() as object[];
+                    table.Rows.Add(newRow);
+                    if (table.Rows.Count >= 2) break;
+                }
+            }
+
+            return table;
+        }
+
+        private static bool IsInternet(string code, string name)
+        {
+            string codeUpper = (code ?? string.Empty).ToUpperInvariant();
+            string nameLower = (name ?? string.Empty).ToLowerInvariant();
+            return codeUpper.Contains("INTERNET") || codeUpper == "NET" || nameLower.Contains("internet");
+        }
+
+        private static bool IsElectric(string code, string name)
+        {
+            string codeUpper = (code ?? string.Empty).ToUpperInvariant();
+            string nameLower = (name ?? string.Empty).ToLowerInvariant();
+            return codeUpper.Contains("ELEC") || nameLower.Contains("dien") || nameLower.Contains("điện");
+        }
+
+        private static bool IsWater(string code, string name)
+        {
+            string codeUpper = (code ?? string.Empty).ToUpperInvariant();
+            string nameLower = (name ?? string.Empty).ToLowerInvariant();
+            return codeUpper.Contains("WATER") || nameLower.Contains("nuoc") || nameLower.Contains("nước");
+        }
+
+        private static bool IsElectricOrWater(string code, string name)
+        {
+            return IsElectric(code, name) || IsWater(code, name);
+        }
+
+        private static void FixTextColumns(DataRow row, params string[] columns)
+        {
+            if (row?.Table == null || columns == null || columns.Length == 0) return;
+            foreach (var column in columns)
+            {
+                if (string.IsNullOrWhiteSpace(column)) continue;
+                if (!row.Table.Columns.Contains(column)) continue;
+                var value = row[column];
+                if (value == null || value == DBNull.Value) continue;
+
+                string text = value.ToString();
+                string fixedText = FixTextRepeat(text);
+                if (!string.Equals(text, fixedText, StringComparison.Ordinal))
+                    row[column] = fixedText;
+            }
+        }
+
+        private static string FixTextRepeat(string input)
+        {
+            string current = input;
+            for (int i = 0; i < 2; i++)
+            {
+                string next = TextFixer.ForceFixUtf8Mojibake(current);
+                if (string.Equals(current, next, StringComparison.Ordinal))
+                    return current;
+                current = next;
+            }
+            return current;
         }
 
         private static bool Contains(DataRow row, string column, string keywordLower)

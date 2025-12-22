@@ -269,10 +269,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
             try
             {
                 bool isNewDeposit = (_existing == null);
+                int depositId;
 
                 if (isNewDeposit)
                 {
-                    await _bll.AddDepositAsync(tenantId, roomId, amount, depositDate, type, status, returned, returnedDate, notes);
+                    depositId = await _bll.AddDepositAsync(tenantId, roomId, amount, depositDate, type, status, returned, returnedDate, notes);
                     
                     // Lưu lịch sử khách hàng: nhân viên thêm khách vào phòng
                     DateTime checkInDate = depositDate ?? DateTime.Now.Date;
@@ -281,8 +282,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 }
                 else
                 {
-                    int id = Convert.ToInt32(_existing["DepositId"]);
-                    await _bll.UpdateDepositAsync(id, tenantId, roomId, amount, depositDate, type, status, returned, returnedDate, notes);
+                    depositId = Convert.ToInt32(_existing["DepositId"]);
+                    await _bll.UpdateDepositAsync(depositId, tenantId, roomId, amount, depositDate, type, status, returned, returnedDate, notes);
                     
                     // Nếu trạng thái thay đổi sang "Returned" hoặc "Cancelled", cập nhật lịch sử
                     string oldStatus = _existing["Status"]?.ToString() ?? "";
@@ -308,12 +309,55 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     }
                 }
 
+                if ((status == "Đã xác nhận" || status == "Hoàn cọc") && !HasLinkedPayment(notes))
+                {
+                    bool isRefund = status == "Hoàn cọc";
+                    decimal linkAmount = isRefund ? (returned ?? amount) : amount;
+                    DateTime linkDate = isRefund
+                        ? (returnedDate ?? DateTime.Today)
+                        : (depositDate ?? DateTime.Today);
+                    string actionType = isRefund ? "Refund" : "Deposit";
+
+                    var result = await _bll.CreateDepositPaymentAsync(
+                        tenantId,
+                        roomId,
+                        linkAmount,
+                        linkDate,
+                        actionType,
+                        $"{(isRefund ? "Hoàn cọc" : "Xác nhận cọc")} - DepositId: {depositId}");
+
+                    notes = AppendPaymentNote(notes, result.Item1, result.Item2, actionType);
+                    await _bll.UpdateDepositAsync(depositId, tenantId, roomId, amount, depositDate, type, status, returned, returnedDate, notes);
+                }
+
+                AdminEvents.NotifyDataChanged();
+                DataSyncManager.NotifyInvoicesChanged();
+                DataSyncManager.NotifyPaymentsChanged();
+                DataSyncManager.NotifyRoomsChanged();
+                DataSyncManager.NotifyTenantsChanged();
+                DataSyncManager.NotifyContractsChanged();
                 this.DialogResult = DialogResult.OK;
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Lỗi lưu đặt phòng/cọc: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private static bool HasLinkedPayment(string notes)
+        {
+            return !string.IsNullOrWhiteSpace(notes) && notes.Contains("[INV:");
+        }
+
+        private static string AppendPaymentNote(string notes, int invoiceId, int paymentId, string actionType)
+        {
+            if (invoiceId <= 0 || paymentId <= 0)
+                return notes;
+
+            string tag = $"[INV:{invoiceId}|PAY:{paymentId}|{actionType}]";
+            if (string.IsNullOrWhiteSpace(notes)) return tag;
+            if (notes.Contains(tag)) return notes;
+            return notes.TrimEnd() + " " + tag;
         }
     }
 }

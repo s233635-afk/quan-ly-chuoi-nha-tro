@@ -60,7 +60,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             treeViewMenu.Nodes.Clear();
 
-            // ========== ADMIN FEATURES ONLY ==========
+            // ========== ADMIN FEATURES ==========
             TreeNode nodeAdmin = new TreeNode("📋 QUẢN LÝ (Admin)");
 
             TreeNode n2 = new TreeNode("🚪 Quản Lý Phòng");
@@ -87,16 +87,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             n7.Nodes.Add("📊 Điện/Nước");
             n7.Nodes.Add("🔧 Dịch vụ");
 
-            // ===== ADMIN - HÓA ĐƠN & THANH TOÁN (FULL) =====
             TreeNode n8 = new TreeNode("💳 Hóa Đơn & Thanh Toán");
             n8.Nodes.Add("📋 Xem danh sách");
-            n8.Nodes.Add("➕ Thêm");
-            n8.Nodes.Add("✏️ Sửa");
-            n8.Nodes.Add("🗑️ Xóa");
+            n8.Nodes.Add("➕ Tạo hóa đơn");
             n8.Nodes.Add("💵 Thu tiền");
-            n8.Nodes.Add("📅 Tạo tháng");
-            n8.Nodes.Add("📊 Xuất CSV");
-            n8.Nodes.Add("🔄 Tải lại");
+            n8.Nodes.Add("📄 Xuất hóa đơn");
+            n8.Nodes.Add("📅 Tạo hóa đơn tháng");
 
             TreeNode n9 = new TreeNode("🔧 Bảo Trì");
             n9.Nodes.Add("🛠️ Sửa chữa");
@@ -120,14 +116,44 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             nodeAdmin.Nodes.AddRange(new[] { n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13 });
 
+            // ========== STAFF FEATURES ==========
+            TreeNode nodeStaff = new TreeNode("👥 NHÂN VIÊN");
+
+            TreeNode s1 = new TreeNode("📊 Xem Phòng");
+            s1.Nodes.Add("👁️ Danh sách");
+            s1.Nodes.Add("📍 Vị trí");
+
+            TreeNode s2 = new TreeNode("🧑 Khách Thuê");
+            s2.Nodes.Add("📋 Hồ sơ");
+            s2.Nodes.Add("🏠 Check-in/out");
+
+            TreeNode s3 = new TreeNode("📜 Hợp Đồng");
+            s3.Nodes.Add("➕ Tạo");
+            s3.Nodes.Add("📄 In sao");
+
+            TreeNode s4 = new TreeNode("💡 Tiện Ích");
+            s4.Nodes.Add("📊 Nhập chỉ số");
+            s4.Nodes.Add("📝 Cập nhật");
+
+            TreeNode s5 = new TreeNode("� Bảo Trì");
+            s5.Nodes.Add("🎫 Tạo ticket");
+            s5.Nodes.Add("✅ Xác nhận");
+
+            TreeNode s6 = new TreeNode("🏠 Tài Sản");
+            s6.Nodes.Add("✓ Kiểm tra");
+            s6.Nodes.Add("⚠️ Báo cáo");
+
+            nodeStaff.Nodes.AddRange(new[] { s1, s2, s3, s4, s5, s6 });
+
             // ========== ACCOUNT ==========
             TreeNode nodeAccount = new TreeNode("⚙️ TÀI KHOẢN");
             nodeAccount.Nodes.Add("🔑 Đổi mật khẩu");
             nodeAccount.Nodes.Add("👤 Thông tin");
             nodeAccount.Nodes.Add("🚪 Đăng xuất");
 
-            // Add to tree - ONLY ADMIN + ACCOUNT (NO STAFF)
+            // Add to tree
             treeViewMenu.Nodes.Add(nodeAdmin);
+            treeViewMenu.Nodes.Add(nodeStaff);
             treeViewMenu.Nodes.Add(nodeAccount);
         }
 
@@ -157,52 +183,35 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 if (result == DialogResult.Yes)
                     this.Close();
             }
-            // ===== HÓA ĐƠN & THANH TOÁN - FULL ADMIN =====
+            // Invoice & Payment actions
             else if (nodeName == "💳 Hóa Đơn & Thanh Toán" || nodeName == "📋 Xem danh sách")
             {
-                // Mở form Hóa Đơn & Thanh Toán đầy đủ với 2 tabs
                 using (var frm = new FrmInvoicePaymentUnified())
                     frm.ShowDialog(this);
             }
-            else if (nodeName == "➕ Thêm")
+            else if (nodeName == "➕ Tạo hóa đơn")
             {
-                // Mở form Hóa Đơn & Thanh Toán để thêm hóa đơn
-                using (var frm = new FrmInvoicePaymentUnified())
-                    frm.ShowDialog(this);
-            }
-            else if (nodeName == "✏️ Sửa")
-            {
-                // Mở form Hóa Đơn & Thanh Toán để sửa hóa đơn
-                using (var frm = new FrmInvoicePaymentUnified())
-                    frm.ShowDialog(this);
-            }
-            else if (nodeName == "🗑️ Xóa")
-            {
-                // Mở form Hóa Đơn & Thanh Toán để xóa hóa đơn
-                using (var frm = new FrmInvoicePaymentUnified())
-                    frm.ShowDialog(this);
+                var adminBll = new QuanLyNhaTro.BLL.AdminDataBLL();
+                using (var frm = new FrmInvoiceEditor(adminBll))
+                {
+                    if (frm.ShowDialog(this) == DialogResult.OK)
+                    {
+                        AdminEvents.NotifyDataChanged();
+                    }
+                }
             }
             else if (nodeName == "💵 Thu tiền")
             {
-                // Mở form Hóa Đơn & Thanh Toán để ghi nhận thanh toán
+                // Open invoice list to select one for payment
                 using (var frm = new FrmInvoicePaymentUnified())
                     frm.ShowDialog(this);
             }
-            else if (nodeName == "📅 Tạo tháng")
+            else if (nodeName == "📄 Xuất hóa đơn")
             {
-                // Mở form Hóa Đơn & Thanh Toán để tạo hóa đơn tháng
-                using (var frm = new FrmInvoicePaymentUnified())
-                    frm.ShowDialog(this);
+                MessageBox.Show("Vui lòng chọn hóa đơn từ danh sách rồi ấn nút 'Xuất hóa đơn'.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
-            else if (nodeName == "📊 Xuất CSV")
+            else if (nodeName == "📅 Tạo hóa đơn tháng")
             {
-                // Mở form Hóa Đơn & Thanh Toán để xuất CSV
-                using (var frm = new FrmInvoicePaymentUnified())
-                    frm.ShowDialog(this);
-            }
-            else if (nodeName == "🔄 Tải lại")
-            {
-                // Mở form Hóa Đơn & Thanh Toán để tải lại dữ liệu
                 using (var frm = new FrmInvoicePaymentUnified())
                     frm.ShowDialog(this);
             }

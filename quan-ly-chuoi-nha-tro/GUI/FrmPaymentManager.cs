@@ -41,6 +41,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _invoiceNumber = invoiceNumber;
             _branchId = branchId;
             InitializeComponent();
+            AdminEvents.DataChanged += HandleAdminDataChanged;
+            FormClosing += (s, e) => AdminEvents.DataChanged -= HandleAdminDataChanged;
         }
 
         private void InitializeComponent()
@@ -225,6 +227,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
             catch (Exception ex)
             {
                 MessageBox.Show("Lỗi tải thanh toán: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private async void HandleAdminDataChanged()
+        {
+            if (IsDisposed || !IsHandleCreated) return;
+            try
+            {
+                await LoadDataAsync();
+            }
+            catch
+            {
+                // ignore refresh errors
             }
         }
 

@@ -14,8 +14,31 @@ namespace quan_ly_chuoi_nha_tro.GUI
     /// </summary>
     public class FrmBranchOverview : Form
     {
+        public enum BranchOverviewTab
+        {
+            Summary,
+            Branch,
+            Rooms,
+            Sections,
+            Tenants,
+            Staff,
+            Contracts,
+            Deposits,
+            Invoices,
+            Payments,
+            Utilities,
+            Maintenance,
+            Assets,
+            Reports,
+            Notifications
+        }
+
         private const int RoomDetailsCollapsedHeight = 190;
         private const int RoomDetailsExpandedHeight = 270;
+        private const int TenantSplitMinLeft = 260;
+        private const int TenantSplitMinRight = 320;
+        private const int InvoiceSplitMinTop = 200;
+        private const int InvoiceSplitMinBottom = 200;
 
         private readonly int _branchId;
         private readonly BranchBLL _branchBll = new BranchBLL();
@@ -24,12 +47,36 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private FrmRoomTenantQuickView _roomQuickView;
 
         private Panel _header;
+        private Panel _navBar;
         private Label _lblTitle;
         private Label _lblSub;
         private Button _btnEdit;
         private Button _btnClose;
 
+        // Action Bar Controls
+        private Panel _actionBarPanel;
+        private FlowLayoutPanel _actionBar;
+        private Button _btnActionBranch;
+        private Button _btnActionRooms;
+        private Button _btnActionTenants;
+        private Button _btnActionContracts;
+        private Button _btnActionDeposits;
+        private Button _btnActionUtilities;
+        private Button _btnActionInvoices;
+        private Button _btnActionNotifications;
+
+        // Staff Form Controls
+        private Panel _staffFormPanel;
+        private FlowLayoutPanel _staffCardsHost;
+        private Label _lblStaffTitle;
+        private Label _lblStaffCount;
+        private Button _btnStaffSave;
+        private Button _btnStaffDelete;
+        private int _selectedStaffId;
+        private DataRow _selectedStaffRow;
+
         private TabControl _tabs;
+        private TabPage _tabSummary;
         private TabPage _tabOverview;
         private TabPage _tabRooms;
         private TabPage _tabSections;
@@ -42,11 +89,20 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private TabPage _tabUtilities;
         private TabPage _tabMaintenance;
         private TabPage _tabAssets;
+        private TabPage _tabReports;
+        private TabPage _tabNotifications;
 
+        private Panel _summaryPanel;
         private Panel _overviewInfo;
-        private FlowLayoutPanel _overviewStaffPreview;
+        private TextBox _txtBranchCode;
+        private TextBox _txtBranchName;
+        private TextBox _txtBranchAddress;
+        private TextBox _txtBranchPhone;
+        private TextBox _txtBranchHotline;
+        private TextBox _txtBranchHours;
+        private TextBox _txtBranchDesc;
 
-        private DataGridView _gridRooms;
+        // private DataGridView _gridRooms; // Not used
         private FlowLayoutPanel _roomCardsHost;
         private Panel _roomDetails;
         private Label _lblRoomTitle;
@@ -56,8 +112,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Label _lblTenantInfo;
         private int _selectedRoomId;
         private bool _tenantVisible;
-        private DataTable _contractsAll;
-        private DataTable _tenantsHistoryAll;
+        // private DataTable _contractsAll; // Not used
+        // private DataTable _tenantsHistoryAll; // Not used
 
         private FlowLayoutPanel _tenantCardsHost;
         private Panel _tenantDetailPanel;
@@ -81,7 +137,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private DataRow _selectedTenantRow;
         private Control _selectedTenantCard;
         private int _selectedTenantId;
-        private DataGridView _gridStaff;
         private DataGridView _gridContracts;
         private DataGridView _gridDeposits;
         private DataGridView _gridInvoices;
@@ -89,6 +144,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private DataGridView _gridUtilities;
         private DataGridView _gridMaintenance;
         private DataGridView _gridAssets;
+        private DataGridView _gridReports;
+        private DataGridView _gridNotifications;
+        private DataGridView _gridStaffOverview;
+        private Button _btnStaffEdit;
+        private SplitContainer _invoicePaymentSplit;
+        private SplitContainer _tenantSplit;
 
         private DataTable _roomsAll;
         private DataTable _roomsBranch;
@@ -96,18 +157,89 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private DataTable _tenantsAll;
         private DataTable _contractsBranch;
         private DataTable _depositsBranch;
+        private DataTable _invoicesBranch;
+        private DataTable _paymentsBranch;
+        private DataTable _utilitiesBranch;
+        private DataTable _maintenanceBranch;
+        private DataTable _assetsBranch;
+        private DataTable _notificationsBranch;
+
+        private Label _lblSummaryRooms;
+        private Label _lblSummaryTenants;
+        private Label _lblSummaryContracts;
+        private Label _lblSummaryDeposits;
+        private Label _lblSummaryInvoices;
+        private Label _lblSummaryPayments;
+        private Label _lblSummaryMaintenance;
+        private Label _lblSummaryAssets;
 
         private Panel _sectionsTop;
         private FlowLayoutPanel _sectionsHost;
         private TextBox _txtSectionSearch;
         private ComboBox _cboSectionFilter;
         private Label _lblSectionsCount;
+        private bool? _branchIsActive;
 
         public FrmBranchOverview(int branchId)
         {
             _branchId = branchId;
             InitializeComponent();
+            AdminEvents.DataChanged += HandleAdminDataChanged;
+            FormClosing += (s, e) => AdminEvents.DataChanged -= HandleAdminDataChanged;
             Load += async (s, e) => await LoadAllAsync();
+        }
+
+        public void SelectTab(BranchOverviewTab tab)
+        {
+            if (_tabs == null) return;
+            switch (tab)
+            {
+                case BranchOverviewTab.Summary:
+                    _tabs.SelectedTab = _tabSummary;
+                    break;
+                case BranchOverviewTab.Branch:
+                    _tabs.SelectedTab = _tabOverview;
+                    break;
+                case BranchOverviewTab.Rooms:
+                    _tabs.SelectedTab = _tabRooms;
+                    break;
+                case BranchOverviewTab.Sections:
+                    _tabs.SelectedTab = _tabSections;
+                    break;
+                case BranchOverviewTab.Tenants:
+                    _tabs.SelectedTab = _tabTenants;
+                    break;
+                case BranchOverviewTab.Staff:
+                    _tabs.SelectedTab = _tabStaff;
+                    break;
+                case BranchOverviewTab.Contracts:
+                    _tabs.SelectedTab = _tabContracts;
+                    break;
+                case BranchOverviewTab.Deposits:
+                    _tabs.SelectedTab = _tabDeposits;
+                    break;
+                case BranchOverviewTab.Invoices:
+                    _tabs.SelectedTab = _tabInvoices;
+                    break;
+                case BranchOverviewTab.Payments:
+                    _tabs.SelectedTab = _tabPayments;
+                    break;
+                case BranchOverviewTab.Utilities:
+                    _tabs.SelectedTab = _tabUtilities;
+                    break;
+                case BranchOverviewTab.Maintenance:
+                    _tabs.SelectedTab = _tabMaintenance;
+                    break;
+                case BranchOverviewTab.Assets:
+                    _tabs.SelectedTab = _tabAssets;
+                    break;
+                case BranchOverviewTab.Reports:
+                    _tabs.SelectedTab = _tabReports;
+                    break;
+                case BranchOverviewTab.Notifications:
+                    _tabs.SelectedTab = _tabNotifications;
+                    break;
+            }
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
@@ -129,7 +261,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             BackColor = Color.FromArgb(245, 247, 250);
             Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
 
-            _header = new Panel { Dock = DockStyle.Top, Height = 72, BackColor = Color.White, Padding = new Padding(14, 10, 14, 10) };
+            _header = new Panel { Dock = DockStyle.Top, Height = 100, BackColor = Color.White, Padding = new Padding(14, 10, 14, 10) };
             _lblTitle = new Label
             {
                 AutoSize = true,
@@ -212,23 +344,39 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             _tabs = new TabControl { Dock = DockStyle.Fill };
             StyleTabs(_tabs);
-            _tabOverview = new TabPage("Tổng quan");
+            HideTabHeaders(_tabs);
+            _tabSummary = new TabPage("Tổng quan");
+            _tabOverview = new TabPage("Chi nhánh");
             _tabRooms = new TabPage("Phòng");
             _tabSections = new TabPage("Khu/Dãy");
             _tabTenants = new TabPage("Khách thuê");
             _tabStaff = new TabPage("Nhân viên");
             _tabContracts = new TabPage("Hợp đồng");
             _tabDeposits = new TabPage("Đặt cọc");
-            _tabInvoices = new TabPage("Hóa đơn");
-            _tabPayments = new TabPage("Thanh toán");
+            _tabInvoices = new TabPage("Hóa đơn/Thanh toán");
+            _tabPayments = _tabInvoices;
             _tabUtilities = new TabPage("Điện/Nước/DV");
             _tabMaintenance = new TabPage("Bảo trì");
             _tabAssets = new TabPage("Tài sản");
+            _tabReports = new TabPage("Báo cáo");
+            _tabNotifications = new TabPage("Thông báo");
 
-            _tabs.TabPages.AddRange(new[] { _tabOverview, _tabRooms, _tabSections, _tabTenants, _tabStaff, _tabContracts, _tabDeposits, _tabInvoices, _tabPayments, _tabUtilities, _tabMaintenance, _tabAssets });
+            _tabs.TabPages.AddRange(new[] { _tabSummary, _tabOverview, _tabRooms, _tabSections, _tabTenants, _tabStaff, _tabContracts, _tabDeposits, _tabInvoices, _tabUtilities, _tabMaintenance, _tabAssets, _tabReports, _tabNotifications });
             foreach (TabPage p in _tabs.TabPages) p.BackColor = Color.White;
 
+            _summaryPanel = BuildSummaryTab();
+            _tabSummary.Controls.Add(_summaryPanel);
+
             _overviewInfo = new Panel { Dock = DockStyle.Top, Height = 400, BackColor = Color.White, Padding = new Padding(14), AutoScroll = true };
+
+            _gridStaffOverview = CreateGrid();
+            _gridStaffOverview.Dock = DockStyle.Fill;
+            _gridStaffOverview.ReadOnly = true;
+            _gridStaffOverview.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            _gridStaffOverview.CellDoubleClick += (s, e) => EditSelectedStaffOverview();
+
+            _btnStaffEdit = UiKit.MakeButton("Sửa nhân viên", UiKit.Warning, (s, e) => EditSelectedStaffOverview(), 130);
+            _btnStaffEdit.Height = 30;
 
             _tabOverview.Controls.Add(_overviewInfo);
 
@@ -277,17 +425,43 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             BuildSectionsTab();
             BuildTenantTab();
-            _gridStaff = CreateGrid(); _gridStaff.Dock = DockStyle.Fill; _gridStaff.CellFormatting += GridActiveCellFormatting; _tabStaff.Controls.Add(_gridStaff);
+            BuildStaffTabForm();
             _gridContracts = CreateGrid(); _gridContracts.Dock = DockStyle.Fill; _tabContracts.Controls.Add(_gridContracts);
             _gridDeposits = CreateGrid(); _gridDeposits.Dock = DockStyle.Fill; _tabDeposits.Controls.Add(_gridDeposits);
-            _gridInvoices = CreateGrid(); _gridInvoices.Dock = DockStyle.Fill; _tabInvoices.Controls.Add(_gridInvoices);
-            _gridPayments = CreateGrid(); _gridPayments.Dock = DockStyle.Fill; _tabPayments.Controls.Add(_gridPayments);
+            _gridInvoices = CreateGrid();
+            _gridPayments = CreateGrid();
+            _invoicePaymentSplit = new SplitContainer
+            {
+                Dock = DockStyle.Fill,
+                Orientation = Orientation.Horizontal,
+                SplitterWidth = 6,
+                Panel1MinSize = 0,
+                Panel2MinSize = 0,
+                BackColor = Color.FromArgb(245, 247, 250)
+            };
+            _invoicePaymentSplit.Panel1.Controls.Add(BuildLabeledGridPanel("Hóa đơn", _gridInvoices));
+            _invoicePaymentSplit.Panel2.Controls.Add(BuildLabeledGridPanel("Thanh toán", _gridPayments));
+            _invoicePaymentSplit.HandleCreated += (s, e) => FixInvoicePaymentSplitter();
+            _invoicePaymentSplit.SizeChanged += (s, e) => FixInvoicePaymentSplitter();
+            _tabInvoices.Controls.Add(_invoicePaymentSplit);
+
             _gridUtilities = CreateGrid(); _gridUtilities.Dock = DockStyle.Fill; _tabUtilities.Controls.Add(_gridUtilities);
             _gridMaintenance = CreateGrid(); _gridMaintenance.Dock = DockStyle.Fill; _tabMaintenance.Controls.Add(_gridMaintenance);
             _gridAssets = CreateGrid(); _gridAssets.Dock = DockStyle.Fill; _tabAssets.Controls.Add(_gridAssets);
+            _gridReports = CreateGrid();
+            _tabReports.Controls.Add(BuildReportsTab(_gridReports));
+            _gridNotifications = CreateGrid();
+            _tabNotifications.Controls.Add(BuildLabeledGridPanel("Thông báo", _gridNotifications));
 
-            Controls.Add(_tabs);
+            // Build Action Bar
+            BuildActionBar();
+
+            _navBar = BuildNavBar();
+            // Removed: Navigation bar is now replaced by action bar
+            // Controls.Add(_navBar);
             Controls.Add(_header);
+            Controls.Add(_actionBarPanel);
+            Controls.Add(_tabs);
         }
 
         private void BuildSectionsTab()
@@ -400,13 +574,16 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             top.Controls.Add(flow);
 
-            var host = new SplitContainer
+            _tenantSplit = new SplitContainer
             {
                 Dock = DockStyle.Fill,
-                SplitterDistance = 400,
                 SplitterWidth = 6,
+                Panel1MinSize = 0,
+                Panel2MinSize = 0,
                 BackColor = Color.White
             };
+            _tenantSplit.HandleCreated += (s, e) => FixTenantSplitter();
+            _tenantSplit.SizeChanged += (s, e) => FixTenantSplitter();
 
             _tenantCardsHost = new FlowLayoutPanel
             {
@@ -417,13 +594,299 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 BackColor = Color.WhiteSmoke,
                 Padding = new Padding(6)
             };
-            host.Panel1.Controls.Add(_tenantCardsHost);
+            _tenantSplit.Panel1.Controls.Add(_tenantCardsHost);
 
             BuildTenantDetailsPanel();
-            host.Panel2.Controls.Add(_tenantDetailPanel);
+            _tenantSplit.Panel2.Controls.Add(_tenantDetailPanel);
 
-            _tabTenants.Controls.Add(host);
+            _tabTenants.Controls.Add(_tenantSplit);
             _tabTenants.Controls.Add(top);
+        }
+
+        private Panel BuildSummaryTab()
+        {
+            var host = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White,
+                Padding = new Padding(14)
+            };
+
+            var title = new Label
+            {
+                AutoSize = true,
+                Text = "Tổng quan chi nhánh",
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 79, 159),
+                Dock = DockStyle.Top
+            };
+
+            var sub = new Label
+            {
+                AutoSize = true,
+                Text = "Tóm tắt nhanh các số liệu chính theo chi nhánh.",
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Regular),
+                ForeColor = Color.FromArgb(90, 90, 90),
+                Dock = DockStyle.Top,
+                Margin = new Padding(0, 4, 0, 12)
+            };
+
+            var layout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                ColumnCount = 4,
+                RowCount = 2,
+                BackColor = Color.White,
+                Padding = new Padding(0, 6, 0, 0)
+            };
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 90F));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 90F));
+
+            layout.Controls.Add(MakeSummaryCard("Phòng", Color.FromArgb(0, 122, 204), out _lblSummaryRooms), 0, 0);
+            layout.Controls.Add(MakeSummaryCard("Khách thuê", Color.FromArgb(76, 175, 80), out _lblSummaryTenants), 1, 0);
+            layout.Controls.Add(MakeSummaryCard("Hợp đồng", Color.FromArgb(103, 58, 183), out _lblSummaryContracts), 2, 0);
+            layout.Controls.Add(MakeSummaryCard("Đặt cọc", Color.FromArgb(255, 152, 0), out _lblSummaryDeposits), 3, 0);
+            layout.Controls.Add(MakeSummaryCard("Hóa đơn", Color.FromArgb(255, 87, 34), out _lblSummaryInvoices), 0, 1);
+            layout.Controls.Add(MakeSummaryCard("Thanh toán", Color.FromArgb(0, 150, 136), out _lblSummaryPayments), 1, 1);
+            layout.Controls.Add(MakeSummaryCard("Bảo trì", Color.FromArgb(156, 39, 176), out _lblSummaryMaintenance), 2, 1);
+            layout.Controls.Add(MakeSummaryCard("Tài sản", Color.FromArgb(63, 81, 181), out _lblSummaryAssets), 3, 1);
+
+            host.Controls.Add(layout);
+            host.Controls.Add(sub);
+            host.Controls.Add(title);
+            return host;
+        }
+
+        private static Panel MakeSummaryCard(string title, Color accent, out Label valueLabel)
+        {
+            var panel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Margin = new Padding(6),
+                Padding = new Padding(12, 10, 12, 10),
+                BackColor = Color.FromArgb(249, 252, 255)
+            };
+
+            panel.Paint += (s, e) =>
+            {
+                using (var pen = new Pen(Color.FromArgb(225, 233, 245)))
+                {
+                    var rect = new Rectangle(0, 0, panel.Width - 1, panel.Height - 1);
+                    e.Graphics.DrawRectangle(pen, rect);
+                }
+            };
+
+            var lblTitle = new Label
+            {
+                AutoSize = true,
+                Text = title,
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Regular),
+                ForeColor = Color.FromArgb(90, 90, 90),
+                Dock = DockStyle.Top
+            };
+
+            valueLabel = new Label
+            {
+                AutoSize = true,
+                Text = "0",
+                Font = new Font("Segoe UI", 16, FontStyle.Bold),
+                ForeColor = accent,
+                Dock = DockStyle.Top,
+                Margin = new Padding(0, 6, 0, 0)
+            };
+
+            panel.Controls.Add(valueLabel);
+            panel.Controls.Add(lblTitle);
+            return panel;
+        }
+
+        private Panel BuildReportsTab(DataGridView grid)
+        {
+            var host = new Panel { Dock = DockStyle.Fill, BackColor = Color.White };
+            var top = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 56,
+                BackColor = Color.White,
+                Padding = new Padding(14, 12, 14, 10)
+            };
+            top.Controls.Add(new Panel { Dock = DockStyle.Bottom, Height = 1, BackColor = Color.FromArgb(230, 235, 240) });
+
+            var lblTitle = new Label
+            {
+                AutoSize = true,
+                Text = "Báo cáo chi nhánh",
+                ForeColor = Color.FromArgb(0, 79, 159),
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Margin = new Padding(0, 6, 12, 0)
+            };
+
+            var cboRange = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 140 };
+            cboRange.Items.AddRange(new object[] { "Tháng này", "Quý này", "Năm nay" });
+            cboRange.SelectedIndex = 0;
+
+            var btnApply = UiKit.MakeButton("Lọc", UiKit.Primary, (s, e) => BindReports(_gridReports, BuildReportsTable()), 80);
+            btnApply.Height = 28;
+            btnApply.Margin = new Padding(10, 0, 0, 0);
+
+            var flow = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                WrapContents = false,
+                FlowDirection = FlowDirection.LeftToRight,
+                BackColor = Color.Transparent
+            };
+            flow.Controls.Add(lblTitle);
+            flow.Controls.Add(cboRange);
+            flow.Controls.Add(btnApply);
+
+            top.Controls.Add(flow);
+
+            host.Controls.Add(grid);
+            host.Controls.Add(top);
+            grid.Dock = DockStyle.Fill;
+            return host;
+        }
+
+        private Panel BuildNavBar()
+        {
+            var nav = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 70,
+                BackColor = Color.White,
+                Padding = new Padding(12, 8, 12, 8)
+            };
+            nav.Controls.Add(new Panel { Dock = DockStyle.Bottom, Height = 1, BackColor = Color.FromArgb(230, 235, 240) });
+
+            var flow = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                AutoSize = false,
+                AutoScroll = true,
+                WrapContents = true,
+                FlowDirection = FlowDirection.LeftToRight,
+                BackColor = Color.Transparent
+            };
+
+            flow.Controls.Add(MakeNavButton("Tổng quan", () => _tabs.SelectedTab = _tabSummary));
+            flow.Controls.Add(MakeNavButton("Chi nhánh", () => _tabs.SelectedTab = _tabOverview));
+            flow.Controls.Add(MakeNavButton("Phòng", () => _tabs.SelectedTab = _tabRooms));
+            flow.Controls.Add(MakeNavButton("Khách thuê", () => _tabs.SelectedTab = _tabTenants));
+            flow.Controls.Add(MakeNavButton("Hợp đồng", () => _tabs.SelectedTab = _tabContracts));
+            flow.Controls.Add(MakeNavButton("Đặt cọc", () => _tabs.SelectedTab = _tabDeposits));
+            flow.Controls.Add(MakeNavButton("Điện/Nước/DV", () => _tabs.SelectedTab = _tabUtilities));
+            flow.Controls.Add(MakeNavButton("Hóa đơn/Thanh toán", () => _tabs.SelectedTab = _tabInvoices));
+            flow.Controls.Add(MakeNavButton("Báo cáo", () => _tabs.SelectedTab = _tabReports));
+            flow.Controls.Add(MakeNavButton("Bảo trì & sự cố", () => _tabs.SelectedTab = _tabMaintenance));
+            flow.Controls.Add(MakeNavButton("Tài sản", () => _tabs.SelectedTab = _tabAssets));
+            flow.Controls.Add(MakeNavButton("Thông báo", () => _tabs.SelectedTab = _tabNotifications));
+
+            nav.Controls.Add(flow);
+            return nav;
+        }
+
+        private void FixInvoicePaymentSplitter()
+        {
+            if (_invoicePaymentSplit == null) return;
+            if (_invoicePaymentSplit.Orientation != Orientation.Horizontal) return;
+
+            int total = _invoicePaymentSplit.ClientSize.Height;
+            if (total <= 0) return;
+
+            int minTop = InvoiceSplitMinTop;
+            int minBottom = InvoiceSplitMinBottom;
+            if (total < minTop + minBottom)
+            {
+                _invoicePaymentSplit.Panel1MinSize = 0;
+                _invoicePaymentSplit.Panel2MinSize = 0;
+                minTop = 0;
+                minBottom = 0;
+            }
+            else
+            {
+                _invoicePaymentSplit.Panel1MinSize = minTop;
+                _invoicePaymentSplit.Panel2MinSize = minBottom;
+            }
+            int maxTop = Math.Max(minTop, total - minBottom);
+            int target = total / 2;
+
+            if (target < minTop) target = minTop;
+            if (target > maxTop) target = maxTop;
+
+            if (_invoicePaymentSplit.SplitterDistance != target)
+                _invoicePaymentSplit.SplitterDistance = target;
+        }
+
+        private void FixTenantSplitter()
+        {
+            if (_tenantSplit == null) return;
+            if (_tenantSplit.Orientation != Orientation.Vertical) return;
+
+            int total = _tenantSplit.ClientSize.Width;
+            if (total <= 0) return;
+
+            int minLeft = TenantSplitMinLeft;
+            int minRight = TenantSplitMinRight;
+            if (total < minLeft + minRight)
+            {
+                _tenantSplit.Panel1MinSize = 0;
+                _tenantSplit.Panel2MinSize = 0;
+                minLeft = 0;
+                minRight = 0;
+            }
+            else
+            {
+                _tenantSplit.Panel1MinSize = minLeft;
+                _tenantSplit.Panel2MinSize = minRight;
+            }
+            int maxLeft = Math.Max(minLeft, total - minRight);
+            int target = total / 2;
+
+            if (target < minLeft) target = minLeft;
+            if (target > maxLeft) target = maxLeft;
+
+            if (_tenantSplit.SplitterDistance != target)
+                _tenantSplit.SplitterDistance = target;
+        }
+
+        private Button MakeNavButton(string text, Action onClick)
+        {
+            var btn = UiKit.MakeButton(text, UiKit.Primary, (s, e) => onClick?.Invoke(), 130);
+            btn.Margin = new Padding(0, 0, 8, 0);
+            return btn;
+        }
+
+        private Panel BuildLabeledGridPanel(string title, DataGridView grid)
+        {
+            var panel = new Panel { Dock = DockStyle.Fill, BackColor = Color.White };
+            var header = new Panel { Dock = DockStyle.Top, Height = 36, BackColor = Color.White, Padding = new Padding(12, 8, 12, 0) };
+            var label = new Label
+            {
+                AutoSize = true,
+                Text = title,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 79, 159)
+            };
+            header.Controls.Add(label);
+            panel.Controls.Add(grid);
+            panel.Controls.Add(header);
+            grid.Dock = DockStyle.Fill;
+            return panel;
+        }
+
+        private static void HideTabHeaders(TabControl tabControl)
+        {
+            if (tabControl == null) return;
+            tabControl.Appearance = TabAppearance.FlatButtons;
+            tabControl.ItemSize = new Size(0, 1);
+            tabControl.SizeMode = TabSizeMode.Fixed;
+            tabControl.Multiline = true;
         }
 
         private void BuildTenantDetailsPanel()
@@ -609,8 +1072,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 var utilitiesTask = _adminBll.GetUtilitiesAsync();
                 var maintenanceTask = _adminBll.GetMaintenanceAsync();
                 var assetsTask = _adminBll.GetAssetsAsync();
+                var notificationsTask = _adminBll.GetNotificationsAsync();
 
-                await Task.WhenAll(branchTask, roomsTask, sectionsTask, tenantsTask, staffTask, contractsTask, depositsTask, invoicesTask, paymentsTask, utilitiesTask, maintenanceTask, assetsTask);
+                await Task.WhenAll(branchTask, roomsTask, sectionsTask, tenantsTask, staffTask, contractsTask, depositsTask, invoicesTask, paymentsTask, utilitiesTask, maintenanceTask, assetsTask, notificationsTask);
 
                 var branch = branchTask.Result;
                 ApplyBranchInfo(branch);
@@ -640,29 +1104,35 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                 var staff = staffTask.Result ?? new DataTable();
                 TextFixer.ForceFixDataTable(staff, "FullName", "RoleName", "BranchName");
-                BindStaff(_gridStaff, staff);
+                RenderStaffCards(staff);
+                BindStaff(_gridStaffOverview, staff);
                 UpdateStaffStats(staff);
-                RenderOverviewStaffPreview(staff);
 
                 var invoices = invoicesTask.Result ?? new DataTable();
-                invoices = FilterByBranchId(invoices, _branchId);
-                BindInvoices(_gridInvoices, invoices);
+                _invoicesBranch = FilterByBranchId(invoices, _branchId);
+                BindInvoices(_gridInvoices, _invoicesBranch);
 
                 var payments = paymentsTask.Result ?? new DataTable();
-                payments = FilterByBranchId(payments, _branchId);
-                BindPayments(_gridPayments, payments);
+                _paymentsBranch = FilterByBranchId(payments, _branchId);
+                BindPayments(_gridPayments, _paymentsBranch);
 
                 var utilities = utilitiesTask.Result ?? new DataTable();
-                utilities = FilterByBranchId(utilities, _branchId);
-                BindUtilities(_gridUtilities, utilities);
+                _utilitiesBranch = FilterByBranchId(utilities, _branchId);
+                BindUtilities(_gridUtilities, _utilitiesBranch);
 
                 var maintenance = maintenanceTask.Result ?? new DataTable();
-                maintenance = FilterByBranchId(maintenance, _branchId);
-                BindMaintenance(_gridMaintenance, maintenance);
+                _maintenanceBranch = FilterByBranchId(maintenance, _branchId);
+                BindMaintenance(_gridMaintenance, _maintenanceBranch);
 
                 var assets = assetsTask.Result ?? new DataTable();
-                assets = FilterByBranchId(assets, _branchId);
-                BindAssets(_gridAssets, assets);
+                _assetsBranch = FilterByBranchId(assets, _branchId);
+                BindAssets(_gridAssets, _assetsBranch);
+
+                _notificationsBranch = notificationsTask.Result ?? new DataTable();
+                BindNotifications(_gridNotifications, BuildNotificationsTable(_notificationsBranch));
+
+                BindReports(_gridReports, BuildReportsTable());
+                UpdateSummaryMetrics();
 
                 // reset room selection view
                 _selectedRoomId = 0;
@@ -683,12 +1153,67 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
         }
 
+        private void UpdateSummaryMetrics()
+        {
+            if (_lblSummaryRooms == null) return;
+
+            int rooms = _roomsBranch?.Rows.Count ?? 0;
+            int tenants = _tenantsBranch?.Rows.Count ?? 0;
+            int contracts = _contractsBranch?.Rows.Count ?? 0;
+            int deposits = _depositsBranch?.Rows.Count ?? 0;
+            int invoices = _invoicesBranch?.Rows.Count ?? 0;
+            int payments = _paymentsBranch?.Rows.Count ?? 0;
+            int maintenance = _maintenanceBranch?.Rows.Count ?? 0;
+            int assets = _assetsBranch?.Rows.Count ?? 0;
+
+            _lblSummaryRooms.Text = rooms.ToString("N0");
+            _lblSummaryTenants.Text = tenants.ToString("N0");
+            _lblSummaryContracts.Text = contracts.ToString("N0");
+            _lblSummaryDeposits.Text = deposits.ToString("N0");
+            _lblSummaryInvoices.Text = invoices.ToString("N0");
+            _lblSummaryPayments.Text = payments.ToString("N0");
+            _lblSummaryMaintenance.Text = maintenance.ToString("N0");
+            _lblSummaryAssets.Text = assets.ToString("N0");
+        }
+
         private void SetLoading(bool loading)
         {
             UseWaitCursor = loading;
             _tabs.Enabled = !loading;
             _btnEdit.Enabled = !loading;
             _btnClose.Enabled = true;
+        }
+
+        private async void EditSelectedStaffOverview()
+        {
+            if (_gridStaffOverview == null || _gridStaffOverview.CurrentRow == null) return;
+
+            DataRow row = null;
+            if (_gridStaffOverview.CurrentRow.DataBoundItem is DataRowView drv)
+                row = drv.Row;
+            if (row == null) return;
+
+            using (var frm = new FrmStaffEditor(_adminBll, row))
+            {
+                if (frm.ShowDialog(this) == DialogResult.OK)
+                {
+                    await LoadAllAsync();
+                    AdminEvents.NotifyDataChanged();
+                }
+            }
+        }
+
+        private async void HandleAdminDataChanged()
+        {
+            if (IsDisposed || !IsHandleCreated) return;
+            try
+            {
+                await LoadAllAsync();
+            }
+            catch
+            {
+                // ignore refresh errors
+            }
         }
 
         private void ApplyBranchInfo(DataTable dt)
@@ -715,9 +1240,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _lblTitle.Text = string.IsNullOrWhiteSpace(code) ? (name ?? "Chi nhánh") : $"{code} - {name}";
 
             var statusText = isActive.HasValue ? (isActive.Value ? "Hoạt động" : "Vô hiệu") : "—";
-            _lblSub.Text = $"BranchId: {_branchId} | Trạng thái: {statusText}";
+            _lblSub.Text = $"Mã: {NullDash(code)} | Địa chỉ: {NullDash(address)} | BranchId: {_branchId} | Trạng thái: {statusText}";
 
+            // Render overview info panel
             RenderOverviewInfo(code, name, address, phone, hotline, hours, desc, statusText);
+            _branchIsActive = isActive;
         }
 
         private void RenderOverviewInfo(string code, string name, string address, string phone, string hotline, string hours, string desc, string statusText)
@@ -731,89 +1258,290 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 BackColor = Color.White
             };
 
-            var content = new Panel
-            {
-                Dock = DockStyle.Top,
-                AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                BackColor = Color.White
-            };
-
+            // Title
             var title = new Label
             {
                 AutoSize = true,
                 Text = "Thông tin chi nhánh",
                 Font = new Font("Segoe UI", 12, FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 79, 159),
-                Margin = new Padding(0, 0, 0, 10),
+                Margin = new Padding(14, 12, 14, 10),
                 Dock = DockStyle.Top
             };
 
-            var infoPanel = new Panel
+            // Quick info strip
+            var quickInfo = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 36,
+                BackColor = Color.FromArgb(249, 252, 255),
+                Padding = new Padding(14, 6, 14, 6),
+                Margin = new Padding(14, 0, 14, 12)
+            };
+
+            var quickLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 4,
+                RowCount = 1,
+                BackColor = Color.Transparent
+            };
+            quickLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            quickLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 40));
+            quickLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            quickLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 60));
+
+            var lblCodeTitle = new Label
+            {
+                Text = "Mã chi nhánh:",
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                ForeColor = Color.FromArgb(80, 80, 80),
+                AutoSize = true,
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Margin = new Padding(0, 0, 8, 0)
+            };
+            var lblCodeValue = new Label
+            {
+                Text = NullDash(code),
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                ForeColor = Color.FromArgb(60, 60, 60),
+                AutoSize = true,
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            var lblAddressTitle = new Label
+            {
+                Text = "Địa chỉ:",
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                ForeColor = Color.FromArgb(80, 80, 80),
+                AutoSize = true,
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Margin = new Padding(16, 0, 8, 0)
+            };
+            var lblAddressValue = new Label
+            {
+                Text = NullDash(address),
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                ForeColor = Color.FromArgb(60, 60, 60),
+                AutoSize = true,
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+
+            quickLayout.Controls.Add(lblCodeTitle, 0, 0);
+            quickLayout.Controls.Add(lblCodeValue, 1, 0);
+            quickLayout.Controls.Add(lblAddressTitle, 2, 0);
+            quickLayout.Controls.Add(lblAddressValue, 3, 0);
+            quickInfo.Controls.Add(quickLayout);
+
+            // Card panel
+            var card = new Panel
             {
                 Dock = DockStyle.Top,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                BackColor = Color.FromArgb(250, 252, 255),
-                Padding = new Padding(12, 10, 12, 10),
-                Margin = new Padding(0, 0, 0, 12)
+                BackColor = Color.White,
+                Padding = new Padding(14),
+                Margin = new Padding(14, 0, 14, 12)
             };
-            infoPanel.Paint += (s, e) =>
+
+            card.Paint += (s, e) =>
             {
                 using (var pen = new Pen(Color.FromArgb(200, 220, 240), 1.5f))
                 {
-                    var rect = new Rectangle(0, 0, infoPanel.Width - 1, infoPanel.Height - 1);
+                    var rect = new Rectangle(0, 0, card.Width - 1, card.Height - 1);
                     e.Graphics.DrawRectangle(pen, rect);
                 }
             };
 
-            var infoContent = new Label
+            // Form layout
+            var form = new TableLayoutPanel
             {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 7,
+                BackColor = Color.Transparent,
                 AutoSize = true,
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Regular),
-                ForeColor = Color.FromArgb(60, 60, 60),
-                Margin = new Padding(0),
-                Dock = DockStyle.Top
+                AutoSizeMode = AutoSizeMode.GrowAndShrink
             };
+            form.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 30));
+            form.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 70));
+            form.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            form.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            form.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            form.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            form.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            form.RowStyles.Add(new RowStyle(SizeType.Absolute, 90));
+            form.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
-            string line1 = $"🏢 Mã: {NullDash(code)}   |   Tên: {NullDash(name)}";
-            string line2 = $"📍 Địa chỉ: {NullDash(address)}";
-            string line3 = $"☎️ Điện thoại: {NullDash(phone)}   |   Hotline: {NullDash(hotline)}";
-            string line4 = $"🕐 Giờ hoạt động: {NullDash(hours)}";
-            string line5 = $"✓ Trạng thái: {NullDash(statusText)}";
-            string line6 = string.IsNullOrWhiteSpace(desc) ? null : $"📝 Mô tả: {desc}";
-            infoContent.Text = string.Join("\n", new[] { line1, line2, line3, line4, line5, line6 }.Where(x => !string.IsNullOrWhiteSpace(x)));
-            
-            infoPanel.Controls.Add(infoContent);
+            // Code
+            var lblCode = new Label { Text = "Mã chi nhánh:", Font = new Font("Segoe UI", 9, FontStyle.Bold), ForeColor = Color.FromArgb(80, 80, 80), Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft };
+            _txtBranchCode = new TextBox { Text = code ?? "", Dock = DockStyle.Fill, Margin = new Padding(0, 2, 0, 8) };
+            form.Controls.Add(lblCode, 0, 0);
+            form.Controls.Add(_txtBranchCode, 1, 0);
 
-            var staffTitle = new Label
+            // Name
+            var lblName = new Label { Text = "Tên chi nhánh:", Font = new Font("Segoe UI", 9, FontStyle.Bold), ForeColor = Color.FromArgb(80, 80, 80), Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft };
+            _txtBranchName = new TextBox { Text = name ?? "", Dock = DockStyle.Fill, Margin = new Padding(0, 2, 0, 8) };
+            form.Controls.Add(lblName, 0, 1);
+            form.Controls.Add(_txtBranchName, 1, 1);
+
+            // Address
+            var lblAddress = new Label { Text = "Địa chỉ:", Font = new Font("Segoe UI", 9, FontStyle.Bold), ForeColor = Color.FromArgb(80, 80, 80), Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft };
+            _txtBranchAddress = new TextBox { Text = address ?? "", Dock = DockStyle.Fill, Margin = new Padding(0, 2, 0, 8) };
+            form.Controls.Add(lblAddress, 0, 2);
+            form.Controls.Add(_txtBranchAddress, 1, 2);
+
+            // Phone & Hotline
+            var lblPhone = new Label { Text = "Điện thoại:", Font = new Font("Segoe UI", 9, FontStyle.Bold), ForeColor = Color.FromArgb(80, 80, 80), Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft };
+            var phonePanel = new TableLayoutPanel
             {
-                AutoSize = true,
-                Text = "Nhân viên tại chi nhánh",
-                Font = new Font("Segoe UI", 12, FontStyle.Bold),
-                ForeColor = Color.FromArgb(0, 79, 159),
-                Margin = new Padding(0, 12, 0, 10),
-                Dock = DockStyle.Top
+                Dock = DockStyle.Fill,
+                ColumnCount = 4,
+                RowCount = 1,
+                BackColor = Color.Transparent,
+                AutoSize = true
             };
+            phonePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+            phonePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 10));
+            phonePanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            phonePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
 
-            _overviewStaffPreview = new FlowLayoutPanel
+            _txtBranchPhone = new TextBox { Text = phone ?? "", Dock = DockStyle.Fill, Margin = new Padding(0, 2, 0, 0) };
+            var spacer = new Panel { Width = 10, Dock = DockStyle.Fill };
+            var lblHotline = new Label
+            {
+                Text = "Hotline:",
+                Font = new Font("Segoe UI", 9f),
+                ForeColor = Color.FromArgb(100, 100, 100),
+                AutoSize = true,
+                Anchor = AnchorStyles.Left,
+                Margin = new Padding(0, 4, 6, 0)
+            };
+            _txtBranchHotline = new TextBox { Text = hotline ?? "", Dock = DockStyle.Fill, Margin = new Padding(0, 2, 0, 0) };
+            phonePanel.Controls.Add(_txtBranchPhone, 0, 0);
+            phonePanel.Controls.Add(spacer, 1, 0);
+            phonePanel.Controls.Add(lblHotline, 2, 0);
+            phonePanel.Controls.Add(_txtBranchHotline, 3, 0);
+            form.Controls.Add(lblPhone, 0, 3);
+            form.Controls.Add(phonePanel, 1, 3);
+
+            // Hours
+            var lblHours = new Label { Text = "Giờ hoạt động:", Font = new Font("Segoe UI", 9, FontStyle.Bold), ForeColor = Color.FromArgb(80, 80, 80), Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft };
+            _txtBranchHours = new TextBox { Text = hours ?? "", Dock = DockStyle.Fill, Margin = new Padding(0, 2, 0, 8) };
+            form.Controls.Add(lblHours, 0, 4);
+            form.Controls.Add(_txtBranchHours, 1, 4);
+
+            // Description
+            var lblDesc = new Label { Text = "Mô tả:", Font = new Font("Segoe UI", 9, FontStyle.Bold), ForeColor = Color.FromArgb(80, 80, 80), Dock = DockStyle.Fill, TextAlign = ContentAlignment.TopLeft };
+            _txtBranchDesc = new TextBox { Text = desc ?? "", Dock = DockStyle.Fill, Multiline = true, Height = 70, ScrollBars = ScrollBars.Vertical, Margin = new Padding(0, 2, 0, 8) };
+            form.Controls.Add(lblDesc, 0, 5);
+            form.Controls.Add(_txtBranchDesc, 1, 5);
+
+            // Buttons
+            var btnPanel = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, WrapContents = false, FlowDirection = FlowDirection.LeftToRight, BackColor = Color.Transparent, Margin = new Padding(0, 8, 0, 0) };
+            var btnSave = new Button { Text = "💾 Lưu", Width = 100, Height = 34, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(40, 167, 69), ForeColor = Color.White, Cursor = Cursors.Hand, Margin = new Padding(0, 0, 10, 0) };
+            btnSave.FlatAppearance.BorderSize = 0;
+            btnSave.Click += async (s, e) => await SaveBranchAsync();
+            var btnCancel = new Button { Text = "❌ Hủy", Width = 100, Height = 34, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(108, 117, 125), ForeColor = Color.White, Cursor = Cursors.Hand };
+            btnCancel.FlatAppearance.BorderSize = 0;
+            btnCancel.Click += (s, e) => ReloadBranchInfo();
+            btnPanel.Controls.Add(btnSave);
+            btnPanel.Controls.Add(btnCancel);
+            form.Controls.Add(btnPanel, 0, 6);
+
+            card.Controls.Add(form);
+
+            scroll.Controls.Add(BuildStaffOverviewPanel());
+            scroll.Controls.Add(card);
+            scroll.Controls.Add(quickInfo);
+            scroll.Controls.Add(title);
+            _overviewInfo.Controls.Add(scroll);
+            _overviewInfo.AutoScrollPosition = new Point(0, 0);
+            scroll.AutoScrollPosition = new Point(0, 0);
+        }
+
+        private Panel BuildStaffOverviewPanel()
+        {
+            var panel = new Panel
             {
                 Dock = DockStyle.Top,
-                AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                WrapContents = true,
-                FlowDirection = FlowDirection.LeftToRight,
-                BackColor = Color.Transparent,
-                Margin = new Padding(0)
+                Height = 300,
+                BackColor = Color.White,
+                Padding = new Padding(14),
+                Margin = new Padding(14, 0, 14, 12)
             };
 
-            content.Controls.Add(_overviewStaffPreview);
-            content.Controls.Add(staffTitle);
-            content.Controls.Add(infoPanel);
-            content.Controls.Add(title);
+            panel.Paint += (s, e) =>
+            {
+                using (var pen = new Pen(Color.FromArgb(200, 220, 240), 1.5f))
+                {
+                    var rect = new Rectangle(0, 0, panel.Width - 1, panel.Height - 1);
+                    e.Graphics.DrawRectangle(pen, rect);
+                }
+            };
 
-            scroll.Controls.Add(content);
-            _overviewInfo.Controls.Add(scroll);
+            var header = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 34,
+                BackColor = Color.Transparent
+            };
+
+            var title = new Label
+            {
+                AutoSize = true,
+                Text = "Thông tin nhân viên",
+                Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 79, 159),
+                Dock = DockStyle.Left
+            };
+
+            _btnStaffEdit.Dock = DockStyle.Right;
+            _btnStaffEdit.Height = 30;
+
+            header.Controls.Add(_btnStaffEdit);
+            header.Controls.Add(title);
+
+            _gridStaffOverview.Dock = DockStyle.Fill;
+            _gridStaffOverview.ReadOnly = true;
+            _gridStaffOverview.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+
+            panel.Controls.Add(_gridStaffOverview);
+            panel.Controls.Add(header);
+
+            return panel;
+        }
+
+        private async Task SaveBranchAsync()
+        {
+            try
+            {
+                await _branchBll.UpdateBranchAsync(
+                    _branchId,
+                    _txtBranchCode.Text.Trim(),
+                    _txtBranchName.Text.Trim(),
+                    _txtBranchAddress.Text.Trim(),
+                    _txtBranchPhone.Text.Trim(),
+                    _txtBranchHotline.Text.Trim(),
+                    _txtBranchHours.Text.Trim(),
+                    _txtBranchDesc.Text.Trim(),
+                    _branchIsActive ?? true
+                );
+                MessageBox.Show("Lưu thông tin chi nhánh thành công!", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                await LoadAllAsync();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi lưu chi nhánh: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void ReloadBranchInfo()
+        {
+            _ = LoadAllAsync();
         }
 
         private Panel BuildOverviewNotice()
@@ -860,63 +1588,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             panel.Controls.Add(text);
             panel.Controls.Add(icon);
             return panel;
-        }
-
-        private void RenderOverviewStaffPreview(DataTable staff)
-        {
-            if (_overviewStaffPreview == null) return;
-
-            _overviewStaffPreview.SuspendLayout();
-            _overviewStaffPreview.Controls.Clear();
-
-            if (staff == null || staff.Rows.Count == 0)
-            {
-                _overviewStaffPreview.Controls.Add(new Label
-                {
-                    AutoSize = true,
-                    Text = "Chưa có nhân viên.",
-                    ForeColor = Color.FromArgb(90, 90, 90),
-                    Margin = new Padding(0, 10, 0, 0)
-                });
-                _overviewStaffPreview.ResumeLayout();
-                return;
-            }
-
-            foreach (DataRow r in staff.Rows)
-            {
-                string name = TextFixer.FixUtf8Mojibake(ReadString(r, "FullName"));
-                string userName = ReadString(r, "UserName");
-                string phone = ReadString(r, "Phone");
-                string email = ReadString(r, "Email");
-                string roleName = TextFixer.FixUtf8Mojibake(ReadString(r, "RoleName"));
-                bool isActive = false;
-                if (staff.Columns.Contains("IsActive"))
-                {
-                    try { isActive = Convert.ToBoolean(r["IsActive"]); } catch { }
-                }
-
-                _overviewStaffPreview.Controls.Add(CreateStaffCard(
-                    name,
-                    userName,
-                    phone,
-                    email,
-                    roleName,
-                    isActive,
-                    async () =>
-                    {
-                        int userId = TryReadInt(r, "UserId");
-                        if (userId <= 0) return;
-                        var latest = FindById(staff, "UserId", userId);
-                        using (var frm = new FrmStaffEditor(_adminBll, latest ?? r))
-                        {
-                            var owner = FindForm();
-                            if (frm.ShowDialog(owner ?? this) == DialogResult.OK)
-                                await LoadAllAsync();
-                        }
-                    }));
-            }
-
-            _overviewStaffPreview.ResumeLayout();
         }
 
         private static Control CreateStaffCard(string fullName, string userName, string phone, string email, string roleName, bool isActive, Func<Task> onEdit)
@@ -1548,7 +2219,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             await LoadAllAsync();
             _tabs.SelectedTab = _tabRooms;
-            SelectRoomInRoomsGrid(roomId);
+            // SelectRoomInRoomsGrid(roomId); // Method commented out
             ShowRoomQuickView(roomId);
         }
 
@@ -1594,31 +2265,31 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _roomQuickView.BringToFront();
         }
 
-        private void SelectRoomInRoomsGrid(int roomId)
-        {
-            if (_gridRooms == null || _gridRooms.Rows == null) return;
-
-            foreach (DataGridViewRow r in _gridRooms.Rows)
-            {
-                if (r?.DataBoundItem is DataRowView drv)
-                {
-                    int id = 0;
-                    try { id = Convert.ToInt32(drv.Row["RoomId"]); } catch { id = 0; }
-                    if (id == roomId)
-                    {
-                        _gridRooms.ClearSelection();
-                        r.Selected = true;
-                        _gridRooms.CurrentCell = r.Cells.Cast<DataGridViewCell>().FirstOrDefault(c => c.Visible) ?? r.Cells[0];
-                        _selectedRoomId = roomId;
-                        _tenantVisible = false;
-                        _tenantDetails.Visible = false;
-                        RenderRoomInfo(roomId);
-                        _gridRooms.FirstDisplayedScrollingRowIndex = Math.Max(0, r.Index - 2);
-                        return;
-                    }
-                }
-            }
-        }
+        // private void SelectRoomInRoomsGrid(int roomId)
+        // {
+        //     if (_gridRooms == null || _gridRooms.Rows == null) return;
+        //
+        //     foreach (DataGridViewRow r in _gridRooms.Rows)
+        //     {
+        //         if (r?.DataBoundItem is DataRowView drv)
+        //         {
+        //             int id = 0;
+        //             try { id = Convert.ToInt32(drv.Row["RoomId"]); } catch { id = 0; }
+        //             if (id == roomId)
+        //             {
+        //                 _gridRooms.ClearSelection();
+        //                 r.Selected = true;
+        //                 _gridRooms.CurrentCell = r.Cells.Cast<DataGridViewCell>().FirstOrDefault(c => c.Visible) ?? r.Cells[0];
+        //                 _selectedRoomId = roomId;
+        //                 _tenantVisible = false;
+        //                 _tenantDetails.Visible = false;
+        //                 RenderRoomInfo(roomId);
+        //                 _gridRooms.FirstDisplayedScrollingRowIndex = Math.Max(0, r.Index - 2);
+        //                 return;
+        //             }
+        //         }
+        //     }
+        // }
 
         private void GridRoomCellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
         {
@@ -1899,6 +2570,84 @@ namespace quan_ly_chuoi_nha_tro.GUI
             SetHeader(grid, "Quantity", "SL");
             SetHeader(grid, "Condition", "Tình trạng");
             HideIfExists(grid, "BranchId");
+        }
+
+        private void BindReports(DataGridView grid, DataTable dt)
+        {
+            if (grid == null) return;
+            grid.DataSource = dt;
+            SetHeader(grid, "Metric", "Hạng mục");
+            SetHeader(grid, "Value", "Số lượng");
+            SetHeader(grid, "Note", "Ghi chú");
+        }
+
+        private void BindNotifications(DataGridView grid, DataTable dt)
+        {
+            if (grid == null) return;
+            grid.DataSource = dt;
+            SetHeader(grid, "NotificationId", "ID");
+            SetHeader(grid, "Title", "Tiêu đề");
+            SetHeader(grid, "Message", "Nội dung");
+            SetHeader(grid, "Status", "Trạng thái");
+            SetHeader(grid, "CreatedDate", "Ngày tạo");
+            HideIfExists(grid, "UserId");
+        }
+
+        private DataTable BuildReportsTable()
+        {
+            var table = new DataTable();
+            table.Columns.Add("Metric", typeof(string));
+            table.Columns.Add("Value", typeof(string));
+            table.Columns.Add("Note", typeof(string));
+
+            int rooms = _roomsBranch?.Rows.Count ?? 0;
+            int tenants = _tenantsBranch?.Rows.Count ?? 0;
+            int contracts = _contractsBranch?.Rows.Count ?? 0;
+            int deposits = _depositsBranch?.Rows.Count ?? 0;
+            int invoices = _invoicesBranch?.Rows.Count ?? 0;
+            int payments = _paymentsBranch?.Rows.Count ?? 0;
+            int maintenance = _maintenanceBranch?.Rows.Count ?? 0;
+            int assets = _assetsBranch?.Rows.Count ?? 0;
+
+            table.Rows.Add("Phòng", rooms.ToString("N0"), "Tổng số phòng của chi nhánh");
+            table.Rows.Add("Khách thuê", tenants.ToString("N0"), "Khách thuê đang theo dõi");
+            table.Rows.Add("Hợp đồng", contracts.ToString("N0"), "Hợp đồng liên quan chi nhánh");
+            table.Rows.Add("Đặt cọc", deposits.ToString("N0"), "Phiếu đặt cọc hiện có");
+            table.Rows.Add("Hóa đơn", invoices.ToString("N0"), "Hóa đơn theo chi nhánh");
+            table.Rows.Add("Thanh toán", payments.ToString("N0"), "Giao dịch thanh toán");
+            table.Rows.Add("Bảo trì", maintenance.ToString("N0"), "Yêu cầu bảo trì");
+            table.Rows.Add("Tài sản", assets.ToString("N0"), "Tài sản đang quản lý");
+
+            return table;
+        }
+
+        private static DataTable BuildNotificationsTable(DataTable source)
+        {
+            var table = new DataTable();
+            table.Columns.Add("NotificationId", typeof(int));
+            table.Columns.Add("Title", typeof(string));
+            table.Columns.Add("Message", typeof(string));
+            table.Columns.Add("Status", typeof(string));
+            table.Columns.Add("CreatedDate", typeof(string));
+            table.Columns.Add("UserId", typeof(int));
+
+            if (source == null) return table;
+
+            foreach (DataRow r in source.Rows)
+            {
+                int id = 0;
+                int userId = 0;
+                if (int.TryParse(r["NotificationId"]?.ToString(), out var nid)) id = nid;
+                if (int.TryParse(r["UserId"]?.ToString(), out var uid)) userId = uid;
+                string title = r.Table.Columns.Contains("Title") ? r["Title"]?.ToString() : null;
+                string message = r.Table.Columns.Contains("Message") ? r["Message"]?.ToString() : null;
+                string status = r.Table.Columns.Contains("Status") ? r["Status"]?.ToString() : null;
+                string created = r.Table.Columns.Contains("CreatedDate") ? FormatDate(r["CreatedDate"]?.ToString()) : null;
+
+                table.Rows.Add(id, TextFixer.FixUtf8Mojibake(title), TextFixer.FixUtf8Mojibake(message), status, created, userId);
+            }
+
+            return table;
         }
 
         private static void SetHeader(DataGridView grid, string col, string header)
@@ -2386,7 +3135,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 var frmType = Type.GetType("quan_ly_chuoi_nha_tro.GUI.FrmRoomDetailForm");
                 if (frmType != null)
                 {
-                    var frm = (Form)Activator.CreateInstance(frmType, _adminBll, row, _contractsBranch, _tenantsHistoryAll);
+                    // Pass null for tenant history since it's not populated
+                    var frm = (Form)Activator.CreateInstance(frmType, _adminBll, row, _contractsBranch, null);
                     if (frm.ShowDialog(this) == DialogResult.OK)
                     {
                         _ = LoadAllAsync();
@@ -2452,6 +3202,384 @@ namespace quan_ly_chuoi_nha_tro.GUI
             catch (Exception ex)
             {
                 MessageBox.Show("Không thể lưu khách thuê.\n\n" + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        // ==================== ACTION BAR METHODS ====================
+        private void BuildActionBar()
+        {
+            _actionBarPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 60,
+                BackColor = Color.FromArgb(240, 244, 250),
+                BorderStyle = BorderStyle.FixedSingle,
+                Padding = new Padding(10, 8, 10, 8)
+            };
+
+            _actionBar = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                AutoSize = false,
+                WrapContents = false,
+                FlowDirection = FlowDirection.LeftToRight,
+                BackColor = Color.Transparent,
+                AutoScroll = true
+            };
+
+            // Create action buttons (12 items)
+            _btnActionBranch = CreateActionButton("Chi nhánh", () => _tabs.SelectedTab = _tabOverview);
+            var btnActionSections = CreateActionButton("Khu/Dãy", () => _tabs.SelectedTab = _tabSections);
+            _btnActionRooms = CreateActionButton("Phòng", () => _tabs.SelectedTab = _tabRooms);
+            _btnActionTenants = CreateActionButton("Khách thuê", () => _tabs.SelectedTab = _tabTenants);
+            _btnActionContracts = CreateActionButton("Hợp đồng", () => _tabs.SelectedTab = _tabContracts);
+            _btnActionDeposits = CreateActionButton("Đặt cọc", () => _tabs.SelectedTab = _tabDeposits);
+            _btnActionUtilities = CreateActionButton("Điện/Nước/DV", () => _tabs.SelectedTab = _tabUtilities);
+            var btnActionMaintenance = CreateActionButton("Bảo trì", () => _tabs.SelectedTab = _tabMaintenance);
+            var btnActionAssets = CreateActionButton("Tài sản", () => _tabs.SelectedTab = _tabAssets);
+            var btnActionReports = CreateActionButton("Báo cáo", () => _tabs.SelectedTab = _tabReports);
+            _btnActionInvoices = CreateActionButton("Hóa đơn/Thanh", () => _tabs.SelectedTab = _tabInvoices);
+            _btnActionNotifications = CreateActionButton("Thông báo", () => _tabs.SelectedTab = _tabNotifications);
+
+            _actionBar.Controls.Add(_btnActionBranch);
+            _actionBar.Controls.Add(btnActionSections);
+            _actionBar.Controls.Add(_btnActionRooms);
+            _actionBar.Controls.Add(_btnActionTenants);
+            _actionBar.Controls.Add(_btnActionContracts);
+            _actionBar.Controls.Add(_btnActionDeposits);
+            _actionBar.Controls.Add(_btnActionUtilities);
+            _actionBar.Controls.Add(btnActionMaintenance);
+            _actionBar.Controls.Add(btnActionAssets);
+            _actionBar.Controls.Add(btnActionReports);
+            _actionBar.Controls.Add(_btnActionInvoices);
+            _actionBar.Controls.Add(_btnActionNotifications);
+
+            _actionBarPanel.Controls.Add(_actionBar);
+        }
+
+        private Button CreateActionButton(string text, Action onClick)
+        {
+            var btn = new Button
+            {
+                Text = text,
+                Width = 120,
+                Height = 34,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.White,
+                ForeColor = Color.FromArgb(0, 79, 159),
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Margin = new Padding(6, 0, 6, 0),
+                Cursor = Cursors.Hand
+            };
+            btn.FlatAppearance.BorderSize = 1;
+            btn.FlatAppearance.BorderColor = Color.FromArgb(200, 220, 240);
+            btn.Click += (s, e) => onClick?.Invoke();
+            return btn;
+        }
+
+        // ==================== STAFF FORM METHODS ====================
+        private void BuildStaffTabForm()
+        {
+            // Create a simple DataGridView with edit capability
+            _staffFormPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White
+            };
+
+            // Header
+            var headerPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 50,
+                BackColor = Color.FromArgb(245, 249, 255),
+                Padding = new Padding(10),
+                BorderStyle = BorderStyle.FixedSingle
+            };
+
+            _lblStaffTitle = new Label
+            {
+                AutoSize = true,
+                Text = "Quản lý nhân viên",
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 79, 159),
+                Dock = DockStyle.Left
+            };
+
+            _lblStaffCount = new Label
+            {
+                AutoSize = true,
+                Text = "Tổng: 0",
+                Font = new Font("Segoe UI", 9f),
+                ForeColor = Color.FromArgb(90, 90, 90),
+                Dock = DockStyle.Right,
+                Margin = new Padding(10, 0, 0, 0)
+            };
+
+            headerPanel.Controls.Add(_lblStaffCount);
+            headerPanel.Controls.Add(_lblStaffTitle);
+
+            // Action buttons panel
+            var btnPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 50,
+                BackColor = Color.White,
+                Padding = new Padding(10),
+                BorderStyle = BorderStyle.FixedSingle
+            };
+
+            _btnStaffSave = new Button
+            {
+                Text = "💾 Lưu",
+                Width = 100,
+                Height = 34,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(40, 167, 69),
+                ForeColor = Color.White,
+                Cursor = Cursors.Hand,
+                Margin = new Padding(0, 0, 10, 0)
+            };
+            _btnStaffSave.FlatAppearance.BorderSize = 0;
+            _btnStaffSave.Click += SaveStaffChanges;
+            _btnStaffSave.Visible = false;
+
+            _btnStaffDelete = new Button
+            {
+                Text = "🗑️ Xóa",
+                Width = 100,
+                Height = 34,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(220, 53, 69),
+                ForeColor = Color.White,
+                Cursor = Cursors.Hand,
+                Margin = new Padding(0, 0, 10, 0)
+            };
+            _btnStaffDelete.FlatAppearance.BorderSize = 0;
+            _btnStaffDelete.Click += (s, e) => MessageBox.Show("Chức năng xóa sẽ được cập nhập", "Thông báo");
+            _btnStaffDelete.Visible = false;
+
+            var btnCancel = new Button
+            {
+                Text = "❌ Hủy",
+                Width = 100,
+                Height = 34,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(108, 117, 125),
+                ForeColor = Color.White,
+                Cursor = Cursors.Hand
+            };
+            btnCancel.FlatAppearance.BorderSize = 0;
+            btnCancel.Click += (s, e) => CancelStaffEdit();
+            btnCancel.Visible = false;
+
+            btnPanel.Controls.Add(btnCancel);
+            btnPanel.Controls.Add(_btnStaffDelete);
+            btnPanel.Controls.Add(_btnStaffSave);
+            btnPanel.Visible = false;
+
+            // Create custom staff grid
+            var gridPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White,
+                AutoScroll = true
+            };
+
+            _staffCardsHost = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                AutoScroll = true,
+                WrapContents = true,
+                FlowDirection = FlowDirection.LeftToRight,
+                BackColor = Color.FromArgb(245, 247, 250),
+                Padding = new Padding(10)
+            };
+
+            gridPanel.Controls.Add(_staffCardsHost);
+
+            _staffFormPanel.Controls.Add(gridPanel);
+            _staffFormPanel.Controls.Add(btnPanel);
+            _staffFormPanel.Controls.Add(headerPanel);
+
+            _tabStaff.Controls.Add(_staffFormPanel);
+        }
+
+        private void CancelStaffEdit()
+        {
+            // Hide edit controls
+            var btnPanel = _staffFormPanel.Controls.OfType<Panel>().FirstOrDefault(p => p.Controls.Contains(_btnStaffSave));
+            if (btnPanel != null) btnPanel.Visible = false;
+            _selectedStaffId = 0;
+        }
+
+        private void SaveStaffChanges(object sender, EventArgs e)
+        {
+            if (_selectedStaffId == 0)
+            {
+                MessageBox.Show("Vui lòng chọn nhân viên để sửa.", "Thông báo");
+                return;
+            }
+            MessageBox.Show("Chức năng sửa nhân viên sẽ được cập nhập.", "Thông báo");
+        }
+
+        private void RenderStaffCards(DataTable staffTable)
+        {
+            if (staffTable == null || _staffCardsHost == null) return;
+
+            _staffCardsHost.Controls.Clear();
+            _lblStaffCount.Text = $"Tổng: {staffTable.Rows.Count}";
+
+            if (staffTable.Rows.Count == 0)
+            {
+                _staffCardsHost.Controls.Add(new Label
+                {
+                    AutoSize = true,
+                    Text = "Không có nhân viên nào",
+                    ForeColor = Color.FromArgb(90, 90, 90),
+                    Font = new Font("Segoe UI", 9f),
+                    Margin = new Padding(8, 6, 0, 0)
+                });
+                return;
+            }
+
+            // Create a table-like layout for staff
+            foreach (DataRow row in staffTable.Rows)
+            {
+                var rowPanel = CreateStaffRowPanel(row);
+                _staffCardsHost.Controls.Add(rowPanel);
+            }
+        }
+
+        private Panel CreateStaffRowPanel(DataRow staffRow)
+        {
+            int staffId = TryReadInt(staffRow, "UserId");
+            string fullName = TextFixer.FixUtf8Mojibake(ReadString(staffRow, "FullName") ?? "");
+            string phone = ReadString(staffRow, "PhoneNumber");
+            string email = ReadString(staffRow, "Email");
+            string address = TextFixer.FixUtf8Mojibake(ReadString(staffRow, "Address"));
+            string role = ReadString(staffRow, "RoleName");
+            bool isActive = staffRow.Table.Columns.Contains("IsActive") && Convert.ToBoolean(staffRow["IsActive"] ?? false);
+
+            // Card panel
+            var card = new Panel
+            {
+                Width = 320,
+                Height = 200,
+                BackColor = Color.White,
+                Padding = new Padding(12),
+                Margin = new Padding(8),
+                Cursor = Cursors.Hand,
+                Tag = staffRow
+            };
+
+            card.Paint += (s, e) =>
+            {
+                using (var pen = new Pen(Color.FromArgb(200, 220, 240), 1.5f))
+                {
+                    e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
+                }
+            };
+
+            var content = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 1,
+                RowCount = 6,
+                BackColor = Color.Transparent
+            };
+            content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            content.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+
+            var lblName = new Label
+            {
+                Text = NullDash(fullName),
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 79, 159),
+                AutoSize = true,
+                Dock = DockStyle.Top,
+                Margin = new Padding(0, 0, 0, 4)
+            };
+
+            var lblRole = new Label
+            {
+                Text = $"Chức vụ: {NullDash(role)}",
+                Font = new Font("Segoe UI", 9f),
+                ForeColor = Color.FromArgb(100, 100, 100),
+                AutoSize = true,
+                Dock = DockStyle.Top,
+                Margin = new Padding(0, 0, 0, 3)
+            };
+
+            var lblPhone = new Label
+            {
+                Text = $"Điện thoại: {NullDash(phone)}",
+                Font = new Font("Segoe UI", 9f),
+                ForeColor = Color.FromArgb(100, 100, 100),
+                AutoSize = true,
+                Dock = DockStyle.Top,
+                Margin = new Padding(0, 0, 0, 3)
+            };
+
+            var lblEmail = new Label
+            {
+                Text = $"Email: {NullDash(email)}",
+                Font = new Font("Segoe UI", 9f),
+                ForeColor = Color.FromArgb(100, 100, 100),
+                AutoSize = true,
+                Dock = DockStyle.Top,
+                Margin = new Padding(0, 0, 0, 3)
+            };
+
+            var lblAddress = new Label
+            {
+                Text = $"Địa chỉ: {NullDash(address)}",
+                Font = new Font("Segoe UI", 8.5f),
+                ForeColor = Color.FromArgb(120, 120, 120),
+                AutoSize = true,
+                Dock = DockStyle.Top,
+                Margin = new Padding(0, 0, 0, 3)
+            };
+
+            var lblStatus = new Label
+            {
+                Text = isActive ? "✓ Hoạt động" : "✕ Vô hiệu",
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                ForeColor = isActive ? Color.FromArgb(40, 167, 69) : Color.FromArgb(220, 53, 69),
+                AutoSize = true,
+                Dock = DockStyle.Top,
+                Margin = new Padding(0, 4, 0, 0)
+            };
+
+            content.Controls.Add(lblName, 0, 0);
+            content.Controls.Add(lblRole, 0, 1);
+            content.Controls.Add(lblPhone, 0, 2);
+            content.Controls.Add(lblEmail, 0, 3);
+            content.Controls.Add(lblAddress, 0, 4);
+            content.Controls.Add(lblStatus, 0, 5);
+
+            card.Controls.Add(content);
+
+            // Click to edit
+            card.Click += (s, e) => OpenStaffEditor(staffId, staffRow);
+            foreach (Control c in content.Controls)
+                c.Click += (s, e) => OpenStaffEditor(staffId, staffRow);
+
+            return card;
+        }
+
+        private void OpenStaffEditor(int staffId, DataRow staffRow)
+        {
+            _selectedStaffId = staffId;
+            _selectedStaffRow = staffRow;
+            var editForm = new FrmStaffEditor(_adminBll, staffRow);
+            if (editForm.ShowDialog() == DialogResult.OK)
+            {
+                _ = LoadAllAsync();
             }
         }
     }

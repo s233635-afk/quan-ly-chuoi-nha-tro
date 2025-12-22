@@ -1,4 +1,5 @@
 using System;
+using System;
 using System.Data;
 using System.Drawing;
 using System.Linq;
@@ -14,6 +15,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
     /// </summary>
     public class FrmBranchCards : Form
     {
+        private const int MaxBranchCards = 2;
+
         private readonly BranchBLL _branchBll = new BranchBLL();
         private readonly AdminDataBLL _adminBll = new AdminDataBLL();
 
@@ -22,6 +25,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private Panel _top;
         private FlowLayoutPanel _cardsHost;
+        private SplitContainer _split;
         private TextBox _txtSearch;
         private Label _lblCount;
         private Label _lblStatTotalValue;
@@ -38,7 +42,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
         public FrmBranchCards()
         {
             InitializeComponent();
+            AdminEvents.DataChanged += HandleAdminDataChanged;
+            FormClosing += (s, e) => AdminEvents.DataChanged -= HandleAdminDataChanged;
             Load += async (s, e) => await LoadDataAsync();
+            Shown += (s, e) => BeginInvoke((System.Action)ApplySplitterLayout);
+            SizeChanged += (s, e) => ApplySplitterLayout();
         }
 
         private void InitializeComponent()
@@ -130,6 +138,18 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _top.Controls.Add(pnlStats);
             _top.Controls.Add(pnlActions);
 
+            _split = new SplitContainer
+            {
+                Dock = DockStyle.Fill,
+                SplitterWidth = 6,
+                BackColor = Color.FromArgb(230, 235, 240),
+                Panel1MinSize = 0,
+                Panel2MinSize = 0,
+                Panel2Collapsed = true
+            };
+            _split.HandleCreated += (s, e) => ApplySplitterLayout();
+            _split.Layout += (s, e) => ApplySplitterLayout();
+
             _cardsHost = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
@@ -139,8 +159,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Padding = new Padding(14),
                 BackColor = BackColor
             };
+            _split.Panel1.Controls.Add(_cardsHost);
 
-            Controls.Add(_cardsHost);
+            
+            Controls.Add(_split);
             Controls.Add(_top);
         }
 
@@ -161,6 +183,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             btn.Click += onClick;
             return btn;
         }
+
 
         private static Panel MakeStatCard(string title, Color valueColor, out Label valueLabel)
         {
@@ -212,11 +235,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 if (allBranches == null) allBranches = new DataTable();
                 TextFixer.FixDataTable(allBranches, "BranchName", "Address", "Description");
                 _branches = AdminBranchScope.Apply(allBranches);
+                _branches = LimitBranches(_branches, MaxBranchCards);
 
                 _rooms = roomTask.Result ?? new DataTable();
 
                 UpdateStats();
                 RebuildCards();
+                AutoSelectFirstBranch();
             }
             catch (Exception ex)
             {
@@ -225,6 +250,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
             finally
             {
                 _btnRefresh.Enabled = true;
+            }
+        }
+
+        private async void HandleAdminDataChanged()
+        {
+            if (IsDisposed || !IsHandleCreated) return;
+            try
+            {
+                await LoadDataAsync();
+            }
+            catch
+            {
+                // ignore refresh errors
             }
         }
 
@@ -286,6 +324,17 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
 
             _cardsHost.ResumeLayout();
+        }
+
+        private void AutoSelectFirstBranch()
+        {
+            if (_branches == null || !_branches.Columns.Contains("BranchId")) return;
+            if (_branches.Rows.Count == 0) return;
+            if (_selectedBranchId > 0) return;
+
+            int branchId;
+            if (!int.TryParse(_branches.Rows[0]["BranchId"]?.ToString(), out branchId)) return;
+            _selectedBranchId = branchId;
         }
 
         private Control MakeBranchCard(DataRow row, int branchId)
@@ -377,11 +426,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             void OpenDetails()
             {
                 SelectThis();
-                using (var frm = new FrmBranchOverview(branchId))
-                {
-                    var owner = FindForm();
-                    frm.ShowDialog(owner ?? this);
-                }
+                OpenBranchDialog(branchId, FrmBranchOverview.BranchOverviewTab.Branch);
             }
 
             card.Click += (s, e) => OpenDetails();
@@ -446,6 +491,73 @@ namespace quan_ly_chuoi_nha_tro.GUI
         }
 
         private static string NullDash(string s) => string.IsNullOrWhiteSpace(s) ? "—" : s.Trim();
+
+        private static DataTable LimitBranches(DataTable branches, int maxCount)
+        {
+            if (branches == null) return branches;
+            if (maxCount <= 0) return branches;
+            if (branches.Rows.Count <= maxCount) return branches;
+            if (!branches.Columns.Contains("BranchId")) return branches;
+
+            var rows = branches.AsEnumerable()
+                .Where(r => int.TryParse(r["BranchId"]?.ToString(), out _))
+                .OrderBy(r => Convert.ToInt32(r["BranchId"]))
+                .Take(maxCount)
+                .ToList();
+
+            var result = branches.Clone();
+            foreach (var r in rows)
+                result.ImportRow(r);
+            return result;
+        }
+
+        private void ApplySplitterLayout()
+        {
+            if (_split == null) return;
+            if (_split.Panel2Collapsed) return;
+            int total = _split.ClientSize.Width;
+            if (total <= 0) return;
+
+            int minLeftDesired = 260;
+            int minRightDesired = 320;
+
+            int minLeft = minLeftDesired;
+            int minRight = minRightDesired;
+            if (total < (minLeft + minRight))
+            {
+                minLeft = 0;
+                minRight = 0;
+            }
+
+            _split.Panel1MinSize = minLeft;
+            _split.Panel2MinSize = minRight;
+
+            int maxLeft = total - minRight;
+            if (maxLeft < minLeft) maxLeft = minLeft;
+
+            int preferred = Math.Max(minLeft, Math.Min(total / 3, maxLeft));
+            int desired = _split.SplitterDistance;
+            if (desired < minLeft || desired > maxLeft)
+                desired = preferred;
+
+            if (_split.SplitterDistance != desired)
+                _split.SplitterDistance = desired;
+        }
+
+        private void OpenBranchDialog(int branchId, FrmBranchOverview.BranchOverviewTab tab)
+        {
+            if (branchId <= 0)
+            {
+                MessageBox.Show("Vui lòng chọn một chi nhánh trước.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using (var frm = new FrmBranchOverview(branchId))
+            {
+                frm.SelectTab(tab);
+                frm.ShowDialog(FindForm() ?? this);
+            }
+        }
 
         private async Task AddBranchAsync()
         {

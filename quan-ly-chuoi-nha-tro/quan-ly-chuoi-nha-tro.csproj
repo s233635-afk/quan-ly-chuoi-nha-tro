@@ -198,6 +198,7 @@
     <Compile Include="DAL\BranchDAL.cs" />
     <Compile Include="DAL\AdminDataDAL.cs" />
     <Compile Include="DAL\InvoicePaymentDAL.cs" />
+    <Compile Include="DAL\StaffDAL.cs" />
     <Compile Include="GUI\Admin.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -221,6 +222,9 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="GUI\FrmTenantEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GUI\FrmTenantDetail.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="GUI\FrmDependentEditor.cs">
@@ -286,10 +290,25 @@
     <Compile Include="GUI\FrmInvoiceEditor.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="GUI\FrmInvoicePaymentUnified.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="GUI\FrmPaymentManager.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="GUI\FrmRoomPaymentSelector.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GUI\FrmBulkPaymentRunner.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="GUI\FrmPaymentEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GUI\FrmPaymentWithTenantInfo.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GUI\MonthlyInvoiceDialog.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="GUI\FrmDataViewer.cs">

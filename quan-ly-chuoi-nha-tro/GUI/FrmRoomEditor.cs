@@ -17,6 +17,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private ComboBox cboSection;
         private ComboBox cboRoomType;
         private ComboBox cboStatus;
+        private Button btnAddSection;
         private NumericUpDown numPrice;
         private NumericUpDown numFloor;
         private NumericUpDown numArea;
@@ -31,6 +32,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private DataTable _statusTable;
 
         public int? SavedRoomId { get; private set; }
+        public int? DefaultBranchId { get; set; }
 
         public FrmRoomEditor(AdminDataBLL bll, DataRow existingRow = null)
         {
@@ -116,7 +118,22 @@ namespace quan_ly_chuoi_nha_tro.GUI
             top += line;
 
             pnlBody.Controls.Add(MakeLabel("Khu/Dãy (*)", top));
-            pnlBody.Controls.Add(MakeInput(cboSection, top));
+            var pnlSection = new Panel { Location = new Point(left + labelWidth, top), Width = inputWidth, Height = 30 };
+            cboSection.Parent = pnlSection;
+            cboSection.Location = new Point(0, 0);
+            cboSection.Width = inputWidth - 110;
+            btnAddSection = new Button { Text = "Thêm khu/dãy", Width = 100, Height = 28 };
+            btnAddSection.Parent = pnlSection;
+            btnAddSection.Location = new Point(inputWidth - btnAddSection.Width, 1);
+            btnAddSection.FlatStyle = FlatStyle.Flat;
+            btnAddSection.FlatAppearance.BorderSize = 1;
+            btnAddSection.Click += async (s, e) => await AddSectionAsync();
+            pnlSection.Resize += (s, e) =>
+            {
+                cboSection.Width = pnlSection.Width - btnAddSection.Width - 10;
+                btnAddSection.Location = new Point(pnlSection.Width - btnAddSection.Width, 1);
+            };
+            pnlBody.Controls.Add(pnlSection);
             top += line;
 
             pnlBody.Controls.Add(MakeLabel("Loại phòng (*)", top));
@@ -207,6 +224,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 BindStatuses();
 
                 LoadExistingIntoControls();
+
+                if (_existingRow == null && DefaultBranchId.HasValue)
+                {
+                    try { cboBranch.SelectedValue = DefaultBranchId.Value; } catch { }
+                }
 
                 await ReloadSectionsAsync();
             }
@@ -306,6 +328,18 @@ namespace quan_ly_chuoi_nha_tro.GUI
             catch
             {
                 // ignore lookup errors
+            }
+        }
+
+        private async System.Threading.Tasks.Task AddSectionAsync()
+        {
+            int? branchId = cboBranch.SelectedValue is int b && b > 0 ? (int?)b : null;
+            using (var frm = new FrmBranchSectionEditor(_bll, null, branchId))
+            {
+                if (frm.ShowDialog(this) != DialogResult.OK) return;
+                await ReloadSectionsAsync();
+                if (frm.SavedSectionId.HasValue)
+                    cboSection.SelectedValue = frm.SavedSectionId.Value;
             }
         }
 
@@ -409,6 +443,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     SavedRoomId = id;
                 }
 
+                AdminEvents.NotifyDataChanged();
+                DataSyncManager.NotifyRoomsChanged();
+                DataSyncManager.NotifyTenantsChanged();
+                DataSyncManager.NotifyContractsChanged();
+                DataSyncManager.NotifyInvoicesChanged();
+                DataSyncManager.NotifyPaymentsChanged();
                 DialogResult = DialogResult.OK;
             }
             catch (Exception ex)

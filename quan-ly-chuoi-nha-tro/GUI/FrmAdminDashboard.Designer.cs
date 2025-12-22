@@ -27,7 +27,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.btnNavUtility = new System.Windows.Forms.Button();
             this.btnNavInvoice = new System.Windows.Forms.Button();
             this.btnNavReport = new System.Windows.Forms.Button();
-            this.btnNavPayment = new System.Windows.Forms.Button();
             this.btnNavMaintenance = new System.Windows.Forms.Button();
             this.btnNavAsset = new System.Windows.Forms.Button();
             this.btnNavNotification = new System.Windows.Forms.Button();
@@ -73,7 +72,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.flowSidebar.Controls.Add(this.btnNavUtility);
             this.flowSidebar.Controls.Add(this.btnNavInvoice);
             this.flowSidebar.Controls.Add(this.btnNavReport);
-            this.flowSidebar.Controls.Add(this.btnNavPayment);
             this.flowSidebar.Controls.Add(this.btnNavMaintenance);
             this.flowSidebar.Controls.Add(this.btnNavAsset);
             this.flowSidebar.Controls.Add(this.btnNavNotification);
@@ -215,7 +213,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.btnNavUtility.UseVisualStyleBackColor = false;
             this.btnNavUtility.Click += new System.EventHandler(this.btnUtility_Click);
 
-            // btnNavInvoice
+            // btnNavInvoice - MERGED with Payment: "💳 Hóa Đơn & Thanh Toán"
             this.btnNavInvoice.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(122)))), ((int)(((byte)(204)))));
             this.btnNavInvoice.FlatAppearance.BorderSize = 0;
             this.btnNavInvoice.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
@@ -226,7 +224,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.btnNavInvoice.Name = "btnNavInvoice";
             this.btnNavInvoice.Size = new System.Drawing.Size(180, 42);
             this.btnNavInvoice.TabIndex = 6;
-            this.btnNavInvoice.Text = "Hóa đơn";
+            this.btnNavInvoice.Text = "💳 Hóa Đơn & Thanh Toán";
             this.btnNavInvoice.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.btnNavInvoice.UseVisualStyleBackColor = false;
             this.btnNavInvoice.Click += new System.EventHandler(this.btnInvoice_Click);
@@ -247,22 +245,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.btnNavReport.UseVisualStyleBackColor = false;
             this.btnNavReport.Click += new System.EventHandler(this.btnReport_Click);
 
-            // btnNavPayment
-            this.btnNavPayment.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(122)))), ((int)(((byte)(204)))));
-            this.btnNavPayment.FlatAppearance.BorderSize = 0;
-            this.btnNavPayment.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnNavPayment.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
-            this.btnNavPayment.ForeColor = System.Drawing.Color.White;
-            this.btnNavPayment.Location = new System.Drawing.Point(3, 432);
-            this.btnNavPayment.Margin = new System.Windows.Forms.Padding(3, 0, 3, 10);
-            this.btnNavPayment.Name = "btnNavPayment";
-            this.btnNavPayment.Size = new System.Drawing.Size(180, 42);
-            this.btnNavPayment.TabIndex = 7;
-            this.btnNavPayment.Text = "Thanh toán";
-            this.btnNavPayment.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnNavPayment.UseVisualStyleBackColor = false;
-            this.btnNavPayment.Click += new System.EventHandler(this.btnPayment_Click);
-
             // btnNavMaintenance
             this.btnNavMaintenance.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(122)))), ((int)(((byte)(204)))));
             this.btnNavMaintenance.FlatAppearance.BorderSize = 0;
@@ -274,7 +256,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.btnNavMaintenance.Name = "btnNavMaintenance";
             this.btnNavMaintenance.Size = new System.Drawing.Size(180, 42);
             this.btnNavMaintenance.TabIndex = 8;
-            this.btnNavMaintenance.Text = "Bảo trì";
+            this.btnNavMaintenance.Text = "Bảo trì & sự cố";
             this.btnNavMaintenance.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.btnNavMaintenance.UseVisualStyleBackColor = false;
             this.btnNavMaintenance.Click += new System.EventHandler(this.btnMaintenance_Click);
@@ -479,7 +461,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private System.Windows.Forms.Button btnNavUtility;
         private System.Windows.Forms.Button btnNavInvoice;
         private System.Windows.Forms.Button btnNavReport;
-        private System.Windows.Forms.Button btnNavPayment;
         private System.Windows.Forms.Button btnNavMaintenance;
         private System.Windows.Forms.Button btnNavAsset;
         private System.Windows.Forms.Button btnNavNotification;

@@ -64,7 +64,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             StyleNavButton(btnNavUtility);
             StyleNavButton(btnNavInvoice);
             StyleNavButton(btnNavReport);
-            StyleNavButton(btnNavPayment);
             StyleNavButton(btnNavMaintenance);
             StyleNavButton(btnNavAsset);
             StyleNavButton(btnNavNotification);
@@ -132,6 +131,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
             tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
             tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
             tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.34F));
+            tableLayoutPanel1.Padding = new Padding(10, 6, 10, 10);
+            tableLayoutPanel1.BackColor = Color.FromArgb(244, 248, 252);
+            tableLayoutPanel1.GrowStyle = TableLayoutPanelGrowStyle.FixedSize;
 
             int GetInt(string col)
             {
@@ -180,7 +182,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             tableLayoutPanel1.RowStyles.Clear();
             for (int i = 0; i < rowCount; i++)
             {
-                tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Absolute, 190F));
+                tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Percent, 100f / rowCount));
             }
 
             for (int i = 0; i < metrics.Length; i++)
@@ -215,10 +217,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 Dock = DockStyle.Fill,
                 Margin = new Padding(12),
-                Padding = new Padding(16, 14, 16, 14),
+                Padding = new Padding(18, 16, 16, 16),
                 BackColor = Color.White,
                 BorderStyle = BorderStyle.None,
-                MinimumSize = new Size(0, 150)
+                MinimumSize = new Size(0, 140)
             };
 
             bool isHover = false;
@@ -262,10 +264,17 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 }
             };
 
+            var accentBar = new Panel
+            {
+                BackColor = metric.AccentColor,
+                Width = 6,
+                Dock = DockStyle.Left
+            };
+
             Label lblTitle = new Label
             {
                 Text = metric.Title,
-                Font = new System.Drawing.Font("Segoe UI", 12, System.Drawing.FontStyle.Bold),
+                Font = new System.Drawing.Font("Segoe UI", 11, System.Drawing.FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 79, 159),
                 Dock = DockStyle.Top,
                 Padding = new Padding(0, 2, 0, 4)
@@ -274,8 +283,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             Label lblValue = new Label
             {
                 Text = metric.ValueText,
-                Font = new Font("Segoe UI", 22, FontStyle.Bold),
-                ForeColor = Color.FromArgb(30, 55, 90),
+                Font = new Font("Segoe UI", 24, FontStyle.Bold),
+                ForeColor = Color.FromArgb(28, 48, 78),
                 Dock = DockStyle.Top,
                 Height = 48,
                 Padding = new Padding(0, 0, 0, 0)
@@ -296,6 +305,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             pnl.Controls.Add(lblSub);
             pnl.Controls.Add(lblValue);
             pnl.Controls.Add(lblTitle);
+            pnl.Controls.Add(accentBar);
 
             pnl.Cursor = Cursors.Hand;
 
@@ -336,7 +346,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             pnlModuleHost.Visible = false;
         }
 
-        private void LoadModule(Form module, string headerTitle)
+        private void LoadModule(Form module, string headerTitle, bool showHeaderTitle = true)
         {
             HideOverview();
             lblPlaceholder.Visible = false;
@@ -353,6 +363,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             pnlModuleHost.Visible = true;
             pnlModuleHost.BringToFront();
 
+            // Luôn hiển thị tiêu đề của module
             lblWelcome.Text = headerTitle;
             module.Show();
         }
@@ -430,11 +441,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
             await ShowOverviewAsync();
         }
 
-        private void LoadModuleSafe(Func<Form> create, string headerTitle)
+        private void LoadModuleSafe(Func<Form> create, string headerTitle, bool showHeaderTitle = true)
         {
             try
             {
-                LoadModule(create(), headerTitle);
+                LoadModule(create(), headerTitle, showHeaderTitle);
             }
             catch (Exception ex)
             {
@@ -476,13 +487,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private void btnDeposit_Click(object sender, EventArgs e)
         {
             SetActiveNav(btnNavDeposit);
-            LoadModuleSafe(() => new FrmDepositManager(), "Đặt phòng & đặt cọc");
-        }
-
-        private void btnPayment_Click(object sender, EventArgs e)
-        {
-            SetActiveNav(btnNavPayment);
-            LoadModuleSafe(() => new FrmPaymentManager(adminDataBLL), "Thanh toán");
+            LoadModuleSafe(() => new FrmDepositManager(), "Đặt cọc");
         }
 
         private void btnUtility_Click(object sender, EventArgs e)
@@ -494,13 +499,20 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private void btnInvoice_Click(object sender, EventArgs e)
         {
             SetActiveNav(btnNavInvoice);
-            LoadModuleSafe(() => new FrmInvoiceManager(), "Hóa đơn & thanh toán");
+            // MERGED: Mở FrmInvoicePaymentUnified (2 tabs: Hóa Đơn + Thanh Toán)
+            LoadModuleSafe(() => new FrmInvoicePaymentUnified(), "💳 Hóa Đơn & Thanh Toán");
+        }
+
+        private void btnPayment_Click(object sender, EventArgs e)
+        {
+            SetActiveNav(btnNavInvoice);
+            LoadModuleSafe(() => new FrmInvoicePaymentUnified(), "💳 Hóa Đơn & Thanh Toán");
         }
 
         private void btnMaintenance_Click(object sender, EventArgs e)
         {
             SetActiveNav(btnNavMaintenance);
-            LoadModuleSafe(() => new FrmMaintenanceManager(), "Bảo trì");
+            LoadModuleSafe(() => new FrmMaintenanceManager(), "Bảo trì & sự cố");
         }
 
         private void btnAsset_Click(object sender, EventArgs e)

@@ -26,6 +26,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
         public FrmSystemSettingsManager()
         {
             InitializeComponent();
+            AdminEvents.DataChanged += HandleAdminDataChanged;
+            FormClosing += (s, e) => AdminEvents.DataChanged -= HandleAdminDataChanged;
         }
 
         private void InitializeComponent()
@@ -35,20 +37,60 @@ namespace quan_ly_chuoi_nha_tro.GUI
             Width = 1180;
             Height = 680;
             BackColor = Color.FromArgb(245, 247, 250);
+            Font = new Font("Segoe UI", 10F);
 
             _grid = MakeGrid();
             _grid.Dock = DockStyle.Fill;
             _grid.DoubleClick += async (s, e) => await EditSelectedAsync();
 
             _txtSearch = MakeSearchBox(SearchPlaceholder, () => ApplyFilter());
-            _lblCount = new Label { AutoSize = true, Text = "Tổng: 0", Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+            _lblCount = new Label { AutoSize = true, Text = "Tổng: 0", Font = new Font("Segoe UI", 10, FontStyle.Bold), ForeColor = Color.FromArgb(0, 120, 215) };
 
-            _btnAdd = MakeButton("Thêm", Color.FromArgb(0, 122, 204), async (s, e) => await AddNewAsync());
-            _btnEdit = MakeButton("Sửa", Color.FromArgb(0, 122, 204), async (s, e) => await EditSelectedAsync());
-            _btnDelete = MakeButton("Xóa", Color.FromArgb(211, 47, 47), async (s, e) => await DeleteSelectedAsync());
-            _btnRefresh = MakeButton("Tải lại", Color.FromArgb(0, 122, 204), async (s, e) => await LoadAsync());
+            _btnAdd = MakeButton("➕ Thêm", Color.FromArgb(0, 122, 204), async (s, e) => await AddNewAsync());
+            _btnEdit = MakeButton("✎ Sửa", Color.FromArgb(0, 122, 204), async (s, e) => await EditSelectedAsync());
+            _btnDelete = MakeButton("🗑 Xóa", Color.FromArgb(211, 47, 47), async (s, e) => await DeleteSelectedAsync());
+            _btnRefresh = MakeButton("⟳ Tải lại", Color.FromArgb(0, 122, 204), async (s, e) => await LoadAsync());
 
-            var top = new Panel { Dock = DockStyle.Top, Height = 64, Padding = new Padding(12, 10, 12, 10), BackColor = Color.White };
+            // Toolbar with title
+            var pnlToolbar = new Panel 
+            { 
+                Dock = DockStyle.Top, 
+                Height = 70, 
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.None,
+                Padding = new Padding(0)
+            };
+
+            // Title bar
+            var pnlTitleBar = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 35,
+                BackColor = Color.FromArgb(248, 249, 250),
+                Padding = new Padding(20, 8, 20, 8),
+                BorderStyle = BorderStyle.None
+            };
+            var lblTitle = new Label
+            {
+                Text = "⚙️ Cấu hình Hệ thống",
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 120, 215),
+                AutoSize = true,
+                Dock = DockStyle.Left
+            };
+            pnlTitleBar.Controls.Add(lblTitle);
+            pnlToolbar.Controls.Add(pnlTitleBar);
+
+            // Actions bar
+            var pnlActionBar = new Panel
+            {
+                Dock = DockStyle.Bottom,
+                Height = 35,
+                BackColor = Color.White,
+                Padding = new Padding(12, 4, 12, 4),
+                BorderStyle = BorderStyle.FixedSingle
+            };
+
             var actions = new FlowLayoutPanel
             {
                 Dock = DockStyle.Left,
@@ -69,18 +111,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 WrapContents = false,
                 FlowDirection = FlowDirection.LeftToRight,
                 BackColor = Color.Transparent,
-                Padding = new Padding(0, 6, 0, 0)
+                Padding = new Padding(0, 2, 0, 0)
             };
-            filters.Controls.Add(new Label { Text = "Tìm:", AutoSize = true, Margin = new Padding(0, 6, 6, 0) });
+            filters.Controls.Add(new Label { Text = "🔍 Tìm:", AutoSize = true, Margin = new Padding(0, 4, 6, 0), Font = new Font("Segoe UI", 9) });
             filters.Controls.Add(_txtSearch);
             filters.Controls.Add(new Label { Text = "  ", AutoSize = true });
             filters.Controls.Add(_lblCount);
 
-            top.Controls.Add(actions);
-            top.Controls.Add(filters);
+            pnlActionBar.Controls.Add(actions);
+            pnlActionBar.Controls.Add(filters);
+            pnlToolbar.Controls.Add(pnlActionBar);
 
             Controls.Add(_grid);
-            Controls.Add(top);
+            Controls.Add(pnlToolbar);
             Load += async (s, e) => await LoadAsync();
         }
 
@@ -96,6 +139,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
             catch (Exception ex)
             {
                 MessageBox.Show("Lỗi tải cấu hình: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private async void HandleAdminDataChanged()
+        {
+            if (IsDisposed || !IsHandleCreated) return;
+            try
+            {
+                await LoadAsync();
+            }
+            catch
+            {
+                // ignore refresh errors
             }
         }
 
@@ -197,16 +253,21 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 AllowUserToDeleteRows = false,
                 RowHeadersVisible = false,
                 BackgroundColor = Color.White,
-                BorderStyle = BorderStyle.None
+                BorderStyle = BorderStyle.None,
+                RowTemplate = { Height = 28 }
             };
             g.EnableHeadersVisualStyles = false;
             g.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(0, 120, 215);
             g.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            g.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+            g.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 11, FontStyle.Bold);
+            g.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            g.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             g.DefaultCellStyle.Font = new Font("Segoe UI", 10, FontStyle.Regular);
+            g.DefaultCellStyle.ForeColor = Color.FromArgb(50, 50, 50);
             g.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 249, 255);
-            g.DefaultCellStyle.SelectionBackColor = Color.FromArgb(232, 244, 252);
+            g.DefaultCellStyle.SelectionBackColor = Color.FromArgb(179, 211, 247);
             g.DefaultCellStyle.SelectionForeColor = Color.Black;
+            g.GridColor = Color.FromArgb(220, 230, 240);
             return g;
         }
 
@@ -215,21 +276,43 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var b = new Button
             {
                 Text = text,
-                Width = 96,
+                Width = 110,
                 Height = 34,
                 FlatStyle = FlatStyle.Flat,
                 BackColor = backColor,
                 ForeColor = Color.White,
-                Margin = new Padding(0, 0, 8, 0)
+                Margin = new Padding(0, 0, 6, 0),
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                Cursor = Cursors.Hand
             };
             b.FlatAppearance.BorderSize = 0;
+            b.FlatAppearance.MouseOverBackColor = ColorAdjust(backColor, 10);
             b.Click += onClick;
             return b;
         }
 
+        private static Color ColorAdjust(Color c, int delta)
+        {
+            return Color.FromArgb(
+                Math.Max(0, Math.Min(255, c.R + delta)),
+                Math.Max(0, Math.Min(255, c.G + delta)),
+                Math.Max(0, Math.Min(255, c.B + delta))
+            );
+        }
+
         private static TextBox MakeSearchBox(string placeholder, Action onChanged)
         {
-            var tb = new TextBox { Width = 360, ForeColor = Color.Gray, Text = placeholder };
+            var tb = new TextBox
+            {
+                Width = 280,
+                Height = 32,
+                ForeColor = Color.Gray,
+                Text = placeholder,
+                Font = new Font("Segoe UI", 10),
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle,
+                Padding = new Padding(5)
+            };
             tb.GotFocus += (s, e) =>
             {
                 if (tb.Text == placeholder)

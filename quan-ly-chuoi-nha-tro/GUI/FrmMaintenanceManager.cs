@@ -32,11 +32,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
         public FrmMaintenanceManager()
         {
             InitializeComponent();
+            AdminEvents.DataChanged += HandleAdminDataChanged;
+            FormClosing += (s, e) => AdminEvents.DataChanged -= HandleAdminDataChanged;
         }
 
         private void InitializeComponent()
         {
-            Text = "Bảo Trì";
+            Text = "Bảo trì & sự cố";
             StartPosition = FormStartPosition.CenterParent;
             Width = 1400;
             Height = 800;
@@ -47,36 +49,16 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var pnlToolbar = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 85,
+                Height = 45,
                 BackColor = Color.White,
                 Padding = new Padding(0),
                 BorderStyle = BorderStyle.None
             };
 
-            // Title bar inside toolbar
-            var pnlTitleBar = new Panel
-            {
-                Dock = DockStyle.Top,
-                Height = 45,
-                BackColor = Color.FromArgb(255, 245, 245),
-                Padding = new Padding(20, 10, 20, 10),
-                BorderStyle = BorderStyle.None
-            };
-            var lblTitle = new Label
-            {
-                Text = "🔧 Bảo Trì",
-                Font = new Font("Segoe UI", 15, FontStyle.Bold),
-                ForeColor = Color.FromArgb(229, 57, 53),
-                AutoSize = true,
-                Dock = DockStyle.Left
-            };
-            pnlTitleBar.Controls.Add(lblTitle);
-            pnlToolbar.Controls.Add(pnlTitleBar);
-
-            // Actions bar inside toolbar
+            // Actions bar
             var pnlActionBar = new Panel
             {
-                Dock = DockStyle.Bottom,
+                Dock = DockStyle.Fill,
                 Height = 40,
                 BackColor = Color.White,
                 Padding = new Padding(12, 5, 12, 5),
@@ -187,6 +169,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
             catch (Exception ex)
             {
                 MessageBox.Show("Lỗi tải bảo trì: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private async void HandleAdminDataChanged()
+        {
+            if (IsDisposed || !IsHandleCreated) return;
+            try
+            {
+                await LoadAsync();
+            }
+            catch
+            {
+                // ignore refresh errors
             }
         }
 
