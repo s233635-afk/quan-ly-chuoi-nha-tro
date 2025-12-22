@@ -344,6 +344,7 @@ INSERT INTO Roles (RoleName, Description) VALUES
 INSERT INTO RoomStatuses (StatusName, Description) VALUES
 (N'Trống', N'Phòng trống'),
 (N'Đang ở', N'Phòng đang cho thuê'),
+(N'Đã thuê', N'Phòng đã thuê'),
 (N'Đã cọc', N'Phòng đã cọc'),
 (N'Bảo trì', N'Phòng đang bảo trì'),
 (N'Vệ sinh', N'Phòng đang dọn vệ sinh');
@@ -359,36 +360,36 @@ INSERT INTO BranchSections (BranchId, SectionCode, SectionName) VALUES
 (1, N'B', N'Dãy B'),
 (2, N'C', N'Dãy C');
 
--- Insert RoomTypes
--- Gọn lại loại phòng: 14 phòng bình thường, 6 phòng cao cấp
+-- 3 loại: đơn / đôi / cao cấp (sắp xếp lại để đúng 20 phòng cho nhân viên)
 INSERT INTO RoomTypes (RoomTypeName, DefaultPrice, Amenities, MaxCapacity, Description) VALUES
-(N'Phòng bình thường', 1000000, N'Giường, tủ, quạt/AC tùy phòng', 2, N'Nhóm phòng tiêu chuẩn'),
-(N'Phòng cao cấp', 1000000, N'Giường, tủ, AC, TV', 2, N'Nhóm phòng cao cấp');
+(N'Phòng đơn', 3000000, N'Giường đơn, tủ, quạt/AC', 1, N'Phòng cho 1-2 người'),
+(N'Phòng đôi', 3500000, N'2 giường, tủ, điều hòa, nước nóng', 2, N'Phòng cho 2-3 người'),
+(N'Phòng cao cấp', 5000000, N'Giường lớn, điều hòa, TV, máy nước nóng', 3, N'Phòng cao cấp đầy đủ tiện nghi');
 
 -- Insert Rooms
 INSERT INTO Rooms (BranchId, SectionId, RoomNumber, RoomTypeId, RoomPrice, CurrentStatusId) VALUES
--- Dãy A: 7 phòng bình thường, 3 phòng cao cấp
-(1, 1, N'A01', 1, 1000000, 1),
-(1, 1, N'A02', 1, 1000000, 1),
-(1, 1, N'A03', 1, 1000000, 2),
-(1, 1, N'A04', 1, 1000000, 2),
-(1, 1, N'A05', 1, 1000000, 1),
-(1, 1, N'A06', 1, 1000000, 1),
-(1, 1, N'A07', 1, 1000000, 1),
-(1, 1, N'A08', 2, 1000000, 2),
-(1, 1, N'A09', 2, 1000000, 1),
-(1, 1, N'A10', 2, 1000000, 1),
--- Dãy B: 7 phòng bình thường, 3 phòng cao cấp
-(1, 2, N'B01', 1, 1000000, 1),
-(1, 2, N'B02', 1, 1000000, 2),
-(1, 2, N'B03', 1, 1000000, 1),
-(1, 2, N'B04', 1, 1000000, 1),
-(1, 2, N'B05', 1, 1000000, 1),
-(1, 2, N'B06', 1, 1000000, 2),
-(1, 2, N'B07', 1, 1000000, 1),
-(1, 2, N'B08', 2, 1000000, 2),
-(1, 2, N'B09', 2, 1000000, 1),
-(1, 2, N'B10', 2, 1000000, 1);
+-- Dãy A: 4 phòng đơn, 3 phòng đôi, 3 phòng cao cấp
+(1, 1, N'A01', 1, 3000000, 2),
+(1, 1, N'A02', 1, 3000000, 2),
+(1, 1, N'A03', 1, 3000000, 2),
+(1, 1, N'A04', 1, 3000000, 2),
+(1, 1, N'A05', 2, 3500000, 3),
+(1, 1, N'A06', 2, 3500000, 2),
+(1, 1, N'A07', 2, 3500000, 1),
+(1, 1, N'A08', 3, 5000000, 2),
+(1, 1, N'A09', 3, 5000000, 1),
+(1, 1, N'A10', 3, 5000000, 1),
+-- Dãy B: 4 phòng đơn, 3 phòng đôi, 3 phòng cao cấp
+(1, 2, N'B01', 1, 3000000, 2),
+(1, 2, N'B02', 1, 3000000, 2),
+(1, 2, N'B03', 1, 3000000, 1),
+(1, 2, N'B04', 1, 3000000, 1),
+(1, 2, N'B05', 2, 3500000, 2),
+(1, 2, N'B06', 2, 3500000, 3),
+(1, 2, N'B07', 2, 3500000, 1),
+(1, 2, N'B08', 3, 5000000, 2),
+(1, 2, N'B09', 3, 5000000, 1),
+(1, 2, N'B10', 3, 5000000, 1);
 
 -- Insert UtilityTypes
 INSERT INTO UtilityTypes (UtilityName, UtilityCode, Unit, DefaultPrice) VALUES
