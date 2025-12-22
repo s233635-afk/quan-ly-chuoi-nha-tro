@@ -338,26 +338,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     return;
                 }
 
-                if (occupants >= 1)
-                {
-                    var occupiedId = GetOccupiedStatusId(statuses);
-                    if (occupiedId.HasValue)
-                        statusId = occupiedId.Value;
-                }
-                else if (IsOccupiedStatusId(statusId, statuses) && occupants < 1)
+                if (occupants < 1)
                 {
                     var emptyId = GetEmptyStatusId(statuses);
                     if (emptyId.HasValue)
-                    {
                         statusId = emptyId.Value;
-                        MessageBox.Show("Phong chua co nguoi, tu dong chuyen trang thai ve Trong.", "Thong bao",
-                            MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    }
-                    else
-                    {
-                        MessageBox.Show("Trang thai Dang o yeu cau it nhat 1 nguoi.", "Canh bao", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return;
-                    }
                 }
 
                 await _bll.UpdateRoomAsync(roomId, roomNumber, branchId, sectionId, roomTypeId, price, statusId, floor, area, isActive, occupants);
