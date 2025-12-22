@@ -1,6 +1,7 @@
 using System;
 using System.Data;
 using System.Drawing;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
@@ -13,7 +14,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
     public class FrmPaymentWithTenantInfo : Form
     {
         private readonly AdminDataBLL _bll;
-        private readonly DataRow _invoiceRow;
+        private DataRow _invoiceRow;
         private DataRow _tenantRow;
         private DataRow _existingPayment;
 
@@ -83,16 +84,16 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             btnExportInvoice = new Button
             {
-                Text = "📄 Xuất hóa đơn",
-                Width = 120,
+                Text = "📄 Xuất PDF/In",
+                Width = 140,
                 Height = 36,
                 BackColor = Color.FromArgb(107, 105, 123),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat
             };
             btnExportInvoice.Click += (s, e) => HandleInvoiceExport();
-            btnExportInvoice.Enabled = _existingPayment != null;
-            _exportAllowed = btnExportInvoice.Enabled;
+            btnExportInvoice.Enabled = false;
+            _exportAllowed = false;
 
             btnCancel = new Button
             {
@@ -109,9 +110,16 @@ namespace quan_ly_chuoi_nha_tro.GUI
             pnlBottom.Controls.Add(btnExportInvoice);
             pnlBottom.Controls.Add(btnCancel);
 
-            btnSave.Location = new Point(pnlBottom.Width - 320, 10);
-            btnExportInvoice.Location = new Point(pnlBottom.Width - 210, 10);
+            btnSave.Location = new Point(pnlBottom.Width - 350, 10);
+            btnExportInvoice.Location = new Point(pnlBottom.Width - 240, 10);
             btnCancel.Location = new Point(pnlBottom.Width - 110, 10);
+
+            pnlBottom.Resize += (s, e) =>
+            {
+                btnSave.Location = new Point(pnlBottom.Width - 350, 10);
+                btnExportInvoice.Location = new Point(pnlBottom.Width - 240, 10);
+                btnCancel.Location = new Point(pnlBottom.Width - 110, 10);
+            };
 
             // Main body with scroll
             var pnlBody = new Panel
@@ -262,7 +270,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             // Payment Method
             var lblMethod = new Label { Text = "Hình thức:", Location = new Point(left, top), Width = labelWidth, TextAlign = ContentAlignment.MiddleLeft };
             cboMethod = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(left + labelWidth, top), Width = 200 };
-            cboMethod.Items.AddRange(new object[] { "Cash", "Transfer", "Check", "Card" });
+            cboMethod.Items.AddRange(new object[] { "Tiền mặt", "Chuyển khoản","Thẻ" });
             cboMethod.SelectedIndex = 0;
             pnlBody.Controls.Add(lblMethod);
             pnlBody.Controls.Add(cboMethod);
@@ -323,39 +331,53 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 if (_tenantRow == null)
                 {
                     MessageBox.Show($"Không tìm thấy khách thuê ID {tenantId}.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
                 }
-
-                // Display tenant info
-                DisplayTenantInfo();
-                DisplayInvoiceInfo();
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Lỗi tải thông tin: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+            finally
+            {
+                DisplayTenantInfo();
+                DisplayInvoiceInfo();
+                if (_existingPayment != null && _existingPayment.Table.Columns.Contains("PaymentMethod"))
+                {
+                    var method = _existingPayment["PaymentMethod"]?.ToString();
+                    cboMethod.SelectedItem = MapPaymentMethodToDisplay(method);
+                }
+            }
         }
 
         private void DisplayTenantInfo()
         {
-            if (_tenantRow == null) return;
+            string tenantName = ReadTenantValue(_tenantRow, "TenantName", "FullName") ?? ReadInvoiceValue("TenantName");
+            string tenantId = ReadTenantValue(_tenantRow, "TenantId") ?? ReadInvoiceValue("TenantId");
+            string phone = ReadTenantValue(_tenantRow, "Phone", "PhoneNumber") ?? ReadInvoiceValue("Phone");
+            string email = ReadTenantValue(_tenantRow, "Email") ?? ReadInvoiceValue("TenantEmail");
+            string address = ReadTenantValue(_tenantRow, "Address") ?? ReadInvoiceValue("TenantAddress");
+            string idCard = ReadTenantValue(_tenantRow, "IdCard", "IdentityCard") ?? ReadInvoiceValue("IdentityCard");
 
-            string tenantName = _tenantRow["TenantName"]?.ToString() ?? "N/A";
-            string tenantId = _tenantRow["TenantId"]?.ToString() ?? "N/A";
-            string phone = _tenantRow["Phone"]?.ToString() ?? "N/A";
-            string email = _tenantRow["Email"]?.ToString() ?? "N/A";
-            string address = _tenantRow["Address"]?.ToString() ?? "N/A";
-            string idCard = _tenantRow["IdCard"]?.ToString() ?? "N/A";
+            if (string.IsNullOrWhiteSpace(tenantName)) tenantName = "N/A";
+            if (string.IsNullOrWhiteSpace(tenantId)) tenantId = "N/A";
+            if (string.IsNullOrWhiteSpace(phone)) phone = "N/A";
+            if (string.IsNullOrWhiteSpace(email)) email = "N/A";
+            if (string.IsNullOrWhiteSpace(address)) address = "N/A";
+            if (string.IsNullOrWhiteSpace(idCard)) idCard = "N/A";
 
             lblTenantInfo.Text = $"ID: {tenantId}\n{tenantName}\nĐC: {address}\nCMND: {idCard}";
             lblPhoneInfo.Text = $"Điện thoại: {phone}";
             lblEmailInfo.Text = $"Email: {email}";
 
             // Get room info
-            if (_invoiceRow.Table.Columns.Contains("RoomNumber"))
+            if (_invoiceRow != null && _invoiceRow.Table.Columns.Contains("RoomNumber"))
             {
                 string roomNumber = _invoiceRow["RoomNumber"]?.ToString() ?? "N/A";
                 lblRoomInfo.Text = $"Phòng: {roomNumber}";
+            }
+            else
+            {
+                lblRoomInfo.Text = "Phòng: N/A";
             }
         }
 
@@ -383,6 +405,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             numAmount.Maximum = (decimal)remainingAmount;
             numAmount.Value = (decimal)remainingAmount;
+            SetExportAllowed(remainingAmount <= 0);
         }
 
         private decimal ReadDecimal(DataRow row, string col)
@@ -432,21 +455,30 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     invoiceId: invoiceId,
                     paymentDate: dtPaymentDate.Value,
                     amount: amount,
-                    method: cboMethod.SelectedItem?.ToString() ?? "Cash",
+                    method: MapPaymentMethodToStored(cboMethod.SelectedItem?.ToString()),
                     reference: txtReference.Text,
                     notes: txtNotes.Text
                 );
 
-                // Enable invoice export and mark as sent
-                SetExportAllowed(true);
+                await ReloadInvoiceRowAsync();
+                DisplayInvoiceInfo();
+
+                decimal remaining = ReadDecimal(_invoiceRow, "RemainingAmount");
+                SetExportAllowed(remaining <= 0);
                 await NotifyTenantInvoiceSentAsync();
-                if (MessageBox.Show(
-                    "Đã lưu thanh toán thành công!\nBạn có muốn in hóa đơn ngay?",
+
+                AdminEvents.NotifyDataChanged();
+                DataSyncManager.NotifyInvoicesChanged();
+                DataSyncManager.NotifyPaymentsChanged();
+                DataSyncManager.NotifyRoomsChanged();
+
+                if (_exportAllowed && MessageBox.Show(
+                    "Đã thanh toán đủ.\nBạn có muốn xuất/in hóa đơn ngay?",
                     "Hoàn tất",
                     MessageBoxButtons.YesNo,
                     MessageBoxIcon.Information) == DialogResult.Yes)
                 {
-                    ExportInvoicePdf();
+                    OpenExportForm();
                 }
 
                 DialogResult = DialogResult.OK;
@@ -464,15 +496,73 @@ namespace quan_ly_chuoi_nha_tro.GUI
             btnExportInvoice.Enabled = allowed;
         }
 
+        private static string MapPaymentMethodToStored(string displayValue)
+        {
+            switch ((displayValue ?? string.Empty).Trim())
+            {
+                case "Tiền mặt":
+                    return "Cash";
+                case "Chuyển khoản":
+                    return "Transfer";
+                case "Séc":
+                    return "Check";
+                case "Thẻ":
+                    return "Card";
+                default:
+                    return "Cash";
+            }
+        }
+
+        private static string MapPaymentMethodToDisplay(string storedValue)
+        {
+            switch ((storedValue ?? string.Empty).Trim())
+            {
+                case "Cash":
+                    return "Tiền mặt";
+                case "Transfer":
+                    return "Chuyển khoản";
+                case "Check":
+                    return "Séc";
+                case "Card":
+                    return "Thẻ";
+                default:
+                    return "Tiền mặt";
+            }
+        }
+
         private async Task NotifyTenantInvoiceSentAsync()
         {
             await Task.Delay(1);
-            string tenantName = _tenantRow?["TenantName"]?.ToString() ?? _invoiceRow?["TenantName"]?.ToString() ?? "khách thuê";
+            string tenantName = ReadTenantValue(_tenantRow, "TenantName", "FullName")
+                ?? ReadInvoiceValue("TenantName")
+                ?? "khách thuê";
             string tenantEmail = _tenantRow?["Email"]?.ToString() ?? _invoiceRow?["TenantEmail"]?.ToString() ?? "chưa cung cấp";
             MessageBox.Show($"Hóa đơn đã được gửi đến {tenantName} ({tenantEmail}).", "Đã gửi hóa đơn", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
-        private void HandleInvoiceExport()
+        private static string ReadTenantValue(DataRow row, params string[] cols)
+        {
+            if (row == null || row.Table == null || cols == null) return null;
+            foreach (var col in cols)
+            {
+                if (row.Table.Columns.Contains(col))
+                {
+                    var v = row[col];
+                    if (v != null && v != DBNull.Value)
+                        return v.ToString();
+                }
+            }
+            return null;
+        }
+
+        private string ReadInvoiceValue(string col)
+        {
+            if (_invoiceRow == null || _invoiceRow.Table == null || !_invoiceRow.Table.Columns.Contains(col)) return null;
+            var v = _invoiceRow[col];
+            return v == null || v == DBNull.Value ? null : v.ToString();
+        }
+
+        private async void HandleInvoiceExport()
         {
             if (!_exportAllowed)
             {
@@ -480,92 +570,35 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 return;
             }
 
-            ExportInvoicePdf();
+            await ReloadInvoiceRowAsync();
+            DisplayInvoiceInfo();
+            OpenExportForm();
         }
 
-        private void ExportInvoicePdf()
+        private async Task ReloadInvoiceRowAsync()
         {
             if (_invoiceRow == null)
-            {
-                MessageBox.Show("Không tìm thấy thông tin hóa đơn.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
-            }
-
             try
             {
-                string invoiceNumber = _invoiceRow["InvoiceNumber"]?.ToString() ?? "Invoice";
-                string fileName = $"{invoiceNumber}_{DateTime.Now:yyyyMMdd_HHmmss}.txt";
-
-                using (var sfd = new SaveFileDialog
-                {
-                    Filter = "Text (*.txt)|*.txt|PDF (*.pdf)|*.pdf",
-                    FileName = fileName,
-                    DefaultExt = "txt"
-                })
-                {
-                    if (sfd.ShowDialog(this) != DialogResult.OK) return;
-
-                    // For now, export as text
-                    // TODO: Integrate with PDF library (iTextSharp, PdfSharp, etc.)
-                    GenerateInvoiceText(_invoiceRow, _tenantRow, sfd.FileName);
-
-                    MessageBox.Show($"Đã xuất hóa đơn: {sfd.FileName}", "Hoàn tất", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
+                int invoiceId = Convert.ToInt32(_invoiceRow["InvoiceId"]);
+                var table = await _bll.GetInvoicesViewAsync();
+                var updated = table?.AsEnumerable().FirstOrDefault(r => Convert.ToInt32(r["InvoiceId"]) == invoiceId);
+                if (updated != null)
+                    _invoiceRow = updated;
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi xuất hóa đơn: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Lỗi tải lại hóa đơn: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void GenerateInvoiceText(DataRow invoice, DataRow tenant, string filePath)
+        private void OpenExportForm()
         {
-            var sb = new System.Text.StringBuilder();
-
-            sb.AppendLine("╔════════════════════════════════════════════════════════════════╗");
-            sb.AppendLine("║                      HÓA ĐƠN THANH TOÁN                        ║");
-            sb.AppendLine("╚════════════════════════════════════════════════════════════════╝");
-            sb.AppendLine();
-
-            sb.AppendLine("━━━━━━ THÔNG TIN HÓA ĐƠN ━━━━━━");
-            sb.AppendLine($"Số hóa đơn  : {invoice["InvoiceNumber"]}");
-            sb.AppendLine($"Ngày lập   : {invoice["InvoiceDate"]}");
-            sb.AppendLine($"Hạn thanh  : {invoice["DueDate"]}");
-            sb.AppendLine();
-
-            sb.AppendLine("━━━━━━ THÔNG TIN KHÁCH THUÊ ━━━━━━");
-            sb.AppendLine($"Tên khách  : {tenant["TenantName"]}");
-            sb.AppendLine($"CMND       : {tenant["IdCard"]}");
-            sb.AppendLine($"Địa chỉ    : {tenant["Address"]}");
-            sb.AppendLine($"Điện thoại : {tenant["Phone"]}");
-            sb.AppendLine($"Email      : {tenant["Email"]}");
-            sb.AppendLine();
-
-            sb.AppendLine("━━━━━━ CHI TIẾT TIỀN ━━━━━━");
-            decimal rental = ReadDecimal(invoice, "RentalCost");
-            decimal utility = ReadDecimal(invoice, "UtilityCost");
-            decimal other = ReadDecimal(invoice, "OtherCost");
-            decimal total = ReadDecimal(invoice, "TotalAmount");
-            decimal paid = ReadDecimal(invoice, "PaidAmount");
-            decimal remaining = ReadDecimal(invoice, "RemainingAmount");
-
-            sb.AppendLine($"Tiền phòng      : {rental:N0} đ");
-            sb.AppendLine($"Tiền dịch vụ    : {utility:N0} đ");
-            sb.AppendLine($"Chi phí khác    : {other:N0} đ");
-            sb.AppendLine("─────────────────────────");
-            sb.AppendLine($"Tổng tiền       : {total:N0} đ");
-            sb.AppendLine($"Đã thanh toán   : {paid:N0} đ");
-            sb.AppendLine($"Còn nợ          : {remaining:N0} đ");
-            sb.AppendLine();
-
-            sb.AppendLine("Ngày xuất: " + DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"));
-            sb.AppendLine();
-            sb.AppendLine("─────────────────────────────────────────────────────────────");
-            sb.AppendLine("Cảm ơn quý khách đã thanh toán. Hóa đơn này là bằng chứng");
-            sb.AppendLine("thanh toán của quý khách.");
-            sb.AppendLine("─────────────────────────────────────────────────────────────");
-
-            System.IO.File.WriteAllText(filePath, sb.ToString(), System.Text.Encoding.UTF8);
+            using (var frm = new FrmInvoiceExportForm(_bll, _invoiceRow))
+            {
+                frm.ShowDialog(this);
+            }
         }
     }
 }

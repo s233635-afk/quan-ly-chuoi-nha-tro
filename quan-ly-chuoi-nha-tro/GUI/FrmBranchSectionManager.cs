@@ -12,6 +12,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private const string SearchPlaceholder = "Tìm theo mã/tên khu/dãy...";
 
         private readonly AdminDataBLL _bll = new AdminDataBLL();
+        private readonly int? _presetBranchId;
         private DataTable _raw;
         private DataTable _branches;
 
@@ -26,8 +27,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Button _btnDelete;
         private Button _btnRefresh;
 
-        public FrmBranchSectionManager()
+        public FrmBranchSectionManager() : this(null)
         {
+        }
+
+        public FrmBranchSectionManager(int? branchId)
+        {
+            _presetBranchId = branchId;
             InitializeComponent();
             AdminEvents.DataChanged += HandleAdminDataChanged;
             FormClosing += (s, e) => AdminEvents.DataChanged -= HandleAdminDataChanged;
@@ -207,6 +213,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _cboBranch.DataSource = dt;
             _cboBranch.DisplayMember = "BranchDisplay";
             _cboBranch.ValueMember = "BranchId";
+            if (_presetBranchId.HasValue)
+            {
+                _cboBranch.SelectedValue = _presetBranchId.Value;
+                _cboBranch.Enabled = false;
+            }
         }
 
         private static void EnrichBranchName(DataTable sections, DataTable branches)

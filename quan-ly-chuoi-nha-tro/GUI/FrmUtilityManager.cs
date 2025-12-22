@@ -13,6 +13,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private const string SearchPlaceholderTypes = "Tìm theo tên/mã...";
 
         private readonly AdminDataBLL _bll = new AdminDataBLL();
+        private readonly int? _presetBranchId;
 
         private DataTable _readingTable;
         private DataTable _readingTableRaw;
@@ -42,8 +43,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Button _btnTDelete;
         private Button _btnTRefresh;
 
-        public FrmUtilityManager()
+        public FrmUtilityManager() : this(null)
         {
+        }
+
+        public FrmUtilityManager(int? branchId)
+        {
+            _presetBranchId = branchId;
             InitializeComponent();
             AdminEvents.DataChanged += HandleAdminDataChanged;
             FormClosing += (s, e) => AdminEvents.DataChanged -= HandleAdminDataChanged;
@@ -220,6 +226,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 _cboBranch.DataSource = _branchTable;
                 _cboBranch.DisplayMember = "BranchDisplay";
                 _cboBranch.ValueMember = "BranchId";
+                if (_presetBranchId.HasValue)
+                {
+                    _cboBranch.SelectedValue = _presetBranchId.Value;
+                    _cboBranch.Enabled = false;
+                }
             }
             catch
             {

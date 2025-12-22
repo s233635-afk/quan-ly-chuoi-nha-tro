@@ -149,6 +149,18 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private DataGridView _gridStaffOverview;
         private Button _btnStaffEdit;
         private SplitContainer _invoicePaymentSplit;
+        private Panel _invoicePaymentHost;
+        private FrmInvoicePaymentUnified _invoicePaymentForm;
+        private FrmRoomManager _roomManagerForm;
+        private FrmTenantManager _tenantManagerForm;
+        private FrmContractManager _contractManagerForm;
+        private FrmDepositManager _depositManagerForm;
+        private FrmUtilityManager _utilityManagerForm;
+        private FrmMaintenanceManager _maintenanceManagerForm;
+        private FrmAssetManager _assetManagerForm;
+        private FrmReportManager _reportManagerForm;
+        private FrmNotificationManager _notificationManagerForm;
+        private FrmBranchSectionManager _sectionManagerForm;
         private SplitContainer _tenantSplit;
 
         private DataTable _roomsAll;
@@ -249,7 +261,24 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 try { _roomQuickView.Close(); } catch { }
                 _roomQuickView = null;
             }
+            CloseEmbeddedForm(_invoicePaymentForm); _invoicePaymentForm = null;
+            CloseEmbeddedForm(_roomManagerForm); _roomManagerForm = null;
+            CloseEmbeddedForm(_tenantManagerForm); _tenantManagerForm = null;
+            CloseEmbeddedForm(_contractManagerForm); _contractManagerForm = null;
+            CloseEmbeddedForm(_depositManagerForm); _depositManagerForm = null;
+            CloseEmbeddedForm(_utilityManagerForm); _utilityManagerForm = null;
+            CloseEmbeddedForm(_maintenanceManagerForm); _maintenanceManagerForm = null;
+            CloseEmbeddedForm(_assetManagerForm); _assetManagerForm = null;
+            CloseEmbeddedForm(_reportManagerForm); _reportManagerForm = null;
+            CloseEmbeddedForm(_notificationManagerForm); _notificationManagerForm = null;
+            CloseEmbeddedForm(_sectionManagerForm); _sectionManagerForm = null;
             base.OnFormClosing(e);
+        }
+
+        private static void CloseEmbeddedForm(Form form)
+        {
+            if (form == null || form.IsDisposed) return;
+            try { form.Close(); } catch { }
         }
 
         private void InitializeComponent()
@@ -430,20 +459,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _gridDeposits = CreateGrid(); _gridDeposits.Dock = DockStyle.Fill; _tabDeposits.Controls.Add(_gridDeposits);
             _gridInvoices = CreateGrid();
             _gridPayments = CreateGrid();
-            _invoicePaymentSplit = new SplitContainer
-            {
-                Dock = DockStyle.Fill,
-                Orientation = Orientation.Horizontal,
-                SplitterWidth = 6,
-                Panel1MinSize = 0,
-                Panel2MinSize = 0,
-                BackColor = Color.FromArgb(245, 247, 250)
-            };
-            _invoicePaymentSplit.Panel1.Controls.Add(BuildLabeledGridPanel("Hóa đơn", _gridInvoices));
-            _invoicePaymentSplit.Panel2.Controls.Add(BuildLabeledGridPanel("Thanh toán", _gridPayments));
-            _invoicePaymentSplit.HandleCreated += (s, e) => FixInvoicePaymentSplitter();
-            _invoicePaymentSplit.SizeChanged += (s, e) => FixInvoicePaymentSplitter();
-            _tabInvoices.Controls.Add(_invoicePaymentSplit);
 
             _gridUtilities = CreateGrid(); _gridUtilities.Dock = DockStyle.Fill; _tabUtilities.Controls.Add(_gridUtilities);
             _gridMaintenance = CreateGrid(); _gridMaintenance.Dock = DockStyle.Fill; _tabMaintenance.Controls.Add(_gridMaintenance);
@@ -455,6 +470,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             // Build Action Bar
             BuildActionBar();
+
+            EmbedModuleTabs();
 
             _navBar = BuildNavBar();
             // Removed: Navigation bar is now replaced by action bar
@@ -791,36 +808,68 @@ namespace quan_ly_chuoi_nha_tro.GUI
             return nav;
         }
 
-        private void FixInvoicePaymentSplitter()
+        
+
+        private void EmbedModuleTabs()
         {
-            if (_invoicePaymentSplit == null) return;
-            if (_invoicePaymentSplit.Orientation != Orientation.Horizontal) return;
+            _sectionManagerForm = new FrmBranchSectionManager(_branchId);
+            EmbedFormInTab(_tabSections, _sectionManagerForm);
 
-            int total = _invoicePaymentSplit.ClientSize.Height;
-            if (total <= 0) return;
+            _roomManagerForm = new FrmRoomManager(_adminBll, _branchId);
+            EmbedFormInTab(_tabRooms, _roomManagerForm);
 
-            int minTop = InvoiceSplitMinTop;
-            int minBottom = InvoiceSplitMinBottom;
-            if (total < minTop + minBottom)
+            _tenantManagerForm = new FrmTenantManager(_adminBll, _branchId);
+            EmbedFormInTab(_tabTenants, _tenantManagerForm);
+
+            _contractManagerForm = new FrmContractManager(_branchId);
+            EmbedFormInTab(_tabContracts, _contractManagerForm);
+
+            _depositManagerForm = new FrmDepositManager(_branchId);
+            EmbedFormInTab(_tabDeposits, _depositManagerForm);
+
+            _utilityManagerForm = new FrmUtilityManager(_branchId);
+            EmbedFormInTab(_tabUtilities, _utilityManagerForm);
+
+            _maintenanceManagerForm = new FrmMaintenanceManager(_branchId);
+            EmbedFormInTab(_tabMaintenance, _maintenanceManagerForm);
+
+            _assetManagerForm = new FrmAssetManager(_branchId);
+            EmbedFormInTab(_tabAssets, _assetManagerForm);
+
+            _reportManagerForm = new FrmReportManager(_adminBll, _branchId);
+            EmbedFormInTab(_tabReports, _reportManagerForm);
+
+            _invoicePaymentForm = new FrmInvoicePaymentUnified(_branchId, false);
+            EmbedFormInTab(_tabInvoices, _invoicePaymentForm);
+
+            _notificationManagerForm = new FrmNotificationManager(_branchId);
+            EmbedFormInTab(_tabNotifications, _notificationManagerForm);
+        }
+
+        private static void EmbedFormInTab(TabPage tab, Form form)
+        {
+            if (tab == null || form == null) return;
+
+            var host = new Panel
             {
-                _invoicePaymentSplit.Panel1MinSize = 0;
-                _invoicePaymentSplit.Panel2MinSize = 0;
-                minTop = 0;
-                minBottom = 0;
-            }
-            else
+                Dock = DockStyle.Fill,
+                BackColor = Color.White
+            };
+
+            tab.Controls.Add(host);
+            host.BringToFront();
+
+            foreach (Control c in tab.Controls)
             {
-                _invoicePaymentSplit.Panel1MinSize = minTop;
-                _invoicePaymentSplit.Panel2MinSize = minBottom;
+                if (!ReferenceEquals(c, host))
+                    c.Visible = false;
             }
-            int maxTop = Math.Max(minTop, total - minBottom);
-            int target = total / 2;
 
-            if (target < minTop) target = minTop;
-            if (target > maxTop) target = maxTop;
-
-            if (_invoicePaymentSplit.SplitterDistance != target)
-                _invoicePaymentSplit.SplitterDistance = target;
+            form.TopLevel = false;
+            form.FormBorderStyle = FormBorderStyle.None;
+            form.Dock = DockStyle.Fill;
+            host.Controls.Add(form);
+            form.Show();
         }
 
         private void FixTenantSplitter()

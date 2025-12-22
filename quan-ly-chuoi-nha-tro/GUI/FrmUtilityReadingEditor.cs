@@ -45,11 +45,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private Button btnSave;
         private Button btnCancel;
+        private readonly int? _preselectRoomId;
 
-        public FrmUtilityReadingEditor(AdminDataBLL bll, DataRow existingRow = null)
+        public FrmUtilityReadingEditor(AdminDataBLL bll, DataRow existingRow = null, int? preselectRoomId = null)
         {
             _bll = bll;
             _existingRow = existingRow;
+            _preselectRoomId = preselectRoomId;
             InitializeComponent();
             Load += async (s, e) => await LoadAsync();
         }
@@ -319,6 +321,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 ApplyDefaultPriceFromType(force: true);
                 Recalc();
                 LoadImageForDate();
+                if (_preselectRoomId.HasValue)
+                {
+                    try { cboRoom.SelectedValue = _preselectRoomId.Value; } catch { }
+                }
                 return;
             }
 
@@ -552,6 +558,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 }
 
                 SaveImagesForDate(roomId, readingDate);
+                AdminEvents.NotifyDataChanged();
                 DialogResult = DialogResult.OK;
             }
             catch (Exception ex)

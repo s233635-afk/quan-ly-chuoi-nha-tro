@@ -39,9 +39,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             this.Text = "Đặt cọc";
             this.StartPosition = FormStartPosition.CenterParent;
-            this.Width = 1200;
-            this.Height = 650;
+            this.Width = 1280;
+            this.Height = 720;
             this.BackColor = Color.FromArgb(245, 247, 250);
+            this.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
 
             _grid = new DataGridView
             {
@@ -59,13 +60,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _grid.DoubleClick += (s, e) => EditSelected();
             _grid.MouseDown += (s, e) => HandleGridMouseDown(e);
             _grid.EnableHeadersVisualStyles = false;
-            _grid.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(0, 120, 215);
+            _grid.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(12, 99, 166);
             _grid.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            _grid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
-            _grid.DefaultCellStyle.Font = new Font("Segoe UI", 10, FontStyle.Regular);
-            _grid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 249, 255);
+            _grid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9.75f, FontStyle.Bold);
+            _grid.ColumnHeadersDefaultCellStyle.Padding = new Padding(6, 0, 6, 0);
+            _grid.DefaultCellStyle.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
+            _grid.DefaultCellStyle.Padding = new Padding(6, 0, 6, 0);
+            _grid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(247, 250, 255);
             _grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(232, 244, 252);
             _grid.DefaultCellStyle.SelectionForeColor = Color.Black;
+            _grid.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
+            _grid.ColumnHeadersHeight = 38;
+            _grid.RowTemplate.Height = 34;
+            _grid.GridColor = Color.FromArgb(225, 232, 240);
             _grid.CellFormatting += Grid_CellFormatting;
 
             _txtSearch = new TextBox { Width = 260 };
@@ -102,14 +109,32 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnReturn = MakeButton("💸 Hoàn cọc", Color.FromArgb(121, 85, 72), async (s, e) => await MarkReturnedAsync());
             _btnRefresh = MakeButton("🔄 Tải lại", Color.FromArgb(0, 122, 204), async (s, e) => await LoadDataAsync());
 
-            var top = new Panel { Dock = DockStyle.Top, Height = 72, Padding = new Padding(12, 12, 12, 12), BackColor = Color.White };
-            top.Paint += (s, e) =>
+            var header = new Panel { Dock = DockStyle.Top, Height = 54, Padding = new Padding(16, 10, 16, 10), BackColor = Color.White };
+            var lblTitle = new Label
             {
-                using (var pen = new Pen(Color.FromArgb(220, 220, 220), 1))
-                {
-                    e.Graphics.DrawLine(pen, 0, top.Height - 1, top.Width, top.Height - 1);
-                }
+                Text = "Đặt cọc",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 79, 159)
             };
+
+            var summary = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Right,
+                AutoSize = true,
+                WrapContents = false,
+                FlowDirection = FlowDirection.TopDown,
+                BackColor = Color.Transparent
+            };
+            _lblCount.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+            _lblTotal.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
+            summary.Controls.Add(_lblCount);
+            summary.Controls.Add(_lblTotal);
+
+            header.Controls.Add(summary);
+            header.Controls.Add(lblTitle);
+
+            var toolbar = new Panel { Dock = DockStyle.Top, Height = 72, Padding = new Padding(16, 14, 16, 14), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
 
             var actions = new FlowLayoutPanel
             {
@@ -161,21 +186,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 _cboStatus.Location = new Point(lblStatus.Right + 6, 6);
             };
 
-            var summary = new Panel { Dock = DockStyle.Right, Width = 260, BackColor = Color.Transparent };
-            _lblCount.Location = new Point(0, 4);
-            _lblTotal.Location = new Point(0, 28);
-            summary.Controls.Add(_lblCount);
-            summary.Controls.Add(_lblTotal);
-
-            top.Controls.Add(searchHost);
-            top.Controls.Add(summary);
-            top.Controls.Add(actions);
+            toolbar.Controls.Add(searchHost);
+            toolbar.Controls.Add(actions);
 
             var gridHost = new Panel { Dock = DockStyle.Fill, Padding = new Padding(12), BackColor = this.BackColor };
             gridHost.Controls.Add(_grid);
 
             this.Controls.Add(gridHost);
-            this.Controls.Add(top);
+            this.Controls.Add(toolbar);
+            this.Controls.Add(header);
             this.Load += async (s, e) => await LoadDataAsync();
         }
 
@@ -292,6 +311,21 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 "Notes",
                 "CreatedDate"
             );
+
+            if (_grid.Columns.Contains("DepositAmount"))
+                _grid.Columns["DepositAmount"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            if (_grid.Columns.Contains("ReturnedAmount"))
+                _grid.Columns["ReturnedAmount"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            if (_grid.Columns.Contains("Status"))
+                _grid.Columns["Status"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            if (_grid.Columns.Contains("DepositId"))
+                _grid.Columns["DepositId"].Width = 70;
+            if (_grid.Columns.Contains("RoomNumber"))
+                _grid.Columns["RoomNumber"].Width = 90;
+            if (_grid.Columns.Contains("DepositDate"))
+                _grid.Columns["DepositDate"].Width = 110;
+            if (_grid.Columns.Contains("ReturnedDate"))
+                _grid.Columns["ReturnedDate"].Width = 110;
         }
 
         private void ApplyFilter()
@@ -437,6 +471,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 decimal? returnedAmount = decimal.TryParse(row["ReturnedAmount"]?.ToString(), out var ra) ? (decimal?)ra : null;
                 DateTime? returnedDate = DateTime.TryParse(row["ReturnedDate"]?.ToString(), out var rd) ? (DateTime?)rd.Date : null;
                 string notes = row["Notes"]?.ToString();
+                string paymentMethod = null;
 
                 if (newStatus == "Confirmed")
                 {
@@ -451,6 +486,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                         if (dlg.ShowDialog(this) != DialogResult.OK) return;
                         depositDate = dlg.DepositDate ?? DateTime.Today;
                         notes = dlg.Notes;
+                        paymentMethod = dlg.PaymentMethod;
                     }
                 }
 
@@ -463,11 +499,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
                         amount,
                         actionDate,
                         "Deposit",
+                        paymentMethod,
                         $"Xác nhận cọc - DepositId: {id}");
                     notes = AppendPaymentNote(notes, result.Item1, result.Item2, "Deposit");
                 }
 
                 await _bll.UpdateDepositAsync(id, tenantId, roomId, amount, depositDate, type, newStatus, returnedAmount, returnedDate, notes);
+                await AddDepositNotificationAsync("Xác nhận cọc", tenantName, roomNumber, amount, paymentMethod);
                 await LoadDataAsync();
                 AdminEvents.NotifyDataChanged();
                 DataSyncManager.NotifyInvoicesChanged();
@@ -502,6 +540,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 decimal? returnedAmount = decimal.TryParse(row["ReturnedAmount"]?.ToString(), out var ra) ? (decimal?)ra : null;
                 DateTime? returnedDate = DateTime.TryParse(row["ReturnedDate"]?.ToString(), out var rd) ? (DateTime?)rd.Date : null;
                 string notes = row["Notes"]?.ToString();
+                string paymentMethod = null;
 
                 using (var dlg = new DepositActionDialog(
                     DepositActionKind.Return,
@@ -516,6 +555,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     returnedAmount = dlg.ReturnedAmount ?? amount;
                     returnedDate = dlg.ReturnedDate ?? DateTime.Today;
                     notes = dlg.Notes;
+                    paymentMethod = dlg.PaymentMethod;
                 }
 
                 if (!HasLinkedPayment(notes))
@@ -528,11 +568,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
                         refundAmount,
                         actionDate,
                         "Refund",
+                        paymentMethod,
                         $"Hoàn cọc - DepositId: {id}");
                     notes = AppendPaymentNote(notes, result.Item1, result.Item2, "Refund");
                 }
 
                 await _bll.UpdateDepositAsync(id, tenantId, roomId, amount, depositDate, type, "Returned", returnedAmount, returnedDate, notes);
+                await AddDepositNotificationAsync("Hoàn cọc", tenantName, roomNumber, returnedAmount ?? amount, paymentMethod);
                 await LoadDataAsync();
                 AdminEvents.NotifyDataChanged();
                 DataSyncManager.NotifyInvoicesChanged();
@@ -558,6 +600,20 @@ namespace quan_ly_chuoi_nha_tro.GUI
             if (string.IsNullOrWhiteSpace(notes)) return tag;
             if (notes.Contains(tag)) return notes;
             return notes.TrimEnd() + " " + tag;
+        }
+
+        private async System.Threading.Tasks.Task AddDepositNotificationAsync(string actionTitle, string tenantName, string roomNumber, decimal amount, string paymentMethod)
+        {
+            try
+            {
+                string methodText = paymentMethod == "Card" ? "Thẻ" : "Tiền mặt";
+                string message = $"{actionTitle}: {tenantName ?? "—"} | Phòng: {roomNumber ?? "—"} | Số tiền: {amount:N0} | Hình thức: {methodText}";
+                await _bll.AddNotificationAsync(null, actionTitle, message, "Unread");
+            }
+            catch
+            {
+                // ignore notification errors
+            }
         }
 
         private async System.Threading.Tasks.Task EnsureAllowedBranchScopeAsync()
@@ -660,12 +716,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
             private readonly DateTimePicker _dtDeposit;
             private readonly NumericUpDown _numReturn;
             private readonly DateTimePicker _dtReturn;
+            private readonly ComboBox _cboMethod;
             private readonly TextBox _txtNotes;
 
             public DateTime? DepositDate { get; private set; }
             public decimal? ReturnedAmount { get; private set; }
             public DateTime? ReturnedDate { get; private set; }
             public string Notes { get; private set; }
+            public string PaymentMethod { get; private set; }
 
             public DepositActionDialog(
                 DepositActionKind kind,
@@ -708,7 +766,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 FormBorderStyle = FormBorderStyle.FixedDialog;
                 MaximizeBox = false;
                 MinimizeBox = false;
-                ClientSize = new Size(520, 320);
+                ClientSize = new Size(520, 350);
                 BackColor = Color.White;
                 Font = new Font("Segoe UI", 10F);
 
@@ -753,6 +811,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     Width = 160
                 };
                 _dtReturn = new DateTimePicker { Format = DateTimePickerFormat.Short, Width = 140 };
+                _cboMethod = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 180 };
+                _cboMethod.Items.AddRange(new object[] { "Tiền mặt", "Thẻ" });
+                _cboMethod.SelectedIndex = 0;
                 _txtNotes = new TextBox { Width = 320, Height = 52, Multiline = true, ScrollBars = ScrollBars.Vertical };
 
                 if (kind == DepositActionKind.Confirm)
@@ -778,6 +839,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     top += line;
                 }
 
+                var lblMethod = new Label { Text = _kind == DepositActionKind.Confirm ? "Hình thức thu:" : "Hình thức hoàn:", AutoSize = true, Location = new Point(leftLabel, top + 4) };
+                _cboMethod.Location = new Point(leftInput, top);
+                panel.Controls.Add(lblMethod);
+                panel.Controls.Add(_cboMethod);
+                top += line;
+
                 var lblNotes = new Label { Text = "Ghi chú:", AutoSize = true, Location = new Point(leftLabel, top + 4) };
                 _txtNotes.Location = new Point(leftInput, top);
                 _txtNotes.Text = notes ?? string.Empty;
@@ -792,7 +859,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     BackColor = Color.FromArgb(0, 122, 204),
                     ForeColor = Color.White,
                     FlatStyle = FlatStyle.Flat,
-                    Location = new Point(274, 264)
+                    Location = new Point(274, 292)
                 };
                 btnOk.FlatAppearance.BorderSize = 0;
                 btnOk.Click += (s, e) => HandleSave();
@@ -805,7 +872,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     BackColor = Color.FromArgb(200, 200, 200),
                     ForeColor = Color.Black,
                     FlatStyle = FlatStyle.Flat,
-                    Location = new Point(394, 264),
+                    Location = new Point(394, 292),
                     DialogResult = DialogResult.Cancel
                 };
                 btnCancel.FlatAppearance.BorderSize = 0;
@@ -822,6 +889,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             private void HandleSave()
             {
+                if (_cboMethod.SelectedIndex < 0)
+                {
+                    MessageBox.Show("Vui lòng chọn hình thức thanh toán.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
                 if (_kind == DepositActionKind.Return)
                 {
                     if (_numReturn.Value <= 0)
@@ -843,6 +916,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     DepositDate = _dtDeposit.Value.Date;
                 }
 
+                PaymentMethod = _cboMethod.SelectedItem?.ToString() == "Thẻ" ? "Card" : "Cash";
                 Notes = _txtNotes.Text?.Trim();
                 DialogResult = DialogResult.OK;
                 Close();

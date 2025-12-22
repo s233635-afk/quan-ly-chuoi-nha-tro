@@ -22,6 +22,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private readonly AdminDataBLL _bll = new AdminDataBLL();
         private readonly int? _branchId;
+        private readonly bool _showPayments;
         private HashSet<int> _allowedBranchIds;
         private DataTable _invoiceTable;
         private DataTable _paymentTable;
@@ -32,12 +33,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private TabPage _tabPayments;
 
         // Invoice Controls
-        private DataGridView _gridInvoices;
+        private FlowLayoutPanel _invoiceCards;
         private TextBox _txtSearchInvoice;
         private ComboBox _cboInvoiceStatus;
         private Label _lblInvoiceCount;
         private Label _lblInvoiceSummary;
-        private Button _btnAddInvoice, _btnEditInvoice, _btnDeleteInvoice, _btnGenerateInvoices, _btnExportInvoices, _btnRefreshInvoices;
+        private Button _btnAddInvoice, _btnEditInvoice, _btnDeleteInvoice, _btnPayInvoice, _btnExportInvoice, _btnGenerateInvoices, _btnExportInvoices, _btnRefreshInvoices;
+        private (Panel Card, DataRow Row)? _selectedInvoice;
 
         // Payment Controls
         private DataGridView _gridPayments;
@@ -51,13 +53,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Button _btnRoomPayment;
         private Button _btnBulkPayment;
 
-        public FrmInvoicePaymentUnified() : this(null)
+        public FrmInvoicePaymentUnified() : this(null, false)
         {
         }
 
-        public FrmInvoicePaymentUnified(int? branchId)
+        public FrmInvoicePaymentUnified(int? branchId, bool showPayments = false)
         {
             _branchId = branchId;
+            _showPayments = showPayments;
             InitializeComponent();
             AdminEvents.DataChanged += HandleAdminDataChanged;
             FormClosing += (s, e) => AdminEvents.DataChanged -= HandleAdminDataChanged;
@@ -80,16 +83,17 @@ namespace quan_ly_chuoi_nha_tro.GUI
             };
 
             _tabInvoices = new TabPage("📋 Hóa Đơn");
-            _tabPayments = new TabPage("💳 Thanh Toán");
 
             // Initialize Invoice Tab
             InitializeInvoicesTab();
 
-            // Initialize Payment Tab
-            InitializePaymentsTab();
-
             _tabControl.TabPages.Add(_tabInvoices);
-            _tabControl.TabPages.Add(_tabPayments);
+            if (_showPayments)
+            {
+                _tabPayments = new TabPage("💳 Thanh Toán");
+                InitializePaymentsTab();
+                _tabControl.TabPages.Add(_tabPayments);
+            }
 
             Controls.Add(_tabControl);
             Load += async (s, e) => await LoadAllDataAsync();
@@ -97,28 +101,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void InitializeInvoicesTab()
         {
-            _gridInvoices = new DataGridView
+            _invoiceCards = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                ReadOnly = true,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                MultiSelect = false,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells,
-                AllowUserToAddRows = false,
-                AllowUserToDeleteRows = false,
-                AllowUserToResizeColumns = true,
-                RowHeadersVisible = false,
-                BackgroundColor = Color.White,
-                BorderStyle = BorderStyle.None
+                AutoScroll = true,
+                WrapContents = true,
+                FlowDirection = FlowDirection.LeftToRight,
+                BackColor = BackColor,
+                Padding = new Padding(8)
             };
-            _gridInvoices.DoubleClick += (s, e) => EditSelectedInvoice();
-            _gridInvoices.CellDoubleClick += (s, e) =>
-            {
-                if (e.ColumnIndex >= 0 && _gridInvoices.Columns[e.ColumnIndex].Name == "InvoiceNumber")
-                    ShowInvoiceDetail();
-            };
-            _gridInvoices.SelectionChanged += (s, e) => UpdateInvoiceSummary();
-            UiKit.StyleGrid(_gridInvoices);
 
             _txtSearchInvoice = new TextBox { Width = 280 };
             _txtSearchInvoice.TextChanged += (s, e) => ApplyInvoiceFilter();
@@ -135,7 +126,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _txtSearchInvoice.Text = SearchPlaceholder;
 
             _cboInvoiceStatus = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 150 };
-            _cboInvoiceStatus.Items.AddRange(new object[] { "Tất cả", "Issued", "PartialPaid", "Paid", "Overdue" });
+            _cboInvoiceStatus.Items.AddRange(new object[] { "Tất cả", "Chưa thanh toán", "Thanh toán một phần", "Đã thanh toán", "Quá hạn" });
             _cboInvoiceStatus.SelectedIndex = 0;
             _cboInvoiceStatus.SelectedIndexChanged += (s, e) => ApplyInvoiceFilter();
 
@@ -145,6 +136,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnAddInvoice = UiKit.MakeButton("➕ Thêm", UiKit.Primary, (s, e) => AddNewInvoice(), 100);
             _btnEditInvoice = UiKit.MakeButton("✏️ Sửa", UiKit.Primary, (s, e) => EditSelectedInvoice(), 100);
             _btnDeleteInvoice = UiKit.MakeButton("🗑️ Xóa", UiKit.Danger, async (s, e) => await DeleteSelectedInvoiceAsync(), 100);
+            _btnPayInvoice = UiKit.MakeButton("💳 Thu tiền", UiKit.Success, async (s, e) => await PaySelectedInvoiceAsync(), 120);
+            _btnExportInvoice = UiKit.MakeButton("📄 Xuất hóa đơn", UiKit.Purple, (s, e) => ExportSelectedInvoice(), 140);
+            _btnPayInvoice.Enabled = false;
+            _btnExportInvoice.Enabled = false;
             _btnGenerateInvoices = UiKit.MakeButton("📅 Tạo tháng", UiKit.Warning, async (s, e) => await GenerateMonthlyAsync(), 140);
             _btnExportInvoices = UiKit.MakeButton("📊 Xuất CSV", UiKit.Purple, (s, e) => ExportInvoicesCsv(), 110);
             _btnRefreshInvoices = UiKit.MakeButton("🔄 Tải lại", UiKit.Primary, async (s, e) => await LoadInvoicesAsync(), 110);
@@ -171,6 +166,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             actionsPanel.Controls.Add(_btnAddInvoice);
             actionsPanel.Controls.Add(_btnEditInvoice);
             actionsPanel.Controls.Add(_btnDeleteInvoice);
+            actionsPanel.Controls.Add(_btnPayInvoice);
+            actionsPanel.Controls.Add(_btnExportInvoice);
             actionsPanel.Controls.Add(_btnGenerateInvoices);
             actionsPanel.Controls.Add(_btnExportInvoices);
             actionsPanel.Controls.Add(_btnRefreshInvoices);
@@ -206,7 +203,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             bottomPanel.Controls.Add(_lblInvoiceSummary);
 
             var gridPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(12), BackColor = BackColor };
-            gridPanel.Controls.Add(_gridInvoices);
+            gridPanel.Controls.Add(_invoiceCards);
 
             _tabInvoices.Controls.Add(gridPanel);
             _tabInvoices.Controls.Add(bottomPanel);
@@ -351,7 +348,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             try
             {
                 await LoadInvoicesAsync();
-                await LoadPaymentsAsync();
+                if (_showPayments)
+                    await LoadPaymentsAsync();
             }
             catch (Exception ex)
             {
@@ -373,9 +371,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     await EnsureAllowedBranchScopeAsync();
                     _invoiceTable = AdminBranchScope.FilterByBranchIds(_invoiceTable, _allowedBranchIds);
                 }
-                _gridInvoices.DataSource = _invoiceTable;
                 ApplyInvoiceFilter();
-                FormatInvoiceGrid();
             }
             catch (Exception ex)
             {
@@ -419,46 +415,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             return filtered;
         }
 
-        private void FormatInvoiceGrid()
-        {
-            var columnMapping = new Dictionary<string, string>
-            {
-                { "InvoiceId", "Mã hóa đơn" },
-                { "InvoiceNumber", "Số hóa đơn" },
-                { "TenantName", "Khách thuê" },
-                { "RoomNumber", "Phòng" },
-                { "InvoiceDate", "Ngày lập" },
-                { "FromDate", "Từ" },
-                { "ToDate", "Đến" },
-                { "RentalCost", "Tiền phòng" },
-                { "UtilityCost", "Tiền dịch vụ" },
-                { "OtherCost", "Chi phí khác" },
-                { "TotalAmount", "Tổng tiền" },
-                { "PaidAmount", "Đã thu" },
-                { "RemainingAmount", "Còn nợ" },
-                { "Status", "Trạng thái" },
-                { "DueDate", "Hạn thanh toán" }
-            };
-
-            foreach (DataGridViewColumn col in _gridInvoices.Columns)
-            {
-                if (columnMapping.ContainsKey(col.Name))
-                    col.HeaderText = columnMapping[col.Name];
-
-                if (col.Name.EndsWith("Cost") || col.Name.EndsWith("Amount"))
-                {
-                    col.DefaultCellStyle.Format = "N0";
-                    col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
-                }
-
-                if (col.Name.Contains("Date"))
-                {
-                    col.DefaultCellStyle.Format = "dd/MM/yyyy";
-                    col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
-                }
-            }
-        }
-
         private void FormatPaymentGrid()
         {
             var columnMapping = new Dictionary<string, string>
@@ -498,7 +454,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             if (_invoiceTable == null) return;
             var keyword = _txtSearchInvoice.Text == SearchPlaceholder ? string.Empty : _txtSearchInvoice.Text.Trim();
             keyword = keyword.Replace("'", "''");
-            var status = _cboInvoiceStatus.SelectedItem?.ToString();
+            var status = MapStatusFilter(_cboInvoiceStatus.SelectedItem?.ToString());
 
             var filters = new List<string>();
 
@@ -511,12 +467,239 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 if (kwFilters.Count > 0) filters.Add("(" + string.Join(" OR ", kwFilters) + ")");
             }
 
-            if (!string.IsNullOrWhiteSpace(status) && status != "Tất cả" && _invoiceTable.Columns.Contains("Status"))
+            if (!string.IsNullOrWhiteSpace(status) && _invoiceTable.Columns.Contains("Status"))
                 filters.Add($"Status = '{status.Replace("'", "''")}'");
 
             _invoiceTable.DefaultView.RowFilter = filters.Count > 0 ? string.Join(" AND ", filters) : string.Empty;
             _lblInvoiceCount.Text = $"Tổng: {_invoiceTable.DefaultView.Count}";
             UpdateInvoiceSummary();
+            UpdateInvoiceActionState();
+            RenderInvoiceCards();
+        }
+
+        private void RenderInvoiceCards()
+        {
+            if (_invoiceCards == null) return;
+            _invoiceCards.SuspendLayout();
+            _invoiceCards.Controls.Clear();
+            _selectedInvoice = null;
+
+            if (_invoiceTable == null || _invoiceTable.DefaultView.Count == 0)
+            {
+                _invoiceCards.ResumeLayout();
+                return;
+            }
+
+            foreach (DataRowView view in _invoiceTable.DefaultView)
+            {
+                var row = view.Row;
+                _invoiceCards.Controls.Add(CreateInvoiceCard(row));
+            }
+
+            if (_invoiceCards.Controls.Count > 0 && _invoiceCards.Controls[0] is Panel first && first.Tag is DataRow firstRow)
+                SelectInvoiceCard(first, firstRow);
+
+            _invoiceCards.ResumeLayout();
+            UpdateInvoiceActionState();
+        }
+
+        private Control CreateInvoiceCard(DataRow row)
+        {
+            string invoiceNumber = ReadString(row, "InvoiceNumber") ?? ReadString(row, "InvoiceId") ?? "—";
+            string tenant = ReadString(row, "TenantName") ?? ReadString(row, "TenantId") ?? "—";
+            string room = ReadString(row, "RoomNumber") ?? ReadString(row, "RoomId") ?? "—";
+            string date = TryReadDate(row, "InvoiceDate")?.ToString("dd/MM/yyyy") ?? "—";
+            string status = ToVietnameseStatus(ReadString(row, "Status"));
+
+            decimal total = ReadDecimal(row, "TotalAmount");
+            decimal paid = ReadDecimal(row, "PaidAmount");
+            decimal remaining = ReadDecimal(row, "RemainingAmount");
+
+            var card = new Panel
+            {
+                Width = 360,
+                Height = 160,
+                BackColor = Color.White,
+                Margin = new Padding(6),
+                Padding = new Padding(8),
+                Cursor = Cursors.Hand,
+                Tag = row
+            };
+
+            var statusStrip = new Panel
+            {
+                Dock = DockStyle.Left,
+                Width = 6,
+                BackColor = GetStatusColor(ReadString(row, "Status"))
+            };
+
+            var content = new Panel { Dock = DockStyle.Fill, Padding = new Padding(8, 4, 8, 4) };
+
+            var lblTitle = new Label
+            {
+                Text = $"HĐ {invoiceNumber}",
+                Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 79, 159),
+                AutoSize = true,
+                Location = new Point(0, 0)
+            };
+
+            var lblStatus = new Label
+            {
+                Text = status,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                ForeColor = GetStatusColor(ReadString(row, "Status")),
+                AutoSize = true,
+                Location = new Point(240, 2)
+            };
+
+            var lblTenant = new Label
+            {
+                Text = $"Khách: {tenant}",
+                Font = new Font("Segoe UI", 9.5f),
+                AutoSize = true,
+                Location = new Point(0, 28)
+            };
+
+            var lblRoom = new Label
+            {
+                Text = $"Phòng: {room} | Ngày: {date}",
+                Font = new Font("Segoe UI", 9f),
+                ForeColor = Color.DimGray,
+                AutoSize = true,
+                Location = new Point(0, 50)
+            };
+
+            var lblAmounts = new Label
+            {
+                Text = $"Tổng: {total:N0} | Đã thu: {paid:N0} | Còn nợ: {remaining:N0}",
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(60, 80, 90),
+                AutoSize = true,
+                Location = new Point(0, 80)
+            };
+
+            var border = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0) };
+            border.Paint += (s, e) =>
+            {
+                using (var pen = new Pen(IsSelectedCard(card) ? Color.FromArgb(0, 122, 204) : Color.FromArgb(230, 230, 230), 1.4f))
+                {
+                    e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
+                }
+            };
+
+            content.Controls.Add(lblTitle);
+            content.Controls.Add(lblStatus);
+            content.Controls.Add(lblTenant);
+            content.Controls.Add(lblRoom);
+            content.Controls.Add(lblAmounts);
+
+            border.Controls.Add(content);
+            card.Controls.Add(border);
+            card.Controls.Add(statusStrip);
+
+            void SelectAction()
+            {
+                SelectInvoiceCard(card, row);
+            }
+
+            card.Click += (s, e) => SelectAction();
+            foreach (Control c in content.Controls) c.Click += (s, e) => SelectAction();
+            card.DoubleClick += (s, e) =>
+            {
+                SelectAction();
+                ShowInvoiceDetail();
+            };
+            foreach (Control c in content.Controls)
+            {
+                c.DoubleClick += (s, e) =>
+                {
+                    SelectAction();
+                    ShowInvoiceDetail();
+                };
+            }
+
+            return card;
+        }
+
+        private void SelectInvoiceCard(Panel card, DataRow row)
+        {
+            if (_selectedInvoice.HasValue && _selectedInvoice.Value.Card != null)
+                _selectedInvoice.Value.Card.Invalidate();
+
+            _selectedInvoice = (card, row);
+            card.Invalidate();
+            UpdateInvoiceActionState();
+        }
+
+        private bool IsSelectedCard(Panel card)
+        {
+            return _selectedInvoice.HasValue && ReferenceEquals(_selectedInvoice.Value.Card, card);
+        }
+
+        private static string MapStatusFilter(string selected)
+        {
+            if (string.IsNullOrWhiteSpace(selected) || selected == "Tất cả") return null;
+            switch (selected)
+            {
+                case "Chưa thanh toán":
+                    return "Issued";
+                case "Thanh toán một phần":
+                    return "PartialPaid";
+                case "Đã thanh toán":
+                    return "Paid";
+                case "Quá hạn":
+                    return "Overdue";
+                default:
+                    return selected;
+            }
+        }
+
+        private static string ToVietnameseStatus(string status)
+        {
+            if (string.IsNullOrWhiteSpace(status)) return "Chưa thanh toán";
+            switch (status)
+            {
+                case "Issued":
+                    return "Chưa thanh toán";
+                case "PartialPaid":
+                    return "Thanh toán một phần";
+                case "Paid":
+                    return "Đã thanh toán";
+                case "Overdue":
+                    return "Quá hạn";
+                default:
+                    return status;
+            }
+        }
+
+        private static Color GetStatusColor(string status)
+        {
+            switch (status)
+            {
+                case "Paid":
+                    return Color.SeaGreen;
+                case "PartialPaid":
+                    return Color.DarkOrange;
+                case "Overdue":
+                    return Color.Firebrick;
+                default:
+                    return Color.Gray;
+            }
+        }
+
+        private static string ReadString(DataRow row, string col)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(col)) return null;
+            var v = row[col];
+            return v == null || v == DBNull.Value ? null : v.ToString();
+        }
+
+        private static DateTime? TryReadDate(DataRow row, string col)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(col)) return null;
+            if (DateTime.TryParse(row[col]?.ToString(), out var dt)) return dt.Date;
+            return null;
         }
 
         private void ApplyPaymentFilter()
@@ -565,6 +748,21 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _lblInvoiceSummary.Text = $"Tổng tiền: {total:N0} | Đã thu: {paid:N0} | Còn nợ: {remaining:N0}";
         }
 
+        private void UpdateInvoiceActionState()
+        {
+            var row = GetCurrentInvoiceRow();
+            if (row == null)
+            {
+                if (_btnPayInvoice != null) _btnPayInvoice.Enabled = false;
+                if (_btnExportInvoice != null) _btnExportInvoice.Enabled = false;
+                return;
+            }
+
+            decimal remaining = ReadDecimal(row, "RemainingAmount");
+            if (_btnPayInvoice != null) _btnPayInvoice.Enabled = remaining > 0;
+            if (_btnExportInvoice != null) _btnExportInvoice.Enabled = remaining <= 0;
+        }
+
         private void UpdatePaymentSummary()
         {
             if (_paymentTable == null) return;
@@ -589,8 +787,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private DataRow GetCurrentInvoiceRow()
         {
-            if (_gridInvoices.CurrentRow?.DataBoundItem is DataRowView drv) return drv.Row;
-            return null;
+            return _selectedInvoice?.Row;
         }
 
         private DataRow GetCurrentPaymentRow()
@@ -662,7 +859,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
         }
 
-        private void PaySelectedInvoice()
+        private async Task PaySelectedInvoiceAsync()
         {
             var row = GetCurrentInvoiceRow();
             if (row == null)
@@ -678,14 +875,38 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 return;
             }
 
+            int invoiceId = Convert.ToInt32(row["InvoiceId"]);
             // Show tenant info and payment form
             using (var frm = new FrmPaymentWithTenantInfo(_bll, row))
             {
                 if (frm.ShowDialog(this) == DialogResult.OK)
                 {
-                    _ = LoadAllDataAsync();
+                    await LoadAllDataAsync();
+                    SelectInvoiceRow(invoiceId);
                     AdminEvents.NotifyDataChanged();
                 }
+            }
+        }
+
+        private void ExportSelectedInvoice()
+        {
+            var row = GetCurrentInvoiceRow();
+            if (row == null)
+            {
+                MessageBox.Show("Chọn một hóa đơn để xuất.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            decimal remaining = ReadDecimal(row, "RemainingAmount");
+            if (remaining > 0)
+            {
+                MessageBox.Show("Hóa đơn chỉ có thể xuất sau khi thanh toán đủ.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            using (var frm = new FrmInvoiceExportForm(_bll, row))
+            {
+                frm.ShowDialog(this);
             }
         }
 
@@ -715,7 +936,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 if (dlg.ShowDialog(this) != DialogResult.OK) return;
                 try
                 {
-                    int created = await _bll.GenerateMonthlyInvoicesAsync(dlg.SelectedYear, dlg.SelectedMonth, DateTime.Today, dlg.DueDay);
+                    int created = await _bll.GenerateMonthlyInvoicesAsync(dlg.SelectedYear, dlg.SelectedMonth, DateTime.Today, dlg.DueDay, dlg.TaxRateOverride);
                     await LoadInvoicesAsync();
                     AdminEvents.NotifyDataChanged();
                     MessageBox.Show($"Đã tạo {created} hóa đơn cho {dlg.SelectedMonth:00}/{dlg.SelectedYear}.", "Hoàn tất", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -759,6 +980,20 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private void AddNewPayment()
         {
             _ = AddNewPaymentAsync();
+        }
+
+        private void SelectInvoiceRow(int invoiceId)
+        {
+            if (_invoiceCards == null || _invoiceCards.Controls.Count == 0) return;
+            foreach (Control control in _invoiceCards.Controls)
+            {
+                if (control is Panel panel && panel.Tag is DataRow row &&
+                    Convert.ToInt32(row["InvoiceId"]) == invoiceId)
+                {
+                    SelectInvoiceCard(panel, row);
+                    return;
+                }
+            }
         }
 
         private void OpenRoomPaymentSelector()
@@ -1063,12 +1298,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
             private NumericUpDown _numYear;
             private NumericUpDown _numMonth;
             private NumericUpDown _numDueDay;
+            private NumericUpDown _numTaxRate;
             private Button _btnOk;
             private Button _btnCancel;
 
             public int SelectedYear => (int)_numYear.Value;
             public int SelectedMonth => (int)_numMonth.Value;
             public int? DueDay => _numDueDay.Value > 0 ? (int?)_numDueDay.Value : null;
+            public decimal? TaxRateOverride => _numTaxRate.Value > 0 ? (decimal?)_numTaxRate.Value : null;
 
             public MonthlyInvoiceDialog()
             {
@@ -1077,12 +1314,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 FormBorderStyle = FormBorderStyle.FixedDialog;
                 MaximizeBox = false;
                 MinimizeBox = false;
-                ClientSize = new Size(360, 180);
+                ClientSize = new Size(360, 220);
 
                 var now = DateTime.Today;
                 _numYear = new NumericUpDown { Minimum = 2000, Maximum = 2100, Value = now.Year, Location = new Point(130, 20), Width = 180 };
                 _numMonth = new NumericUpDown { Minimum = 1, Maximum = 12, Value = now.Month, Location = new Point(130, 55), Width = 180 };
                 _numDueDay = new NumericUpDown { Minimum = 0, Maximum = 31, Value = 10, Location = new Point(130, 90), Width = 180 };
+                _numTaxRate = new NumericUpDown { Minimum = 0, Maximum = 100, DecimalPlaces = 2, Increment = 0.1m, Value = 0, Location = new Point(130, 125), Width = 180 };
 
                 Controls.Add(new Label { Text = "Năm", AutoSize = true, Location = new Point(20, 24) });
                 Controls.Add(_numYear);
@@ -1090,9 +1328,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Controls.Add(_numMonth);
                 Controls.Add(new Label { Text = "Hạn (ngày, 0=auto)", AutoSize = true, Location = new Point(20, 94) });
                 Controls.Add(_numDueDay);
+                Controls.Add(new Label { Text = "Thuế (%), 0=auto", AutoSize = true, Location = new Point(20, 129) });
+                Controls.Add(_numTaxRate);
 
-                _btnOk = new Button { Text = "Tạo", Width = 100, Location = new Point(130, 130) };
-                _btnCancel = new Button { Text = "Hủy", Width = 100, Location = new Point(240, 130) };
+                _btnOk = new Button { Text = "Tạo", Width = 100, Location = new Point(130, 165) };
+                _btnCancel = new Button { Text = "Hủy", Width = 100, Location = new Point(240, 165) };
                 _btnOk.Click += (s, e) => DialogResult = DialogResult.OK;
                 _btnCancel.Click += (s, e) => DialogResult = DialogResult.Cancel;
                 Controls.Add(_btnOk);

@@ -29,6 +29,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Label lblTotal;
         private Label lblHint;
         private Button btnSave;
+        private Button btnPayNow;
         private Button btnCancel;
 
         private DataTable _tenantTable;
@@ -163,10 +164,21 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Text = "Lưu",
                 Width = 100,
                 Height = 32,
-                Location = new Point(ClientSize.Width - 220, ClientSize.Height - 50),
+                Location = new Point(ClientSize.Width - 350, ClientSize.Height - 50),
                 Anchor = AnchorStyles.Right | AnchorStyles.Bottom
             };
-            btnSave.Click += async (s, e) => await SaveAsync();
+            btnSave.Click += async (s, e) => await SaveAsync(false);
+
+            btnPayNow = new Button
+            {
+                Text = "Thanh toán ngay",
+                Width = 120,
+                Height = 32,
+                Location = new Point(ClientSize.Width - 240, ClientSize.Height - 50),
+                Anchor = AnchorStyles.Right | AnchorStyles.Bottom,
+                Visible = _existing == null
+            };
+            btnPayNow.Click += async (s, e) => await SaveAsync(true);
 
             btnCancel = new Button
             {
@@ -179,6 +191,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             btnCancel.Click += (s, e) => DialogResult = DialogResult.Cancel;
 
             Controls.Add(btnSave);
+            Controls.Add(btnPayNow);
             Controls.Add(btnCancel);
         }
 
@@ -419,7 +432,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             lblTotal.Text = $"{total:N0} VNĐ";
         }
 
-        private async Task SaveAsync()
+        private async Task SaveAsync(bool payNow)
         {
             if (cboTenant.SelectedValue == null || cboRoom.SelectedValue == null)
             {
@@ -443,14 +456,24 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             try
             {
+                int invoiceId = 0;
                 if (_existing == null)
                 {
-                    await _bll.AddInvoiceAsync(invoiceNumber, tenantId, roomId, invoiceDate, fromDate, toDate, rental, utility, other, dueDate, taxRate);
+                    invoiceId = await _bll.AddInvoiceAsync(invoiceNumber, tenantId, roomId, invoiceDate, fromDate, toDate, rental, utility, other, dueDate, taxRate);
                 }
                 else
                 {
-                    int invoiceId = Convert.ToInt32(_existing["InvoiceId"]);
+                    invoiceId = Convert.ToInt32(_existing["InvoiceId"]);
                     await _bll.UpdateInvoiceAsync(invoiceId, invoiceNumber, tenantId, roomId, invoiceDate, fromDate, toDate, rental, utility, other, dueDate, taxRate);
+                }
+
+                AdminEvents.NotifyDataChanged();
+                DataSyncManager.NotifyInvoicesChanged();
+                DataSyncManager.NotifyRoomsChanged();
+
+                if (payNow && invoiceId > 0)
+                {
+                    await OpenPaymentFormAsync(invoiceId);
                 }
 
                 DialogResult = DialogResult.OK;
@@ -458,6 +481,29 @@ namespace quan_ly_chuoi_nha_tro.GUI
             catch (Exception ex)
             {
                 MessageBox.Show("Lỗi lưu hóa đơn: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private async Task OpenPaymentFormAsync(int invoiceId)
+        {
+            try
+            {
+                var table = await _bll.GetInvoicesViewAsync();
+                var row = table?.AsEnumerable().FirstOrDefault(r => Convert.ToInt32(r["InvoiceId"]) == invoiceId);
+                if (row == null)
+                {
+                    MessageBox.Show("Không tìm thấy hóa đơn vừa tạo để thanh toán.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                using (var frm = new FrmPaymentWithTenantInfo(_bll, row))
+                {
+                    frm.ShowDialog(this);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi mở thanh toán: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
     }

@@ -24,7 +24,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private ComboBox _cboStatus;
         private Label _lblCount;
         private Label _lblSummary;
-        private Button _btnAdd, _btnEdit, _btnDelete, _btnPay, _btnPayments, _btnGenerate, _btnExport, _btnRefresh;
+        private Button _btnAdd, _btnEdit, _btnDelete, _btnPay, _btnExportInvoice, _btnPayments, _btnGenerate, _btnExport, _btnRefresh;
 
         public FrmInvoiceManager() : this(null)
         {
@@ -66,14 +66,27 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 if (e.ColumnIndex >= 0 && _grid.Columns[e.ColumnIndex].Name == "InvoiceNumber")
                     ShowInvoiceDetail();
             };
-            _grid.SelectionChanged += (s, e) => UpdateSummary();
+            _grid.SelectionChanged += (s, e) =>
+            {
+                UpdateSummary();
+                UpdateActionState();
+            };
+            _grid.CellFormatting += (s, e) =>
+            {
+                if (e.RowIndex < 0) return;
+                if (_grid.Columns[e.ColumnIndex].Name == "Status" && e.Value != null)
+                {
+                    e.Value = ToVietnameseStatus(e.Value.ToString());
+                    e.FormattingApplied = true;
+                }
+            };
             UiKit.StyleGrid(_grid);
 
             _txtSearch = new TextBox { Width = 280 };
             var pnlSearch = UiKit.MakeSearchPanel(_txtSearch, 320, SearchPlaceholder, ApplyFilter);
 
             _cboStatus = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 150 };
-            _cboStatus.Items.AddRange(new object[] { "Tất cả", "Issued", "PartialPaid", "Paid", "Overdue" });
+            _cboStatus.Items.AddRange(new object[] { "Tất cả", "Chưa thanh toán", "Thanh toán một phần", "Đã thanh toán", "Quá hạn" });
             _cboStatus.SelectedIndex = 0;
             _cboStatus.SelectedIndexChanged += (s, e) => ApplyFilter();
 
@@ -83,7 +96,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnAdd = UiKit.MakeButton("Thêm", UiKit.Primary, (s, e) => AddNew(), 92);
             _btnEdit = UiKit.MakeButton("Sửa", UiKit.Primary, (s, e) => EditSelected(), 92);
             _btnDelete = UiKit.MakeButton("Xóa", UiKit.Danger, async (s, e) => await DeleteSelectedAsync(), 92);
-            _btnPay = UiKit.MakeButton("Thu tiền", UiKit.Success, (s, e) => PaySelected(), 100);
+            _btnPay = UiKit.MakeButton("Thu tiền", UiKit.Success, async (s, e) => await PaySelectedAsync(), 100);
+            _btnExportInvoice = UiKit.MakeButton("Xuất hóa đơn", UiKit.Purple, (s, e) => ExportSelectedInvoice(), 120);
+            _btnExportInvoice.Enabled = false;
             _btnPayments = UiKit.MakeButton("DS thanh toán", UiKit.Primary, (s, e) => ShowPayments(), 120);
             _btnGenerate = UiKit.MakeButton("Tạo hóa đơn tháng", UiKit.Warning, async (s, e) => await GenerateMonthlyAsync(), 150);
             _btnExport = UiKit.MakeButton("Xuất CSV", UiKit.Purple, (s, e) => ExportCsv(), 100);
@@ -103,6 +118,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             actions.Controls.Add(_btnEdit);
             actions.Controls.Add(_btnDelete);
             actions.Controls.Add(_btnPay);
+            actions.Controls.Add(_btnExportInvoice);
             actions.Controls.Add(_btnPayments);
             actions.Controls.Add(_btnGenerate);
             actions.Controls.Add(_btnExport);
@@ -279,7 +295,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var raw = (_txtSearch.Text ?? string.Empty).Trim();
             if (raw == SearchPlaceholder) raw = string.Empty;
             var keyword = raw.Replace("'", "''");
-            var status = _cboStatus.SelectedItem?.ToString();
+            var status = MapStatusFilter(_cboStatus.SelectedItem?.ToString());
 
             var filters = new System.Collections.Generic.List<string>();
 
@@ -295,7 +311,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 if (kwFilters.Count > 0) filters.Add("(" + string.Join(" OR ", kwFilters) + ")");
             }
 
-            if (!string.IsNullOrWhiteSpace(status) && status != "Tất cả" && _table.Columns.Contains("Status"))
+            if (!string.IsNullOrWhiteSpace(status) && _table.Columns.Contains("Status"))
             {
                 string escapedStatus = status.Replace("'", "''");
                 filters.Add("Status = '" + escapedStatus + "'");
@@ -330,6 +346,42 @@ namespace quan_ly_chuoi_nha_tro.GUI
             if (decimal.TryParse(v.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed)) return parsed;
             if (decimal.TryParse(v.ToString(), NumberStyles.Any, CultureInfo.CurrentCulture, out parsed)) return parsed;
             return 0m;
+        }
+
+        private static string MapStatusFilter(string selected)
+        {
+            if (string.IsNullOrWhiteSpace(selected) || selected == "Tất cả") return null;
+            switch (selected)
+            {
+                case "Chưa thanh toán":
+                    return "Issued";
+                case "Thanh toán một phần":
+                    return "PartialPaid";
+                case "Đã thanh toán":
+                    return "Paid";
+                case "Quá hạn":
+                    return "Overdue";
+                default:
+                    return selected;
+            }
+        }
+
+        private static string ToVietnameseStatus(string status)
+        {
+            if (string.IsNullOrWhiteSpace(status)) return "Chưa thanh toán";
+            switch (status)
+            {
+                case "Issued":
+                    return "Chưa thanh toán";
+                case "PartialPaid":
+                    return "Thanh toán một phần";
+                case "Paid":
+                    return "Đã thanh toán";
+                case "Overdue":
+                    return "Quá hạn";
+                default:
+                    return status;
+            }
         }
 
         private DataRow GetCurrentRow()
@@ -402,7 +454,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
         }
 
-        private void PaySelected()
+        private async System.Threading.Tasks.Task PaySelectedAsync()
         {
             var row = GetCurrentRow();
             if (row == null)
@@ -418,11 +470,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 return;
             }
 
-            using (var frm = new FrmPaymentEditor(_bll, row))
+            int invoiceId = Convert.ToInt32(row["InvoiceId"]);
+            using (var frm = new FrmPaymentWithTenantInfo(_bll, row))
             {
                 if (frm.ShowDialog(this) == DialogResult.OK)
                 {
-                    _ = LoadDataAsync();
+                    await LoadDataAsync();
+                    SelectInvoiceRow(invoiceId);
                     AdminEvents.NotifyDataChanged();
                 }
             }
@@ -463,6 +517,28 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 frm.ShowDialog(this);
         }
 
+        private void ExportSelectedInvoice()
+        {
+            var row = GetCurrentRow();
+            if (row == null)
+            {
+                MessageBox.Show("Chọn một hóa đơn để xuất.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            decimal remaining = ReadDecimal(row, "RemainingAmount");
+            if (remaining > 0)
+            {
+                MessageBox.Show("Hóa đơn chỉ có thể xuất sau khi thanh toán đủ.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            using (var frm = new FrmInvoiceExportForm(_bll, row))
+            {
+                frm.ShowDialog(this);
+            }
+        }
+
         private async System.Threading.Tasks.Task GenerateMonthlyAsync()
         {
             using (var dlg = new MonthlyInvoiceDialog())
@@ -470,7 +546,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 if (dlg.ShowDialog(this) != DialogResult.OK) return;
                 try
                 {
-                    int created = await _bll.GenerateMonthlyInvoicesAsync(dlg.SelectedYear, dlg.SelectedMonth, DateTime.Today, dlg.DueDay);
+                    int created = await _bll.GenerateMonthlyInvoicesAsync(dlg.SelectedYear, dlg.SelectedMonth, DateTime.Today, dlg.DueDay, dlg.TaxRateOverride);
                     await LoadDataAsync();
                     AdminEvents.NotifyDataChanged();
                     MessageBox.Show($"Đã tạo {created} hóa đơn cho {dlg.SelectedMonth:00}/{dlg.SelectedYear}.", "Hoàn tất", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -524,6 +600,34 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
         }
 
+        private void UpdateActionState()
+        {
+            var row = GetCurrentRow();
+            if (row == null)
+            {
+                _btnExportInvoice.Enabled = false;
+                return;
+            }
+
+            decimal remaining = ReadDecimal(row, "RemainingAmount");
+            _btnExportInvoice.Enabled = remaining <= 0;
+        }
+
+        private void SelectInvoiceRow(int invoiceId)
+        {
+            if (_grid == null || _grid.Rows.Count == 0) return;
+            foreach (DataGridViewRow gridRow in _grid.Rows)
+            {
+                if (gridRow.DataBoundItem is DataRowView drv &&
+                    Convert.ToInt32(drv.Row["InvoiceId"]) == invoiceId)
+                {
+                    gridRow.Selected = true;
+                    _grid.CurrentCell = gridRow.Cells[0];
+                    return;
+                }
+            }
+        }
+
         private static void WriteCsvFromView(DataView view, string path)
         {
             var sb = new StringBuilder();
@@ -551,12 +655,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
             private NumericUpDown _numYear;
             private NumericUpDown _numMonth;
             private NumericUpDown _numDueDay;
+            private NumericUpDown _numTaxRate;
             private Button _btnOk;
             private Button _btnCancel;
 
             public int SelectedYear => (int)_numYear.Value;
             public int SelectedMonth => (int)_numMonth.Value;
             public int? DueDay => _numDueDay.Value > 0 ? (int?)_numDueDay.Value : null;
+            public decimal? TaxRateOverride => _numTaxRate.Value > 0 ? (decimal?)_numTaxRate.Value : null;
 
             public MonthlyInvoiceDialog()
             {
@@ -565,12 +671,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 FormBorderStyle = FormBorderStyle.FixedDialog;
                 MaximizeBox = false;
                 MinimizeBox = false;
-                ClientSize = new Size(360, 180);
+                ClientSize = new Size(360, 220);
 
                 var now = DateTime.Today;
                 _numYear = new NumericUpDown { Minimum = 2000, Maximum = 2100, Value = now.Year, Location = new Point(130, 20), Width = 180 };
                 _numMonth = new NumericUpDown { Minimum = 1, Maximum = 12, Value = now.Month, Location = new Point(130, 55), Width = 180 };
                 _numDueDay = new NumericUpDown { Minimum = 0, Maximum = 31, Value = 10, Location = new Point(130, 90), Width = 180 };
+                _numTaxRate = new NumericUpDown { Minimum = 0, Maximum = 100, DecimalPlaces = 2, Increment = 0.1m, Value = 0, Location = new Point(130, 125), Width = 180 };
 
                 Controls.Add(new Label { Text = "Năm", AutoSize = true, Location = new Point(20, 24) });
                 Controls.Add(_numYear);
@@ -578,9 +685,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Controls.Add(_numMonth);
                 Controls.Add(new Label { Text = "Hạn (ngày, 0=auto)", AutoSize = true, Location = new Point(20, 94) });
                 Controls.Add(_numDueDay);
+                Controls.Add(new Label { Text = "Thuế (%), 0=auto", AutoSize = true, Location = new Point(20, 129) });
+                Controls.Add(_numTaxRate);
 
-                _btnOk = new Button { Text = "Tạo", Width = 100, Location = new Point(130, 130) };
-                _btnCancel = new Button { Text = "Hủy", Width = 100, Location = new Point(240, 130) };
+                _btnOk = new Button { Text = "Tạo", Width = 100, Location = new Point(130, 165) };
+                _btnCancel = new Button { Text = "Hủy", Width = 100, Location = new Point(240, 165) };
                 _btnOk.Click += (s, e) => DialogResult = DialogResult.OK;
                 _btnCancel.Click += (s, e) => DialogResult = DialogResult.Cancel;
                 Controls.Add(_btnOk);

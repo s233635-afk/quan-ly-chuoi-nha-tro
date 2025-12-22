@@ -12,12 +12,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private ComboBox cboYear;
         private ComboBox cboMonth;
         private NumericUpDown numDueDay;
+        private NumericUpDown numTaxRate;
         private Button btnOK;
         private Button btnCancel;
 
         public int SelectedYear { get; private set; }
         public int SelectedMonth { get; private set; }
         public int DueDay { get; private set; }
+        public decimal? TaxRateOverride { get; private set; }
 
         public MonthlyInvoiceDialog()
         {
@@ -31,7 +33,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
-            ClientSize = new Size(350, 200);
+            ClientSize = new Size(350, 240);
             BackColor = Color.White;
             Font = new Font("Segoe UI", 10F);
 
@@ -79,11 +81,24 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Value = 10
             };
 
+            // Tax rate label and numeric
+            var lblTax = new Label { Text = "Thuế (%):", Location = new Point(20, 140), AutoSize = true };
+            numTaxRate = new NumericUpDown
+            {
+                Location = new Point(100, 140),
+                Width = 200,
+                Minimum = 0,
+                Maximum = 100,
+                DecimalPlaces = 2,
+                Increment = 0.1m,
+                Value = 0
+            };
+
             // OK Button
             btnOK = new Button
             {
                 Text = "Tạo",
-                Location = new Point(100, 150),
+                Location = new Point(100, 190),
                 Width = 90,
                 Height = 36,
                 BackColor = Color.FromArgb(0, 120, 215),
@@ -96,6 +111,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 SelectedYear = (int)cboYear.SelectedItem;
                 SelectedMonth = cboMonth.SelectedIndex + 1;
                 DueDay = (int)numDueDay.Value;
+                TaxRateOverride = numTaxRate.Value > 0 ? (decimal?)numTaxRate.Value : null;
                 DialogResult = DialogResult.OK;
                 Close();
             };
@@ -104,7 +120,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             btnCancel = new Button
             {
                 Text = "Hủy",
-                Location = new Point(200, 150),
+                Location = new Point(200, 190),
                 Width = 90,
                 Height = 36,
                 BackColor = Color.FromArgb(200, 200, 200),
@@ -124,6 +140,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             Controls.Add(cboMonth);
             Controls.Add(lblDueDay);
             Controls.Add(numDueDay);
+            Controls.Add(lblTax);
+            Controls.Add(numTaxRate);
             Controls.Add(btnOK);
             Controls.Add(btnCancel);
         }

@@ -11,6 +11,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
     {
         private const string SearchPlaceholder = "Tìm theo tiêu đề/nội dung...";
         private readonly AdminDataBLL _bll = new AdminDataBLL();
+        private readonly int? _presetBranchId;
 
         // Tab Control
         private TabControl _tabControl;
@@ -27,8 +28,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Label _lblOverdueCount, _lblExpiredCount, _lblIncompleteCount;
         private Button _btnCreateReminder, _btnViewDetails, _btnSendNew;
 
-        public FrmNotificationManager()
+        public FrmNotificationManager() : this(null)
         {
+        }
+
+        public FrmNotificationManager(int? branchId)
+        {
+            _presetBranchId = branchId;
             InitializeComponent();
             AdminEvents.DataChanged += HandleAdminDataChanged;
             FormClosing += (s, e) => AdminEvents.DataChanged -= HandleAdminDataChanged;
@@ -183,6 +189,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             try
             {
                 _rawTable = await _bll.GetNotificationsAsync();
+                _rawTable = FilterByBranch(_rawTable);
                 _grid.DataSource = _rawTable;
                 ApplyGridPresentation();
                 ApplyFilter();
@@ -212,18 +219,36 @@ namespace quan_ly_chuoi_nha_tro.GUI
             try
             {
                 var invoices = await _bll.GetInvoicesAsync();
+                invoices = FilterByBranch(invoices);
                 int overdueCount = invoices?.AsEnumerable().Where(r => r["Status"]?.ToString() == "Chưa thanh toán").Count() ?? 0;
                 _lblOverdueCount.Text = overdueCount.ToString();
 
                 var contracts = await _bll.GetContractsAsync();
+                contracts = FilterByBranch(contracts);
                 int expiredCount = contracts?.AsEnumerable().Where(r => { if (r["EndDate"] is DateTime endDate) return endDate < DateTime.Today; return false; }).Count() ?? 0;
                 _lblExpiredCount.Text = expiredCount.ToString();
 
                 var utilities = await _bll.GetUtilitiesAsync();
+                utilities = FilterByBranch(utilities);
                 int incompleteCount = utilities?.AsEnumerable().Where(r => r["Value"] == null || r["Value"] == DBNull.Value || string.IsNullOrEmpty(r["Value"]?.ToString())).Count() ?? 0;
                 _lblIncompleteCount.Text = incompleteCount.ToString();
             }
             catch { }
+        }
+
+        private DataTable FilterByBranch(DataTable table)
+        {
+            if (!_presetBranchId.HasValue || table == null || !table.Columns.Contains("BranchId"))
+                return table;
+
+            var filtered = table.Clone();
+            foreach (DataRow row in table.Rows)
+            {
+                if (!int.TryParse(row["BranchId"]?.ToString(), out var bid)) continue;
+                if (bid == _presetBranchId.Value)
+                    filtered.ImportRow(row);
+            }
+            return filtered;
         }
         #endregion
 

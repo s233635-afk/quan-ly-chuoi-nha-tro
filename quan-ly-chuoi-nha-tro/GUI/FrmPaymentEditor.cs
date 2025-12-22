@@ -274,6 +274,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
                         txtNotes.Text.Trim());
                 }
 
+                AdminEvents.NotifyDataChanged();
+                DataSyncManager.NotifyInvoicesChanged();
+                DataSyncManager.NotifyPaymentsChanged();
+                DataSyncManager.NotifyRoomsChanged();
                 DialogResult = DialogResult.OK;
             }
             catch (Exception ex)

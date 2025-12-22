@@ -349,7 +349,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private async System.Threading.Tasks.Task AddNewAsync()
         {
-            using (var frm = new FrmContractEditor(_bll, null)) { if (frm.ShowDialog(this) == DialogResult.OK) await LoadDataAsync(); }
+            using (var frm = new FrmContractEditor(_bll, null))
+            {
+                if (frm.ShowDialog(this) == DialogResult.OK)
+                {
+                    await LoadDataAsync();
+                    AdminEvents.NotifyDataChanged();
+                }
+            }
         }
 
         private async System.Threading.Tasks.Task DeleteSelectedAsync()
@@ -372,6 +379,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     await _bll.DeleteContractAsync(contractId); 
                     MessageBox.Show("Đã xóa hợp đồng thành công.", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     await LoadDataAsync(); // Tải lại danh sách
+                    AdminEvents.NotifyDataChanged();
                 }
                 catch (Exception ex)
                 {

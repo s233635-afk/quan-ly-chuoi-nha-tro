@@ -14,11 +14,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private const string SearchPlaceholder = "Tìm nhanh (mọi cột)...";
 
         private readonly AdminDataBLL _bll;
+        private readonly int? _presetBranchId;
         private System.Collections.Generic.HashSet<int> _allowedBranchIds;
 
         private ComboBox _cboSource;
         private TextBox _txtSearch;
         private DataGridView _grid;
+        private FlowLayoutPanel _cards;
         private Label _lblCount;
         private Label _lblFooterSummary;
         private Button _btnExport;
@@ -34,10 +36,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Button _btnTaxOpenInvoices;
 
         private DataTable _raw;
+        private DataTable _viewTable;
 
-        public FrmReportManager(AdminDataBLL bll)
+        public FrmReportManager(AdminDataBLL bll, int? branchId = null)
         {
             _bll = bll ?? throw new ArgumentNullException(nameof(bll));
+            _presetBranchId = branchId;
             InitializeComponent();
             AdminEvents.DataChanged += HandleAdminDataChanged;
             FormClosing += (s, e) => AdminEvents.DataChanged -= HandleAdminDataChanged;
@@ -118,34 +122,16 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Margin = new Padding(20, 0, 0, 0)
             };
 
-            // ===== GRID =====
-            _grid = new DataGridView
+            // ===== CARD HOST =====
+            _cards = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                ReadOnly = true,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                MultiSelect = false,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                AllowUserToAddRows = false,
-                AllowUserToDeleteRows = false,
-                RowHeadersVisible = false,
-                BackgroundColor = Color.White,
-                BorderStyle = BorderStyle.None,
-                ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize,
-                RowTemplate = { Height = 28 }
+                AutoScroll = true,
+                WrapContents = true,
+                FlowDirection = FlowDirection.LeftToRight,
+                BackColor = BackColor,
+                Padding = new Padding(8)
             };
-            _grid.EnableHeadersVisualStyles = false;
-            _grid.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(0, 120, 215);
-            _grid.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            _grid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 11, FontStyle.Bold);
-            _grid.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
-            _grid.DefaultCellStyle.Font = new Font("Segoe UI", 10);
-            _grid.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
-            _grid.DefaultCellStyle.ForeColor = Color.FromArgb(50, 50, 50);
-            _grid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 249, 255);
-            _grid.GridColor = Color.FromArgb(220, 230, 240);
-            _grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(179, 211, 247);
-            _grid.DefaultCellStyle.SelectionForeColor = Color.Black;
 
             // ===== TOOLBAR PANEL =====
             var pnlToolbar = new Panel 
@@ -216,7 +202,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Padding = new Padding(12), 
                 BackColor = BackColor 
             };
-            gridHost.Controls.Add(_grid);
+            gridHost.Controls.Add(_cards);
 
             // ===== FOOTER PANEL =====
             var pnlFooter = new Panel
@@ -257,9 +243,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 if (_raw != null && _raw.Columns.Contains("BranchId"))
                     _raw = AdminBranchScope.FilterByBranchIds(_raw, _allowedBranchIds);
                 ApplyTaxReportDefaults();
-                _grid.DataSource = _raw;
-                TranslateGridHeaders(_grid);
-                _lblCount.Text = $"Tổng: {_raw?.Rows.Count ?? 0}";
+                _viewTable = _raw;
+                RenderCards(_viewTable);
+                _lblCount.Text = $"Tổng: {_viewTable?.Rows.Count ?? 0}";
                 UpdateFooterSummary();
                 ApplyFilter();
             }
@@ -417,114 +403,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             if (grid == null || grid.Columns.Count == 0) return;
 
             // Comprehensive translation dictionary for all reports
-            var columnMap = new System.Collections.Generic.Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                // Invoice columns
-                { "InvoiceId", "#" },
-                { "InvoiceNumber", "SốHĐ" },
-                { "TenantId", "KH#" },
-                { "TenantName", "Tên KH" },
-                { "RoomId", "P#" },
-                { "RoomNumber", "Phòng" },
-                { "InvoiceDate", "Ngày" },
-                { "FromDate", "Từ" },
-                { "ToDate", "Đến" },
-                { "RentalCost", "Thuê" },
-                { "UtilityCost", "Tiện Ích" },
-                { "OtherCost", "Khác" },
-                { "TaxRate", "Thuế %" },
-                { "TaxAmount", "Thuế" },
-                { "TotalAmount", "Tổng" },
-                { "PaidAmount", "Đã TT" },
-                { "RemainingAmount", "Còn Nợ" },
-                { "Status", "TT" },
-                { "DueDate", "Hạn" },
-                { "CreatedDate", "Tạo" },
-                { "UpdatedDate", "Sửa" },
-                
-                // Payment columns
-                { "PaymentId", "#" },
-                { "PaymentDate", "Ngày TT" },
-                { "PaymentAmount", "Tiền" },
-                { "PaymentMethod", "PT" },
-                { "TransactionReference", "Ref" },
-                { "Notes", "GC" },
-                
-                // Tenant columns
-                { "FullName", "Tên KH" },
-                { "IdentityCard", "CMND" },
-                { "PhoneNumber", "ĐT" },
-                { "Email", "Email" },
-                { "BirthDate", "Sinh" },
-                { "Address", "ĐC" },
-                { "TempReg", "Tạm Trú" },
-                { "TempRegDate", "Từ TT" },
-                { "TempRegExpiry", "Hết TT" },
-                { "IsActive", "Hoạt" },
-                { "CreatedBy", "Người TL" },
-                
-                // Room columns
-                { "RoomTypeId", "LP#" },
-                { "BranchId", "Chi Nhánh" },
-                { "SectionId", "KV#" },
-                { "RoomStatusId", "TT#" },
-                { "RoomPrice", "Giá" },
-                { "Capacity", "Sức" },
-                { "Occupied", "Sử Dụng" },
-                
-                // Contract columns
-                { "ContractId", "HĐ#" },
-                { "ContractNumber", "Số HĐ" },
-                { "ContractType", "Loại" },
-                { "SignDate", "Ký" },
-                { "StartDate", "Từ" },
-                { "EndDate", "Đến" },
-                { "RentalPrice", "Giá" },
-                { "DepositRequired", "Cọc" },
-                { "Terms", "ĐK" },
-                { "ContractPdfPath", "PDF" },
-                
-                // Deposit columns
-                { "DepositId", "Cọc#" },
-                { "DepositAmount", "Tiền" },
-                { "DepositDate", "Ngày" },
-                { "DepositType", "Loại" },
-                { "ReturnedAmount", "Hoàn" },
-                { "ReturnedDate", "Ngày Hoàn" },
-                
-                // Maintenance columns
-                { "MaintenanceId", "BT#" },
-                { "RequestDate", "Yêu Cầu" },
-                { "CompletionDate", "Hoàn" },
-                { "Cost", "CP" },
-                { "Category", "DM" },
-                { "Description", "Mô Tả" },
-                
-                // Asset columns
-                { "AssetId", "TS#" },
-                { "AssetName", "Tên TS" },
-                { "AssetValue", "Giá" },
-                { "Condition", "TT" },
-                { "PurchaseDate", "Mua" },
-                
-                // Notification columns
-                { "NotificationId", "TB#" },
-                { "NotificationTitle", "Tiêu Đề" },
-                { "NotificationContent", "Nội Dung" },
-                { "NotificationDate", "Gửi" },
-                { "RecipientType", "Loại" },
-                
-                // System Settings columns
-                { "SettingKey", "Khóa" },
-                { "SettingValue", "Giá Trị" },
-                { "SettingDescription", "Mô Tả" },
-
-                // Revenue tax report columns
-                { "PeriodLabel", "Kỳ" },
-                { "Revenue", "Doanh Thu" },
-                { "Year", "Năm" },
-                { "Period", "Tháng/Quý" }
-            };
+            var columnMap = GetColumnMap();
 
             foreach (DataGridViewColumn col in grid.Columns)
             {
@@ -563,6 +442,118 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
         }
 
+        private static System.Collections.Generic.Dictionary<string, string> GetColumnMap()
+        {
+            return new System.Collections.Generic.Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                // Invoice columns
+                { "InvoiceId", "#" },
+                { "InvoiceNumber", "SốHĐ" },
+                { "TenantId", "KH#" },
+                { "TenantName", "Tên KH" },
+                { "RoomId", "P#" },
+                { "RoomNumber", "Phòng" },
+                { "InvoiceDate", "Ngày" },
+                { "FromDate", "Từ" },
+                { "ToDate", "Đến" },
+                { "RentalCost", "Thuê" },
+                { "UtilityCost", "Tiện Ích" },
+                { "OtherCost", "Khác" },
+                { "TaxRate", "Thuế %" },
+                { "TaxAmount", "Thuế" },
+                { "TotalAmount", "Tổng" },
+                { "PaidAmount", "Đã TT" },
+                { "RemainingAmount", "Còn Nợ" },
+                { "Status", "TT" },
+                { "DueDate", "Hạn" },
+                { "CreatedDate", "Tạo" },
+                { "UpdatedDate", "Sửa" },
+
+                // Payment columns
+                { "PaymentId", "#" },
+                { "PaymentDate", "Ngày TT" },
+                { "PaymentAmount", "Tiền" },
+                { "PaymentMethod", "PT" },
+                { "TransactionReference", "Ref" },
+                { "Notes", "GC" },
+
+                // Tenant columns
+                { "FullName", "Tên KH" },
+                { "IdentityCard", "CMND" },
+                { "PhoneNumber", "ĐT" },
+                { "Email", "Email" },
+                { "BirthDate", "Sinh" },
+                { "Address", "ĐC" },
+                { "TempReg", "Tạm Trú" },
+                { "TempRegDate", "Từ TT" },
+                { "TempRegExpiry", "Hết TT" },
+                { "IsActive", "Hoạt" },
+                { "CreatedBy", "Người TL" },
+
+                // Room columns
+                { "RoomTypeId", "LP#" },
+                { "BranchId", "Chi Nhánh" },
+                { "SectionId", "KV#" },
+                { "RoomStatusId", "TT#" },
+                { "RoomPrice", "Giá" },
+                { "Capacity", "Sức" },
+                { "Occupied", "Sử Dụng" },
+
+                // Contract columns
+                { "ContractId", "HĐ#" },
+                { "ContractNumber", "Số HĐ" },
+                { "ContractType", "Loại" },
+                { "SignDate", "Ký" },
+                { "StartDate", "Từ" },
+                { "EndDate", "Đến" },
+                { "RentalPrice", "Giá" },
+                { "DepositRequired", "Cọc" },
+                { "Terms", "ĐK" },
+                { "ContractPdfPath", "PDF" },
+
+                // Deposit columns
+                { "DepositId", "Cọc#" },
+                { "DepositAmount", "Tiền" },
+                { "DepositDate", "Ngày" },
+                { "DepositType", "Loại" },
+                { "ReturnedAmount", "Hoàn" },
+                { "ReturnedDate", "Ngày Hoàn" },
+
+                // Maintenance columns
+                { "MaintenanceId", "BT#" },
+                { "RequestDate", "Yêu Cầu" },
+                { "CompletionDate", "Hoàn" },
+                { "Cost", "CP" },
+                { "Category", "DM" },
+                { "Description", "Mô Tả" },
+
+                // Asset columns
+                { "AssetId", "TS#" },
+                { "AssetName", "Tên TS" },
+                { "AssetValue", "Giá" },
+                { "Condition", "TT" },
+                { "PurchaseDate", "Mua" },
+
+                // Notification columns
+                { "NotificationId", "TB#" },
+                { "NotificationTitle", "Tiêu Đề" },
+                { "NotificationContent", "Nội Dung" },
+                { "NotificationDate", "Gửi" },
+                { "RecipientType", "Loại" },
+
+                // System Settings columns
+                { "SettingKey", "Khóa" },
+                { "SettingValue", "Giá Trị" },
+                { "SettingDescription", "Mô Tả" },
+
+                // Revenue tax report columns
+                { "PeriodLabel", "Kỳ" },
+                { "Revenue", "Doanh Thu" },
+                { "Year", "Năm" },
+                { "Period", "Tháng/Quý" }
+            };
+        }
+
         private void ApplyTaxGridPresentation(DataGridView grid)
         {
             if (grid == null) return;
@@ -586,6 +577,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private async System.Threading.Tasks.Task EnsureAllowedBranchScopeAsync()
         {
+            if (_presetBranchId.HasValue)
+            {
+                _allowedBranchIds = new System.Collections.Generic.HashSet<int> { _presetBranchId.Value };
+                return;
+            }
             if (_allowedBranchIds != null && _allowedBranchIds.Count > 0) return;
             try
             {
@@ -631,6 +627,186 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
         }
 
+        private void RenderCards(DataTable table)
+        {
+            if (_cards == null) return;
+            _cards.SuspendLayout();
+            _cards.Controls.Clear();
+
+            if (table == null || table.Rows.Count == 0)
+            {
+                _cards.ResumeLayout();
+                return;
+            }
+
+            var reportType = _cboSource.SelectedItem?.ToString() ?? string.Empty;
+            var columnMap = GetColumnMap();
+            var displayColumns = GetDisplayColumns(table, reportType);
+
+            foreach (DataRow row in table.Rows)
+            {
+                _cards.Controls.Add(CreateCard(row, displayColumns, columnMap, reportType));
+            }
+
+            _cards.ResumeLayout();
+        }
+
+        private static System.Collections.Generic.List<DataColumn> GetDisplayColumns(DataTable table, string reportType)
+        {
+            if (table == null) return new System.Collections.Generic.List<DataColumn>();
+            if (reportType == "Thuế Doanh Thu")
+            {
+                var names = new[] { "PeriodLabel", "Revenue", "TaxRate", "TaxAmount" };
+                return table.Columns.Cast<DataColumn>()
+                    .Where(c => names.Contains(c.ColumnName))
+                    .ToList();
+            }
+
+            return table.Columns.Cast<DataColumn>().ToList();
+        }
+
+        private Control CreateCard(DataRow row, System.Collections.Generic.List<DataColumn> columns,
+            System.Collections.Generic.Dictionary<string, string> columnMap, string reportType)
+        {
+            int rowCount = columns?.Count ?? 0;
+            var card = new Panel
+            {
+                Width = 320,
+                Height = Math.Max(120, 52 + rowCount * 20),
+                BackColor = Color.White,
+                Margin = new Padding(6),
+                Padding = new Padding(10)
+            };
+
+            var title = new Label
+            {
+                Text = BuildCardTitle(row, columns, columnMap, reportType),
+                Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 79, 159),
+                AutoSize = true,
+                Dock = DockStyle.Top
+            };
+
+            var table = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                AutoSize = false,
+                BackColor = Color.Transparent,
+                Padding = new Padding(0, 8, 0, 0)
+            };
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+
+            int rowIndex = 0;
+            foreach (var col in columns)
+            {
+                string labelText = columnMap.TryGetValue(col.ColumnName, out var mapped)
+                    ? mapped
+                    : col.ColumnName;
+                string valueText = FormatValue(row, col);
+
+                var lblKey = new Label
+                {
+                    Text = labelText + ":",
+                    Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                    ForeColor = Color.FromArgb(90, 90, 90),
+                    AutoSize = true,
+                    Margin = new Padding(0, 2, 6, 2)
+                };
+
+                var lblValue = new Label
+                {
+                    Text = valueText,
+                    Font = new Font("Segoe UI", 9f),
+                    ForeColor = Color.FromArgb(40, 40, 40),
+                    AutoSize = true,
+                    MaximumSize = new Size(190, 0),
+                    Margin = new Padding(0, 2, 0, 2)
+                };
+
+                table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+                table.Controls.Add(lblKey, 0, rowIndex);
+                table.Controls.Add(lblValue, 1, rowIndex);
+                rowIndex++;
+            }
+
+            card.Controls.Add(table);
+            card.Controls.Add(title);
+            card.Paint += (s, e) =>
+            {
+                using (var pen = new Pen(Color.FromArgb(220, 230, 240), 1.4f))
+                {
+                    e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
+                }
+            };
+
+            return card;
+        }
+
+        private static string BuildCardTitle(DataRow row, System.Collections.Generic.List<DataColumn> columns,
+            System.Collections.Generic.Dictionary<string, string> columnMap, string reportType)
+        {
+            if (reportType == "Thuế Doanh Thu")
+            {
+                var period = ReadString(row, "PeriodLabel") ?? ReadString(row, "Period");
+                return string.IsNullOrWhiteSpace(period) ? "Thuế doanh thu" : $"Kỳ {period}";
+            }
+
+            var invoiceNo = ReadString(row, "InvoiceNumber");
+            if (!string.IsNullOrWhiteSpace(invoiceNo))
+                return $"Hóa đơn {invoiceNo}";
+
+            var paymentId = ReadString(row, "PaymentId");
+            if (!string.IsNullOrWhiteSpace(paymentId) && reportType == "Thanh Toán")
+                return $"Thanh toán #{paymentId}";
+
+            if (columns.Count > 0)
+            {
+                var col = columns[0];
+                var label = columnMap.TryGetValue(col.ColumnName, out var mapped) ? mapped : col.ColumnName;
+                var value = FormatValue(row, col);
+                return $"{label}: {value}";
+            }
+
+            return "Báo cáo";
+        }
+
+        private static string FormatValue(DataRow row, DataColumn col)
+        {
+            if (row == null || col == null) return "—";
+            var v = row[col];
+            if (v == null || v == DBNull.Value) return "—";
+
+            if (col.DataType == typeof(DateTime) || col.ColumnName.Contains("Date"))
+            {
+                if (DateTime.TryParse(v.ToString(), out var dt))
+                    return dt.ToString("dd/MM/yyyy");
+            }
+
+            if (col.ColumnName.Equals("TaxRate", StringComparison.OrdinalIgnoreCase))
+            {
+                if (decimal.TryParse(v.ToString(), out var rate))
+                    return rate.ToString("N2");
+            }
+
+            if (col.ColumnName.Contains("Amount") || col.ColumnName.Contains("Revenue")
+                || col.ColumnName.Contains("Cost") || col.ColumnName.Contains("Price"))
+            {
+                if (decimal.TryParse(v.ToString(), out var money))
+                    return money.ToString("N0");
+            }
+
+            return v.ToString();
+        }
+
+        private static string ReadString(DataRow row, string col)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(col)) return null;
+            var v = row[col];
+            return v == null || v == DBNull.Value ? null : v.ToString();
+        }
+
         private async System.Threading.Tasks.Task<DataTable> LoadRevenueTaxAsync()
         {
             _pnlTaxFilters.Visible = true;
@@ -658,8 +834,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             if (string.IsNullOrWhiteSpace(keyword))
             {
-                _grid.DataSource = _raw;
+                _viewTable = _raw;
                 _lblCount.Text = $"Tổng: {_raw.Rows.Count}";
+                RenderCards(_viewTable);
                 return;
             }
 
@@ -670,8 +847,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     filtered.ImportRow(row);
             }
 
-            _grid.DataSource = filtered;
+            _viewTable = filtered;
             _lblCount.Text = $"Tổng: {filtered.Rows.Count}";
+            RenderCards(_viewTable);
         }
 
         private static bool RowContains(DataRow row, string keyword)
@@ -688,7 +866,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void ExportCsv()
         {
-            var dt = _grid.DataSource as DataTable;
+            var dt = _viewTable ?? _raw;
             if (dt == null || dt.Rows.Count == 0)
             {
                 MessageBox.Show("Không có dữ liệu để xuất.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -819,8 +997,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 return;
 
             _raw = await LoadRevenueTaxAsync();
-            _grid.DataSource = _raw;
-            TranslateGridHeaders(_grid);
+            _viewTable = _raw;
             _lblCount.Text = $"Tổng: {_raw?.Rows.Count ?? 0}";
             UpdateFooterSummary();
             ApplyFilter();
@@ -866,7 +1043,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             if ((_cboSource.SelectedItem?.ToString() ?? string.Empty) != "Thuế Doanh Thu")
                 return;
             ApplyTaxColumns(_raw, _numTaxRate.Value);
-            _grid.Refresh();
+            RenderCards(_viewTable ?? _raw);
             UpdateFooterSummary();
         }
 

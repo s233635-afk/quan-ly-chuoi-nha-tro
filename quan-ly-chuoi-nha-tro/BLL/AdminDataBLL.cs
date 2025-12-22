@@ -175,8 +175,8 @@ namespace QuanLyNhaTro.BLL
         public Task<bool> DeleteInvoiceAsync(int invoiceId, bool deletePaymentsFirst)
             => dbHelper.DeleteInvoiceAsync(invoiceId, deletePaymentsFirst);
 
-        public Task<int> GenerateMonthlyInvoicesAsync(int year, int month, DateTime? invoiceDate = null, int? dueDay = null)
-            => dbHelper.GenerateMonthlyInvoicesAsync(year, month, invoiceDate, dueDay);
+        public Task<int> GenerateMonthlyInvoicesAsync(int year, int month, DateTime? invoiceDate = null, int? dueDay = null, decimal? taxRateOverride = null)
+            => dbHelper.GenerateMonthlyInvoicesAsync(year, month, invoiceDate, dueDay, taxRateOverride);
 
         // --- PAYMENT CRUD ---
         public Task<int> AddPaymentAsync(int invoiceId, DateTime paymentDate, decimal paymentAmount, string paymentMethod, string transactionReference, string notes)
@@ -197,13 +197,17 @@ namespace QuanLyNhaTro.BLL
             decimal amount,
             DateTime actionDate,
             string actionType,
+            string paymentMethod,
             string notes)
         {
             if (amount <= 0)
                 return Tuple.Create(0, 0);
 
-            string prefix = string.Equals(actionType, "Refund", StringComparison.OrdinalIgnoreCase) ? "REF" : "COK";
+            bool isRefund = string.Equals(actionType, "Refund", StringComparison.OrdinalIgnoreCase);
+            string prefix = isRefund ? "REF" : "COK";
             string invoiceNumber = $"{prefix}-{actionDate:yyyyMMdd}-{DateTime.Now:HHmmss}";
+            decimal signedAmount = isRefund ? -Math.Abs(amount) : Math.Abs(amount);
+            string method = string.IsNullOrWhiteSpace(paymentMethod) ? "Cash" : paymentMethod.Trim();
 
             int invoiceId = await AddInvoiceAsync(
                 invoiceNumber,
@@ -214,15 +218,15 @@ namespace QuanLyNhaTro.BLL
                 null,
                 0m,
                 0m,
-                amount,
+                signedAmount,
                 actionDate.Date,
                 0m);
 
             int paymentId = await AddPaymentAsync(
                 invoiceId,
                 actionDate.Date,
-                amount,
-                actionType,
+                signedAmount,
+                method,
                 null,
                 notes);
 

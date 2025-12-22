@@ -12,15 +12,17 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private const string SearchPlaceholder = "Tìm theo mã/tên/phòng/nhóm...";
 
         private readonly AdminDataBLL _bll = new AdminDataBLL();
+        private readonly int? _presetBranchId;
 
         private DataTable _rawTable;
         private DataTable _branchTable;
 
-        private DataGridView _grid;
+        private FlowLayoutPanel _cardsHost;
         private TextBox _txtSearch;
         private ComboBox _cboBranch;
         private ComboBox _cboActive;
         private Label _lblCount;
+        private (Panel Card, DataRow Row)? _selectedItem;
 
         private Button _btnAdd;
         private Button _btnEdit;
@@ -28,8 +30,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Button _btnToggleActive;
         private Button _btnRefresh;
 
-        public FrmAssetManager()
+        public FrmAssetManager() : this(null)
         {
+        }
+
+        public FrmAssetManager(int? branchId)
+        {
+            _presetBranchId = branchId;
             InitializeComponent();
             AdminEvents.DataChanged += HandleAdminDataChanged;
             FormClosing += (s, e) => AdminEvents.DataChanged -= HandleAdminDataChanged;
@@ -70,6 +77,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnDelete = MakeButton("🗑 Xóa", Color.FromArgb(211, 47, 47), async (s, e) => await DeleteSelectedAsync());
             _btnToggleActive = MakeButton("⚙ Bật/Tắt", Color.FromArgb(103, 58, 183), async (s, e) => await ToggleActiveAsync());
             _btnRefresh = MakeButton("⟳ Tải lại", Color.FromArgb(0, 122, 204), async (s, e) => await LoadAsync());
+            _btnEdit.Enabled = false;
+            _btnDelete.Enabled = false;
+            _btnToggleActive.Enabled = false;
 
             var pnlActions = new FlowLayoutPanel
             {
@@ -141,13 +151,18 @@ namespace quan_ly_chuoi_nha_tro.GUI
             pnlActionBar.Controls.Add(pnlFilters);
             pnlToolbar.Controls.Add(pnlActionBar);
 
-            // ===== GRID =====
-            _grid = MakeGrid();
-            _grid.Dock = DockStyle.Fill;
-            _grid.DoubleClick += async (s, e) => await EditSelectedAsync();
+            _cardsHost = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                AutoScroll = true,
+                WrapContents = true,
+                FlowDirection = FlowDirection.LeftToRight,
+                BackColor = BackColor,
+                Padding = new Padding(12)
+            };
 
             // Add all controls
-            Controls.Add(_grid);
+            Controls.Add(_cardsHost);
             Controls.Add(pnlToolbar);
 
             Load += async (s, e) => await LoadAsync();
@@ -161,9 +176,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 _rawTable = await _bll.GetAssetsAsync();
                 ApplyAdminBranchScopeToAssets();
                 TextFixer.FixDataTable(_rawTable, "AssetName", "Category", "Condition", "Description", "RoomNumber");
-                _grid.DataSource = _rawTable;
-                ApplyGridPresentation();
+                _selectedItem = null;
                 ApplyFilter();
+                UpdateActionState();
             }
             catch (Exception ex)
             {
@@ -212,6 +227,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 _cboBranch.DataSource = _branchTable;
                 _cboBranch.DisplayMember = "BranchDisplay";
                 _cboBranch.ValueMember = "BranchId";
+                if (_presetBranchId.HasValue)
+                {
+                    _cboBranch.SelectedValue = _presetBranchId.Value;
+                    _cboBranch.Enabled = false;
+                }
             }
             catch
             {
@@ -245,47 +265,196 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _rawTable = filtered;
         }
 
-        private void ApplyGridPresentation()
+        private void RenderCards(DataTable table)
         {
-            SetHeader("AssetId", "ID");
-            SetHeader("AssetCode", "Mã");
-            SetHeader("AssetName", "Tên tài sản");
-            SetHeader("Category", "Nhóm");
-            SetHeader("RoomNumber", "Phòng");
-            SetHeader("Quantity", "SL");
-            SetHeader("Condition", "Tình trạng");
-            SetHeader("PurchaseDate", "Ngày mua");
-            SetHeader("PurchasePrice", "Giá mua");
-            SetHeader("Description", "Mô tả");
-            SetHeader("IsActive", "Kích hoạt");
-            SetHeader("CreatedDate", "Tạo lúc");
-            SetHeader("UpdatedDate", "Cập nhật");
+            if (_cardsHost == null) return;
+            _cardsHost.SuspendLayout();
+            _cardsHost.Controls.Clear();
 
-            HideIfExists("RoomId");
-            HideIfExists("BranchId");
+            if (table == null || table.Rows.Count == 0)
+            {
+                _cardsHost.ResumeLayout();
+                return;
+            }
 
-            FormatDate("PurchaseDate");
-            FormatDateTime("CreatedDate");
-            FormatDateTime("UpdatedDate");
+            foreach (DataRow row in table.Rows)
+            {
+                _cardsHost.Controls.Add(CreateCard(row));
+            }
 
-            SetDisplayOrder(
-                "AssetId",
-                "AssetCode",
-                "AssetName",
-                "Category",
-                "RoomNumber",
-                "Quantity",
-                "Condition",
-                "PurchaseDate",
-                "PurchasePrice",
-                "IsActive",
-                "CreatedDate",
-                "UpdatedDate",
-                "Description"
-            );
+            _cardsHost.ResumeLayout();
+        }
 
-            if (_grid.Columns.Contains("Description"))
-                _grid.Columns["Description"].FillWeight = 180;
+        private Control CreateCard(DataRow row)
+        {
+            string code = ReadString(row, "AssetCode") ?? ReadString(row, "AssetId") ?? "—";
+            string name = ReadString(row, "AssetName") ?? "—";
+            string category = ReadString(row, "Category") ?? "—";
+            string room = ReadString(row, "RoomNumber") ?? ReadString(row, "RoomId") ?? "—";
+            string condition = ReadString(row, "Condition") ?? "—";
+            string description = ReadString(row, "Description") ?? string.Empty;
+            string date = FormatDate(ReadString(row, "PurchaseDate"));
+            string price = ReadMoney(row, "PurchasePrice");
+            int qty = ReadInt(row, "Quantity");
+            bool isActive = TryReadBool(row, "IsActive") ?? true;
+
+            var card = new Panel
+            {
+                Width = 340,
+                Height = 170,
+                BackColor = Color.White,
+                Margin = new Padding(8),
+                Padding = new Padding(1),
+                Cursor = Cursors.Hand,
+                Tag = row
+            };
+
+            var statusStrip = new Panel
+            {
+                Dock = DockStyle.Left,
+                Width = 6,
+                BackColor = isActive ? Color.SeaGreen : Color.DarkGray
+            };
+
+            var content = new Panel { Dock = DockStyle.Fill, Padding = new Padding(10, 8, 10, 8) };
+
+            var lblTitle = new Label
+            {
+                Text = $"{code} • {name}",
+                Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 79, 159),
+                AutoSize = false,
+                Width = 300,
+                Height = 22,
+                Location = new Point(0, 0),
+                AutoEllipsis = true
+            };
+
+            var lblStatus = new Label
+            {
+                Text = isActive ? "Kích hoạt" : "Đã tắt",
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                ForeColor = isActive ? Color.SeaGreen : Color.DimGray,
+                AutoSize = false,
+                Width = 120,
+                Height = 20,
+                TextAlign = ContentAlignment.MiddleRight,
+                Location = new Point(190, 0)
+            };
+
+            var lblCategory = new Label
+            {
+                Text = $"Nhóm: {category} | Phòng: {room}",
+                Font = new Font("Segoe UI", 9f),
+                ForeColor = Color.FromArgb(60, 60, 60),
+                AutoSize = false,
+                Width = 300,
+                Height = 18,
+                Location = new Point(0, 26),
+                AutoEllipsis = true
+            };
+
+            var lblQuantity = new Label
+            {
+                Text = $"SL: {qty} | Giá mua: {price}",
+                Font = new Font("Segoe UI", 9f),
+                ForeColor = Color.FromArgb(60, 60, 60),
+                AutoSize = false,
+                Width = 300,
+                Height = 18,
+                Location = new Point(0, 46),
+                AutoEllipsis = true
+            };
+
+            var lblDate = new Label
+            {
+                Text = $"Ngày mua: {date}",
+                Font = new Font("Segoe UI", 8.5f),
+                ForeColor = Color.DimGray,
+                AutoSize = false,
+                Width = 300,
+                Height = 18,
+                Location = new Point(0, 66)
+            };
+
+            var lblCondition = new Label
+            {
+                Text = $"Tình trạng: {condition}",
+                Font = new Font("Segoe UI", 8.5f),
+                ForeColor = Color.FromArgb(90, 90, 90),
+                AutoSize = false,
+                Width = 300,
+                Height = 18,
+                Location = new Point(0, 86),
+                AutoEllipsis = true
+            };
+
+            var lblDescription = new Label
+            {
+                Text = $"Mô tả: {description}",
+                Font = new Font("Segoe UI", 8.5f),
+                ForeColor = Color.FromArgb(90, 90, 90),
+                AutoSize = false,
+                Width = 300,
+                Height = 36,
+                Location = new Point(0, 106),
+                AutoEllipsis = true
+            };
+
+            content.Controls.Add(lblTitle);
+            content.Controls.Add(lblStatus);
+            content.Controls.Add(lblCategory);
+            content.Controls.Add(lblQuantity);
+            content.Controls.Add(lblDate);
+            content.Controls.Add(lblCondition);
+            content.Controls.Add(lblDescription);
+
+            var border = new Panel { Dock = DockStyle.Fill };
+            border.Paint += (s, e) =>
+            {
+                using (var pen = new Pen(IsSelected(card) ? Color.FromArgb(0, 122, 204) : Color.FromArgb(220, 230, 240), 1.4f))
+                {
+                    e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
+                }
+            };
+
+            border.Controls.Add(content);
+            card.Controls.Add(border);
+            card.Controls.Add(statusStrip);
+
+            void SelectAction()
+            {
+                SelectCard(card, row);
+            }
+
+            card.Click += (s, e) => SelectAction();
+            foreach (Control c in content.Controls) c.Click += (s, e) => SelectAction();
+            card.DoubleClick += async (s, e) => await EditSelectedAsync();
+            foreach (Control c in content.Controls) c.DoubleClick += async (s, e) => await EditSelectedAsync();
+
+            return card;
+        }
+
+        private void SelectCard(Panel card, DataRow row)
+        {
+            if (_selectedItem.HasValue && _selectedItem.Value.Card != null)
+                _selectedItem.Value.Card.Invalidate();
+            _selectedItem = (card, row);
+            UpdateActionState();
+            card.Invalidate();
+        }
+
+        private bool IsSelected(Panel card)
+        {
+            return _selectedItem.HasValue && ReferenceEquals(_selectedItem.Value.Card, card);
+        }
+
+        private void UpdateActionState()
+        {
+            bool has = _selectedItem.HasValue;
+            _btnEdit.Enabled = has;
+            _btnDelete.Enabled = has;
+            _btnToggleActive.Enabled = has;
         }
 
         private void ApplyFilter()
@@ -324,8 +493,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
 
             var filtered = rows.Any() ? rows.CopyToDataTable() : _rawTable.Clone();
-            _grid.DataSource = filtered;
             _lblCount.Text = $"Tổng: {filtered.Rows.Count}";
+            RenderCards(filtered);
+            _selectedItem = null;
+            UpdateActionState();
         }
 
         private async System.Threading.Tasks.Task AddNewAsync()
@@ -430,39 +601,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private DataRow GetCurrentRow()
         {
-            if (_grid.CurrentRow == null || _grid.CurrentRow.DataBoundItem == null) return null;
-            var drv = _grid.CurrentRow.DataBoundItem as DataRowView;
-            return drv?.Row;
-        }
-
-        private static DataGridView MakeGrid()
-        {
-            var g = new DataGridView
-            {
-                ReadOnly = true,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                MultiSelect = false,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                AllowUserToAddRows = false,
-                AllowUserToDeleteRows = false,
-                RowHeadersVisible = false,
-                BackgroundColor = Color.White,
-                BorderStyle = BorderStyle.None,
-                RowTemplate = { Height = 28 }
-            };
-            g.EnableHeadersVisualStyles = false;
-            g.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(0, 120, 215);
-            g.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            g.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 11, FontStyle.Bold);
-            g.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
-            g.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            g.DefaultCellStyle.Font = new Font("Segoe UI", 10, FontStyle.Regular);
-            g.DefaultCellStyle.ForeColor = Color.FromArgb(50, 50, 50);
-            g.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 249, 255);
-            g.DefaultCellStyle.SelectionBackColor = Color.FromArgb(179, 211, 247);
-            g.DefaultCellStyle.SelectionForeColor = Color.Black;
-            g.GridColor = Color.FromArgb(220, 230, 240);
-            return g;
+            return _selectedItem?.Row;
         }
 
         private static Button MakeButton(string text, Color backColor, EventHandler onClick)
@@ -527,41 +666,24 @@ namespace quan_ly_chuoi_nha_tro.GUI
             return tb;
         }
 
-        private void SetHeader(string columnName, string headerText)
+        private static string FormatDate(string raw)
         {
-            if (_grid.Columns.Contains(columnName))
-                _grid.Columns[columnName].HeaderText = headerText;
+            if (DateTime.TryParse(raw, out var dt))
+                return dt.ToString("dd/MM/yyyy");
+            return "—";
         }
 
-        private void HideIfExists(string columnName)
+        private static string ReadMoney(DataRow row, params string[] cols)
         {
-            if (_grid.Columns.Contains(columnName))
-                _grid.Columns[columnName].Visible = false;
-        }
-
-        private void FormatDate(string columnName)
-        {
-            if (_grid.Columns.Contains(columnName))
-                _grid.Columns[columnName].DefaultCellStyle.Format = "dd/MM/yyyy";
-        }
-
-        private void FormatDateTime(string columnName)
-        {
-            if (_grid.Columns.Contains(columnName))
-                _grid.Columns[columnName].DefaultCellStyle.Format = "dd/MM/yyyy HH:mm";
-        }
-
-        private void SetDisplayOrder(params string[] order)
-        {
-            int idx = 0;
-            foreach (var name in order)
+            foreach (var c in cols)
             {
-                if (_grid.Columns.Contains(name))
-                {
-                    _grid.Columns[name].DisplayIndex = idx;
-                    idx++;
-                }
+                if (!row.Table.Columns.Contains(c)) continue;
+                var v = row[c];
+                if (v == null || v == DBNull.Value) continue;
+                if (decimal.TryParse(v.ToString(), out var d)) return d.ToString("N0");
+                try { return Convert.ToDecimal(v).ToString("N0"); } catch { }
             }
+            return "0";
         }
 
         private static bool Contains(DataRow row, string column, string keywordLower)

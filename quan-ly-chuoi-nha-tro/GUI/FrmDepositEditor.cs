@@ -18,6 +18,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private DateTimePicker dtDeposit;
         private ComboBox cboType;
         private ComboBox cboStatus;
+        private ComboBox cboPaymentMethod;
         private NumericUpDown numReturned;
         private DateTimePicker dtReturned;
         private TextBox txtNotes;
@@ -43,7 +44,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
-            this.ClientSize = new Size(560, 460);
+            this.ClientSize = new Size(560, 500);
 
             int labelWidth = 150;
             int inputWidth = 320;
@@ -72,12 +73,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
             dtDeposit = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true };
             cboType = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
             cboStatus = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
+            cboPaymentMethod = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
             numReturned = new NumericUpDown { Minimum = 0, Maximum = 1000000000, DecimalPlaces = 0, ThousandsSeparator = true };
             dtReturned = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true };
             txtNotes = new TextBox { Multiline = true, Height = 80, ScrollBars = ScrollBars.Vertical };
 
             cboType.Items.AddRange(new object[] { "Đặt chỗ", "Chính thức" });
             cboStatus.Items.AddRange(new object[] { "Chờ xử lý", "Đã xác nhận", "Hoàn cọc", "Hủy" });
+            cboPaymentMethod.Items.AddRange(new object[] { "Tiền mặt", "Thẻ" });
+            cboPaymentMethod.SelectedIndex = 0;
 
             this.Controls.Add(MakeLabel("Khách thuê (*)", top));
             this.Controls.Add(MakeInput(cboTenant, top));
@@ -101,6 +105,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             this.Controls.Add(MakeLabel("Trạng thái", top));
             this.Controls.Add(MakeInput(cboStatus, top));
+            top += line;
+
+            this.Controls.Add(MakeLabel("Hình thức thanh toán", top));
+            this.Controls.Add(MakeInput(cboPaymentMethod, top));
             top += line;
 
             this.Controls.Add(MakeLabel("Số tiền hoàn", top));
@@ -137,6 +145,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             this.Controls.Add(btnSave);
             this.Controls.Add(btnCancel);
+
+            if (_existing == null)
+            {
+                cboStatus.SelectedIndex = 1;
+                dtDeposit.Checked = true;
+            }
         }
 
         private async System.Threading.Tasks.Task LoadLookupAsync()
@@ -256,6 +270,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 return;
             }
 
+            if ((cboStatus.Text == "Đã xác nhận" || cboStatus.Text == "Hoàn cọc") && cboPaymentMethod.SelectedIndex < 0)
+            {
+                MessageBox.Show("Vui lòng chọn hình thức thanh toán.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                cboPaymentMethod.Focus();
+                return;
+            }
+
             int tenantId = Convert.ToInt32(cboTenant.SelectedValue);
             int roomId = Convert.ToInt32(cboRoom.SelectedValue);
             decimal amount = numAmount.Value;
@@ -264,6 +285,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             DateTime? returnedDate = dtReturned.Checked ? (DateTime?)dtReturned.Value.Date : null;
             string type = cboType.Text;
             string status = cboStatus.Text;
+            string paymentMethod = cboPaymentMethod.SelectedItem?.ToString() == "Thẻ" ? "Card" : "Cash";
             string notes = txtNotes.Text.Trim();
 
             try
@@ -324,10 +346,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
                         linkAmount,
                         linkDate,
                         actionType,
+                        paymentMethod,
                         $"{(isRefund ? "Hoàn cọc" : "Xác nhận cọc")} - DepositId: {depositId}");
 
                     notes = AppendPaymentNote(notes, result.Item1, result.Item2, actionType);
                     await _bll.UpdateDepositAsync(depositId, tenantId, roomId, amount, depositDate, type, status, returned, returnedDate, notes);
+
+                    string actionTitle = isRefund ? "Hoàn cọc" : "Xác nhận cọc";
+                    string message = $"{actionTitle}: {cboTenant.Text} | Phòng: {cboRoom.Text} | Số tiền: {linkAmount:N0} | Hình thức: {(paymentMethod == \"Card\" ? "Thẻ" : "Tiền mặt")}";
+                    await _bll.AddNotificationAsync(null, actionTitle, message, "Unread");
                 }
 
                 AdminEvents.NotifyDataChanged();

@@ -290,6 +290,9 @@
     <Compile Include="GUI\FrmInvoiceEditor.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="GUI\FrmInvoiceExportForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="GUI\FrmInvoicePaymentUnified.cs">
       <SubType>Form</SubType>
     </Compile>
