@@ -1,8 +1,10 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
+using System.Globalization;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
@@ -42,6 +44,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Button _btnEdit;
 
         private int _selectedRoomId = 0;
+        private int _inspectingRoomId = 0;
         private DataRow _selectedRoomRow = null;
 
         public FrmRoomManager(AdminDataBLL bll, int? branchId = null)
@@ -226,11 +229,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 Dock = DockStyle.Fill,
                 AutoScroll = true,
-                WrapContents = true,
-                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                FlowDirection = FlowDirection.TopDown,
                 BackColor = Color.FromArgb(245, 247, 250),
                 Padding = new Padding(16)
             };
+            _roomCardsHost.SizeChanged += (s, e) => AdjustSectionWidths();
 
             _roomDetailPanel = new Panel
             {
@@ -279,6 +283,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                 EnsureDisplayColumns();
                 PopulateOccupancy();
+                NormalizeRoomStatusForOccupancy();
                 PopulateStatusFilter();
 
                 ApplyFilter();
@@ -371,6 +376,27 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
         }
 
+        private void NormalizeRoomStatusForOccupancy()
+        {
+            if (_rooms == null) return;
+            var emptyId = GetEmptyStatusId();
+            var emptyName = GetEmptyStatusName();
+
+            foreach (DataRow row in _rooms.Rows)
+            {
+                int occupants = TryGetInt(row, "Occupants");
+                string statusName = row.Table.Columns.Contains("StatusName") ? row["StatusName"]?.ToString() ?? string.Empty : string.Empty;
+
+                if (occupants < 1 && IsOccupiedStatusName(statusName))
+                {
+                    if (emptyId.HasValue && row.Table.Columns.Contains("CurrentStatusId"))
+                        row["CurrentStatusId"] = emptyId.Value;
+                    if (!string.IsNullOrWhiteSpace(emptyName) && row.Table.Columns.Contains("StatusName"))
+                        row["StatusName"] = emptyName;
+                }
+            }
+        }
+
         private void PopulateStatusFilter()
         {
             var dt = new DataTable();
@@ -415,13 +441,51 @@ namespace quan_ly_chuoi_nha_tro.GUI
             view.RowFilter = filters.Count > 0 ? string.Join(" AND ", filters) : string.Empty;
 
             var filteredTable = view.ToTable();
-            var displayedRows = filteredTable.AsEnumerable()
-                .OrderBy(r => SafeToString(r, "RoomNumber"))
-                .Take(MaxDisplayedRooms)
-                .ToList();
+            var filteredRows = filteredTable.AsEnumerable().ToList();
+            var displayedRows = LimitRoomsBySection(filteredRows);
 
             RenderRoomCards(displayedRows);
             UpdateStats(displayedRows);
+        }
+
+        private List<DataRow> LimitRoomsBySection(IEnumerable<DataRow> rows)
+        {
+            var list = rows?.ToList() ?? new List<DataRow>();
+            if (list.Count == 0) return list;
+
+            if (!_branchId.HasValue)
+            {
+                var roomsA = list
+                    .Where(r => (SafeToString(r, "RoomNumber") ?? string.Empty).StartsWith("A", StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(r => GetRoomSortKey(SafeToString(r, "RoomNumber")))
+                    .Take(10);
+
+                var roomsB = list
+                    .Where(r => (SafeToString(r, "RoomNumber") ?? string.Empty).StartsWith("B", StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(r => GetRoomSortKey(SafeToString(r, "RoomNumber")))
+                    .Take(10);
+
+                return roomsA.Concat(roomsB).ToList();
+            }
+
+            var unique = list
+                .GroupBy(r => NormalizeRoomNumber(SafeToString(r, "RoomNumber")))
+                .Select(g => g.First())
+                .ToList();
+
+            var roomsAStaff = unique
+                .Where(r => (SafeToString(r, "RoomNumber") ?? string.Empty).StartsWith("A", StringComparison.OrdinalIgnoreCase))
+                .OrderBy(r => GetRoomSortKey(SafeToString(r, "RoomNumber")))
+                .ToList();
+
+            var roomsBStaff = unique
+                .Where(r => (SafeToString(r, "RoomNumber") ?? string.Empty).StartsWith("B", StringComparison.OrdinalIgnoreCase))
+                .OrderBy(r => GetRoomSortKey(SafeToString(r, "RoomNumber")))
+                .Take(10)
+                .ToList();
+
+            var selectedA = SelectRoomsForSectionA(roomsAStaff);
+            return selectedA.Concat(roomsBStaff).ToList();
         }
 
         private void RenderRoomCards(IEnumerable<DataRow> displayedRows)
@@ -444,36 +508,154 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 return;
             }
 
-            foreach (DataRow row in roomsToRender)
-            {
-                int roomId = TryGetInt(row, "RoomId");
-                if (roomId <= 0) continue;
+            var roomsA = roomsToRender
+                .Where(r => (SafeToString(r, "RoomNumber") ?? string.Empty).StartsWith("A", StringComparison.OrdinalIgnoreCase))
+                .OrderBy(r => GetRoomSortKey(SafeToString(r, "RoomNumber")))
+                .ToList();
+            var roomsB = roomsToRender
+                .Where(r => (SafeToString(r, "RoomNumber") ?? string.Empty).StartsWith("B", StringComparison.OrdinalIgnoreCase))
+                .OrderBy(r => GetRoomSortKey(SafeToString(r, "RoomNumber")))
+                .ToList();
 
-                var card = CreateRoomCard(row, roomId);
-                _roomCardsHost.Controls.Add(card);
-            }
+            _roomCardsHost.Controls.Add(BuildRoomSection("Dãy A", roomsA));
+            _roomCardsHost.Controls.Add(BuildSectionDivider());
+            _roomCardsHost.Controls.Add(BuildRoomSection("Dãy B", roomsB));
+
+            AdjustSectionWidths();
 
             _roomCardsHost.ResumeLayout();
             _lblRoomCount.Text = $"Phòng: {roomsToRender.Count}/{MaxDisplayedRooms}";
         }
 
+        private Control BuildRoomSection(string title, IList<DataRow> rows)
+        {
+            var container = new TableLayoutPanel
+            {
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                ColumnCount = 1,
+                RowCount = 2,
+                Margin = new Padding(0, 0, 0, 8),
+                Tag = "room-section"
+            };
+            container.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+            container.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            container.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
+            var header = new Label
+            {
+                Text = title,
+                AutoSize = true,
+                Font = new Font("Segoe UI", 12.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 79, 159),
+                Margin = new Padding(4, 0, 0, 8)
+            };
+
+            var flow = new FlowLayoutPanel
+            {
+                AutoSize = false,
+                WrapContents = true,
+                FlowDirection = FlowDirection.LeftToRight,
+                Margin = new Padding(0),
+                Padding = new Padding(0),
+                Tag = "room-section-flow"
+            };
+            int initialWidth = _roomCardsHost == null
+                ? 900
+                : Math.Max(200, _roomCardsHost.ClientSize.Width - _roomCardsHost.Padding.Left - _roomCardsHost.Padding.Right);
+            flow.Width = initialWidth;
+            flow.MaximumSize = new Size(initialWidth, 0);
+
+            if (rows == null || rows.Count == 0)
+            {
+                flow.Controls.Add(new Label
+                {
+                    AutoSize = true,
+                    Text = "Không có phòng.",
+                    ForeColor = Color.FromArgb(90, 90, 90)
+                });
+            }
+            else
+            {
+                foreach (var row in rows)
+                {
+                    int roomId = TryGetInt(row, "RoomId");
+                    if (roomId <= 0) continue;
+                    flow.Controls.Add(CreateRoomCard(row, roomId));
+                }
+            }
+
+            container.Controls.Add(header, 0, 0);
+            container.Controls.Add(flow, 0, 1);
+            flow.Height = flow.PreferredSize.Height;
+            return container;
+        }
+
+        private Control BuildSectionDivider()
+        {
+            var divider = new Panel
+            {
+                Height = 14,
+                BackColor = Color.FromArgb(220, 225, 232),
+                Margin = new Padding(0, 2, 0, 10),
+                Tag = "room-divider"
+            };
+
+            var line = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 2,
+                BackColor = Color.FromArgb(200, 205, 212)
+            };
+            divider.Controls.Add(line);
+            return divider;
+        }
+
+        private void AdjustSectionWidths()
+        {
+            if (_roomCardsHost == null) return;
+            int width = Math.Max(200, _roomCardsHost.ClientSize.Width - _roomCardsHost.Padding.Left - _roomCardsHost.Padding.Right);
+
+            foreach (Control ctl in _roomCardsHost.Controls)
+            {
+                if (ctl is TableLayoutPanel table && (string)table.Tag == "room-section")
+                {
+                    table.Width = width;
+                    table.MaximumSize = new Size(width, 0);
+
+                    foreach (Control child in table.Controls)
+                    {
+                        if (child is FlowLayoutPanel flow && (string)flow.Tag == "room-section-flow")
+                        {
+                            flow.Width = width;
+                            flow.MaximumSize = new Size(width, 0);
+                            flow.Height = flow.PreferredSize.Height;
+                        }
+                    }
+                }
+                else if (ctl is Panel panel && (string)panel.Tag == "room-divider")
+                {
+                    panel.Width = width;
+                }
+            }
+        }
+
         private Panel CreateRoomCard(DataRow row, int roomId)
         {
-            string roomNumber = SafeToString(row, "RoomNumber") ?? "—";
-            string typeName = SafeToString(row, "TypeName") ?? "—";
-            string statusName = SafeToString(row, "StatusName") ?? "—";
+            string roomNumber = SafeToString(row, "RoomNumber") ?? "N/A";
+            string typeName = SafeToString(row, "TypeName") ?? "N/A";
+            string statusName = SafeToString(row, "StatusName") ?? "N/A";
             var statusColor = GetStatusColor(statusName);
-            var hoverColor = ControlPaint.Light(statusColor, 0.1f);
+            var hoverColor = Color.FromArgb(245, 249, 255);
             decimal price = TryGetDecimal(row, "RoomPrice") ?? 0m;
             int occupants = TryGetInt(row, "Occupants");
             bool isSelected = _selectedRoomId == roomId;
-            var selectedColor = ControlPaint.Dark(statusColor, 0.05f);
 
             var card = new Panel
             {
                 Width = 300,
                 Height = 180,
-                BackColor = isSelected ? selectedColor : statusColor,
+                BackColor = isSelected ? Color.FromArgb(236, 242, 255) : Color.White,
                 BorderStyle = BorderStyle.None,
                 Margin = new Padding(10, 10, 10, 10),
                 Cursor = Cursors.Hand,
@@ -482,15 +664,24 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             card.Paint += (s, e) =>
             {
-                var borderColor = isSelected ? Color.FromArgb(0, 95, 180) : Color.FromArgb(70, 160, 230);
-                var borderWidth = isSelected ? 3 : 2;
+                var borderColor = isSelected ? Color.FromArgb(0, 95, 180) : Color.FromArgb(210, 215, 220);
+                var borderWidth = isSelected ? 3 : 1;
                 using (var pen = new Pen(borderColor, borderWidth))
                 {
                     e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
                 }
-                using (var shadowPen = new Pen(Color.FromArgb(200, 220, 245), 1))
+                using (var shadowPen = new Pen(Color.FromArgb(230, 235, 240), 1))
                 {
                     e.Graphics.DrawRectangle(shadowPen, 1, 1, card.Width - 3, card.Height - 3);
+                }
+
+                if (_inspectingRoomId == roomId)
+                {
+                    var rect = new Rectangle(card.Width - 26, card.Height - 26, 20, 20);
+                    using (var fill = new SolidBrush(Color.FromArgb(225, 238, 255)))
+                        e.Graphics.FillRectangle(fill, rect);
+                    using (var pen = new Pen(Color.FromArgb(0, 122, 204), 2))
+                        e.Graphics.DrawRectangle(pen, rect);
                 }
             };
 
@@ -500,8 +691,16 @@ namespace quan_ly_chuoi_nha_tro.GUI
             };
             card.MouseLeave += (s, e) =>
             {
-                card.BackColor = isSelected ? selectedColor : statusColor;
+                card.BackColor = isSelected ? Color.FromArgb(236, 242, 255) : Color.White;
             };
+
+            var statusBar = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 10,
+                BackColor = statusColor
+            };
+            card.Controls.Add(statusBar);
 
             var mainLayout = new TableLayoutPanel
             {
@@ -518,8 +717,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var lblRoom = new Label
             {
                 Text = $"Phòng {roomNumber}",
-                Font = new Font("Segoe UI", 16, FontStyle.Bold),
-                ForeColor = Color.FromArgb(0, 79, 159),
+                Font = new Font("Segoe UI", 17, FontStyle.Bold),
+                ForeColor = Color.FromArgb(20, 50, 90),
                 Dock = DockStyle.Fill,
                 Height = 28,
                 AutoSize = false,
@@ -571,34 +770,34 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var lblTypeInfo = new Label
             {
                 Text = $"Loại: {GetTypeIcon(typeName)} {typeName}",
-                Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                ForeColor = Color.FromArgb(80, 80, 80),
+                Font = new Font("Segoe UI", 11f, FontStyle.Regular),
+                ForeColor = Color.FromArgb(0, 122, 204),
                 Dock = DockStyle.Top,
-                Height = 20,
+                Height = 22,
                 AutoSize = false,
                 TextAlign = ContentAlignment.TopLeft,
-                Margin = new Padding(0, 0, 0, 2)
+                Margin = new Padding(0, 0, 0, 4)
             };
 
             var lblStatusInfo = new Label
             {
                 Text = $"Trạng thái: {statusName}",
-                Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                ForeColor = Color.FromArgb(80, 80, 80),
+                Font = new Font("Segoe UI Semibold", 11.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(25, 55, 110),
                 Dock = DockStyle.Top,
-                Height = 20,
+                Height = 22,
                 AutoSize = false,
                 TextAlign = ContentAlignment.TopLeft,
-                Margin = new Padding(0, 0, 0, 2)
+                Margin = new Padding(0, 0, 0, 4)
             };
 
             var lblOccupantsInfo = new Label
             {
                 Text = $"Số người: {occupants}",
-                Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                ForeColor = Color.FromArgb(80, 80, 80),
+                Font = new Font("Segoe UI", 11f, FontStyle.Regular),
+                ForeColor = Color.FromArgb(40, 40, 40),
                 Dock = DockStyle.Top,
-                Height = 20,
+                Height = 22,
                 AutoSize = false,
                 TextAlign = ContentAlignment.TopLeft
             };
@@ -614,12 +813,25 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             card.Controls.Add(mainLayout);
 
+
             card.Click += (s, e) => ShowRoomDetailsForm(row, roomId);
             lblRoom.Click += (s, e) => ShowRoomDetailsForm(row, roomId);
             lblPrice.Click += (s, e) => ShowRoomDetailsForm(row, roomId);
             lblTypeInfo.Click += (s, e) => ShowRoomDetailsForm(row, roomId);
             lblStatusInfo.Click += (s, e) => ShowRoomDetailsForm(row, roomId);
             lblOccupantsInfo.Click += (s, e) => ShowRoomDetailsForm(row, roomId);
+
+            card.Click += (s, e) =>
+            {
+                ShowRoomDetails(row, roomId);
+                ShowRoomInfoForm(row, roomId);
+            };
+            lblRoom.Click += (s, e) => { ShowRoomDetails(row, roomId); ShowRoomInfoForm(row, roomId); };
+            lblPrice.Click += (s, e) => { ShowRoomDetails(row, roomId); ShowRoomInfoForm(row, roomId); };
+            lblTypeInfo.Click += (s, e) => { ShowRoomDetails(row, roomId); ShowRoomInfoForm(row, roomId); };
+            lblStatusInfo.Click += (s, e) => { ShowRoomDetails(row, roomId); ShowRoomInfoForm(row, roomId); };
+            lblOccupantsInfo.Click += (s, e) => { ShowRoomDetails(row, roomId); ShowRoomInfoForm(row, roomId); };
+
 
             return card;
         }
@@ -628,6 +840,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             _selectedRoomId = roomId;
             _selectedRoomRow = row;
+            _inspectingRoomId = roomId;
 
             try
             {
@@ -660,6 +873,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void ShowRoomDetails(DataRow row, int roomId)
         {
+
             ShowRoomDetailsForm(row, roomId);
         }
 
@@ -677,6 +891,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     method?.Invoke(null, null);
                 }
             }
+
+            _selectedRoomId = roomId;
+            _selectedRoomRow = row;
+            _inspectingRoomId = roomId;
+            ApplyFilter();
+            _btnEdit.Visible = true;
+
         }
 
         private void BuildRoomDetailsPanel()
@@ -748,6 +969,125 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _roomDetailPanel.Controls.Add(detailHeader);
         }
 
+        private void ShowRoomInfoForm(DataRow row, int roomId)
+        {
+            if (row == null) return;
+
+            DataRow activeHistory = null;
+            if (_tenantHistory != null && _tenantHistory.Columns.Contains("RoomId"))
+            {
+                activeHistory = _tenantHistory.AsEnumerable()
+                    .Where(r => TryGetInt(r, "RoomId") == roomId)
+                    .Where(IsHistoryActive)
+                    .OrderByDescending(r => TryGetDate(r, "CheckInDate") ?? DateTime.MinValue)
+                    .FirstOrDefault();
+            }
+
+            DataRow tenantRow = null;
+            int tenantId = 0;
+            if (activeHistory != null)
+            {
+                tenantId = TryGetInt(activeHistory, "TenantId");
+                if (_tenants != null && tenantId > 0)
+                    tenantRow = _tenants.AsEnumerable().FirstOrDefault(t => TryGetInt(t, "TenantId") == tenantId);
+            }
+
+            DataRow contractRow = null;
+            if (_contracts != null && _contracts.Columns.Contains("RoomId"))
+            {
+                var contracts = _contracts.AsEnumerable().Where(c => TryGetInt(c, "RoomId") == roomId);
+                if (tenantId > 0)
+                    contracts = contracts.Where(c => TryGetInt(c, "TenantId") == tenantId);
+
+                contractRow = contracts
+                    .OrderByDescending(c => TryGetDate(c, "StartDate") ?? DateTime.MinValue)
+                    .FirstOrDefault();
+            }
+
+            using (var frm = new FrmRoomTenantQuickView(_bll, RefreshRoomQuickViewAsync, true))
+            {
+                var tenantSummary = BuildTenantSummary(roomId);
+                frm.StartPosition = FormStartPosition.CenterParent;
+                frm.UpdateData(roomId, row, tenantRow, contractRow, tenantSummary);
+                frm.ShowDialog(this);
+            }
+        }
+
+        private string BuildTenantSummary(int roomId)
+        {
+            if (_tenantHistory == null || _tenants == null) return null;
+
+            var tenantIds = _tenantHistory.AsEnumerable()
+                .Where(r => TryGetInt(r, "RoomId") == roomId)
+                .Where(IsHistoryActive)
+                .Select(r => TryGetInt(r, "TenantId"))
+                .Where(id => id > 0)
+                .Distinct()
+                .ToList();
+
+            if (tenantIds.Count == 0) return null;
+
+            var lines = new List<string>();
+            int index = 1;
+            foreach (var tenantId in tenantIds)
+            {
+                var tenant = _tenants.AsEnumerable().FirstOrDefault(t => TryGetInt(t, "TenantId") == tenantId);
+                if (tenant == null) continue;
+
+                var name = SafeToString(tenant, "FullName");
+                if (!string.IsNullOrWhiteSpace(name))
+                    name = TextFixer.FixUtf8Mojibake(name) ?? name;
+
+                var phone = SafeToString(tenant, "PhoneNumber");
+                if (!string.IsNullOrWhiteSpace(phone))
+                    phone = TextFixer.FixUtf8Mojibake(phone) ?? phone;
+
+                if (string.IsNullOrWhiteSpace(name) && string.IsNullOrWhiteSpace(phone)) continue;
+                var line = string.IsNullOrWhiteSpace(phone) ? name : $"{name} - {phone}";
+                lines.Add($"{index}. {line}".Trim());
+                index++;
+            }
+
+            return lines.Count > 0 ? string.Join("\n", lines) : null;
+        }
+
+        private static bool IsHistoryActive(DataRow history)
+        {
+            if (history == null || history.Table == null) return false;
+
+            var checkout = history.Table.Columns.Contains("CheckOutDate") ? history["CheckOutDate"] : null;
+            bool hasCheckout = checkout != null && checkout != DBNull.Value;
+            if (!hasCheckout) return true;
+
+            if (history.Table.Columns.Contains("Status"))
+            {
+                var statusText = history["Status"]?.ToString() ?? string.Empty;
+                return statusText.IndexOf("active", StringComparison.OrdinalIgnoreCase) >= 0
+                    || statusText.IndexOf("đang", StringComparison.OrdinalIgnoreCase) >= 0;
+            }
+
+            return false;
+        }
+
+        private static DateTime? TryGetDate(DataRow row, string column)
+        {
+            if (row == null || !row.Table.Columns.Contains(column)) return null;
+            return DateTime.TryParse(row[column]?.ToString(), out var val) ? val : (DateTime?)null;
+        }
+
+        private async System.Threading.Tasks.Task RefreshRoomQuickViewAsync(int roomId)
+        {
+            await LoadRoomsAsync();
+            var refreshed = _rooms?.AsEnumerable().FirstOrDefault(r => TryGetInt(r, "RoomId") == roomId);
+            if (refreshed != null)
+            {
+                _selectedRoomId = roomId;
+                _selectedRoomRow = refreshed;
+                _inspectingRoomId = roomId;
+                ApplyFilter();
+            }
+        }
+
         private Control BuildDetailHeader(string title)
         {
             var panel = new Panel { Dock = DockStyle.Top, Height = 40 };
@@ -755,8 +1095,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var lblTitle = new Label
             {
                 Text = title,
-                Font = new Font("Segoe UI", 13, FontStyle.Bold),
-                ForeColor = Color.FromArgb(0, 79, 159),
+                Font = new Font("Segoe UI", 13.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(10, 60, 130),
                 Dock = DockStyle.Left,
                 AutoSize = false,
                 TextAlign = ContentAlignment.MiddleLeft,
@@ -779,6 +1119,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 _selectedRoomRow = null;
                 _selectedRoomId = 0;
+                _inspectingRoomId = 0;
                 _btnEdit.Visible = false;
                 if (_splitContainer != null) _splitContainer.Panel2Collapsed = true;
             };
@@ -1002,8 +1343,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var lblLabel = new Label
             {
                 Text = label,
-                Font = new Font("Segoe UI", 11, FontStyle.Bold),
-                ForeColor = Color.FromArgb(70, 70, 70),
+                Font = new Font("Segoe UI", 11.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(45, 45, 45),
                 AutoSize = true,
                 Margin = new Padding(0, 6, 8, 6)
             };
@@ -1011,8 +1352,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var lblValue = new Label
             {
                 Text = value ?? "—",
-                Font = new Font("Segoe UI", 12, FontStyle.Bold),
-                ForeColor = Color.FromArgb(30, 55, 90),
+                Font = new Font("Segoe UI", 12.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(25, 55, 110),
                 AutoSize = true,
                 Margin = new Padding(0, 6, 0, 6)
             };
@@ -1025,8 +1366,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             var list = rows?.ToList() ?? new List<DataRow>();
 
-            int occupied = list.Count(r => (r["StatusName"]?.ToString() ?? string.Empty)
-                .IndexOf("đang", StringComparison.OrdinalIgnoreCase) >= 0);
+            int occupied = list.Count(r =>
+                IsOccupiedStatusName(r["StatusName"]?.ToString()) && TryGetInt(r, "Occupants") >= 1);
 
             _lblSummary.Text = $"Đang ở/Tổng: {occupied}/{MaxDisplayedRooms} phòng";
         }
@@ -1063,7 +1404,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                 var btnOk = new Button
                 {
-                    Text = "Cập nhật",
+                    Text = "Cap nhat",
                     DialogResult = DialogResult.OK,
                     Width = 110,
                     Height = 32,
@@ -1076,7 +1417,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                 var btnCancel = new Button
                 {
-                    Text = "Hủy",
+                    Text = "Huy",
                     DialogResult = DialogResult.Cancel,
                     Width = 90,
                     Height = 32,
@@ -1095,6 +1436,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     try
                     {
                         int newStatusId = Convert.ToInt32(cbo.SelectedValue);
+                        int currentOccupants = TryGetInt(_selectedRoomRow, "Occupants");
+                        if (IsOccupiedStatusId(newStatusId) && currentOccupants < 1)
+                        {
+                            MessageBox.Show("Phòng chưa có người, không thể chuyển sang Đang ở.", "Cảnh báo",
+                                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+
                         await UpdateRoomStatusAsync(_selectedRoomId, newStatusId);
                         await LoadRoomsAsync();
                     }
@@ -1114,14 +1463,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 return;
             }
 
-            using (var dlg = new RoomEditDialog(_selectedRoomRow, _roomTypes, _statuses))
+            int roomId = TryGetInt(_selectedRoomRow, "RoomId");
+
+            using (var dlg = new RoomEditDialog(_selectedRoomRow, _roomTypes, _statuses, _branchId.HasValue))
             {
                 if (dlg.ShowDialog(this) != DialogResult.OK) return;
 
                 try
                 {
                     string roomNumber = SafeToString(_selectedRoomRow, "RoomNumber") ?? string.Empty;
-                    int roomId = TryGetInt(_selectedRoomRow, "RoomId");
                     int branchId = TryGetInt(_selectedRoomRow, "BranchId");
                     int? sectionId = TryGetNullableInt(_selectedRoomRow, "SectionId");
                     int? roomTypeId = dlg.SelectedRoomTypeId ?? TryGetNullableInt(_selectedRoomRow, "RoomTypeId");
@@ -1132,14 +1482,80 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     bool? isActive = dlg.IsActive ?? TryGetBool(_selectedRoomRow, "IsActive");
                     int occupants = dlg.OccupantCount ?? TryGetInt(_selectedRoomRow, "Occupants");
 
+                    if (occupants > 5)
+                    {
+                        MessageBox.Show("Mỗi phòng tối đa 5 người.", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+
+                    if (IsOccupiedStatusId(statusId) && occupants < 1)
+                    {
+                        var emptyId = GetEmptyStatusId();
+                        if (emptyId.HasValue)
+                        {
+                            statusId = emptyId.Value;
+                            MessageBox.Show("Phòng chưa có người, tự chuyển trạng thái về Trống.", "Thông báo",
+                                MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        }
+                        else
+                        {
+                            MessageBox.Show("Trạng thái Đang ở yêu cầu ít nhất 1 người.", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+                    }
+
                     await _bll.UpdateRoomAsync(roomId, roomNumber, branchId, sectionId, roomTypeId, price, statusId, floor, area, isActive, occupants);
+
                     await LoadRoomsAsync();
                     AdminEvents.NotifyDataChanged();
+
+
+                    // Cập nhật tại chỗ cho thấy ngay kết quả
+                    UpdateRowValues(_selectedRoomRow, roomNumber, roomTypeId, price, statusId, floor, area, isActive, occupants);
+                    UpdateRowValues(_rooms?.AsEnumerable().FirstOrDefault(r => TryGetInt(r, "RoomId") == roomId), roomNumber, roomTypeId, price, statusId, floor, area, isActive, occupants);
+
+                    ApplyFilter();
+                    BuildRoomDetailsPanel();
+                    _inspectingRoomId = roomId;
+ 
                 }
                 catch (Exception ex)
                 {
                     MessageBox.Show("Lỗi cập nhật phòng: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
+            }
+        }
+
+        private void UpdateRowValues(DataRow row, string roomNumber, int? roomTypeId, decimal? price, int? statusId, int? floor, decimal? area, bool? isActive, int occupants)
+        {
+            if (row == null || row.Table == null) return;
+            void Set(string col, object val)
+            {
+                if (row.Table.Columns.Contains(col))
+                    row[col] = val ?? DBNull.Value;
+            }
+
+            Set("RoomNumber", roomNumber);
+            Set("RoomTypeId", roomTypeId);
+            Set("RoomPrice", price);
+            Set("CurrentStatusId", statusId);
+            Set("Floor", floor);
+            Set("Area", area);
+            Set("IsActive", isActive);
+            Set("Occupants", occupants);
+
+            if (row.Table.Columns.Contains("TypeName") && roomTypeId.HasValue && _roomTypes != null)
+            {
+                var typeRow = _roomTypes.AsEnumerable()
+                    .FirstOrDefault(r => int.TryParse(r["RoomTypeId"]?.ToString(), out var id) && id == roomTypeId.Value);
+                row["TypeName"] = typeRow?["RoomTypeName"]?.ToString() ?? row["TypeName"];
+            }
+
+            if (row.Table.Columns.Contains("StatusName") && statusId.HasValue && _statuses != null)
+            {
+                var statusRow = _statuses.AsEnumerable()
+                    .FirstOrDefault(r => int.TryParse(r["StatusId"]?.ToString(), out var id) && id == statusId.Value);
+                row["StatusName"] = statusRow?["StatusName"]?.ToString() ?? row["StatusName"];
             }
         }
 
@@ -1198,16 +1614,93 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (string.IsNullOrWhiteSpace(statusName)) return Color.White;
 
-            var status = statusName.ToLowerInvariant();
-            bool isDeposit = status.Contains("cọc") || status.Contains("coc") || status.Contains("đặt cọc");
-            bool isMaintenance = status.Contains("bảo trì") || status.Contains("bao tri") || status.Contains("maintenance");
-            bool isOccupied = status.Contains("đang ở") || status.Contains("dang o") || status.Contains("đang thuê") || status.Contains("dang thue");
+            var key = NormalizeStatusKey(statusName);
+            bool isDeposit = key.Contains("coc") || key.Contains("dat coc");
+            bool isMaintenance = key.Contains("bao tri") || key.Contains("maintenance");
+            bool isOccupied = key.Contains("dang o") || key.Contains("dang thue") || key.Contains("da thue");
 
-            if (isMaintenance) return Color.FromArgb(255, 220, 220);
-            if (isDeposit) return Color.FromArgb(255, 245, 200);
-            if (isOccupied) return Color.FromArgb(220, 245, 230);
-            return Color.White;
+            if (isMaintenance) return Color.FromArgb(255, 220, 220); // do nhat
+            if (isDeposit) return Color.FromArgb(255, 241, 188);    // vang nhat
+            if (isOccupied) return Color.FromArgb(0, 122, 204);     // xanh duong
+            return Color.White;                                     // trong
         }
+
+
+
+        private bool IsOccupiedStatusId(int? statusId)
+        {
+            if (!statusId.HasValue || _statuses == null || !_statuses.Columns.Contains("StatusId")) return false;
+            var row = _statuses.AsEnumerable().FirstOrDefault(r => int.TryParse(r["StatusId"]?.ToString(), out var id) && id == statusId.Value);
+            var name = row?["StatusName"]?.ToString() ?? string.Empty;
+            return IsOccupiedStatusName(name);
+        }
+
+        private int? GetEmptyStatusId()
+        {
+            if (_statuses == null || !_statuses.Columns.Contains("StatusId")) return null;
+            var row = _statuses.AsEnumerable()
+                .FirstOrDefault(r =>
+                    (r["StatusName"]?.ToString() ?? string.Empty)
+                        .IndexOf("trống", StringComparison.OrdinalIgnoreCase) >= 0
+                    || (r["StatusName"]?.ToString() ?? string.Empty)
+                        .IndexOf("trong", StringComparison.OrdinalIgnoreCase) >= 0);
+
+            if (row == null) return null;
+            return int.TryParse(row["StatusId"]?.ToString(), out var id) ? (int?)id : null;
+        }
+
+        private string GetEmptyStatusName()
+        {
+            if (_statuses == null || !_statuses.Columns.Contains("StatusName")) return "Trống";
+            var row = _statuses.AsEnumerable()
+                .FirstOrDefault(r =>
+                    (r["StatusName"]?.ToString() ?? string.Empty)
+                        .IndexOf("trống", StringComparison.OrdinalIgnoreCase) >= 0
+                    || (r["StatusName"]?.ToString() ?? string.Empty)
+                        .IndexOf("trong", StringComparison.OrdinalIgnoreCase) >= 0);
+            return row?["StatusName"]?.ToString() ?? "Trống";
+        }
+
+
+        private static string NormalizeStatusKey(string statusName)
+        {
+            if (string.IsNullOrWhiteSpace(statusName)) return string.Empty;
+            var fixedName = TextFixer.FixUtf8Mojibake(statusName) ?? statusName;
+            return RemoveDiacritics(fixedName).ToLowerInvariant();
+        }
+
+        private static string RemoveDiacritics(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+            var normalized = text.Normalize(NormalizationForm.FormD);
+            var sb = new StringBuilder(normalized.Length);
+            foreach (char ch in normalized)
+            {
+                if (CharUnicodeInfo.GetUnicodeCategory(ch) != UnicodeCategory.NonSpacingMark)
+                    sb.Append(ch);
+            }
+            return sb.ToString().Normalize(NormalizationForm.FormC);
+        }
+
+        private static bool IsAllowedStaffStatusName(string statusName)
+        {
+            var key = NormalizeStatusKey(statusName);
+            return key.Contains("dang o")
+                || key.Contains("dang thue")
+                || key.Contains("da thue")
+                || key.Contains("bao tri")
+                || key.Contains("coc")
+                || key.Contains("trong");
+        }
+
+        private static bool IsOccupiedStatusName(string statusName)
+        {
+            if (string.IsNullOrWhiteSpace(statusName)) return false;
+            var key = NormalizeStatusKey(statusName);
+            return key.Contains("dang o") || key.Contains("dang thue") || key.Contains("da thue");
+        }
+
+
 
         private static string GetTypeIcon(string typeName)
         {
@@ -1224,6 +1717,77 @@ namespace quan_ly_chuoi_nha_tro.GUI
             return "🏠";
         }
 
+        private static string NormalizeRoomNumber(string roomNumber)
+        {
+            if (string.IsNullOrWhiteSpace(roomNumber)) return string.Empty;
+            return roomNumber.Trim().ToUpperInvariant();
+        }
+
+        private static string GetRoomTypeKey(DataRow row)
+        {
+            var typeName = SafeToString(row, "TypeName");
+            if (string.IsNullOrWhiteSpace(typeName))
+                typeName = SafeToString(row, "RoomTypeName");
+            return NormalizeStatusKey(typeName ?? string.Empty);
+        }
+
+        private static bool IsSingleRoomType(DataRow row)
+        {
+            var key = GetRoomTypeKey(row);
+            return key.Contains("don") || key.Contains("single");
+        }
+
+        private static bool IsDoubleRoomType(DataRow row)
+        {
+            var key = GetRoomTypeKey(row);
+            return key.Contains("doi") || key.Contains("double");
+        }
+
+        private static bool IsPremiumRoomType(DataRow row)
+        {
+            var key = GetRoomTypeKey(row);
+            return key.Contains("cao cap") || key.Contains("vip") || key.Contains("premium");
+        }
+
+        private static void AppendRooms(List<DataRow> target, IEnumerable<DataRow> source, int targetCount, HashSet<string> used)
+        {
+            foreach (var row in source)
+            {
+                if (target.Count >= targetCount) break;
+                var roomNumber = NormalizeRoomNumber(SafeToString(row, "RoomNumber"));
+                if (string.IsNullOrWhiteSpace(roomNumber) || used.Contains(roomNumber)) continue;
+                target.Add(row);
+                used.Add(roomNumber);
+            }
+        }
+
+        private static List<DataRow> SelectRoomsForSectionA(List<DataRow> rooms)
+        {
+            var selected = new List<DataRow>();
+            var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            AppendRooms(selected, rooms.Where(IsSingleRoomType).OrderBy(r => GetRoomSortKey(SafeToString(r, "RoomNumber"))), 4, used);
+            AppendRooms(selected, rooms.Where(IsDoubleRoomType).OrderBy(r => GetRoomSortKey(SafeToString(r, "RoomNumber"))), 7, used);
+            AppendRooms(selected, rooms.Where(IsPremiumRoomType).OrderBy(r => GetRoomSortKey(SafeToString(r, "RoomNumber"))), 10, used);
+
+            if (selected.Count < 10)
+                AppendRooms(selected, rooms.OrderBy(r => GetRoomSortKey(SafeToString(r, "RoomNumber"))), 10, used);
+
+            return selected
+                .OrderBy(r => GetRoomSortKey(SafeToString(r, "RoomNumber")))
+                .ToList();
+        }
+
+        private static (int prefix, int number) GetRoomSortKey(string roomNumber)
+        {
+            if (string.IsNullOrWhiteSpace(roomNumber)) return (int.MaxValue, int.MaxValue);
+            roomNumber = roomNumber.Trim();
+            int prefix = char.ToUpper(roomNumber[0]);
+            var digits = new string(roomNumber.Skip(1).Where(char.IsDigit).ToArray());
+            int number = int.TryParse(digits, out var n) ? n : int.MaxValue;
+            return (prefix, number);
+        }
+
         private static string GetOccupancyIcon(int occupants, string typeName = null)
         {
             var lowerType = typeName?.ToLowerInvariant() ?? string.Empty;
@@ -1237,11 +1801,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             return "👤";
         }
 
-        private class RoomEditDialog : Form
+        internal class RoomEditDialog : Form
         {
             private readonly DataRow _row;
             private readonly DataTable _roomTypes;
             private readonly DataTable _statuses;
+            private readonly bool _isStaffMode;
 
             private ComboBox _cboRoomType;
             private ComboBox _cboStatus;
@@ -1257,11 +1822,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             public decimal? Area => decimal.TryParse(_txtArea.Text.Replace(",", ""), out var d) ? d : (decimal?)null;
             public bool? IsActive => _chkActive.Checked;
 
-            public RoomEditDialog(DataRow row, DataTable roomTypes, DataTable statuses)
+            public RoomEditDialog(DataRow row, DataTable roomTypes, DataTable statuses, bool isStaffMode = false)
             {
                 _row = row;
                 _roomTypes = roomTypes;
                 _statuses = statuses;
+                _isStaffMode = isStaffMode;
 
                 InitializeComponent();
                 LoadData();
@@ -1269,7 +1835,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             private void InitializeComponent()
             {
-                Text = "Chỉnh sửa phòng";
+                Text = "Chỉnh sửa";
                 StartPosition = FormStartPosition.CenterParent;
                 FormBorderStyle = FormBorderStyle.FixedDialog;
                 MaximizeBox = false;
@@ -1288,12 +1854,26 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                 var lblType = new Label { Text = "Loại phòng:", AutoSize = true, Location = new Point(18, 56) };
                 _cboRoomType = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 260, Location = new Point(120, 52) };
+                if (_isStaffMode)
+                {
+                    _cboRoomType.Enabled = false;
+                    _cboRoomType.TabStop = false;
+                }
 
                 var lblStatus = new Label { Text = "Trạng thái:", AutoSize = true, Location = new Point(18, 94) };
                 _cboStatus = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 260, Location = new Point(120, 90) };
 
                 var lblOccupants = new Label { Text = "Số người:", AutoSize = true, Location = new Point(18, 132) };
-                _numOccupants = new NumericUpDown { Minimum = 0, Maximum = 50, Width = 120, Location = new Point(120, 128) };
+                _numOccupants = new NumericUpDown
+                {
+                    Minimum = 0,
+                    Maximum = 5,
+                    Width = 120,
+                    Location = new Point(120, 128),
+                    ReadOnly = false,
+                    Enabled = true,
+                    Increment = 1
+                };
 
                 var lblPrice = new Label { Text = "Giá/Tháng:", AutoSize = true, Location = new Point(18, 166) };
                 _lblPrice = new Label { AutoSize = true, Location = new Point(120, 166), ForeColor = Color.FromArgb(70, 70, 70) };
@@ -1306,11 +1886,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 var btnOk = new Button
                 {
                     Text = "Cập nhật",
-                    Width = 100,
-                    Height = 30,
-                    Location = new Point(200, 248),
+                    Width = 120,
+                    Height = 34,
+                    Location = new Point(190, 248),
                     BackColor = Color.FromArgb(0, 122, 204),
                     ForeColor = Color.White,
+                    Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
                     FlatStyle = FlatStyle.Flat,
                     DialogResult = DialogResult.OK
                 };
@@ -1319,12 +1900,18 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 var btnCancel = new Button
                 {
                     Text = "Hủy",
-                    Width = 80,
-                    Height = 30,
-                    Location = new Point(310, 248),
+                    Width = 90,
+                    Height = 34,
+                    Location = new Point(318, 248),
+                    BackColor = Color.White,
+                    ForeColor = Color.FromArgb(60, 60, 60),
+                    Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                    FlatStyle = FlatStyle.Flat,
                     DialogResult = DialogResult.Cancel
                 };
 
+                btnCancel.FlatAppearance.BorderColor = Color.FromArgb(180, 180, 180);
+                btnCancel.FlatAppearance.BorderSize = 1;
                 Controls.Add(lblRoom);
                 Controls.Add(txtRoom);
                 Controls.Add(lblType);
@@ -1339,6 +1926,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Controls.Add(_txtArea);
                 Controls.Add(_chkActive);
                 Controls.Add(btnOk);
+                btnCancel.FlatAppearance.BorderColor = Color.FromArgb(180, 180, 180);
+                btnCancel.FlatAppearance.BorderSize = 1;
                 Controls.Add(btnCancel);
 
                 AcceptButton = btnOk;
@@ -1347,18 +1936,73 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             private void LoadData()
             {
+                const string LabelRoomSingle = "Ph\u00f2ng \u0111\u01a1n";
+                const string LabelRoomDouble = "Ph\u00f2ng \u0111\u00f4i";
+                const string LabelRoomPremium = "Ph\u00f2ng cao c\u1ea5p";
+                const string LabelStatusEmpty = "Tr\u1ed1ng";
+                const string LabelStatusMaintenance = "B\u1ea3o tr\u00ec";
+                const string LabelStatusOccupied = "\u0110ang \u1edf";
+                const string LabelStatusDeposit = "\u0110\u00e3 c\u1ecdc";
+
                 var roomTypeSrc = new DataTable();
                 roomTypeSrc.Columns.Add("RoomTypeId", typeof(int));
-                roomTypeSrc.Columns.Add("RoomTypeName", typeof(string));
+
                 var filteredTypes = RoomTypeCatalog.FilterToCanonicalTypes(_roomTypes);
                 if (filteredTypes != null && filteredTypes.Columns.Contains("RoomTypeId"))
                 {
                     foreach (DataRow r in filteredTypes.Rows)
+
+
+                if (_isStaffMode)
+                {
+                    int? typeDonId = null;
+                    int? typeDoiId = null;
+                    int? typeCaoCapId = null;
+
+                    if (_roomTypes != null && _roomTypes.Columns.Contains("RoomTypeId"))
+
                     {
-                        if (!int.TryParse(r["RoomTypeId"]?.ToString(), out var id)) continue;
-                        roomTypeSrc.Rows.Add(id, r["RoomTypeName"]?.ToString());
+                        foreach (DataRow r in _roomTypes.Rows)
+                        {
+                            if (!int.TryParse(r["RoomTypeId"]?.ToString(), out var id)) continue;
+                            var rawName = r["RoomTypeName"]?.ToString();
+                            var name = TextFixer.FixUtf8Mojibake(rawName) ?? rawName ?? string.Empty;
+                            var key = NormalizeStatusKey(name);
+
+                            if (!typeDonId.HasValue && (key.Contains("don") || key.Contains("single")))
+                                typeDonId = id;
+                            if (!typeDoiId.HasValue && (key.Contains("doi") || key.Contains("double")))
+                                typeDoiId = id;
+                            if (!typeCaoCapId.HasValue && (key.Contains("cao cap") || key.Contains("vip") || key.Contains("premium")))
+                                typeCaoCapId = id;
+                        }
+                    }
+
+                    if (typeDonId.HasValue) roomTypeSrc.Rows.Add(typeDonId.Value, LabelRoomSingle);
+                    if (typeDoiId.HasValue) roomTypeSrc.Rows.Add(typeDoiId.Value, LabelRoomDouble);
+                    if (typeCaoCapId.HasValue) roomTypeSrc.Rows.Add(typeCaoCapId.Value, LabelRoomPremium);
+
+                    if (roomTypeSrc.Rows.Count == 0 && _roomTypes != null && _roomTypes.Columns.Contains("RoomTypeId"))
+                    {
+                        foreach (DataRow r in _roomTypes.Rows)
+                        {
+                            if (!int.TryParse(r["RoomTypeId"]?.ToString(), out var id)) continue;
+                            roomTypeSrc.Rows.Add(id, r["RoomTypeName"]?.ToString());
+                        }
                     }
                 }
+                else
+                {
+                    if (_roomTypes != null && _roomTypes.Columns.Contains("RoomTypeId"))
+                    {
+                        foreach (DataRow r in _roomTypes.Rows)
+                        {
+                            if (!int.TryParse(r["RoomTypeId"]?.ToString(), out var id)) continue;
+                            roomTypeSrc.Rows.Add(id, r["RoomTypeName"]?.ToString());
+                        }
+                    }
+                }
+
                 _cboRoomType.DataSource = roomTypeSrc;
                 _cboRoomType.DisplayMember = "RoomTypeName";
                 _cboRoomType.ValueMember = "RoomTypeId";
@@ -1366,17 +2010,60 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 var statusSrc = new DataTable();
                 statusSrc.Columns.Add("StatusId", typeof(int));
                 statusSrc.Columns.Add("StatusName", typeof(string));
-                if (_statuses != null && _statuses.Columns.Contains("StatusId"))
+
+                if (_isStaffMode)
                 {
-                    foreach (DataRow r in _statuses.Rows)
+                    int? statusTrongId = null;
+                    int? statusBaoTriId = null;
+                    int? statusDangId = null;
+                    int? statusCocId = null;
+                    int? statusDaThueId = null;
+
+                    if (_statuses != null && _statuses.Columns.Contains("StatusId"))
                     {
-                        if (!int.TryParse(r["StatusId"]?.ToString(), out var id)) continue;
-                        statusSrc.Rows.Add(id, r["StatusName"]?.ToString());
+                        foreach (DataRow r in _statuses.Rows)
+                        {
+                            if (!int.TryParse(r["StatusId"]?.ToString(), out var id)) continue;
+                            var rawName = r["StatusName"]?.ToString();
+                            var name = TextFixer.FixUtf8Mojibake(rawName) ?? rawName ?? string.Empty;
+                            var key = NormalizeStatusKey(name);
+
+                            if (!statusTrongId.HasValue && key.Contains("trong"))
+                                statusTrongId = id;
+                            if (!statusBaoTriId.HasValue && key.Contains("bao tri"))
+                                statusBaoTriId = id;
+                            if (!statusCocId.HasValue && (key.Contains("coc") || key.Contains("dat coc")))
+                                statusCocId = id;
+                            if (!statusDangId.HasValue && (key.Contains("dang o") || key.Contains("dang thue") || key.Contains("dang")))
+                                statusDangId = id;
+                            if (!statusDaThueId.HasValue && key.Contains("da thue"))
+                                statusDaThueId = id;
+                        }
+                    }
+
+                    if (statusTrongId.HasValue) statusSrc.Rows.Add(statusTrongId.Value, LabelStatusEmpty);
+                    if (statusBaoTriId.HasValue) statusSrc.Rows.Add(statusBaoTriId.Value, LabelStatusMaintenance);
+                    var dangId = statusDangId ?? statusDaThueId;
+                    if (dangId.HasValue) statusSrc.Rows.Add(dangId.Value, LabelStatusOccupied);
+                    if (statusCocId.HasValue) statusSrc.Rows.Add(statusCocId.Value, LabelStatusDeposit);
+                }
+                else
+                {
+                    if (_statuses != null && _statuses.Columns.Contains("StatusId"))
+                    {
+                        foreach (DataRow r in _statuses.Rows)
+                        {
+                            if (!int.TryParse(r["StatusId"]?.ToString(), out var id)) continue;
+                            statusSrc.Rows.Add(id, r["StatusName"]?.ToString());
+                        }
                     }
                 }
+
                 _cboStatus.DataSource = statusSrc;
                 _cboStatus.DisplayMember = "StatusName";
                 _cboStatus.ValueMember = "StatusId";
+                if (_cboStatus.Items.Count > 0 && _cboStatus.SelectedIndex < 0)
+                    _cboStatus.SelectedIndex = 0;
 
                 if (_row != null)
                 {
@@ -1390,7 +2077,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     _numOccupants.Value = Math.Max(_numOccupants.Minimum, Math.Min(_numOccupants.Maximum, occupants));
 
                     decimal? price = TryReadDecimal(_row, "RoomPrice");
-                    _lblPrice.Text = price.HasValue ? price.Value.ToString("N0") : "Không xác định";
+                    _lblPrice.Text = price.HasValue ? price.Value.ToString("N0") : "Khong xac dinh";
 
                     decimal? area = TryReadDecimal(_row, "Area");
                     if (area.HasValue) _txtArea.Text = area.Value.ToString("0.##");
@@ -1399,7 +2086,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     _chkActive.Checked = active ?? true;
                 }
             }
-
+            }
             private static int? TryReadInt(DataRow row, string column)
             {
                 if (row == null || !row.Table.Columns.Contains(column)) return null;
@@ -1427,3 +2114,4 @@ namespace quan_ly_chuoi_nha_tro.GUI
         }
     }
 }
+

@@ -1,6 +1,9 @@
 using System;
 using System.Data;
 using System.Drawing;
+using System.Globalization;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
@@ -15,13 +18,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
     {
         private readonly AdminDataBLL _bll;
         private readonly Func<int, Task> _refreshRoomAsync;
+        private readonly bool _isStaffMode;
 
         private int _roomId;
-        private int _tenantId;
-
         private DataRow _roomRow;
         private DataRow _tenantRow;
         private DataRow _contractRow;
+        private string _tenantSummary;
 
         private Label _lblTitle;
         private Label _lblSub;
@@ -32,10 +35,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Button _btnClose;
         private ContextMenuStrip _editMenu;
 
-        public FrmRoomTenantQuickView(AdminDataBLL bll, Func<int, Task> refreshRoomAsync)
+        public FrmRoomTenantQuickView(AdminDataBLL bll, Func<int, Task> refreshRoomAsync, bool staffMode = false)
         {
             _bll = bll;
             _refreshRoomAsync = refreshRoomAsync;
+            _isStaffMode = staffMode;
             InitializeComponent();
         }
 
@@ -95,10 +99,30 @@ namespace quan_ly_chuoi_nha_tro.GUI
             };
             _btnEdit.FlatAppearance.BorderSize = 0;
 
-            _editMenu = new ContextMenuStrip();
-            _editMenu.Items.Add("Sửa phòng", null, async (s, e) => await EditRoomAsync());
-            _editMenu.Items.Add("Sửa khách thuê", null, async (s, e) => await EditTenantAsync());
-            _btnEdit.Click += (s, e) => _editMenu.Show(_btnEdit, new Point(0, _btnEdit.Height));
+            if (_isStaffMode)
+            {
+                _btnEdit.Text = "Chỉnh sửa";
+                _btnEdit.Width = 120;
+                _btnEdit.Height = 36;
+                _btnEdit.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
+                _btnEdit.BackColor = Color.FromArgb(0, 122, 204);
+                _btnEdit.ForeColor = Color.White;
+
+                _btnClose.Visible = false;
+            }
+
+
+            if (_isStaffMode)
+            {
+                _btnEdit.Click += async (s, e) => await EditRoomAsync();
+            }
+            else
+            {
+                _editMenu = new ContextMenuStrip();
+                _editMenu.Items.Add("Sửa phòng", null, async (s, e) => await EditRoomAsync());
+                _editMenu.Items.Add("Sửa khách thuê", null, async (s, e) => await EditTenantAsync());
+                _btnEdit.Click += (s, e) => _editMenu.Show(_btnEdit, new Point(0, _btnEdit.Height));
+            }
 
             header.Controls.Add(_lblTitle);
             header.Controls.Add(_lblSub);
@@ -106,8 +130,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
             header.Controls.Add(_btnClose);
             header.Resize += (s, e) =>
             {
-                _btnClose.Location = new Point(header.ClientSize.Width - _btnClose.Width - 14, 16);
-                _btnEdit.Location = new Point(_btnClose.Left - _btnEdit.Width - 10, 16);
+                if (_btnClose.Visible)
+                {
+                    _btnClose.Location = new Point(header.ClientSize.Width - _btnClose.Width - 14, 16);
+                    _btnEdit.Location = new Point(_btnClose.Left - _btnEdit.Width - 10, 16);
+                }
+                else
+                {
+                    _btnEdit.Location = new Point(header.ClientSize.Width - _btnEdit.Width - 14, 16);
+                }
             };
 
             var body = new TableLayoutPanel
@@ -122,13 +153,25 @@ namespace quan_ly_chuoi_nha_tro.GUI
             body.RowStyles.Add(new RowStyle(SizeType.Percent, 52F));
 
             var roomBox = MakeInfoBox("Thông tin phòng", out _lblRoomInfo);
-            var tenantBox = MakeInfoBox("Người đang sử dụng", out _lblTenantInfo);
+            var tenantTitle = _isStaffMode ? "Người đã thuê" : "Ng??i ?ang s? d?ng";
+            var tenantBox = MakeInfoBox(tenantTitle, out _lblTenantInfo);
+
+            if (_isStaffMode)
+            {
+                _lblRoomInfo.Font = new Font("Segoe UI", 10.5f, FontStyle.Regular);
+                _lblRoomInfo.ForeColor = Color.FromArgb(35, 35, 35);
+                _lblRoomInfo.AutoEllipsis = false;
+
+                _lblTenantInfo.Font = new Font("Segoe UI", 10.5f, FontStyle.Regular);
+                _lblTenantInfo.ForeColor = Color.FromArgb(35, 35, 35);
+                _lblTenantInfo.AutoEllipsis = false;
+            }
 
             body.Controls.Add(roomBox, 0, 0);
             body.Controls.Add(tenantBox, 0, 1);
 
-            Controls.Add(body);
             Controls.Add(header);
+            Controls.Add(body);
         }
 
         private static Panel MakeInfoBox(string title, out Label content)
@@ -173,18 +216,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
             return box;
         }
 
-        public void UpdateData(int roomId, DataRow roomRow, DataRow tenantRow, DataRow contractRow)
+        public void UpdateData(int roomId, DataRow roomRow, DataRow tenantRow, DataRow contractRow, string tenantSummary = null)
         {
             _roomId = roomId;
             _roomRow = roomRow;
             _tenantRow = tenantRow;
             _contractRow = contractRow;
-
-            _tenantId = 0;
-            if (_tenantRow != null && _tenantRow.Table.Columns.Contains("TenantId"))
-            {
-                try { _tenantId = Convert.ToInt32(_tenantRow["TenantId"]); } catch { _tenantId = 0; }
-            }
+            _tenantSummary = tenantSummary;
 
             string roomNumber = ReadString(_roomRow, "RoomNumber");
             string section = ReadString(_roomRow, "SectionName");
@@ -198,14 +236,39 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _lblTitle.Text = $"Phòng {NullDash(roomNumber)}";
             _lblSub.Text = $"RoomId: {roomId}   |   Trạng thái: {NullDash(status)}";
 
-            _lblRoomInfo.Text =
-                $"Khu/Dãy: {NullDash(section)}   |   Loại: {NullDash(type)}\n" +
-                $"Giá: {NullDash(price)}   |   Tầng: {NullDash(floor)}   |   Diện tích: {NullDash(area)}\n" +
-                $"Kích hoạt: {NullDash(isActive)}";
-
-            if (_contractRow == null || _tenantRow == null)
+            if (_isStaffMode)
             {
-                _lblTenantInfo.Text = "Phòng hiện chưa có người sử dụng (không có hợp đồng Active/Extended).";
+                _lblSub.Text = $"Mã phòng: {NullDash(roomNumber)}";
+                var areaText = string.IsNullOrWhiteSpace(area) ? "-" : area + " m2";
+                _lblRoomInfo.Text =
+                    $"Mã phòng: {NullDash(roomNumber)}\n" +
+                    $"Giá/Tháng: {NullDash(price)}\n" +
+                    $"Trạng thái: {NullDash(status)}\n" +
+                    $"Diện tích: {areaText}";
+            }
+            else
+            {
+                    _lblRoomInfo.Text =
+                    $"Khu/DA?y: {NullDash(section)}   |   Lo???i: {NullDash(type)}\n" +
+                    $"GiA?: {NullDash(price)}   |   T???ng: {NullDash(floor)}   |   Di???n tA-ch: {NullDash(area)}\n" +
+                    $"KA-ch ho???t: {NullDash(isActive)}";
+            }
+
+
+            if (_isStaffMode)
+            {
+                if (!string.IsNullOrWhiteSpace(_tenantSummary))
+                {
+                    _lblTenantInfo.Text = _tenantSummary;
+                }
+                else
+                {
+                    _lblTenantInfo.Text = "Phòng hiện tại còn trống";
+                }
+            }
+            else if (_contractRow == null || _tenantRow == null)
+            {
+                _lblTenantInfo.Text = "Phong hien chua co nguoi su dung (khong co hop dong Active/Extended).";
             }
             else
             {
@@ -219,8 +282,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 string end = FormatDate(ReadString(_contractRow, "EndDate"));
 
                 _lblTenantInfo.Text =
-                    $"Họ tên: {NullDash(tenantName)}   |   SĐT: {NullDash(tenantPhone)}   |   CCCD: {NullDash(tenantIdCard)}\n" +
-                    $"Hợp đồng: {NullDash(contractNo)}   |   {NullDash(st)}   |   {NullDash(start)} → {NullDash(end)}";
+                    $"Ho ten: {NullDash(tenantName)}   |   SDT: {NullDash(tenantPhone)}   |   CCCD: {NullDash(tenantIdCard)}\n" +
+                    $"Hop dong: {NullDash(contractNo)}   |   {NullDash(st)}   |   {NullDash(start)} -> {NullDash(end)}";
             }
 
             bool canEditTenant = _tenantRow != null;
@@ -232,13 +295,77 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (_roomRow == null)
             {
-                MessageBox.Show("Không tìm thấy dữ liệu phòng.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                var message = _isStaffMode
+                    ? "Khong tim thay du lieu phong."
+                    : "KhA'ng tAªm th §y d ¯_ li ¯Øu phAýng.";
+                var title = _isStaffMode ? "Thong bao" : "ThA'ng bA­o";
+                MessageBox.Show(message, title, MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
-            using (var frm = new FrmRoomEditor(_bll, _roomRow))
+            if (!_isStaffMode)
             {
-                if (frm.ShowDialog(this) == DialogResult.OK && _refreshRoomAsync != null)
+                using (var frm = new FrmRoomEditor(_bll, _roomRow))
+                {
+                    if (frm.ShowDialog(this) == DialogResult.OK && _refreshRoomAsync != null)
+                        await _refreshRoomAsync(_roomId);
+                }
+                return;
+            }
+
+            var roomTypes = await _bll.GetRoomTypesAsync();
+            var statuses = await _bll.GetRoomStatusesAsync();
+
+            using (var dlg = new FrmRoomManager.RoomEditDialog(_roomRow, roomTypes, statuses, true))
+            {
+                if (dlg.ShowDialog(this) != DialogResult.OK) return;
+
+                int roomId = TryGetInt(_roomRow, "RoomId");
+                string roomNumber = ReadString(_roomRow, "RoomNumber") ?? string.Empty;
+                int branchId = TryGetInt(_roomRow, "BranchId");
+                int? sectionId = TryGetNullableInt(_roomRow, "SectionId");
+                int? roomTypeId = dlg.SelectedRoomTypeId ?? TryGetNullableInt(_roomRow, "RoomTypeId");
+                decimal? price = TryGetDecimal(_roomRow, "RoomPrice");
+                int? statusId = dlg.SelectedStatusId ?? TryGetNullableInt(_roomRow, "CurrentStatusId");
+                int? floor = TryGetNullableInt(_roomRow, "Floor");
+                decimal? area = dlg.Area ?? TryGetDecimal(_roomRow, "Area");
+                bool? isActive = dlg.IsActive ?? TryGetBool(_roomRow, "IsActive");
+                int occupants = dlg.OccupantCount ?? TryGetInt(_roomRow, "Occupants");
+
+                if (occupants > 5)
+                {
+                    MessageBox.Show("Moi phong toi da 5 nguoi.", "Canh bao", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                if (occupants >= 1)
+                {
+                    var occupiedId = GetOccupiedStatusId(statuses);
+                    if (occupiedId.HasValue)
+                        statusId = occupiedId.Value;
+                }
+                else if (IsOccupiedStatusId(statusId, statuses) && occupants < 1)
+                {
+                    var emptyId = GetEmptyStatusId(statuses);
+                    if (emptyId.HasValue)
+                    {
+                        statusId = emptyId.Value;
+                        MessageBox.Show("Phong chua co nguoi, tu dong chuyen trang thai ve Trong.", "Thong bao",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    else
+                    {
+                        MessageBox.Show("Trang thai Dang o yeu cau it nhat 1 nguoi.", "Canh bao", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+                }
+
+                await _bll.UpdateRoomAsync(roomId, roomNumber, branchId, sectionId, roomTypeId, price, statusId, floor, area, isActive, occupants);
+
+                UpdateRoomRowValues(_roomRow, roomTypeId, price, statusId, floor, area, isActive, occupants, roomTypes, statuses);
+                UpdateData(_roomId, _roomRow, _tenantRow, _contractRow);
+
+                if (_refreshRoomAsync != null)
                     await _refreshRoomAsync(_roomId);
             }
         }
@@ -269,6 +396,142 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (r == null || r.Table == null || !r.Table.Columns.Contains(col)) return false;
             try { return Convert.ToBoolean(r[col]); } catch { return false; }
+        }
+
+
+        private static int TryGetInt(DataRow row, string column)
+        {
+            if (row == null || !row.Table.Columns.Contains(column)) return 0;
+            return int.TryParse(row[column]?.ToString(), out var val) ? val : 0;
+        }
+
+        private static int? TryGetNullableInt(DataRow row, string column)
+        {
+            if (row == null || !row.Table.Columns.Contains(column)) return null;
+            return int.TryParse(row[column]?.ToString(), out var val) ? (int?)val : null;
+        }
+
+        private static decimal? TryGetDecimal(DataRow row, string column)
+        {
+            if (row == null || !row.Table.Columns.Contains(column)) return null;
+            return decimal.TryParse(row[column]?.ToString(), out var val) ? (decimal?)val : null;
+        }
+
+        private static bool? TryGetBool(DataRow row, string column)
+        {
+            if (row == null || !row.Table.Columns.Contains(column)) return null;
+            return bool.TryParse(row[column]?.ToString(), out var val) ? (bool?)val : null;
+        }
+
+        private static int? GetEmptyStatusId(DataTable statuses)
+        {
+            if (statuses == null || !statuses.Columns.Contains("StatusId")) return null;
+            var row = statuses.AsEnumerable()
+                .FirstOrDefault(r => NormalizeStatusKey(r["StatusName"]?.ToString()).Contains("trong"));
+            if (row == null) return null;
+            return int.TryParse(row["StatusId"]?.ToString(), out var id) ? (int?)id : null;
+        }
+
+        private static int? GetOccupiedStatusId(DataTable statuses)
+        {
+            if (statuses == null || !statuses.Columns.Contains("StatusId")) return null;
+            DataRow row = statuses.AsEnumerable()
+                .FirstOrDefault(r => NormalizeStatusKey(r["StatusName"]?.ToString()).Contains("dang o"));
+            if (row == null)
+            {
+                row = statuses.AsEnumerable().FirstOrDefault(r =>
+                {
+                    var key = NormalizeStatusKey(r["StatusName"]?.ToString());
+                    return key.Contains("dang thue") || key.Contains("da thue") || key.Contains("dang");
+                });
+            }
+            if (row == null) return null;
+            return int.TryParse(row["StatusId"]?.ToString(), out var id) ? (int?)id : null;
+        }
+
+        private static bool IsOccupiedStatusId(int? statusId, DataTable statuses)
+        {
+            if (!statusId.HasValue || statuses == null || !statuses.Columns.Contains("StatusId")) return false;
+            var row = statuses.AsEnumerable()
+                .FirstOrDefault(r => int.TryParse(r["StatusId"]?.ToString(), out var id) && id == statusId.Value);
+            var name = row?["StatusName"]?.ToString() ?? string.Empty;
+            return IsOccupiedStatusName(name);
+        }
+
+        private static bool IsOccupiedStatusName(string statusName)
+        {
+            if (string.IsNullOrWhiteSpace(statusName)) return false;
+            var key = NormalizeStatusKey(statusName);
+            return key.Contains("dang o") || key.Contains("dang thue") || key.Contains("da thue");
+        }
+
+        private static string NormalizeStatusKey(string statusName)
+        {
+            if (string.IsNullOrWhiteSpace(statusName)) return string.Empty;
+            var fixedName = TextFixer.FixUtf8Mojibake(statusName) ?? statusName;
+            return RemoveDiacritics(fixedName).ToLowerInvariant();
+        }
+
+        private static string RemoveDiacritics(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+            var normalized = text.Normalize(NormalizationForm.FormD);
+            var sb = new StringBuilder(normalized.Length);
+            foreach (char ch in normalized)
+            {
+                if (CharUnicodeInfo.GetUnicodeCategory(ch) != UnicodeCategory.NonSpacingMark)
+                    sb.Append(ch);
+            }
+            return sb.ToString().Normalize(NormalizationForm.FormC);
+        }
+
+        private static void UpdateRoomRowValues(
+            DataRow row,
+            int? roomTypeId,
+            decimal? price,
+            int? statusId,
+            int? floor,
+            decimal? area,
+            bool? isActive,
+            int occupants,
+            DataTable roomTypes,
+            DataTable statuses)
+        {
+            if (row == null || row.Table == null) return;
+            void Set(string col, object val)
+            {
+                if (row.Table.Columns.Contains(col))
+                    row[col] = val ?? DBNull.Value;
+            }
+
+            Set("RoomTypeId", roomTypeId);
+            Set("RoomPrice", price);
+            Set("CurrentStatusId", statusId);
+            Set("Floor", floor);
+            Set("Area", area);
+            Set("IsActive", isActive);
+            Set("Occupants", occupants);
+
+            if (row.Table.Columns.Contains("RoomTypeName") && roomTypeId.HasValue && roomTypes != null)
+            {
+                var typeRow = roomTypes.AsEnumerable()
+                    .FirstOrDefault(r => int.TryParse(r["RoomTypeId"]?.ToString(), out var id) && id == roomTypeId.Value);
+                row["RoomTypeName"] = typeRow?["RoomTypeName"]?.ToString() ?? row["RoomTypeName"];
+            }
+
+            if (row.Table.Columns.Contains("TypeName") && roomTypeId.HasValue && roomTypes != null)
+            {
+                var typeRow = roomTypes.AsEnumerable()
+                    .FirstOrDefault(r => int.TryParse(r["RoomTypeId"]?.ToString(), out var id) && id == roomTypeId.Value);
+                row["TypeName"] = typeRow?["RoomTypeName"]?.ToString() ?? row["TypeName"];
+            }
+
+            if (row.Table.Columns.Contains("StatusName") && statusId.HasValue && statuses != null)
+            {
+                var statusRow = statuses.AsEnumerable()
+                    .FirstOrDefault(r => int.TryParse(r["StatusId"]?.ToString(), out var id) && id == statusId.Value);
+                row["StatusName"] = statusRow?["StatusName"]?.ToString() ?? row["StatusName"];
+            }
         }
 
         private static string NullDash(string s) => string.IsNullOrWhiteSpace(s) ? "—" : s;

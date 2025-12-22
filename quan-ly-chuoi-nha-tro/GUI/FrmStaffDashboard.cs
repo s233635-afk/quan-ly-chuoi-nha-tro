@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
 using System.Linq;
@@ -38,6 +39,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Button _btnAsset;
         private Button _btnReport;
         private Button _btnStatus;
+
+        // Room detail caches for staff view
+        private FrmDataViewer _roomViewer;
+        private DataTable _roomsCache;
+        private DataTable _tenantHistoryCache;
+        private DataTable _tenantsCache;
+        private DataTable _contractsCache;
 
         public FrmStaffDashboard(string username, string fullName, int? branchId, int? userId = null)
         {
@@ -111,7 +119,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
             };
 
             _btnOverview = MakeNavButton("🏠 Tổng quan", (s, e) => ShowOverview());
-            _btnRoom = MakeNavButton("🏠 Phòng", (s, e) => { SetActive(_btnRoom); LoadModule(new FrmDataViewer("Danh sách Phòng", LoadRoomsAsync), "🏠 Phòng"); });
+            _btnRoom = MakeNavButton("🏠 Phòng", (s, e) =>
+            {
+                SetActive(_btnRoom);
+                LoadModule(new FrmRoomManager(_bll, _branchId), "🏠 Phòng");
+            });
             _btnTenant = MakeNavButton("👥 Khách thuê", (s, e) => { SetActive(_btnTenant); LoadModule(new FrmTenantManager(), "👥 Khách thuê"); });
             _btnContract = MakeNavButton("📄 Hợp đồng", (s, e) => { SetActive(_btnContract); LoadModule(new FrmContractManager(_branchId), "📄 Hợp đồng"); });
             _btnDeposit = MakeNavButton("💰 Đặt cọc", (s, e) => { SetActive(_btnDeposit); LoadModule(new FrmDepositManager(_branchId), "💰 Đặt cọc"); });
@@ -376,6 +388,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             var dt = await _bll.GetRoomsAsync();
             var table = FilterByBranch(dt, _branchId);
+            table = LimitRoomsForStaff(table);
+            AddRoomIdRawColumn(table);
 
             if (table != null)
             {
@@ -477,6 +491,214 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     filtered.ImportRow(r);
             }
             return filtered;
+        }
+
+        private static void AddRoomIdRawColumn(DataTable table)
+        {
+            if (table == null) return;
+            if (!table.Columns.Contains("RoomId") || table.Columns.Contains("RoomIdRaw")) return;
+
+            table.Columns.Add("RoomIdRaw", typeof(int));
+            foreach (DataRow r in table.Rows)
+            {
+                if (int.TryParse(r["RoomId"]?.ToString(), out var id))
+                    r["RoomIdRaw"] = id;
+            }
+        }
+
+        private DataTable LimitRoomsForStaff(DataTable table)
+        {
+            if (table == null) return table;
+
+            var limited = table.Clone();
+            var prefixes = new[] { "A", "B" };
+
+            foreach (var prefix in prefixes)
+            {
+                var selection = table.AsEnumerable()
+                    .Where(r => (r["RoomNumber"]?.ToString() ?? string.Empty).StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(r => r["RoomNumber"]?.ToString())
+                    .Take(10);
+
+                foreach (var row in selection)
+                    limited.ImportRow(row);
+            }
+
+            return limited.Rows.Count > 0 ? limited : table;
+        }
+
+        private async Task OnRoomRowDoubleClickAsync(DataRow row)
+        {
+            int roomId = ExtractRoomId(row);
+            if (roomId <= 0)
+            {
+                MessageBox.Show("Không xác định được phòng.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            await EnsureRoomCachesAsync();
+
+            var roomRow = _roomsCache?.AsEnumerable().FirstOrDefault(r => TryReadInt(r, "RoomId") == roomId);
+            if (roomRow == null)
+            {
+                MessageBox.Show("Không tìm thấy dữ liệu phòng.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var activeHistory = _tenantHistoryCache?.AsEnumerable()
+                .Where(r => TryReadInt(r, "RoomId") == roomId)
+                .Where(IsActiveHistory)
+                .OrderByDescending(r => TryReadDate(r, "CheckInDate") ?? DateTime.MinValue)
+                .FirstOrDefault();
+
+            DataRow tenantRow = null;
+            if (activeHistory != null)
+            {
+                int tenantId = TryReadInt(activeHistory, "TenantId");
+                if (tenantId > 0)
+                    tenantRow = _tenantsCache?.AsEnumerable().FirstOrDefault(t => TryReadInt(t, "TenantId") == tenantId);
+            }
+
+            DataRow contractRow = null;
+            if (_contractsCache != null)
+            {
+                var contracts = _contractsCache.AsEnumerable().Where(c => TryReadInt(c, "RoomId") == roomId);
+                if (activeHistory != null)
+                {
+                    int tenantId = TryReadInt(activeHistory, "TenantId");
+                    if (tenantId > 0) contracts = contracts.Where(c => TryReadInt(c, "TenantId") == tenantId);
+                }
+
+                contractRow = contracts
+                    .OrderByDescending(c => TryReadDate(c, "StartDate") ?? DateTime.MinValue)
+                    .FirstOrDefault();
+            }
+
+            using (var frm = new FrmRoomTenantQuickView(_bll, RefreshRoomsAfterEditAsync, true))
+            {
+                frm.StartPosition = FormStartPosition.CenterParent;
+                var tenantSummary = BuildTenantSummary(roomId);
+                frm.UpdateData(roomId, roomRow, tenantRow, contractRow, tenantSummary);
+                frm.ShowDialog(this);
+            }
+        }
+
+        private string BuildTenantSummary(int roomId)
+        {
+            if (_tenantHistoryCache == null || _tenantsCache == null) return null;
+
+            var tenantIds = _tenantHistoryCache.AsEnumerable()
+                .Where(r => TryReadInt(r, "RoomId") == roomId)
+                .Where(IsActiveHistory)
+                .Select(r => TryReadInt(r, "TenantId"))
+                .Where(id => id > 0)
+                .Distinct()
+                .ToList();
+
+            if (tenantIds.Count == 0) return null;
+
+            var lines = new List<string>();
+            int index = 1;
+            foreach (var tenantId in tenantIds)
+            {
+                var tenant = _tenantsCache.AsEnumerable().FirstOrDefault(t => TryReadInt(t, "TenantId") == tenantId);
+                if (tenant == null) continue;
+
+                var name = tenant.Table.Columns.Contains("FullName") ? tenant["FullName"]?.ToString() : null;
+                if (!string.IsNullOrWhiteSpace(name))
+                    name = TextFixer.FixUtf8Mojibake(name) ?? name;
+
+                var phone = tenant.Table.Columns.Contains("PhoneNumber") ? tenant["PhoneNumber"]?.ToString() : null;
+                if (!string.IsNullOrWhiteSpace(phone))
+                    phone = TextFixer.FixUtf8Mojibake(phone) ?? phone;
+
+                if (string.IsNullOrWhiteSpace(name) && string.IsNullOrWhiteSpace(phone)) continue;
+                var line = string.IsNullOrWhiteSpace(phone) ? name : $"{name} - {phone}";
+                lines.Add($"{index}. {line}".Trim());
+                index++;
+            }
+
+            return lines.Count > 0 ? string.Join("\n", lines) : null;
+        }
+
+        private async Task EnsureRoomCachesAsync()
+        {
+            if (_roomsCache == null)
+            {
+                var rooms = FilterByBranch(await _bll.GetRoomsAsync(), _branchId);
+                _roomsCache = LimitRoomsForStaff(rooms);
+            }
+
+            if (_tenantHistoryCache == null)
+                _tenantHistoryCache = await _bll.GetTenantHistoryAsync();
+
+            if (_tenantsCache == null)
+                _tenantsCache = await _bll.GetTenantsAsync();
+
+            if (_contractsCache == null)
+                _contractsCache = await _bll.GetContractsAsync();
+        }
+
+        private async Task RefreshRoomsAfterEditAsync(int roomId)
+        {
+            _roomsCache = null;
+            _tenantHistoryCache = null;
+            _tenantsCache = null;
+            _contractsCache = null;
+
+            if (_roomViewer != null && !_roomViewer.IsDisposed)
+                await _roomViewer.ReloadAsync();
+        }
+
+        private static bool IsActiveHistory(DataRow history)
+        {
+            if (history == null || history.Table == null) return false;
+
+            var checkout = history.Table.Columns.Contains("CheckOutDate") ? history["CheckOutDate"] : null;
+            bool hasCheckout = checkout != null && checkout != DBNull.Value;
+            if (!hasCheckout) return true;
+
+            if (history.Table.Columns.Contains("Status"))
+            {
+                var statusText = history["Status"]?.ToString() ?? string.Empty;
+                return statusText.IndexOf("active", StringComparison.OrdinalIgnoreCase) >= 0
+                    || statusText.IndexOf("đang", StringComparison.OrdinalIgnoreCase) >= 0
+                    || statusText.IndexOf("Đang", StringComparison.OrdinalIgnoreCase) >= 0;
+            }
+
+            return false;
+        }
+
+        private static int ExtractRoomId(DataRow row)
+        {
+            if (row == null || row.Table == null) return 0;
+            string[] names = { "RoomIdRaw", "RoomId", "Mã Phòng" };
+
+            foreach (var name in names)
+            {
+                if (row.Table.Columns.Contains(name) && int.TryParse(row[name]?.ToString(), out var value) && value > 0)
+                    return value;
+            }
+
+            foreach (DataColumn col in row.Table.Columns)
+            {
+                if (int.TryParse(row[col]?.ToString(), out var value) && value > 0)
+                    return value;
+            }
+
+            return 0;
+        }
+
+        private static int TryReadInt(DataRow row, string col)
+        {
+            if (row?.Table == null || !row.Table.Columns.Contains(col)) return 0;
+            return int.TryParse(row[col]?.ToString(), out var val) ? val : 0;
+        }
+
+        private static DateTime? TryReadDate(DataRow row, string col)
+        {
+            if (row?.Table == null || !row.Table.Columns.Contains(col)) return null;
+            return DateTime.TryParse(row[col]?.ToString(), out var dt) ? dt : (DateTime?)null;
         }
 
         private static decimal TryDecimal(object v)
