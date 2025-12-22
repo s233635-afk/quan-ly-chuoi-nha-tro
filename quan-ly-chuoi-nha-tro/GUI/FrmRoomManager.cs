@@ -891,13 +891,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     method?.Invoke(null, null);
                 }
             }
-
-            _selectedRoomId = roomId;
-            _selectedRoomRow = row;
-            _inspectingRoomId = roomId;
-            ApplyFilter();
-            _btnEdit.Visible = true;
-
         }
 
         private void BuildRoomDetailsPanel()
@@ -1946,13 +1939,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                 var roomTypeSrc = new DataTable();
                 roomTypeSrc.Columns.Add("RoomTypeId", typeof(int));
+                roomTypeSrc.Columns.Add("RoomTypeName", typeof(string));
 
                 var filteredTypes = RoomTypeCatalog.FilterToCanonicalTypes(_roomTypes);
-                if (filteredTypes != null && filteredTypes.Columns.Contains("RoomTypeId"))
-                {
-                    foreach (DataRow r in filteredTypes.Rows)
-
-
                 if (_isStaffMode)
                 {
                     int? typeDonId = null;
@@ -1960,12 +1949,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     int? typeCaoCapId = null;
 
                     if (_roomTypes != null && _roomTypes.Columns.Contains("RoomTypeId"))
-
                     {
-                        foreach (DataRow r in _roomTypes.Rows)
+                        foreach (DataRow typeRow in _roomTypes.Rows)
                         {
-                            if (!int.TryParse(r["RoomTypeId"]?.ToString(), out var id)) continue;
-                            var rawName = r["RoomTypeName"]?.ToString();
+                            if (!int.TryParse(typeRow["RoomTypeId"]?.ToString(), out var id)) continue;
+                            var rawName = typeRow["RoomTypeName"]?.ToString();
                             var name = TextFixer.FixUtf8Mojibake(rawName) ?? rawName ?? string.Empty;
                             var key = NormalizeStatusKey(name);
 
@@ -1984,21 +1972,29 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                     if (roomTypeSrc.Rows.Count == 0 && _roomTypes != null && _roomTypes.Columns.Contains("RoomTypeId"))
                     {
-                        foreach (DataRow r in _roomTypes.Rows)
+                        foreach (DataRow typeRow in _roomTypes.Rows)
                         {
-                            if (!int.TryParse(r["RoomTypeId"]?.ToString(), out var id)) continue;
-                            roomTypeSrc.Rows.Add(id, r["RoomTypeName"]?.ToString());
+                            if (!int.TryParse(typeRow["RoomTypeId"]?.ToString(), out var id)) continue;
+                            roomTypeSrc.Rows.Add(id, typeRow["RoomTypeName"]?.ToString());
                         }
                     }
                 }
                 else
                 {
-                    if (_roomTypes != null && _roomTypes.Columns.Contains("RoomTypeId"))
+                    if (filteredTypes != null && filteredTypes.Columns.Contains("RoomTypeId"))
                     {
-                        foreach (DataRow r in _roomTypes.Rows)
+                        foreach (DataRow typeRow in filteredTypes.Rows)
                         {
-                            if (!int.TryParse(r["RoomTypeId"]?.ToString(), out var id)) continue;
-                            roomTypeSrc.Rows.Add(id, r["RoomTypeName"]?.ToString());
+                            if (!int.TryParse(typeRow["RoomTypeId"]?.ToString(), out var id)) continue;
+                            roomTypeSrc.Rows.Add(id, typeRow["RoomTypeName"]?.ToString());
+                        }
+                    }
+                    else if (_roomTypes != null && _roomTypes.Columns.Contains("RoomTypeId"))
+                    {
+                        foreach (DataRow typeRow in _roomTypes.Rows)
+                        {
+                            if (!int.TryParse(typeRow["RoomTypeId"]?.ToString(), out var id)) continue;
+                            roomTypeSrc.Rows.Add(id, typeRow["RoomTypeName"]?.ToString());
                         }
                     }
                 }
@@ -2085,7 +2081,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     bool? active = TryReadBool(_row, "IsActive");
                     _chkActive.Checked = active ?? true;
                 }
-            }
             }
             private static int? TryReadInt(DataRow row, string column)
             {
