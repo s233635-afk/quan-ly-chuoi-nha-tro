@@ -1,5 +1,6 @@
 using System;
 using System.Data;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
@@ -475,29 +476,261 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void DeleteTenant()
         {
-            if (_selectedTenantId <= 0)
+            var candidates = GetFilteredTenantsForDelete();
+            if (candidates.Count == 0)
             {
-                MessageBox.Show("Chọn khách thuê trước.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Không có khách thuê để xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
-            if (MessageBox.Show($"Xóa khách thuê #{_selectedTenantId}?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                return;
+            using (var picker = new TenantDeletePicker(candidates, _selectedTenantId))
+            {
+                if (picker.ShowDialog(this) != DialogResult.OK) return;
+                var selected = picker.SelectedRows;
+                if (selected == null || selected.Count == 0)
+                {
+                    MessageBox.Show("Chưa chọn khách thuê cần xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
 
-            _ = DeleteTenantAsync();
+                if (MessageBox.Show($"Xóa {selected.Count} khách thuê?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                    return;
+
+                _ = DeleteTenantsAsync(selected);
+            }
         }
 
-        private async Task DeleteTenantAsync()
+        private async Task DeleteTenantsAsync(List<DataRow> rows)
         {
             try
             {
-                await _bll.DeleteTenantAsync(_selectedTenantId);
+                int deleted = 0;
+                var failures = new List<string>();
+                var deletedIds = new HashSet<int>();
+
+                foreach (var row in rows)
+                {
+                    int id = TryGetInt(row, "TenantId");
+                    if (id <= 0 || deletedIds.Contains(id)) continue;
+                    try
+                    {
+                        bool ok = await _bll.DeleteTenantAsync(id);
+                        if (ok) deleted++;
+                        else failures.Add(SafeToString(row, "FullName") ?? id.ToString());
+                        deletedIds.Add(id);
+                    }
+                    catch (Exception ex)
+                    {
+                        var label = SafeToString(row, "FullName") ?? id.ToString();
+                        failures.Add($"{label}: {ex.Message}");
+                    }
+                }
+
                 await LoadDataAsync();
                 AdminEvents.NotifyDataChanged();
+                DataSyncManager.NotifyTenantsChanged();
+                DataSyncManager.NotifyRoomsChanged();
+                DataSyncManager.NotifyContractsChanged();
+                DataSyncManager.NotifyInvoicesChanged();
+                DataSyncManager.NotifyPaymentsChanged();
+
+                if (failures.Count > 0)
+                {
+                    MessageBox.Show("Một số khách thuê không xóa được:\n" + string.Join("\n", failures), "Cảnh báo",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+                else if (deleted > 0)
+                {
+                    MessageBox.Show($"Đã xóa {deleted} khách thuê.", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Lỗi xóa khách thuê: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private List<DataRow> GetFilteredTenantsForDelete()
+        {
+            if (_tenants == null) return new List<DataRow>();
+
+            string keyword = (_txtSearch.Text ?? string.Empty).Trim();
+            if (keyword == SearchPlaceholder) keyword = string.Empty;
+
+            var view = new DataView(_tenants);
+            if (!string.IsNullOrWhiteSpace(keyword))
+            {
+                var escaped = keyword.Replace("'", "''");
+                view.RowFilter = $"Convert(FullName, 'System.String') LIKE '%{escaped}%' OR Convert(IdentityCard, 'System.String') LIKE '%{escaped}%' OR Convert(PhoneNumber, 'System.String') LIKE '%{escaped}%'";
+            }
+            else
+            {
+                view.RowFilter = string.Empty;
+            }
+
+            var rows = view.ToTable().AsEnumerable().ToList();
+            if (_tenants.Columns.Contains("TenantId"))
+                rows = rows.GroupBy(r => TryGetInt(r, "TenantId")).Select(g => g.First()).ToList();
+            return rows;
+        }
+
+        private static int TryGetInt(DataRow row, string column)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(column)) return 0;
+            return int.TryParse(row[column]?.ToString(), out var val) ? val : 0;
+        }
+
+        private static string SafeToString(DataRow row, string column)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(column)) return null;
+            var v = row[column];
+            return v == null || v == DBNull.Value ? null : v.ToString();
+        }
+
+        private sealed class TenantDeletePicker : Form
+        {
+            private readonly CheckedListBox _list;
+            private readonly Label _lblCount;
+            public List<DataRow> SelectedRows { get; private set; }
+
+            public TenantDeletePicker(List<DataRow> rows, int preselectedTenantId)
+            {
+                Text = "Ch?n khách thuê c?n xóa";
+                StartPosition = FormStartPosition.CenterParent;
+                FormBorderStyle = FormBorderStyle.FixedDialog;
+                MaximizeBox = false;
+                MinimizeBox = false;
+                ClientSize = new Size(520, 420);
+                BackColor = Color.White;
+                Font = new Font("Segoe UI", 10F);
+
+                var lbl = new Label
+                {
+                    Text = "Ch?n khách thuê:",
+                    AutoSize = true,
+                    Location = new Point(14, 12)
+                };
+
+                _list = new CheckedListBox
+                {
+                    CheckOnClick = true,
+                    Location = new Point(14, 36),
+                    Size = new Size(492, 300)
+                };
+
+                foreach (var row in rows)
+                {
+                    string name = SafeToString(row, "FullName") ?? "N/A";
+                    string phone = SafeToString(row, "PhoneNumber") ?? "";
+                    string cccd = SafeToString(row, "IdentityCard") ?? "";
+                    int id = TryGetInt(row, "TenantId");
+                    string label = $"{id} - {name}";
+                    if (!string.IsNullOrWhiteSpace(phone) || !string.IsNullOrWhiteSpace(cccd))
+                        label = $"{label} | {phone} | {cccd}";
+                    int index = _list.Items.Add(new ListItem(label, row), false);
+                    if (preselectedTenantId > 0 && preselectedTenantId == id)
+                        _list.SetItemChecked(index, true);
+                }
+
+                _lblCount = new Label
+                {
+                    Text = $"T?ng: {rows.Count}",
+                    AutoSize = true,
+                    Location = new Point(14, 346),
+                    ForeColor = Color.FromArgb(80, 80, 80)
+                };
+
+                var btnSelectAll = new Button
+                {
+                    Text = "Ch?n t?t c?",
+                    Width = 110,
+                    Height = 28,
+                    FlatStyle = FlatStyle.Flat,
+                    Location = new Point(230, 342)
+                };
+                btnSelectAll.FlatAppearance.BorderSize = 1;
+                btnSelectAll.Click += (s, e) =>
+                {
+                    for (int i = 0; i < _list.Items.Count; i++)
+                        _list.SetItemChecked(i, true);
+                };
+
+                var btnClear = new Button
+                {
+                    Text = "B? ch?n",
+                    Width = 90,
+                    Height = 28,
+                    FlatStyle = FlatStyle.Flat,
+                    Location = new Point(346, 342)
+                };
+                btnClear.FlatAppearance.BorderSize = 1;
+                btnClear.Click += (s, e) =>
+                {
+                    for (int i = 0; i < _list.Items.Count; i++)
+                        _list.SetItemChecked(i, false);
+                };
+
+                var btnOk = new Button
+                {
+                    Text = "X?a",
+                    Width = 100,
+                    Height = 32,
+                    BackColor = Color.FromArgb(220, 53, 69),
+                    ForeColor = Color.White,
+                    FlatStyle = FlatStyle.Flat,
+                    Location = new Point(296, 360),
+                    DialogResult = DialogResult.OK
+                };
+                btnOk.FlatAppearance.BorderSize = 0;
+                btnOk.Click += (s, e) => CollectSelection();
+
+                var btnCancel = new Button
+                {
+                    Text = "H?y",
+                    Width = 90,
+                    Height = 32,
+                    BackColor = Color.FromArgb(220, 220, 220),
+                    ForeColor = Color.Black,
+                    FlatStyle = FlatStyle.Flat,
+                    Location = new Point(412, 360),
+                    DialogResult = DialogResult.Cancel
+                };
+                btnCancel.FlatAppearance.BorderSize = 0;
+
+                Controls.Add(lbl);
+                Controls.Add(_list);
+                Controls.Add(_lblCount);
+                Controls.Add(btnSelectAll);
+                Controls.Add(btnClear);
+                Controls.Add(btnOk);
+                Controls.Add(btnCancel);
+
+                AcceptButton = btnOk;
+                CancelButton = btnCancel;
+            }
+
+            private void CollectSelection()
+            {
+                SelectedRows = new List<DataRow>();
+                foreach (var item in _list.CheckedItems)
+                {
+                    if (item is ListItem li && li.Row != null)
+                        SelectedRows.Add(li.Row);
+                }
+            }
+
+            private sealed class ListItem
+            {
+                public string Text { get; }
+                public DataRow Row { get; }
+
+                public ListItem(string text, DataRow row)
+                {
+                    Text = text;
+                    Row = row;
+                }
+
+                public override string ToString() => Text;
             }
         }
 

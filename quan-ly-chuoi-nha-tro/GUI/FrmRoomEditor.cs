@@ -32,6 +32,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private DataTable _statusTable;
 
         public int? SavedRoomId { get; private set; }
+        public int? DefaultBranchId { get; set; }
 
         public FrmRoomEditor(AdminDataBLL bll, DataRow existingRow = null)
         {
@@ -223,6 +224,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 BindStatuses();
 
                 LoadExistingIntoControls();
+
+                if (_existingRow == null && DefaultBranchId.HasValue)
+                {
+                    try { cboBranch.SelectedValue = DefaultBranchId.Value; } catch { }
+                }
 
                 await ReloadSectionsAsync();
             }
@@ -437,6 +443,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     SavedRoomId = id;
                 }
 
+                AdminEvents.NotifyDataChanged();
+                DataSyncManager.NotifyRoomsChanged();
+                DataSyncManager.NotifyTenantsChanged();
+                DataSyncManager.NotifyContractsChanged();
+                DataSyncManager.NotifyInvoicesChanged();
+                DataSyncManager.NotifyPaymentsChanged();
                 DialogResult = DialogResult.OK;
             }
             catch (Exception ex)

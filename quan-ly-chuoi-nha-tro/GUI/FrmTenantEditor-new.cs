@@ -473,6 +473,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     );
                 }
 
+                AdminEvents.NotifyDataChanged();
+                DataSyncManager.NotifyTenantsChanged();
+                DataSyncManager.NotifyRoomsChanged();
+                DataSyncManager.NotifyContractsChanged();
+                DataSyncManager.NotifyInvoicesChanged();
+                DataSyncManager.NotifyPaymentsChanged();
                 DialogResult = DialogResult.OK;
                 Close();
             }

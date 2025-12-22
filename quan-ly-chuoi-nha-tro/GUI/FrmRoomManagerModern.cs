@@ -497,6 +497,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 await _bll.DeleteRoomAsync(roomId);
                 MessageBox.Show("Xóa thành công!", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                AdminEvents.NotifyDataChanged();
+                DataSyncManager.NotifyRoomsChanged();
+                DataSyncManager.NotifyTenantsChanged();
+                DataSyncManager.NotifyContractsChanged();
+                DataSyncManager.NotifyInvoicesChanged();
+                DataSyncManager.NotifyPaymentsChanged();
                 await LoadDataAsync();
             }
             catch (Exception ex)

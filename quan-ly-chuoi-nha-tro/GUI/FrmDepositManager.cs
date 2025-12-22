@@ -312,8 +312,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 else if (statusCombo == "Đã xác nhận") dbStatus = "Confirmed";
                 else if (statusCombo == "Hoàn cọc") dbStatus = "Returned";
                 else if (statusCombo == "Hủy") dbStatus = "Cancelled";
-                
-                statusFilter = $"Status = '{dbStatus}'";
+
+                statusFilter = $"(Status = '{dbStatus}' OR Status = '{statusCombo}')";
             }
 
             string keywordFilter = !string.IsNullOrWhiteSpace(keyword)
@@ -339,12 +339,16 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _lblCount.Text = $"Tổng: {_table.DefaultView.Count}";
 
             decimal total = 0m;
+            decimal returned = 0m;
             foreach (DataRowView r in _table.DefaultView)
             {
                 if (_table.Columns.Contains("DepositAmount") && decimal.TryParse(r["DepositAmount"]?.ToString(), out var v))
                     total += v;
+                if (_table.Columns.Contains("ReturnedAmount") && decimal.TryParse(r["ReturnedAmount"]?.ToString(), out var ret))
+                    returned += ret;
             }
-            _lblTotal.Text = $"Tổng cọc: {total:N0}";
+            var net = total - returned;
+            _lblTotal.Text = $"Tổng cọc: {net:N0} (Hoàn: {returned:N0})";
         }
 
         private DataRow GetCurrentRow()
@@ -450,9 +454,24 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     }
                 }
 
+                if (newStatus == "Confirmed" && !HasLinkedPayment(notes))
+                {
+                    var actionDate = depositDate ?? DateTime.Today;
+                    var result = await _bll.CreateDepositPaymentAsync(
+                        tenantId,
+                        roomId,
+                        amount,
+                        actionDate,
+                        "Deposit",
+                        $"Xác nhận cọc - DepositId: {id}");
+                    notes = AppendPaymentNote(notes, result.Item1, result.Item2, "Deposit");
+                }
+
                 await _bll.UpdateDepositAsync(id, tenantId, roomId, amount, depositDate, type, newStatus, returnedAmount, returnedDate, notes);
                 await LoadDataAsync();
                 AdminEvents.NotifyDataChanged();
+                DataSyncManager.NotifyInvoicesChanged();
+                DataSyncManager.NotifyPaymentsChanged();
             }
             catch (Exception ex)
             {
@@ -499,14 +518,46 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     notes = dlg.Notes;
                 }
 
+                if (!HasLinkedPayment(notes))
+                {
+                    var actionDate = returnedDate ?? DateTime.Today;
+                    var refundAmount = returnedAmount ?? amount;
+                    var result = await _bll.CreateDepositPaymentAsync(
+                        tenantId,
+                        roomId,
+                        refundAmount,
+                        actionDate,
+                        "Refund",
+                        $"Hoàn cọc - DepositId: {id}");
+                    notes = AppendPaymentNote(notes, result.Item1, result.Item2, "Refund");
+                }
+
                 await _bll.UpdateDepositAsync(id, tenantId, roomId, amount, depositDate, type, "Returned", returnedAmount, returnedDate, notes);
                 await LoadDataAsync();
                 AdminEvents.NotifyDataChanged();
+                DataSyncManager.NotifyInvoicesChanged();
+                DataSyncManager.NotifyPaymentsChanged();
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Lỗi hoàn cọc: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private static bool HasLinkedPayment(string notes)
+        {
+            return !string.IsNullOrWhiteSpace(notes) && notes.Contains("[INV:");
+        }
+
+        private static string AppendPaymentNote(string notes, int invoiceId, int paymentId, string actionType)
+        {
+            if (invoiceId <= 0 || paymentId <= 0)
+                return notes;
+
+            string tag = $"[INV:{invoiceId}|PAY:{paymentId}|{actionType}]";
+            if (string.IsNullOrWhiteSpace(notes)) return tag;
+            if (notes.Contains(tag)) return notes;
+            return notes.TrimEnd() + " " + tag;
         }
 
         private async System.Threading.Tasks.Task EnsureAllowedBranchScopeAsync()

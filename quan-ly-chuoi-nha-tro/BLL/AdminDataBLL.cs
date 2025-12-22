@@ -191,6 +191,44 @@ namespace QuanLyNhaTro.BLL
         public Task<int> InsertPaymentAsync(int invoiceId, DateTime paymentDate, decimal amount, string method, string reference, string notes)
             => dbHelper.AddPaymentAsync(invoiceId, paymentDate, amount, method, reference, notes);
 
+        public async Task<Tuple<int, int>> CreateDepositPaymentAsync(
+            int tenantId,
+            int roomId,
+            decimal amount,
+            DateTime actionDate,
+            string actionType,
+            string notes)
+        {
+            if (amount <= 0)
+                return Tuple.Create(0, 0);
+
+            string prefix = string.Equals(actionType, "Refund", StringComparison.OrdinalIgnoreCase) ? "REF" : "COK";
+            string invoiceNumber = $"{prefix}-{actionDate:yyyyMMdd}-{DateTime.Now:HHmmss}";
+
+            int invoiceId = await AddInvoiceAsync(
+                invoiceNumber,
+                tenantId,
+                roomId,
+                actionDate.Date,
+                null,
+                null,
+                0m,
+                0m,
+                amount,
+                actionDate.Date,
+                0m);
+
+            int paymentId = await AddPaymentAsync(
+                invoiceId,
+                actionDate.Date,
+                amount,
+                actionType,
+                null,
+                notes);
+
+            return Tuple.Create(invoiceId, paymentId);
+        }
+
         // --- ROOM CRUD ---
         public async Task<int> AddRoomAsync(
             string roomNumber,

@@ -17,7 +17,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
     public class FrmRoomManager : Form
     {
         private const string SearchPlaceholder = "Tìm theo số phòng/loại...";
-        private const int MaxDisplayedRooms = 20;
+        private const int DefaultDisplayedRooms = 20;
 
         private readonly AdminDataBLL _bll;
         private readonly int? _branchId;
@@ -36,16 +36,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private TextBox _txtSearch;
         private Label _lblSummary;
         private Label _lblRoomCount;
+        private NumericUpDown _numDisplayLimit;
 
         private Button _btnSearch;
         private Button _btnRefresh;
         private Button _btnAddRoom;
         private Button _btnChangeStatus;
         private Button _btnEdit;
+        private Button _btnDelete;
 
         private int _selectedRoomId = 0;
         private int _inspectingRoomId = 0;
         private DataRow _selectedRoomRow = null;
+        private int _displayLimit = DefaultDisplayedRooms;
 
         public FrmRoomManager(AdminDataBLL bll, int? branchId = null)
         {
@@ -86,8 +89,18 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 AutoSizeMode = AutoSizeMode.GrowAndShrink
             };
 
+            var actions = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Right,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Padding = new Padding(0, 0, 6, 0)
+            };
+
             var lblSearch = new Label { Text = "Tìm kiếm:", AutoSize = true, Margin = new Padding(0, 8, 6, 0) };
-            _txtSearch = new TextBox { Width = 240, ForeColor = Color.Gray, Text = SearchPlaceholder, Margin = new Padding(0, 4, 12, 0) };
+            _txtSearch = new TextBox { Width = 200, ForeColor = Color.Gray, Text = SearchPlaceholder, Margin = new Padding(0, 4, 10, 0) };
             _txtSearch.GotFocus += (s, e) =>
             {
                 if (_txtSearch.Text == SearchPlaceholder)
@@ -107,8 +120,24 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _txtSearch.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) ApplyFilter(); };
 
             var lblStatus = new Label { Text = "Trạng thái:", AutoSize = true, Margin = new Padding(0, 8, 6, 0) };
-            _cboStatus = new ComboBox { Width = 170, DropDownStyle = ComboBoxStyle.DropDownList, Margin = new Padding(0, 4, 12, 0) };
+            _cboStatus = new ComboBox { Width = 150, DropDownStyle = ComboBoxStyle.DropDownList, Margin = new Padding(0, 4, 10, 0) };
             _cboStatus.SelectedIndexChanged += (s, e) => ApplyFilter();
+
+            var lblLimit = new Label { Text = "Hien thi:", AutoSize = true, Margin = new Padding(0, 8, 6, 0) };
+            _numDisplayLimit = new NumericUpDown
+            {
+                Width = 60,
+                Minimum = 0,
+                Maximum = 9999,
+                Value = DefaultDisplayedRooms,
+                Margin = new Padding(0, 4, 10, 0),
+                ThousandsSeparator = true
+            };
+            _numDisplayLimit.ValueChanged += (s, e) =>
+            {
+                _displayLimit = (int)_numDisplayLimit.Value;
+                ApplyFilter();
+            };
 
             _btnSearch = new Button
             {
@@ -118,7 +147,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 BackColor = Color.FromArgb(0, 122, 204),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Margin = new Padding(0, 4, 8, 0)
+                Margin = new Padding(0, 4, 6, 0)
             };
             _btnSearch.FlatAppearance.BorderSize = 0;
             _btnSearch.Click += (s, e) => ApplyFilter();
@@ -126,12 +155,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnRefresh = new Button
             {
                 Text = "Làm mới",
-                Width = 90,
+                Width = 88,
                 Height = 32,
                 BackColor = Color.FromArgb(40, 167, 69),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Margin = new Padding(0, 4, 8, 0)
+                Margin = new Padding(0, 4, 6, 0)
             };
             _btnRefresh.FlatAppearance.BorderSize = 0;
             _btnRefresh.Click += async (s, e) => await LoadRoomsAsync();
@@ -139,12 +168,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnAddRoom = new Button
             {
                 Text = "Thêm phòng",
-                Width = 110,
+                Width = 100,
                 Height = 32,
                 BackColor = Color.FromArgb(23, 162, 184),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Margin = new Padding(0, 4, 8, 0)
+                Margin = new Padding(0, 4, 6, 0)
             };
             _btnAddRoom.FlatAppearance.BorderSize = 0;
             _btnAddRoom.Click += async (s, e) => await AddRoomAsync();
@@ -177,14 +206,34 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnEdit.FlatAppearance.BorderSize = 0;
             _btnEdit.Click += (s, e) => EditCurrentRoom();
 
+            _btnDelete = new Button
+            {
+                Text = "Xóa",
+                Width = 70,
+                Height = 32,
+                BackColor = Color.FromArgb(220, 53, 69),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Margin = new Padding(0, 4, 0, 0),
+                Visible = true,
+                Enabled = true
+            };
+            _btnDelete.FlatAppearance.BorderSize = 0;
+            _btnDelete.Click += async (s, e) => await DeleteCurrentRoomAsync();
+
             filters.Controls.Add(lblSearch);
             filters.Controls.Add(_txtSearch);
             filters.Controls.Add(lblStatus);
             filters.Controls.Add(_cboStatus);
-            filters.Controls.Add(_btnSearch);
-            filters.Controls.Add(_btnRefresh);
-            filters.Controls.Add(_btnAddRoom);
-            filters.Controls.Add(_btnChangeStatus);
+            filters.Controls.Add(lblLimit);
+            filters.Controls.Add(_numDisplayLimit);
+
+            actions.Controls.Add(_btnSearch);
+            actions.Controls.Add(_btnRefresh);
+            actions.Controls.Add(_btnAddRoom);
+            actions.Controls.Add(_btnEdit);
+            actions.Controls.Add(_btnChangeStatus);
+            actions.Controls.Add(_btnDelete);
 
             var stats = new FlowLayoutPanel
             {
@@ -197,14 +246,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
             };
             _lblSummary = new Label
             {
-                Text = $"Đang ở/Tổng: 0/{MaxDisplayedRooms} phòng",
+                Text = $"Đang ở/Tổng: 0/{GetLimitText()} phòng",
                 AutoSize = true,
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 122, 204)
             };
             _lblRoomCount = new Label
             {
-                Text = $"Phòng: 0/{MaxDisplayedRooms}",
+                Text = $"Phòng: 0/{GetLimitText()}",
                 AutoSize = true,
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 122, 204),
@@ -213,6 +262,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             stats.Controls.Add(_lblSummary);
             stats.Controls.Add(_lblRoomCount);
 
+            toolbar.Controls.Add(actions);
             toolbar.Controls.Add(stats);
             toolbar.Controls.Add(filters);
 
@@ -262,6 +312,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 _selectedRoomId = 0;
                 _selectedRoomRow = null;
                 _btnEdit.Visible = false;
+                _btnDelete.Enabled = true;
                 if (_splitContainer != null)
                 {
                     _splitContainer.Panel2Collapsed = true;
@@ -453,17 +504,33 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var list = rows?.ToList() ?? new List<DataRow>();
             if (list.Count == 0) return list;
 
+            if (_displayLimit <= 0)
+            {
+                if (_branchId.HasValue)
+                {
+                    return list
+                        .GroupBy(r => NormalizeRoomNumber(SafeToString(r, "RoomNumber")))
+                        .Select(g => g.First())
+                        .OrderBy(r => GetRoomSortKey(SafeToString(r, "RoomNumber")))
+                        .ToList();
+                }
+                return list;
+            }
+
+            int limitA = (_displayLimit + 1) / 2;
+            int limitB = _displayLimit / 2;
+
             if (!_branchId.HasValue)
             {
                 var roomsA = list
                     .Where(r => (SafeToString(r, "RoomNumber") ?? string.Empty).StartsWith("A", StringComparison.OrdinalIgnoreCase))
                     .OrderBy(r => GetRoomSortKey(SafeToString(r, "RoomNumber")))
-                    .Take(10);
+                    .Take(limitA);
 
                 var roomsB = list
                     .Where(r => (SafeToString(r, "RoomNumber") ?? string.Empty).StartsWith("B", StringComparison.OrdinalIgnoreCase))
                     .OrderBy(r => GetRoomSortKey(SafeToString(r, "RoomNumber")))
-                    .Take(10);
+                    .Take(limitB);
 
                 return roomsA.Concat(roomsB).ToList();
             }
@@ -481,10 +548,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var roomsBStaff = unique
                 .Where(r => (SafeToString(r, "RoomNumber") ?? string.Empty).StartsWith("B", StringComparison.OrdinalIgnoreCase))
                 .OrderBy(r => GetRoomSortKey(SafeToString(r, "RoomNumber")))
-                .Take(10)
+                .Take(limitB)
                 .ToList();
 
-            var selectedA = SelectRoomsForSectionA(roomsAStaff);
+            var selectedA = SelectRoomsForSectionA(roomsAStaff, limitA);
             return selectedA.Concat(roomsBStaff).ToList();
         }
 
@@ -504,7 +571,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     ForeColor = Color.FromArgb(90, 90, 90)
                 });
                 _roomCardsHost.ResumeLayout();
-                _lblRoomCount.Text = $"Phòng: 0/{MaxDisplayedRooms}";
+                _lblRoomCount.Text = $"Phòng: 0/{GetLimitText()}";
                 return;
             }
 
@@ -524,7 +591,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             AdjustSectionWidths();
 
             _roomCardsHost.ResumeLayout();
-            _lblRoomCount.Text = $"Phòng: {roomsToRender.Count}/{MaxDisplayedRooms}";
+            _lblRoomCount.Text = $"Phòng: {roomsToRender.Count}/{GetLimitText()}";
         }
 
         private Control BuildRoomSection(string title, IList<DataRow> rows)
@@ -814,13 +881,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             card.Controls.Add(mainLayout);
 
 
-            card.Click += (s, e) => ShowRoomDetailsForm(row, roomId);
-            lblRoom.Click += (s, e) => ShowRoomDetailsForm(row, roomId);
-            lblPrice.Click += (s, e) => ShowRoomDetailsForm(row, roomId);
-            lblTypeInfo.Click += (s, e) => ShowRoomDetailsForm(row, roomId);
-            lblStatusInfo.Click += (s, e) => ShowRoomDetailsForm(row, roomId);
-            lblOccupantsInfo.Click += (s, e) => ShowRoomDetailsForm(row, roomId);
-
             card.Click += (s, e) =>
             {
                 ShowRoomDetails(row, roomId);
@@ -841,6 +901,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _selectedRoomId = roomId;
             _selectedRoomRow = row;
             _inspectingRoomId = roomId;
+            _btnEdit.Visible = true;
+            _btnDelete.Enabled = true;
 
             try
             {
@@ -879,7 +941,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private async Task AddRoomAsync()
         {
-            using (var frm = new FrmRoomEditor(_bll))
+            using (var frm = new FrmRoomEditor(_bll) { DefaultBranchId = _branchId })
             {
                 if (frm.ShowDialog(this) != DialogResult.OK) return;
                 await LoadRoomsAsync();
@@ -891,6 +953,115 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     method?.Invoke(null, null);
                 }
             }
+        }
+
+        private async Task DeleteCurrentRoomAsync()
+        {
+            var candidates = GetFilteredRowsForDelete();
+            if (candidates.Count == 0)
+            {
+                MessageBox.Show("Không có phòng nào để xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using (var picker = new RoomDeletePicker(candidates, _selectedRoomRow))
+            {
+                if (picker.ShowDialog(this) != DialogResult.OK) return;
+                var selected = picker.SelectedRows;
+                if (selected == null || selected.Count == 0)
+                {
+                    MessageBox.Show("Chưa chọn phòng cần xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                var confirm = MessageBox.Show($"Bạn Có Chắc Muốn Xóa {selected.Count} phòng?",
+                    "Xác nhận xóa", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                if (confirm != DialogResult.Yes) return;
+
+                try
+                {
+                    int deleted = 0;
+                    var failures = new List<string>();
+                    var deletedRoomIds = new HashSet<int>();
+                    foreach (var row in selected)
+                    {
+                        int roomId = TryGetInt(row, "RoomId");
+                        if (roomId <= 0 || deletedRoomIds.Contains(roomId)) continue;
+                        try
+                        {
+                            bool ok = await _bll.DeleteRoomAsync(roomId);
+                            if (ok) deleted++;
+                            else failures.Add(SafeToString(row, "RoomNumber") ?? roomId.ToString());
+                            deletedRoomIds.Add(roomId);
+                        }
+                        catch (Exception ex)
+                        {
+                            var label = SafeToString(row, "RoomNumber") ?? roomId.ToString();
+                            failures.Add($"{label}: {ex.Message}");
+                        }
+                    }
+
+                    AdminEvents.NotifyDataChanged();
+                    DataSyncManager.NotifyRoomsChanged();
+                    DataSyncManager.NotifyTenantsChanged();
+                    DataSyncManager.NotifyContractsChanged();
+                    DataSyncManager.NotifyInvoicesChanged();
+                    DataSyncManager.NotifyPaymentsChanged();
+
+                    _selectedRoomRow = null;
+                    _selectedRoomId = 0;
+                    _inspectingRoomId = 0;
+                    _btnEdit.Visible = false;
+                    _btnDelete.Enabled = true;
+                    if (_splitContainer != null) _splitContainer.Panel2Collapsed = true;
+
+                    await LoadRoomsAsync();
+                    ApplyFilter();
+
+                    if (failures.Count > 0)
+                    {
+                        MessageBox.Show("Một số phòng không xóa được:\n" + string.Join("\n", failures), "Cảnh báo",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
+                    else if (deleted > 0)
+                    {
+                        MessageBox.Show($"Đã xóa {deleted} phòng.", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Lỗi xóa phòng: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+
+        private List<DataRow> GetFilteredRowsForDelete()
+        {
+            if (_rooms == null) return new List<DataRow>();
+
+            var view = new DataView(_rooms);
+            var filters = new List<string>();
+            bool hasStatusColumn = _rooms.Columns.Contains("CurrentStatusId");
+
+            var raw = (_txtSearch.Text ?? string.Empty).Trim();
+            if (raw == SearchPlaceholder) raw = string.Empty;
+            if (!string.IsNullOrWhiteSpace(raw))
+            {
+                var escaped = raw.Replace("'", "''");
+                filters.Add($"Convert(RoomNumber, 'System.String') LIKE '%{escaped}%' OR Convert(TypeName, 'System.String') LIKE '%{escaped}%'");
+            }
+
+            if (hasStatusColumn && _cboStatus.SelectedValue is int statusId && statusId > 0)
+                filters.Add($"Convert(CurrentStatusId, 'System.Int32') = {statusId}");
+
+            view.RowFilter = filters.Count > 0 ? string.Join(" AND ", filters) : string.Empty;
+            var result = view.ToTable().AsEnumerable().ToList();
+            if (_rooms.Columns.Contains("RoomId"))
+                result = result
+                    .GroupBy(r => TryGetInt(r, "RoomId"))
+                    .Select(g => g.First())
+                    .ToList();
+            return result;
         }
 
         private void BuildRoomDetailsPanel()
@@ -946,6 +1117,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
             editButton.FlatAppearance.BorderSize = 0;
             editButton.Click += (s, e) => EditCurrentRoom();
 
+            var deleteButton = new Button
+            {
+                Text = "Xóa",
+                AutoSize = true,
+                BackColor = Color.FromArgb(220, 53, 69),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Padding = new Padding(12, 6, 12, 6),
+                Margin = new Padding(8, 12, 0, 0)
+            };
+            deleteButton.FlatAppearance.BorderSize = 0;
+            deleteButton.Click += async (s, e) => await DeleteCurrentRoomAsync();
+
             var buttonPanel = new FlowLayoutPanel
             {
                 Dock = DockStyle.Top,
@@ -953,6 +1137,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 FlowDirection = FlowDirection.LeftToRight
             };
             buttonPanel.Controls.Add(editButton);
+            buttonPanel.Controls.Add(deleteButton);
 
             var tenantsPanel = BuildTenantListPanel();
 
@@ -1114,6 +1299,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 _selectedRoomId = 0;
                 _inspectingRoomId = 0;
                 _btnEdit.Visible = false;
+                _btnDelete.Enabled = true;
                 if (_splitContainer != null) _splitContainer.Panel2Collapsed = true;
             };
 
@@ -1362,7 +1548,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             int occupied = list.Count(r =>
                 IsOccupiedStatusName(r["StatusName"]?.ToString()) && TryGetInt(r, "Occupants") >= 1);
 
-            _lblSummary.Text = $"Đang ở/Tổng: {occupied}/{MaxDisplayedRooms} phòng";
+            _lblSummary.Text = $"Đang ở/Tổng: {occupied}/{GetLimitText()} phòng";
+        }
+
+        private string GetLimitText()
+        {
+            return _displayLimit > 0 ? _displayLimit.ToString() : "∞";
         }
 
         private async void ChangeRoomStatus()
@@ -1754,17 +1945,21 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
         }
 
-        private static List<DataRow> SelectRoomsForSectionA(List<DataRow> rooms)
+        private static List<DataRow> SelectRoomsForSectionA(List<DataRow> rooms, int maxCount)
         {
             var selected = new List<DataRow>();
             var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            AppendRooms(selected, rooms.Where(IsSingleRoomType).OrderBy(r => GetRoomSortKey(SafeToString(r, "RoomNumber"))), 4, used);
-            AppendRooms(selected, rooms.Where(IsDoubleRoomType).OrderBy(r => GetRoomSortKey(SafeToString(r, "RoomNumber"))), 7, used);
-            AppendRooms(selected, rooms.Where(IsPremiumRoomType).OrderBy(r => GetRoomSortKey(SafeToString(r, "RoomNumber"))), 10, used);
+            int singleLimit = Math.Min(4, maxCount);
+            int doubleLimit = Math.Min(7, maxCount);
+            int premiumLimit = Math.Min(10, maxCount);
 
-            if (selected.Count < 10)
-                AppendRooms(selected, rooms.OrderBy(r => GetRoomSortKey(SafeToString(r, "RoomNumber"))), 10, used);
+            AppendRooms(selected, rooms.Where(IsSingleRoomType).OrderBy(r => GetRoomSortKey(SafeToString(r, "RoomNumber"))), singleLimit, used);
+            AppendRooms(selected, rooms.Where(IsDoubleRoomType).OrderBy(r => GetRoomSortKey(SafeToString(r, "RoomNumber"))), doubleLimit, used);
+            AppendRooms(selected, rooms.Where(IsPremiumRoomType).OrderBy(r => GetRoomSortKey(SafeToString(r, "RoomNumber"))), premiumLimit, used);
+
+            if (selected.Count < maxCount)
+                AppendRooms(selected, rooms.OrderBy(r => GetRoomSortKey(SafeToString(r, "RoomNumber"))), maxCount, used);
 
             return selected
                 .OrderBy(r => GetRoomSortKey(SafeToString(r, "RoomNumber")))
@@ -1792,6 +1987,152 @@ namespace quan_ly_chuoi_nha_tro.GUI
             if (occupants == 2 || lowerType.Contains("đôi") || lowerType.Contains("doi") || lowerType.Contains("double"))
                 return "👥";
             return "👤";
+        }
+
+        private sealed class RoomDeletePicker : Form
+        {
+            private readonly CheckedListBox _list;
+            private readonly Label _lblCount;
+            public List<DataRow> SelectedRows { get; private set; }
+
+            public RoomDeletePicker(List<DataRow> rows, DataRow preselected)
+            {
+                Text = "Chọn phòng cần xóa";
+                StartPosition = FormStartPosition.CenterParent;
+                FormBorderStyle = FormBorderStyle.FixedDialog;
+                MaximizeBox = false;
+                MinimizeBox = false;
+                ClientSize = new Size(520, 420);
+                BackColor = Color.White;
+                Font = new Font("Segoe UI", 10F);
+
+                var lbl = new Label
+                {
+                    Text = "Chọn phòng:",
+                    AutoSize = true,
+                    Location = new Point(14, 12)
+                };
+
+                _list = new CheckedListBox
+                {
+                    CheckOnClick = true,
+                    Location = new Point(14, 36),
+                    Size = new Size(492, 300)
+                };
+
+                foreach (var row in rows)
+                {
+                    string roomNumber = SafeToString(row, "RoomNumber") ?? "N/A";
+                    string typeName = SafeToString(row, "TypeName") ?? SafeToString(row, "RoomTypeName") ?? "";
+                    string statusName = SafeToString(row, "StatusName") ?? "";
+                    string label = string.IsNullOrWhiteSpace(typeName)
+                        ? $"{roomNumber} - {statusName}"
+                        : $"{roomNumber} - {typeName} - {statusName}";
+                    int index = _list.Items.Add(new ListItem(label, row), false);
+                    if (preselected != null && TryGetInt(preselected, "RoomId") == TryGetInt(row, "RoomId"))
+                        _list.SetItemChecked(index, true);
+                }
+
+                _lblCount = new Label
+                {
+                    Text = $"Tổng: {rows.Count}",
+                    AutoSize = true,
+                    Location = new Point(14, 346),
+                    ForeColor = Color.FromArgb(80, 80, 80)
+                };
+
+                var btnSelectAll = new Button
+                {
+                    Text = "Chọn tất cả",
+                    Width = 110,
+                    Height = 28,
+                    FlatStyle = FlatStyle.Flat,
+                    Location = new Point(230, 342)
+                };
+                btnSelectAll.FlatAppearance.BorderSize = 1;
+                btnSelectAll.Click += (s, e) =>
+                {
+                    for (int i = 0; i < _list.Items.Count; i++)
+                        _list.SetItemChecked(i, true);
+                };
+
+                var btnClear = new Button
+                {
+                    Text = "Bỏ chọn",
+                    Width = 90,
+                    Height = 28,
+                    FlatStyle = FlatStyle.Flat,
+                    Location = new Point(346, 342)
+                };
+                btnClear.FlatAppearance.BorderSize = 1;
+                btnClear.Click += (s, e) =>
+                {
+                    for (int i = 0; i < _list.Items.Count; i++)
+                        _list.SetItemChecked(i, false);
+                };
+
+                var btnOk = new Button
+                {
+                    Text = "Xoa",
+                    Width = 100,
+                    Height = 32,
+                    BackColor = Color.FromArgb(220, 53, 69),
+                    ForeColor = Color.White,
+                    FlatStyle = FlatStyle.Flat,
+                    Location = new Point(296, 360),
+                    DialogResult = DialogResult.OK
+                };
+                btnOk.FlatAppearance.BorderSize = 0;
+                btnOk.Click += (s, e) => CollectSelection();
+
+                var btnCancel = new Button
+                {
+                    Text = "Hủy",
+                    Width = 90,
+                    Height = 32,
+                    BackColor = Color.FromArgb(220, 220, 220),
+                    ForeColor = Color.Black,
+                    FlatStyle = FlatStyle.Flat,
+                    Location = new Point(412, 360),
+                    DialogResult = DialogResult.Cancel
+                };
+                btnCancel.FlatAppearance.BorderSize = 0;
+
+                Controls.Add(lbl);
+                Controls.Add(_list);
+                Controls.Add(_lblCount);
+                Controls.Add(btnSelectAll);
+                Controls.Add(btnClear);
+                Controls.Add(btnOk);
+                Controls.Add(btnCancel);
+
+                AcceptButton = btnOk;
+                CancelButton = btnCancel;
+            }
+
+            private void CollectSelection()
+            {
+                SelectedRows = new List<DataRow>();
+                foreach (var item in _list.CheckedItems)
+                {
+                    if (item is ListItem li && li.Row != null)
+                        SelectedRows.Add(li.Row);
+                }
+            }
+
+            private sealed class ListItem
+            {
+                public string Text { get; }
+                public DataRow Row { get; }
+
+                public ListItem(string text, DataRow row)
+                {
+                    Text = text;
+                    Row = row;
+                }
+
+                public override string ToString() => Text;
+            }
         }
 
         internal class RoomEditDialog : Form
@@ -1847,12 +2188,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                 var lblType = new Label { Text = "Loại phòng:", AutoSize = true, Location = new Point(18, 56) };
                 _cboRoomType = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 260, Location = new Point(120, 52) };
-                if (_isStaffMode)
-                {
-                    _cboRoomType.Enabled = false;
-                    _cboRoomType.TabStop = false;
-                }
-
                 var lblStatus = new Label { Text = "Trạng thái:", AutoSize = true, Location = new Point(18, 94) };
                 _cboStatus = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 260, Location = new Point(120, 90) };
 
@@ -1942,60 +2277,16 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 roomTypeSrc.Columns.Add("RoomTypeName", typeof(string));
 
                 var filteredTypes = RoomTypeCatalog.FilterToCanonicalTypes(_roomTypes);
-                if (_isStaffMode)
+                var sourceTypes = filteredTypes != null && filteredTypes.Columns.Contains("RoomTypeId")
+                    ? filteredTypes
+                    : _roomTypes;
+
+                if (sourceTypes != null && sourceTypes.Columns.Contains("RoomTypeId"))
                 {
-                    int? typeDonId = null;
-                    int? typeDoiId = null;
-                    int? typeCaoCapId = null;
-
-                    if (_roomTypes != null && _roomTypes.Columns.Contains("RoomTypeId"))
+                    foreach (DataRow typeRow in sourceTypes.Rows)
                     {
-                        foreach (DataRow typeRow in _roomTypes.Rows)
-                        {
-                            if (!int.TryParse(typeRow["RoomTypeId"]?.ToString(), out var id)) continue;
-                            var rawName = typeRow["RoomTypeName"]?.ToString();
-                            var name = TextFixer.FixUtf8Mojibake(rawName) ?? rawName ?? string.Empty;
-                            var key = NormalizeStatusKey(name);
-
-                            if (!typeDonId.HasValue && (key.Contains("don") || key.Contains("single")))
-                                typeDonId = id;
-                            if (!typeDoiId.HasValue && (key.Contains("doi") || key.Contains("double")))
-                                typeDoiId = id;
-                            if (!typeCaoCapId.HasValue && (key.Contains("cao cap") || key.Contains("vip") || key.Contains("premium")))
-                                typeCaoCapId = id;
-                        }
-                    }
-
-                    if (typeDonId.HasValue) roomTypeSrc.Rows.Add(typeDonId.Value, LabelRoomSingle);
-                    if (typeDoiId.HasValue) roomTypeSrc.Rows.Add(typeDoiId.Value, LabelRoomDouble);
-                    if (typeCaoCapId.HasValue) roomTypeSrc.Rows.Add(typeCaoCapId.Value, LabelRoomPremium);
-
-                    if (roomTypeSrc.Rows.Count == 0 && _roomTypes != null && _roomTypes.Columns.Contains("RoomTypeId"))
-                    {
-                        foreach (DataRow typeRow in _roomTypes.Rows)
-                        {
-                            if (!int.TryParse(typeRow["RoomTypeId"]?.ToString(), out var id)) continue;
-                            roomTypeSrc.Rows.Add(id, typeRow["RoomTypeName"]?.ToString());
-                        }
-                    }
-                }
-                else
-                {
-                    if (filteredTypes != null && filteredTypes.Columns.Contains("RoomTypeId"))
-                    {
-                        foreach (DataRow typeRow in filteredTypes.Rows)
-                        {
-                            if (!int.TryParse(typeRow["RoomTypeId"]?.ToString(), out var id)) continue;
-                            roomTypeSrc.Rows.Add(id, typeRow["RoomTypeName"]?.ToString());
-                        }
-                    }
-                    else if (_roomTypes != null && _roomTypes.Columns.Contains("RoomTypeId"))
-                    {
-                        foreach (DataRow typeRow in _roomTypes.Rows)
-                        {
-                            if (!int.TryParse(typeRow["RoomTypeId"]?.ToString(), out var id)) continue;
-                            roomTypeSrc.Rows.Add(id, typeRow["RoomTypeName"]?.ToString());
-                        }
+                        if (!int.TryParse(typeRow["RoomTypeId"]?.ToString(), out var id)) continue;
+                        roomTypeSrc.Rows.Add(id, typeRow["RoomTypeName"]?.ToString());
                     }
                 }
 

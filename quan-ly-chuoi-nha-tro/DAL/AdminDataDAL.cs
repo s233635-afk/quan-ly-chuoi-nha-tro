@@ -638,26 +638,116 @@ namespace QuanLyNhaTro.DAL
             {
                 await conn.OpenAsync();
 
-                bool hasIsActive = await ColumnExistsAsync(conn, "Rooms", "IsActive");
-                bool hasUpdatedDate = await ColumnExistsAsync(conn, "Rooms", "UpdatedDate");
+                using (var tx = conn.BeginTransaction())
+                {
+                    try
+                    {
+                        if (await TableExistsAsync("Payments") && await TableExistsAsync("Invoices"))
+                        {
+                            const string sqlPayments = @"
+                                DELETE FROM Payments
+                                WHERE InvoiceId IN (SELECT InvoiceId FROM Invoices WHERE RoomId = @RoomId);";
+                            using (var cmd = new SqlCommand(sqlPayments, conn, tx))
+                            {
+                                cmd.Parameters.AddWithValue("@RoomId", roomId);
+                                await cmd.ExecuteNonQueryAsync();
+                            }
+                        }
 
-                string sql;
-                if (hasIsActive)
-                {
-                    sql = hasUpdatedDate
-                        ? "UPDATE Rooms SET IsActive = 0, UpdatedDate = GETDATE() WHERE RoomId = @RoomId"
-                        : "UPDATE Rooms SET IsActive = 0 WHERE RoomId = @RoomId";
-                }
-                else
-                {
-                    sql = "DELETE FROM Rooms WHERE RoomId = @RoomId";
-                }
+                        if (await TableExistsAsync("Invoices"))
+                        {
+                            const string sql = @"DELETE FROM Invoices WHERE RoomId = @RoomId;";
+                            using (var cmd = new SqlCommand(sql, conn, tx))
+                            {
+                                cmd.Parameters.AddWithValue("@RoomId", roomId);
+                                await cmd.ExecuteNonQueryAsync();
+                            }
+                        }
 
-                using (var cmd = new SqlCommand(sql, conn))
-                {
-                    cmd.Parameters.AddWithValue("@RoomId", roomId);
-                    int affected = await cmd.ExecuteNonQueryAsync();
-                    return affected > 0;
+                        if (await TableExistsAsync("Deposits"))
+                        {
+                            const string sql = @"DELETE FROM Deposits WHERE RoomId = @RoomId;";
+                            using (var cmd = new SqlCommand(sql, conn, tx))
+                            {
+                                cmd.Parameters.AddWithValue("@RoomId", roomId);
+                                await cmd.ExecuteNonQueryAsync();
+                            }
+                        }
+
+                        if (await TableExistsAsync("TenantHistory"))
+                        {
+                            const string sql = @"DELETE FROM TenantHistory WHERE RoomId = @RoomId;";
+                            using (var cmd = new SqlCommand(sql, conn, tx))
+                            {
+                                cmd.Parameters.AddWithValue("@RoomId", roomId);
+                                await cmd.ExecuteNonQueryAsync();
+                            }
+                        }
+
+                        if (await TableExistsAsync("TenantRoomHistory"))
+                        {
+                            const string sql = @"DELETE FROM TenantRoomHistory WHERE RoomId = @RoomId;";
+                            using (var cmd = new SqlCommand(sql, conn, tx))
+                            {
+                                cmd.Parameters.AddWithValue("@RoomId", roomId);
+                                await cmd.ExecuteNonQueryAsync();
+                            }
+                        }
+
+                        if (await TableExistsAsync("Contracts"))
+                        {
+                            const string sql = @"DELETE FROM Contracts WHERE RoomId = @RoomId;";
+                            using (var cmd = new SqlCommand(sql, conn, tx))
+                            {
+                                cmd.Parameters.AddWithValue("@RoomId", roomId);
+                                await cmd.ExecuteNonQueryAsync();
+                            }
+                        }
+
+                        if (await TableExistsAsync("UtilityReadings"))
+                        {
+                            const string sql = @"DELETE FROM UtilityReadings WHERE RoomId = @RoomId;";
+                            using (var cmd = new SqlCommand(sql, conn, tx))
+                            {
+                                cmd.Parameters.AddWithValue("@RoomId", roomId);
+                                await cmd.ExecuteNonQueryAsync();
+                            }
+                        }
+
+                        if (await TableExistsAsync("MaintenanceTickets"))
+                        {
+                            const string sql = @"DELETE FROM MaintenanceTickets WHERE RoomId = @RoomId;";
+                            using (var cmd = new SqlCommand(sql, conn, tx))
+                            {
+                                cmd.Parameters.AddWithValue("@RoomId", roomId);
+                                await cmd.ExecuteNonQueryAsync();
+                            }
+                        }
+
+                        if (await TableExistsAsync("Assets"))
+                        {
+                            const string sql = @"DELETE FROM Assets WHERE RoomId = @RoomId;";
+                            using (var cmd = new SqlCommand(sql, conn, tx))
+                            {
+                                cmd.Parameters.AddWithValue("@RoomId", roomId);
+                                await cmd.ExecuteNonQueryAsync();
+                            }
+                        }
+
+                        const string sqlRoom = @"DELETE FROM Rooms WHERE RoomId = @RoomId;";
+                        using (var cmd = new SqlCommand(sqlRoom, conn, tx))
+                        {
+                            cmd.Parameters.AddWithValue("@RoomId", roomId);
+                            int affected = await cmd.ExecuteNonQueryAsync();
+                            tx.Commit();
+                            return affected > 0;
+                        }
+                    }
+                    catch
+                    {
+                        tx.Rollback();
+                        throw;
+                    }
                 }
             }
         }

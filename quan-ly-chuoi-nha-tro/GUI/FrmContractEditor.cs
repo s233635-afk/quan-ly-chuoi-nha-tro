@@ -362,6 +362,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     await _bll.UpdateContractAsync(id, ContractNumber, TenantId, RoomId, SignDate, StartDate, EndDate, RentalPrice, DepositRequired, Terms, ContractPdfPath, Status);
                 }
 
+                AdminEvents.NotifyDataChanged();
+                DataSyncManager.NotifyContractsChanged();
+                DataSyncManager.NotifyTenantsChanged();
+                DataSyncManager.NotifyRoomsChanged();
+                DataSyncManager.NotifyInvoicesChanged();
+                DataSyncManager.NotifyPaymentsChanged();
                 this.DialogResult = DialogResult.OK;
             }
             catch (Exception ex)
