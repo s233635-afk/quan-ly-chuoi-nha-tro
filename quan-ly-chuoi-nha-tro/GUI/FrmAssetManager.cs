@@ -507,6 +507,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 {
                     await LoadAsync();
                     AdminEvents.NotifyDataChanged();
+                    DataSyncManager.NotifyRoomsChanged();
                 }
             }
         }
@@ -526,6 +527,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 {
                     await LoadAsync();
                     AdminEvents.NotifyDataChanged();
+                    DataSyncManager.NotifyRoomsChanged();
                 }
             }
         }
@@ -550,6 +552,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 await _bll.DeleteAssetAsync(id);
                 await LoadAsync();
                 AdminEvents.NotifyDataChanged();
+                DataSyncManager.NotifyRoomsChanged();
             }
             catch (Exception ex)
             {

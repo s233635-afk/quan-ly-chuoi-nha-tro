@@ -153,7 +153,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             body.RowStyles.Add(new RowStyle(SizeType.Percent, 52F));
 
             var roomBox = MakeInfoBox("Thông tin phòng", out _lblRoomInfo);
-            var tenantTitle = _isStaffMode ? "Người đã thuê" : "Ng??i ?ang s? d?ng";
+            var tenantTitle = _isStaffMode ? "Người đã thuê" : "Người đang sử dụng";
             var tenantBox = MakeInfoBox(tenantTitle, out _lblTenantInfo);
 
             if (_isStaffMode)
@@ -249,9 +249,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
             else
             {
                     _lblRoomInfo.Text =
-                    $"Khu/DA?y: {NullDash(section)}   |   Lo???i: {NullDash(type)}\n" +
-                    $"GiA?: {NullDash(price)}   |   T???ng: {NullDash(floor)}   |   Di???n tA-ch: {NullDash(area)}\n" +
-                    $"KA-ch ho???t: {NullDash(isActive)}";
+                    $"Khu/Dãy: {NullDash(section)}   |   Loại: {NullDash(type)}\n" +
+                    $"Giá: {NullDash(price)}   |   Tầng: {NullDash(floor)}   |   Diện tích: {NullDash(area)}\n" +
+                    $"Kích hoạt: {NullDash(isActive)}";
             }
 
 
@@ -268,7 +268,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             else if (_contractRow == null || _tenantRow == null)
             {
-                _lblTenantInfo.Text = "Phong hien chua co nguoi su dung (khong co hop dong Active/Extended).";
+                _lblTenantInfo.Text = "Phòng hiện chưa có người sử dụng (không có hợp đồng Active/Extended).";
             }
             else
             {
@@ -282,8 +282,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 string end = FormatDate(ReadString(_contractRow, "EndDate"));
 
                 _lblTenantInfo.Text =
-                    $"Ho ten: {NullDash(tenantName)}   |   SDT: {NullDash(tenantPhone)}   |   CCCD: {NullDash(tenantIdCard)}\n" +
-                    $"Hop dong: {NullDash(contractNo)}   |   {NullDash(st)}   |   {NullDash(start)} -> {NullDash(end)}";
+                    $"Họ tên: {NullDash(tenantName)}   |   SĐT: {NullDash(tenantPhone)}   |   CCCD: {NullDash(tenantIdCard)}\n" +
+                    $"Hợp đồng: {NullDash(contractNo)}   |   {NullDash(st)}   |   {NullDash(start)} -> {NullDash(end)}";
             }
 
             bool canEditTenant = _tenantRow != null;
@@ -295,10 +295,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (_roomRow == null)
             {
-                var message = _isStaffMode
-                    ? "Khong tim thay du lieu phong."
-                    : "KhA'ng tAªm th §y d ¯_ li ¯Øu phAýng.";
-                var title = _isStaffMode ? "Thong bao" : "ThA'ng bA­o";
+                var message = "Không tìm thấy dữ liệu phòng.";
+                var title = "Thông báo";
                 MessageBox.Show(message, title, MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -334,7 +332,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                 if (occupants > 5)
                 {
-                    MessageBox.Show("Moi phong toi da 5 nguoi.", "Canh bao", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show("Mỗi phòng tối đa 5 người.", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
@@ -350,12 +348,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     if (emptyId.HasValue)
                     {
                         statusId = emptyId.Value;
-                        MessageBox.Show("Phong chua co nguoi, tu dong chuyen trang thai ve Trong.", "Thong bao",
+                        MessageBox.Show("Phòng chưa có người, tự động chuyển trạng thái về Trống.", "Thông báo",
                             MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
                     else
                     {
-                        MessageBox.Show("Trang thai Dang o yeu cau it nhat 1 nguoi.", "Canh bao", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        MessageBox.Show("Trạng thái Đang ở yêu cầu ít nhất 1 người.", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         return;
                     }
                 }

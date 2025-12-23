@@ -28,6 +28,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private DataTable _tenantHistory;
         private DataTable _contracts;
         private DataTable _tenants;
+        private DataTable _assets;
+        private readonly Dictionary<int, List<DataRow>> _assetsByRoom = new Dictionary<int, List<DataRow>>();
 
         private SplitContainer _splitContainer;
         private FlowLayoutPanel _roomCardsHost;
@@ -56,7 +58,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _branchId = branchId;
             InitializeComponent();
             AdminEvents.DataChanged += HandleAdminDataChanged;
-            FormClosing += (s, e) => AdminEvents.DataChanged -= HandleAdminDataChanged;
+            DataSyncManager.RoomsDataChanged += HandleRoomsDataSync;
+            FormClosing += (s, e) =>
+            {
+                AdminEvents.DataChanged -= HandleAdminDataChanged;
+                DataSyncManager.RoomsDataChanged -= HandleRoomsDataSync;
+            };
         }
 
         public FrmRoomManager() : this(new AdminDataBLL(), null)
@@ -123,7 +130,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _cboStatus = new ComboBox { Width = 150, DropDownStyle = ComboBoxStyle.DropDownList, Margin = new Padding(0, 4, 10, 0) };
             _cboStatus.SelectedIndexChanged += (s, e) => ApplyFilter();
 
-            var lblLimit = new Label { Text = "Hien thi:", AutoSize = true, Margin = new Padding(0, 8, 6, 0) };
+            var lblLimit = new Label { Text = "Hiển thị:", AutoSize = true, Margin = new Padding(0, 8, 6, 0) };
             _numDisplayLimit = new NumericUpDown
             {
                 Width = 60,
@@ -318,12 +325,25 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     _splitContainer.Panel2Collapsed = true;
                 }
 
-                _rooms = await _bll.GetRoomsAsync() ?? new DataTable();
-                _statuses = await _bll.GetRoomStatusesAsync() ?? new DataTable();
-                _roomTypes = await _bll.GetRoomTypesAsync() ?? new DataTable();
-                _tenantHistory = await _bll.GetTenantHistoryAsync() ?? new DataTable();
-                _contracts = await _bll.GetContractsAsync() ?? new DataTable();
-                _tenants = await _bll.GetTenantsAsync() ?? new DataTable();
+                var roomsTask = _bll.GetRoomsAsync();
+                var statusesTask = _bll.GetRoomStatusesAsync();
+                var typesTask = _bll.GetRoomTypesAsync();
+                var historyTask = _bll.GetTenantHistoryAsync();
+                var contractsTask = _bll.GetContractsAsync();
+                var tenantsTask = _bll.GetTenantsAsync();
+                var assetsTask = _bll.GetAssetsAsync();
+
+                await Task.WhenAll(roomsTask, statusesTask, typesTask, historyTask, contractsTask, tenantsTask, assetsTask);
+
+                _rooms = roomsTask.Result ?? new DataTable();
+                _statuses = statusesTask.Result ?? new DataTable();
+                _roomTypes = typesTask.Result ?? new DataTable();
+                _tenantHistory = historyTask.Result ?? new DataTable();
+                _contracts = contractsTask.Result ?? new DataTable();
+                _tenants = tenantsTask.Result ?? new DataTable();
+                _assets = assetsTask.Result ?? new DataTable();
+
+                NormalizeLoadedTables();
 
                 if (_branchId.HasValue && _rooms.Columns.Contains("BranchId"))
                 {
@@ -333,6 +353,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 }
 
                 EnsureDisplayColumns();
+                BuildAssetLookup();
                 PopulateOccupancy();
                 NormalizeRoomStatusForOccupancy();
                 PopulateStatusFilter();
@@ -347,6 +368,18 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 Cursor = Cursors.Default;
             }
+        }
+
+        private void NormalizeLoadedTables()
+        {
+            TextFixer.ForceFixDataTable(_rooms, "RoomNumber", "TypeName", "RoomTypeName", "StatusName", "BranchName", "SectionName");
+            TextFixer.ForceFixDataTable(_roomTypes, "RoomTypeName", "Amenities", "Description");
+            TextFixer.ForceFixDataTable(_statuses, "StatusName", "Description");
+            TextFixer.ForceFixDataTable(_assets, "AssetName", "Description");
+            TextFixer.ForceFixDataTable(_tenants, "FullName", "PhoneNumber");
+
+            RoomTypeCatalog.CanonicalizeRoomTypeColumn(_rooms, "TypeName");
+            RoomTypeCatalog.CanonicalizeRoomTypeColumn(_roomTypes, "RoomTypeName");
         }
 
         private void EnsureDisplayColumns()
@@ -377,7 +410,107 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
         }
 
+        private void BuildAssetLookup()
+        {
+            _assetsByRoom.Clear();
+            if (_assets == null || !_assets.Columns.Contains("RoomId")) return;
+
+            IEnumerable<DataRow> rows = _assets.AsEnumerable();
+            if (_branchId.HasValue && _assets.Columns.Contains("BranchId"))
+            {
+                rows = rows.Where(r => TryGetInt(r, "BranchId") == _branchId.Value);
+            }
+
+            foreach (var asset in rows)
+            {
+                if (!int.TryParse(asset["RoomId"]?.ToString(), out var roomId) || roomId <= 0)
+                    continue;
+
+                if (!_assetsByRoom.TryGetValue(roomId, out var list))
+                {
+                    list = new List<DataRow>();
+                    _assetsByRoom[roomId] = list;
+                }
+                list.Add(asset);
+            }
+        }
+
+        private string BuildAssetInlineSummary(int roomId)
+        {
+            if (!_assetsByRoom.TryGetValue(roomId, out var list) || list == null || list.Count == 0)
+                return null;
+
+            var grouped = list
+                .GroupBy(r =>
+                {
+                    var rawName = SafeReadString(r, "AssetName");
+                    var fixedName = NormalizeAssetText(rawName);
+                    return fixedName ?? $"T\u00e0i s\u1ea3n #{SafeToString(r, "AssetId") ?? "?"}";
+                })
+                .Select(g => new
+                {
+                    Name = g.Key,
+                    Quantity = g.Sum(r => Math.Max(1, TryGetInt(r, "Quantity")))
+                })
+                .OrderByDescending(g => g.Quantity)
+                .ThenBy(g => g.Name)
+                .ToList();
+
+            if (grouped.Count == 0) return null;
+
+            var top = grouped.Take(2)
+                .Select(g => $"{g.Name}×{g.Quantity}")
+                .ToList();
+
+            var summary = string.Join(", ", top);
+            int remaining = grouped.Count - top.Count;
+            if (remaining > 0)
+            {
+                summary = string.IsNullOrEmpty(summary) ? $"(+{remaining} m\u1ee5c)" : $"{summary} +{remaining}";
+            }
+
+            return summary;
+        }
+
+        private decimal GetAssetCharge(int roomId)
+        {
+            if (!_assetsByRoom.TryGetValue(roomId, out var list) || list == null || list.Count == 0)
+                return 0m;
+
+            decimal total = 0m;
+            foreach (var asset in list)
+            {
+                int qty = Math.Max(1, TryGetInt(asset, "Quantity"));
+                decimal price = TryGetDecimal(asset, "PurchasePrice") ?? 0m;
+                total += qty * price;
+            }
+
+            return total;
+        }
+
+        private static string NormalizeAssetText(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return value;
+            var fixedValue = TextFixer.FixUtf8Mojibake(value) ?? value;
+            fixedValue = fixedValue.Replace("Máy lạnh", "Máy lạnh")
+                                   .Replace("Máy lạnh", "Máy lạnh");
+            return fixedValue;
+        }
+
         private async void HandleAdminDataChanged()
+        {
+            if (IsDisposed || !IsHandleCreated) return;
+            try
+            {
+                await LoadRoomsAsync();
+            }
+            catch
+            {
+                // ignore refresh errors
+            }
+        }
+
+        private async void HandleRoomsDataSync(object sender, EventArgs e)
         {
             if (IsDisposed || !IsHandleCreated) return;
             try
@@ -709,22 +842,26 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private Panel CreateRoomCard(DataRow row, int roomId)
         {
-            string roomNumber = SafeToString(row, "RoomNumber") ?? "N/A";
-            string typeName = SafeToString(row, "TypeName") ?? "N/A";
-            string statusName = SafeToString(row, "StatusName") ?? "N/A";
+            string roomNumber = SafeReadString(row, "RoomNumber") ?? "N/A";
+            string typeName = SafeReadString(row, "TypeName") ?? "N/A";
+            string statusName = SafeReadString(row, "StatusName") ?? "N/A";
             var statusColor = GetStatusColor(statusName);
             var hoverColor = Color.FromArgb(245, 249, 255);
             decimal price = TryGetDecimal(row, "RoomPrice") ?? 0m;
             int occupants = TryGetInt(row, "Occupants");
+            string assetSummary = BuildAssetInlineSummary(roomId);
             bool isSelected = _selectedRoomId == roomId;
 
             var card = new Panel
             {
-                Width = 300,
-                Height = 180,
+                Width = 320,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                MinimumSize = new Size(320, 0),
+                MaximumSize = new Size(320, 0),
                 BackColor = isSelected ? Color.FromArgb(236, 242, 255) : Color.White,
                 BorderStyle = BorderStyle.None,
-                Margin = new Padding(10, 10, 10, 10),
+                Margin = new Padding(12, 12, 12, 12),
                 Cursor = Cursors.Hand,
                 Tag = roomId
             };
@@ -771,23 +908,25 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             var mainLayout = new TableLayoutPanel
             {
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 ColumnCount = 1,
                 RowCount = 3,
-                Padding = new Padding(14, 12, 14, 12)
+                Padding = new Padding(14, 14, 14, 14)
             };
             mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
             // Header: Phòng + icon
             var lblRoom = new Label
             {
                 Text = $"Phòng {roomNumber}",
-                Font = new Font("Segoe UI", 17, FontStyle.Bold),
+                Font = new Font("Segoe UI", 18, FontStyle.Bold),
                 ForeColor = Color.FromArgb(20, 50, 90),
-                Dock = DockStyle.Fill,
-                Height = 28,
+                Dock = DockStyle.Top,
+                Height = 30,
                 AutoSize = false,
                 TextAlign = ContentAlignment.MiddleLeft,
                 Margin = new Padding(0, 0, 0, 0)
@@ -815,56 +954,60 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var lblPrice = new Label
             {
                 Text = $"{price:N0}đ",
-                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                Font = new Font("Segoe UI", 16, FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 122, 204),
                 Dock = DockStyle.Top,
-                Height = 24,
+                Height = 28,
                 AutoSize = false,
                 TextAlign = ContentAlignment.TopRight,
                 Margin = new Padding(0, 0, 0, 6)
             };
 
             // Info: Loại, Trạng thái, Số người
-            var infoPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0) };
+            var infoPanel = new Panel { Dock = DockStyle.Top,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink, Padding = new Padding(0) };
             var infoLayout = new TableLayoutPanel
             {
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 ColumnCount = 1,
-                RowCount = 3,
+                RowCount = string.IsNullOrEmpty(assetSummary) ? 3 : 4,
                 Padding = new Padding(0)
             };
 
             var lblTypeInfo = new Label
             {
                 Text = $"Loại: {GetTypeIcon(typeName)} {typeName}",
-                Font = new Font("Segoe UI", 11f, FontStyle.Regular),
+                Font = new Font("Segoe UI", 11.5f, FontStyle.Regular),
                 ForeColor = Color.FromArgb(0, 122, 204),
                 Dock = DockStyle.Top,
-                Height = 22,
+                Height = 24,
                 AutoSize = false,
                 TextAlign = ContentAlignment.TopLeft,
-                Margin = new Padding(0, 0, 0, 4)
+                Margin = new Padding(0, 0, 0, 6)
             };
 
             var lblStatusInfo = new Label
             {
                 Text = $"Trạng thái: {statusName}",
-                Font = new Font("Segoe UI Semibold", 11.5f, FontStyle.Bold),
+                Font = new Font("Segoe UI Semibold", 12f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(25, 55, 110),
                 Dock = DockStyle.Top,
-                Height = 22,
+                Height = 24,
                 AutoSize = false,
                 TextAlign = ContentAlignment.TopLeft,
-                Margin = new Padding(0, 0, 0, 4)
+                Margin = new Padding(0, 0, 0, 6)
             };
 
             var lblOccupantsInfo = new Label
             {
-                Text = $"Số người: {occupants}",
-                Font = new Font("Segoe UI", 11f, FontStyle.Regular),
+                Text = $"S\u1ed1 ng\u01b0\u1eddi: {occupants}",
+                Font = new Font("Segoe UI", 11.5f, FontStyle.Regular),
                 ForeColor = Color.FromArgb(40, 40, 40),
                 Dock = DockStyle.Top,
-                Height = 22,
+                Height = 24,
                 AutoSize = false,
                 TextAlign = ContentAlignment.TopLeft
             };
@@ -872,9 +1015,26 @@ namespace quan_ly_chuoi_nha_tro.GUI
             infoLayout.Controls.Add(lblTypeInfo, 0, 0);
             infoLayout.Controls.Add(lblStatusInfo, 0, 1);
             infoLayout.Controls.Add(lblOccupantsInfo, 0, 2);
+
+            if (!string.IsNullOrEmpty(assetSummary))
+            {
+                assetSummary = TextFixer.FixUtf8Mojibake(assetSummary) ?? assetSummary;
+                var lblAssetsInfo = new Label
+                {
+                    Text = $"T\u00e0i s\u1ea3n: {assetSummary}",
+                    Font = new Font("Segoe UI", 10.5f),
+                    ForeColor = Color.FromArgb(60, 60, 60),
+                    Dock = DockStyle.Top,
+                    Height = 24,
+                    AutoSize = false,
+                    TextAlign = ContentAlignment.TopLeft
+                };
+                infoLayout.Controls.Add(lblAssetsInfo, 0, 3);
+            }
             infoPanel.Controls.Add(infoLayout);
 
             mainLayout.Controls.Add(headerPanel, 0, 0);
+            mainLayout.RowCount = 3;
             mainLayout.Controls.Add(lblPrice, 0, 1);
             mainLayout.Controls.Add(infoPanel, 0, 2);
 
@@ -1325,7 +1485,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             var grid = new DataGridView
             {
-                Dock = DockStyle.Top,
+                Dock = DockStyle.Fill,
                 Height = 200,
                 ReadOnly = true,
                 AllowUserToAddRows = false,
@@ -1588,7 +1748,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                 var btnOk = new Button
                 {
-                    Text = "Cap nhat",
+                    Text = "Cập nhật",
                     DialogResult = DialogResult.OK,
                     Width = 110,
                     Height = 32,
@@ -1601,7 +1761,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                 var btnCancel = new Button
                 {
-                    Text = "Huy",
+                    Text = "Hủy",
                     DialogResult = DialogResult.Cancel,
                     Width = 90,
                     Height = 32,
@@ -2364,7 +2524,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     _numOccupants.Value = Math.Max(_numOccupants.Minimum, Math.Min(_numOccupants.Maximum, occupants));
 
                     decimal? price = TryReadDecimal(_row, "RoomPrice");
-                    _lblPrice.Text = price.HasValue ? price.Value.ToString("N0") : "Khong xac dinh";
+                    _lblPrice.Text = price.HasValue ? price.Value.ToString("N0") : "Không xác định";
 
                     decimal? area = TryReadDecimal(_row, "Area");
                     if (area.HasValue) _txtArea.Text = area.Value.ToString("0.##");
@@ -2392,12 +2552,25 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
         }
 
+        private static string SafeReadString(DataRow row, string column)
+        {
+            var value = SafeToString(row, column);
+            return string.IsNullOrWhiteSpace(value) ? null : value;
+        }
+
         private static string SafeToString(DataRow row, string column)
         {
             if (row?.Table == null || !row.Table.Columns.Contains(column)) return null;
-            var v = row[column];
-            return v == null || v == DBNull.Value ? null : v.ToString();
+            var value = row[column];
+            if (value == null || value == DBNull.Value) return null;
+            var text = value.ToString();
+            return TextFixer.ForceFixUtf8Mojibake(text) ?? text;
         }
     }
 }
+
+
+
+
+
 

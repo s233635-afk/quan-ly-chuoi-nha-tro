@@ -297,29 +297,37 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             try
             {
-                _grid.DataSource = null;
-                var data = await _bll.GetRoomListAsync();
-                _rawTable = data ?? new DataTable();
-
-                if (_grid.Columns.Count == 0)
-                {
-                    _grid.DataSource = _rawTable;
-                    ConfigureGridColumns();
-                }
-                else
-                {
-                    _grid.DataSource = _rawTable;
-                }
-
-                // Load filter combos
-                LoadFilterData();
-                ApplyFilter();
+                Cursor = Cursors.WaitCursor;
+                var rooms = await _bll.GetRoomsAsync();
+                _rawTable = NormalizeRooms(rooms);
+                BindDataToGrid();
                 UpdateStats();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Lỗi tải dữ liệu: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Lỗi tải dữ liệu: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+            finally
+            {
+                Cursor = Cursors.Default;
+            }
+        }
+
+        private DataTable NormalizeRooms(DataTable rooms)
+        {
+            if (rooms == null) return new DataTable();
+            var clone = rooms.Copy();
+            TextFixer.ForceFixDataTable(clone, "RoomNumber", "TypeName", "RoomTypeName", "StatusName", "BranchName", "SectionName");
+            RoomTypeCatalog.CanonicalizeRoomTypeColumn(clone, "TypeName");
+            RoomTypeCatalog.CanonicalizeRoomTypeColumn(clone, "RoomTypeName");
+            if (!clone.Columns.Contains("TypeDisplay"))
+                clone.Columns.Add("TypeDisplay", typeof(string));
+            foreach (DataRow row in clone.Rows)
+            {
+                string raw = row["TypeName"]?.ToString() ?? row["RoomTypeName"]?.ToString();
+                row["TypeDisplay"] = RoomTypeCatalog.Canonicalize(raw);
+            }
+            return clone;
         }
 
         private void LoadFilterData()

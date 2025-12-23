@@ -395,7 +395,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 pnlModuleHost.Visible = false;
                 lblPlaceholder.Text = "Không thể tải thống kê tổng quan.\n\n" + ex.Message;
                 lblPlaceholder.Visible = true;
-                lblWelcome.Text = $"Xin chào Admin: {currentUser}";
+                lblWelcome.Text = $"Xin chào : {currentUser}";
             }
         }
 

@@ -174,6 +174,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private DataTable _utilitiesBranch;
         private DataTable _maintenanceBranch;
         private DataTable _assetsBranch;
+        private readonly Dictionary<int, List<DataRow>> _assetsByRoom = new Dictionary<int, List<DataRow>>();
         private DataTable _notificationsBranch;
 
         private Label _lblSummaryRooms;
@@ -197,7 +198,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _branchId = branchId;
             InitializeComponent();
             AdminEvents.DataChanged += HandleAdminDataChanged;
-            FormClosing += (s, e) => AdminEvents.DataChanged -= HandleAdminDataChanged;
+            DataSyncManager.RoomsDataChanged += HandleRoomsDataChanged;
+            FormClosing += (s, e) =>
+            {
+                AdminEvents.DataChanged -= HandleAdminDataChanged;
+                DataSyncManager.RoomsDataChanged -= HandleRoomsDataChanged;
+            };
             Load += async (s, e) => await LoadAllAsync();
         }
 
@@ -1131,7 +1137,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 _roomsAll = roomsTask.Result ?? new DataTable();
                 _roomsBranch = FilterByBranchId(_roomsAll, _branchId);
                 TextFixer.ForceFixDataTable(_roomsBranch, "RoomNumber", "BranchName", "SectionName", "RoomTypeName", "StatusName");
-                RenderRoomCards(_roomsBranch);
 
                 var sections = sectionsTask.Result ?? new DataTable();
                 TextFixer.ForceFixDataTable(sections, "SectionCode", "SectionName", "Description");
@@ -1176,6 +1181,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 var assets = assetsTask.Result ?? new DataTable();
                 _assetsBranch = FilterByBranchId(assets, _branchId);
                 BindAssets(_gridAssets, _assetsBranch);
+                BuildAssetLookup();
+                RenderRoomCards(_roomsBranch);
 
                 _notificationsBranch = notificationsTask.Result ?? new DataTable();
                 BindNotifications(_gridNotifications, BuildNotificationsTable(_notificationsBranch));
@@ -1253,6 +1260,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
         }
 
         private async void HandleAdminDataChanged()
+        {
+            if (IsDisposed || !IsHandleCreated) return;
+            try
+            {
+                await LoadAllAsync();
+            }
+            catch
+            {
+                // ignore refresh errors
+            }
+        }
+
+        private async void HandleRoomsDataChanged(object sender, EventArgs e)
         {
             if (IsDisposed || !IsHandleCreated) return;
             try
@@ -3035,11 +3055,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             var card = new Panel
             {
-                Width = 300,
-                Height = 180,
+                Width = 320,
+                Height = 200,
                 BackColor = Color.White,
                 BorderStyle = BorderStyle.None,
-                Margin = new Padding(10, 10, 10, 10),
+                Margin = new Padding(12, 12, 12, 12),
                 Cursor = Cursors.Hand,
                 Tag = roomId
             };
@@ -3067,9 +3087,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 card.BackColor = Color.White;
             };
 
-            string roomNumber = SafeReadString(row, "RoomNumber") ?? "—";
-            string typeName = SafeReadString(row, "RoomTypeName") ?? "—";
-            string statusName = SafeReadString(row, "StatusName") ?? "—";
+            string roomNumber = SafeReadString(row, "RoomNumber") ?? "N/A";
+            string typeName = SafeReadString(row, "TypeName") ?? "N/A";
+            string statusName = SafeReadString(row, "StatusName") ?? "N/A";
             decimal price = TryReadDecimal(row, "RoomPrice") ?? 0m;
             int occupants = TryReadInt(row, "Occupants");
 
@@ -3078,7 +3098,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Dock = DockStyle.Fill,
                 ColumnCount = 1,
                 RowCount = 3,
-                Padding = new Padding(14, 12, 14, 12)
+                Padding = new Padding(14, 14, 14, 14)
             };
             mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -3088,10 +3108,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var lblRoom = new Label
             {
                 Text = $"Phòng {roomNumber}",
-                Font = new Font("Segoe UI", 14, FontStyle.Bold),
-                ForeColor = Color.FromArgb(0, 79, 159),
-                Dock = DockStyle.Top,
-                Height = 28,
+                Font = new Font("Segoe UI", 18, FontStyle.Bold),
+                ForeColor = Color.FromArgb(20, 50, 90),
+                Dock = DockStyle.Fill,
+                Height = 30,
                 AutoSize = false,
                 TextAlign = ContentAlignment.MiddleLeft,
                 Margin = new Padding(0, 0, 0, 4)
@@ -3100,10 +3120,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var lblPrice = new Label
             {
                 Text = $"{price:N0}đ",
-                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                Font = new Font("Segoe UI", 16, FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 122, 204),
                 Dock = DockStyle.Top,
-                Height = 24,
+                Height = 28,
                 AutoSize = false,
                 TextAlign = ContentAlignment.TopRight,
                 Margin = new Padding(0, 0, 0, 6)
@@ -3122,34 +3142,34 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var lblTypeInfo = new Label
             {
                 Text = $"Loại: {typeName}",
-                Font = new Font("Segoe UI", 9),
-                ForeColor = Color.FromArgb(80, 80, 80),
+                Font = new Font("Segoe UI", 11.5f, FontStyle.Regular),
+                ForeColor = Color.FromArgb(0, 122, 204),
                 Dock = DockStyle.Top,
-                Height = 20,
+                Height = 24,
                 AutoSize = false,
                 TextAlign = ContentAlignment.TopLeft,
-                Margin = new Padding(0, 0, 0, 2)
+                Margin = new Padding(0, 0, 0, 6)
             };
 
             var lblStatusInfo = new Label
             {
                 Text = $"Trạng thái: {statusName}",
-                Font = new Font("Segoe UI", 9),
-                ForeColor = Color.FromArgb(80, 80, 80),
+                Font = new Font("Segoe UI Semibold", 12f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(25, 55, 110),
                 Dock = DockStyle.Top,
-                Height = 20,
+                Height = 24,
                 AutoSize = false,
                 TextAlign = ContentAlignment.TopLeft,
-                Margin = new Padding(0, 0, 0, 2)
+                Margin = new Padding(0, 0, 0, 6)
             };
 
             var lblOccupantsInfo = new Label
             {
                 Text = $"Số người: {occupants}",
-                Font = new Font("Segoe UI", 9),
-                ForeColor = Color.FromArgb(80, 80, 80),
+                Font = new Font("Segoe UI", 11.5f, FontStyle.Regular),
+                ForeColor = Color.FromArgb(40, 40, 40),
                 Dock = DockStyle.Top,
-                Height = 20,
+                Height = 24,
                 AutoSize = false,
                 TextAlign = ContentAlignment.TopLeft
             };
@@ -3203,12 +3223,75 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
         }
 
-        private string SafeReadString(DataRow row, string col)
+        private static string SafeReadString(DataRow row, string col)
         {
             if (row == null || !row.Table.Columns.Contains(col)) return null;
             var v = row[col];
             if (v == DBNull.Value || v == null) return null;
-            return v.ToString();
+            var text = v.ToString();
+            return TextFixer.ForceFixUtf8Mojibake(text) ?? text;
+        }
+
+        private static string SafeToString(DataRow row, string column)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(column)) return null;
+            var value = row[column];
+            return value == null || value == DBNull.Value ? null : value.ToString();
+        }
+
+        private void BuildAssetLookup()
+        {
+            _assetsByRoom.Clear();
+            if (_assetsBranch == null || !_assetsBranch.Columns.Contains("RoomId")) return;
+
+            IEnumerable<DataRow> rows = _assetsBranch.AsEnumerable();
+            if (_branchId > 0 && _assetsBranch.Columns.Contains("BranchId"))
+            {
+                rows = rows.Where(r => TryReadInt(r, "BranchId") == _branchId);
+            }
+
+            foreach (var asset in rows)
+            {
+                int roomId = TryReadInt(asset, "RoomId");
+                if (roomId <= 0) continue;
+
+                if (!_assetsByRoom.TryGetValue(roomId, out var list))
+                {
+                    list = new List<DataRow>();
+                    _assetsByRoom[roomId] = list;
+                }
+                list.Add(asset);
+            }
+        }
+
+        private string BuildAssetInlineSummary(int roomId)
+        {
+            if (!_assetsByRoom.TryGetValue(roomId, out var list) || list == null || list.Count == 0)
+                return null;
+
+            var grouped = list
+                .GroupBy(r => SafeReadString(r, "AssetName") ?? $"Tài sản #{SafeToString(r, "AssetId") ?? "?"}")
+                .Select(g => new
+                {
+                    Name = g.Key,
+                    Quantity = g.Sum(r => Math.Max(1, TryReadInt(r, "Quantity")))
+                })
+                .OrderByDescending(g => g.Quantity)
+                .ThenBy(g => g.Name)
+                .ToList();
+
+            if (grouped.Count == 0) return null;
+
+            var top = grouped.Take(2)
+                .Select(g => $"{g.Name}×{g.Quantity}")
+                .ToList();
+
+            var summary = string.Join(", ", top);
+            int remaining = grouped.Count - top.Count;
+            if (remaining > 0)
+                summary = string.IsNullOrEmpty(summary) ? $"(+{remaining} mục)" : $"{summary} +{remaining}";
+
+            return summary;
         }
 
         private decimal? TryReadDecimal(DataRow row, string col)

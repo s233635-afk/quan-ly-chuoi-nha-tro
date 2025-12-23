@@ -57,7 +57,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.pnlSidebar.Location = new System.Drawing.Point(0, 0);
             this.pnlSidebar.Name = "pnlSidebar";
             this.pnlSidebar.Padding = new System.Windows.Forms.Padding(16, 20, 16, 20);
-            this.pnlSidebar.Size = new System.Drawing.Size(230, 730);
+            this.pnlSidebar.Size = new System.Drawing.Size(280, 730);
             this.pnlSidebar.TabIndex = 0;
 
             // flowSidebar
@@ -81,7 +81,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.flowSidebar.Location = new System.Drawing.Point(16, 104);
             this.flowSidebar.Name = "flowSidebar";
             this.flowSidebar.Padding = new System.Windows.Forms.Padding(0, 12, 0, 0);
-            this.flowSidebar.Size = new System.Drawing.Size(198, 606);
+            this.flowSidebar.Size = new System.Drawing.Size(248, 606);
             this.flowSidebar.TabIndex = 2;
             this.flowSidebar.WrapContents = false;
 
@@ -94,7 +94,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.btnNavOverview.Location = new System.Drawing.Point(3, 12);
             this.btnNavOverview.Margin = new System.Windows.Forms.Padding(3, 0, 3, 10);
             this.btnNavOverview.Name = "btnNavOverview";
-            this.btnNavOverview.Size = new System.Drawing.Size(180, 42);
+            this.btnNavOverview.Size = new System.Drawing.Size(228, 42);
             this.btnNavOverview.TabIndex = 6;
             this.btnNavOverview.Text = "Tổng quan";
             this.btnNavOverview.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -110,7 +110,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.btnNavBranch.Location = new System.Drawing.Point(3, 54);
             this.btnNavBranch.Margin = new System.Windows.Forms.Padding(3, 0, 3, 10);
             this.btnNavBranch.Name = "btnNavBranch";
-            this.btnNavBranch.Size = new System.Drawing.Size(180, 42);
+            this.btnNavBranch.Size = new System.Drawing.Size(228, 42);
             this.btnNavBranch.TabIndex = 0;
             this.btnNavBranch.Text = "Chi nhánh";
             this.btnNavBranch.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -126,7 +126,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.btnNavRoom.Location = new System.Drawing.Point(3, 96);
             this.btnNavRoom.Margin = new System.Windows.Forms.Padding(3, 0, 3, 10);
             this.btnNavRoom.Name = "btnNavRoom";
-            this.btnNavRoom.Size = new System.Drawing.Size(180, 42);
+            this.btnNavRoom.Size = new System.Drawing.Size(228, 42);
             this.btnNavRoom.TabIndex = 1;
             this.btnNavRoom.Text = "Phòng";
             this.btnNavRoom.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -142,7 +142,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.btnNavStaff.Location = new System.Drawing.Point(3, 138);
             this.btnNavStaff.Margin = new System.Windows.Forms.Padding(3, 0, 3, 10);
             this.btnNavStaff.Name = "btnNavStaff";
-            this.btnNavStaff.Size = new System.Drawing.Size(180, 42);
+            this.btnNavStaff.Size = new System.Drawing.Size(228, 42);
             this.btnNavStaff.TabIndex = 12;
             this.btnNavStaff.Text = "Nhân viên";
             this.btnNavStaff.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -158,7 +158,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.btnNavTenant.Location = new System.Drawing.Point(3, 180);
             this.btnNavTenant.Margin = new System.Windows.Forms.Padding(3, 0, 3, 10);
             this.btnNavTenant.Name = "btnNavTenant";
-            this.btnNavTenant.Size = new System.Drawing.Size(180, 42);
+            this.btnNavTenant.Size = new System.Drawing.Size(228, 42);
             this.btnNavTenant.TabIndex = 2;
             this.btnNavTenant.Text = "Khách thuê";
             this.btnNavTenant.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -174,7 +174,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.btnNavContract.Location = new System.Drawing.Point(3, 222);
             this.btnNavContract.Margin = new System.Windows.Forms.Padding(3, 0, 3, 10);
             this.btnNavContract.Name = "btnNavContract";
-            this.btnNavContract.Size = new System.Drawing.Size(180, 42);
+            this.btnNavContract.Size = new System.Drawing.Size(228, 42);
             this.btnNavContract.TabIndex = 3;
             this.btnNavContract.Text = "Hợp đồng";
             this.btnNavContract.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -190,7 +190,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.btnNavDeposit.Location = new System.Drawing.Point(3, 264);
             this.btnNavDeposit.Margin = new System.Windows.Forms.Padding(3, 0, 3, 10);
             this.btnNavDeposit.Name = "btnNavDeposit";
-            this.btnNavDeposit.Size = new System.Drawing.Size(180, 42);
+            this.btnNavDeposit.Size = new System.Drawing.Size(228, 42);
             this.btnNavDeposit.TabIndex = 4;
             this.btnNavDeposit.Text = "Đặt cọc";
             this.btnNavDeposit.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -206,7 +206,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.btnNavUtility.Location = new System.Drawing.Point(3, 306);
             this.btnNavUtility.Margin = new System.Windows.Forms.Padding(3, 0, 3, 10);
             this.btnNavUtility.Name = "btnNavUtility";
-            this.btnNavUtility.Size = new System.Drawing.Size(180, 42);
+            this.btnNavUtility.Size = new System.Drawing.Size(228, 42);
             this.btnNavUtility.TabIndex = 5;
             this.btnNavUtility.Text = "Điện/Nước/DV";
             this.btnNavUtility.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -222,7 +222,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.btnNavInvoice.Location = new System.Drawing.Point(3, 348);
             this.btnNavInvoice.Margin = new System.Windows.Forms.Padding(3, 0, 3, 10);
             this.btnNavInvoice.Name = "btnNavInvoice";
-            this.btnNavInvoice.Size = new System.Drawing.Size(180, 42);
+            this.btnNavInvoice.Size = new System.Drawing.Size(228, 42);
             this.btnNavInvoice.TabIndex = 6;
             this.btnNavInvoice.Text = "💳 Hóa Đơn & Thanh Toán";
             this.btnNavInvoice.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -238,7 +238,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.btnNavReport.Location = new System.Drawing.Point(3, 390);
             this.btnNavReport.Margin = new System.Windows.Forms.Padding(3, 0, 3, 10);
             this.btnNavReport.Name = "btnNavReport";
-            this.btnNavReport.Size = new System.Drawing.Size(180, 42);
+            this.btnNavReport.Size = new System.Drawing.Size(228, 42);
             this.btnNavReport.TabIndex = 13;
             this.btnNavReport.Text = "Báo cáo";
             this.btnNavReport.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -254,7 +254,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.btnNavMaintenance.Location = new System.Drawing.Point(3, 474);
             this.btnNavMaintenance.Margin = new System.Windows.Forms.Padding(3, 0, 3, 10);
             this.btnNavMaintenance.Name = "btnNavMaintenance";
-            this.btnNavMaintenance.Size = new System.Drawing.Size(180, 42);
+            this.btnNavMaintenance.Size = new System.Drawing.Size(228, 42);
             this.btnNavMaintenance.TabIndex = 8;
             this.btnNavMaintenance.Text = "Bảo trì & sự cố";
             this.btnNavMaintenance.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -270,7 +270,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.btnNavAsset.Location = new System.Drawing.Point(3, 516);
             this.btnNavAsset.Margin = new System.Windows.Forms.Padding(3, 0, 3, 10);
             this.btnNavAsset.Name = "btnNavAsset";
-            this.btnNavAsset.Size = new System.Drawing.Size(180, 42);
+            this.btnNavAsset.Size = new System.Drawing.Size(228, 42);
             this.btnNavAsset.TabIndex = 9;
             this.btnNavAsset.Text = "Tài sản";
             this.btnNavAsset.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -286,7 +286,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.btnNavNotification.Location = new System.Drawing.Point(3, 558);
             this.btnNavNotification.Margin = new System.Windows.Forms.Padding(3, 0, 3, 10);
             this.btnNavNotification.Name = "btnNavNotification";
-            this.btnNavNotification.Size = new System.Drawing.Size(180, 42);
+            this.btnNavNotification.Size = new System.Drawing.Size(228, 42);
             this.btnNavNotification.TabIndex = 10;
             this.btnNavNotification.Text = "Thông báo";
             this.btnNavNotification.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -302,7 +302,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.btnNavSettings.Location = new System.Drawing.Point(3, 600);
             this.btnNavSettings.Margin = new System.Windows.Forms.Padding(3, 0, 3, 10);
             this.btnNavSettings.Name = "btnNavSettings";
-            this.btnNavSettings.Size = new System.Drawing.Size(180, 42);
+            this.btnNavSettings.Size = new System.Drawing.Size(228, 42);
             this.btnNavSettings.TabIndex = 5;
             this.btnNavSettings.Text = "⚙️ Cấu hình";
             this.btnNavSettings.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -477,3 +477,4 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private System.Windows.Forms.Button btnLogout;
     }
 }
+

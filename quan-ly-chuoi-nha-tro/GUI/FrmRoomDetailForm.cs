@@ -16,13 +16,16 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private DataTable _tenantHistory;
         private DataTable _tenants;
         private DataTable _utilities;
+        private DataTable _assets;
         private DataRow _activeTenantRow;
         private DataRow _activeTenantHistory;
         private Panel _tenantInfoHost;
         private Panel _contractsInfoHost;
         private Panel _utilitiesInfoHost;
+        private Panel _assetsInfoHost;
         private ComboBox _cboUtilityMonth;
         private Label _lblUtilitySummary;
+        private Label _lblAssetSummary;
         private Button _btnAddUtility;
         private Button _btnEditTenant;
         private Button _btnEditRoom;
@@ -43,10 +46,17 @@ namespace quan_ly_chuoi_nha_tro.GUI
             Activated += async (s, e) => await RefreshOnActivateAsync();
             Load += async (s, e) =>
             {
-                await LoadTenantHistoryAsync();
-                await LoadTenantsAsync();
-                await LoadContractsAsync();
-                await LoadUtilitiesAsync();
+                try
+                {
+                    await LoadTenantHistoryAsync();
+                    await LoadTenantsAsync();
+                    await LoadContractsAsync();
+                    await LoadUtilitiesAsync();
+                    await LoadAssetsAsync();
+                }
+                catch
+                {
+                }
             };
         }
 
@@ -115,6 +125,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var utilitiesPanel = BuildUtilitiesPanel();
             tabUtilities.Controls.Add(utilitiesPanel);
             _tabControl.TabPages.Add(tabUtilities);
+
+            // Tab 5: Tài sản
+            var tabAssets = new TabPage("Tài sản") { BackColor = Color.White, Padding = new Padding(12) };
+            var assetsPanel = BuildAssetsPanel();
+            tabAssets.Controls.Add(assetsPanel);
+            _tabControl.TabPages.Add(tabAssets);
 
             contentPanel.Controls.Add(_tabControl);
 
@@ -297,6 +313,52 @@ namespace quan_ly_chuoi_nha_tro.GUI
             return panel;
         }
 
+        private Panel BuildAssetsPanel()
+        {
+            var panel = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, AutoScroll = true };
+
+            var topBar = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                Padding = new Padding(0, 0, 0, 8)
+            };
+
+            var lblIntro = new Label
+            {
+                Text = "Tài sản gán trực tiếp cho phòng này:",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = Color.FromArgb(70, 70, 70),
+                Margin = new Padding(0, 6, 16, 0)
+            };
+
+            _lblAssetSummary = new Label
+            {
+                AutoSize = true,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 79, 159),
+                Margin = new Padding(0, 6, 0, 0)
+            };
+
+            topBar.Controls.Add(lblIntro);
+            topBar.Controls.Add(_lblAssetSummary);
+
+            _assetsInfoHost = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White,
+                AutoScroll = true
+            };
+
+            panel.Controls.Add(_assetsInfoHost);
+            panel.Controls.Add(topBar);
+            RenderAssetsPanel();
+            return panel;
+        }
+
         private async System.Threading.Tasks.Task LoadTenantsAsync()
         {
             if (_bll == null) return;
@@ -359,6 +421,22 @@ namespace quan_ly_chuoi_nha_tro.GUI
             RenderUtilitiesPanel();
         }
 
+        private async System.Threading.Tasks.Task LoadAssetsAsync()
+        {
+            if (_bll == null) return;
+            try
+            {
+                _assets = await _bll.GetAssetsAsync();
+                TextFixer.ForceFixDataTable(_assets, "AssetName", "AssetCode", "Category", "Description", "Condition", "RoomNumber");
+            }
+            catch
+            {
+                _assets = null;
+            }
+
+            RenderAssetsPanel();
+        }
+
         private async void HandleAdminDataChanged()
         {
             if (IsDisposed || !IsHandleCreated) return;
@@ -368,6 +446,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 await LoadTenantsAsync();
                 await LoadContractsAsync();
                 await LoadUtilitiesAsync();
+                await LoadAssetsAsync();
                 await ReloadRoomAsync();
             }
             catch
@@ -394,6 +473,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 else if (tabName == "Điện/Nước/DV")
                 {
                     await LoadUtilitiesAsync();
+                }
+                else if (tabName == "Tài sản")
+                {
+                    await LoadAssetsAsync();
                 }
             }
             catch
@@ -903,6 +986,143 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _utilitiesInfoHost.Controls.Add(container);
         }
 
+        private void RenderAssetsPanel()
+        {
+            if (_assetsInfoHost == null) return;
+            _assetsInfoHost.Controls.Clear();
+
+            int roomId = TryGetInt(_roomRow, "RoomId");
+            var list = new System.Collections.Generic.List<DataRow>();
+            if (_assets != null && _assets.Rows.Count > 0)
+            {
+                list = _assets.AsEnumerable()
+                    .Where(r => TryGetInt(r, "RoomId") == roomId)
+                    .OrderBy(r => ReadString(r, "AssetName"))
+                    .ThenBy(r => ReadString(r, "AssetCode"))
+                    .ToList();
+            }
+
+            int totalQty = list.Sum(r => Math.Max(1, TryGetInt(r, "Quantity")));
+            decimal totalValue = list.Sum(r =>
+            {
+                var qty = Math.Max(1, TryGetInt(r, "Quantity"));
+                var price = TryGetDecimal(r, "PurchasePrice") ?? 0m;
+                return qty * price;
+            });
+
+            if (_lblAssetSummary != null)
+            {
+                _lblAssetSummary.Text = list.Count == 0
+                    ? "Không có tài sản nào được gán cho phòng."
+                    : $"Tổng {list.Count} mục | SL: {totalQty:N0} | Giá mua: {totalValue:N0}đ";
+            }
+
+            var container = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                Padding = new Padding(0, 6, 0, 0)
+            };
+
+            if (list.Count == 0)
+            {
+                container.Controls.Add(new Label
+                {
+                    Text = "Chưa gán tài sản cho phòng này. Vào mục Tài sản để thêm.",
+                    AutoSize = true,
+                    ForeColor = Color.FromArgb(100, 100, 100),
+                    Font = new Font("Segoe UI", 10, FontStyle.Italic)
+                });
+                _assetsInfoHost.Controls.Add(container);
+                return;
+            }
+
+            foreach (var asset in list)
+            {
+                container.Controls.Add(CreateAssetCard(asset));
+            }
+
+            _assetsInfoHost.Controls.Add(container);
+        }
+
+        private Control CreateAssetCard(DataRow asset)
+        {
+            var card = new Panel
+            {
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Padding = new Padding(12),
+                BackColor = Color.FromArgb(247, 250, 255),
+                Margin = new Padding(0, 0, 0, 10),
+                BorderStyle = BorderStyle.FixedSingle
+            };
+            int minWidth = Math.Max(520, _assetsInfoHost?.ClientSize.Width - 30 ?? 520);
+            card.MinimumSize = new Size(minWidth, 0);
+
+            string name = NormalizeAssetText(ReadString(asset, "AssetName")) ?? "Tài sản";
+            string code = ReadString(asset, "AssetCode");
+            string category = NormalizeAssetText(ReadString(asset, "Category"));
+            string condition = NormalizeAssetText(ReadString(asset, "Condition"));
+            string description = NormalizeAssetText(ReadString(asset, "Description"));
+            int quantity = Math.Max(1, TryGetInt(asset, "Quantity"));
+            decimal? purchasePrice = TryGetDecimal(asset, "PurchasePrice");
+            string purchaseDate = FormatDate(ReadString(asset, "PurchaseDate"));
+            bool isActive = asset.Table.Columns.Contains("IsActive") && Convert.ToBoolean(asset["IsActive"] ?? true);
+
+            var header = new TableLayoutPanel
+            {
+                AutoSize = true,
+                ColumnCount = 2,
+                Dock = DockStyle.Top,
+                Margin = new Padding(0, 0, 0, 6)
+            };
+            header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            header.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+
+            var lblTitle = new Label
+            {
+                Text = !string.IsNullOrWhiteSpace(code) ? $"{name} ({code})" : name,
+                AutoSize = true,
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = Color.FromArgb(25, 55, 110)
+            };
+
+            var lblStatus = new Label
+            {
+                Text = isActive ? "Đang dùng" : "Ngưng",
+                AutoSize = true,
+                ForeColor = isActive ? Color.FromArgb(40, 167, 69) : Color.FromArgb(220, 53, 69),
+                Font = new Font("Segoe UI", 9, FontStyle.Bold)
+            };
+
+            header.Controls.Add(lblTitle, 0, 0);
+            header.Controls.Add(lblStatus, 1, 0);
+
+            var layout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                ColumnCount = 2,
+                RowCount = 6,
+                Padding = new Padding(0)
+            };
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 140));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+
+            AddRow(layout, "Nhóm/Loại:", category);
+            AddRow(layout, "Số lượng:", quantity.ToString("N0"));
+            AddRow(layout, "Tình trạng:", condition);
+            AddRow(layout, "Giá mua:", purchasePrice.HasValue ? purchasePrice.Value.ToString("N0") + "đ" : "—");
+            AddRow(layout, "Ngày mua:", purchaseDate);
+            AddRow(layout, "Mô tả:", string.IsNullOrWhiteSpace(description) ? "—" : description);
+
+            card.Controls.Add(layout);
+            card.Controls.Add(header);
+            return card;
+        }
+
         private async System.Threading.Tasks.Task AddUtilityReadingAsync()
         {
             int roomId = TryGetInt(_roomRow, "RoomId");
@@ -1174,6 +1394,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var v = r[col];
             if (v == DBNull.Value || v == null) return null;
             return v.ToString();
+        }
+
+        private string NormalizeAssetText(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return value;
+            var fixedValue = TextFixer.FixUtf8Mojibake(value) ?? value;
+            fixedValue = fixedValue.Replace("M?y L?nh", "Máy lạnh")
+                                   .Replace("M?y l?nh", "Máy lạnh");
+            return fixedValue;
         }
 
         private int TryGetInt(DataRow r, string col)

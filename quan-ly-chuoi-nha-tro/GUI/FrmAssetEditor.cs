@@ -362,6 +362,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                         chkActive.Checked);
                 }
 
+                AdminEvents.NotifyDataChanged();
+                DataSyncManager.NotifyRoomsChanged();
                 DialogResult = DialogResult.OK;
             }
             catch (Exception ex)

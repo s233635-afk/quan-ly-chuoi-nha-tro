@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
 using System.Linq;
@@ -13,10 +14,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
         public const string PhongCaoCap = "Phòng cao cấp";
 
         private static readonly string[] CanonicalNames = { PhongDon, PhongDoi, PhongCaoCap };
+        public static IReadOnlyList<string> CanonicalTypeNames => CanonicalNames;
 
         public static string Canonicalize(string input)
         {
-            string s = TextFixer.FixUtf8Mojibake(input)?.Trim();
+            string s = TextFixer.ForceFixUtf8Mojibake(input)?.Trim();
             if (string.IsNullOrWhiteSpace(s)) return s;
 
             string key = RemoveDiacritics(s).ToLowerInvariant();
@@ -51,27 +53,31 @@ namespace quan_ly_chuoi_nha_tro.GUI
             if (!rawTypes.Columns.Contains("RoomTypeId") || !rawTypes.Columns.Contains("RoomTypeName"))
                 return rawTypes;
 
-            // Fix encoding in-place first
-            TextFixer.FixDataTable(rawTypes, "RoomTypeName", "Amenities", "Description");
+            TextFixer.ForceFixDataTable(rawTypes, "RoomTypeName", "Amenities", "Description");
+
+            var canonicalGroups = rawTypes.AsEnumerable()
+                .Select(r => new
+                {
+                    Row = r,
+                    Canonical = Canonicalize(r["RoomTypeName"]?.ToString())
+                })
+                .Where(x => !string.IsNullOrWhiteSpace(x.Canonical))
+                .GroupBy(x => x.Canonical, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First().Row, StringComparer.OrdinalIgnoreCase);
 
             var result = rawTypes.Clone();
-
             foreach (var canonical in CanonicalNames)
             {
-                DataRow best = rawTypes.AsEnumerable()
-                    .FirstOrDefault(r => string.Equals(Canonicalize(r["RoomTypeName"]?.ToString()), canonical, StringComparison.OrdinalIgnoreCase));
-
-                if (best == null) continue;
-                var row = result.NewRow();
-                foreach (DataColumn c in result.Columns)
+                if (!canonicalGroups.TryGetValue(canonical, out var row)) continue;
+                var copy = result.NewRow();
+                foreach (DataColumn c in rawTypes.Columns)
                 {
-                    row[c.ColumnName] = best[c.ColumnName];
+                    copy[c.ColumnName] = row[c.ColumnName];
                 }
-                row["RoomTypeName"] = canonical;
-                result.Rows.Add(row);
+                copy["RoomTypeName"] = canonical;
+                result.Rows.Add(copy);
             }
 
-            // If nothing matched (unexpected DB), fall back to original.
             return result.Rows.Count > 0 ? result : rawTypes;
         }
 

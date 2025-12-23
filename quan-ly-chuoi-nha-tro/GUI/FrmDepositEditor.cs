@@ -353,7 +353,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     await _bll.UpdateDepositAsync(depositId, tenantId, roomId, amount, depositDate, type, status, returned, returnedDate, notes);
 
                     string actionTitle = isRefund ? "Hoàn cọc" : "Xác nhận cọc";
-                    string message = $"{actionTitle}: {cboTenant.Text} | Phòng: {cboRoom.Text} | Số tiền: {linkAmount:N0} | Hình thức: {(paymentMethod == \"Card\" ? "Thẻ" : "Tiền mặt")}";
+                    string methodLabel = paymentMethod == "Card" ? "Thẻ" : "Tiền mặt";
+                    string message = $"{actionTitle}: {cboTenant.Text} | Phòng: {cboRoom.Text} | Số tiền: {linkAmount:N0} | Hình thức: {methodLabel}";
                     await _bll.AddNotificationAsync(null, actionTitle, message, "Unread");
                 }
 

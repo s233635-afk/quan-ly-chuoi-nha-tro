@@ -24,6 +24,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private NumericUpDown numRental;
         private NumericUpDown numUtility;
         private NumericUpDown numOther;
+        private NumericUpDown numAsset;
         private NumericUpDown numTaxRate;
         private NumericUpDown numTaxAmount;
         private Label lblTotal;
@@ -34,6 +35,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private DataTable _tenantTable;
         private DataTable _roomTable;
+        private DataTable _assetTable;
+        private DataTable _utilityTable;
         private bool _syncingTax;
 
         public FrmInvoiceEditor(AdminDataBLL bll, DataRow existing = null)
@@ -94,12 +97,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
             numRental = MakeMoney();
             numUtility = MakeMoney();
             numOther = MakeMoney();
+            numAsset = MakeMoney();
             numTaxRate = MakePercent();
             numTaxAmount = MakeMoney();
 
             numRental.ValueChanged += (s, e) => SyncTaxAmountFromRate();
             numUtility.ValueChanged += (s, e) => SyncTaxAmountFromRate();
             numOther.ValueChanged += (s, e) => SyncTaxAmountFromRate();
+            numAsset.ValueChanged += (s, e) => SyncTaxAmountFromRate();
             numTaxRate.ValueChanged += (s, e) => SyncTaxAmountFromRate();
             numTaxAmount.ValueChanged += (s, e) => SyncTaxRateFromAmount();
 
@@ -144,6 +149,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             Controls.Add(MakeLabel("Phí khác", top));
             Controls.Add(MakeInput(numOther, top));
+            top += line;
+
+            Controls.Add(MakeLabel("Phí tài sản", top));
+            Controls.Add(MakeInput(numAsset, top));
             top += line;
 
             Controls.Add(MakeLabel("Thuế (%)", top));
@@ -224,10 +233,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 var t1 = _bll.GetTenantsAsync();
                 var t2 = _bll.GetRoomsAsync();
-                await Task.WhenAll(t1, t2);
+                var t3 = _bll.GetAssetsAsync();
+                var t4 = _bll.GetUtilitiesAsync();
+                await Task.WhenAll(t1, t2, t3, t4);
 
                 _tenantTable = t1.Result;
                 _roomTable = t2.Result;
+                _assetTable = t3.Result ?? new DataTable();
+                _utilityTable = t4.Result ?? new DataTable();
 
                 var branches = AdminBranchScope.Apply(await _bll.GetBranchesAsync());
                 var allowedIds = AdminBranchScope.GetAllowedBranchIds(branches);
@@ -251,10 +264,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 cboRoom.DataSource = _roomTable;
                 cboRoom.DisplayMember = "RoomDisplay";
                 cboRoom.ValueMember = _roomTable.Columns.Contains("RoomId") ? "RoomId" : _roomTable.Columns[0].ColumnName;
+                cboRoom.SelectedValueChanged += (s, e) => RefreshRoomDerivedValues();
 
                 LoadExisting();
                 if (_existing == null)
                     await LoadDefaultTaxRateAsync();
+                RefreshRoomDerivedValues();
                 UpdateTotal();
             }
             catch (Exception ex)
@@ -317,6 +332,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             if (taxAmount <= 0m && taxRate > 0m)
                 SyncTaxAmountFromRate();
+
+            numAsset.Value = 0;
         }
 
         private async Task LoadDefaultTaxRateAsync()
@@ -391,10 +408,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             return value;
         }
 
-        private decimal GetBaseAmount()
-        {
-            return numRental.Value + numUtility.Value + numOther.Value;
-        }
+        private decimal GetBaseAmount() => numRental.Value + numUtility.Value + numOther.Value + numAsset.Value;
 
         private void SyncTaxAmountFromRate()
         {
@@ -451,7 +465,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             decimal rental = numRental.Value;
             decimal utility = numUtility.Value;
-            decimal other = numOther.Value;
+            decimal other = numOther.Value + numAsset.Value;
             decimal taxRate = numTaxRate.Value;
 
             try
@@ -505,6 +519,117 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 MessageBox.Show("Lỗi mở thanh toán: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void RefreshRoomDerivedValues()
+        {
+            int roomId = GetSelectedRoomId();
+
+            if (_existing == null && roomId > 0)
+            {
+                numRental.Value = ClampMoney(CalculateRoomRental(roomId));
+                numUtility.Value = ClampMoney(CalculateUtilityCharge(roomId));
+                numAsset.Value = ClampMoney(CalculateAssetCharge(roomId));
+            }
+
+            UpdateTotal();
+        }
+
+        private int GetSelectedRoomId()
+        {
+            if (cboRoom?.SelectedValue == null) return 0;
+            try { return Convert.ToInt32(cboRoom.SelectedValue); }
+            catch { return 0; }
+        }
+
+        private decimal CalculateAssetCharge(int roomId)
+        {
+            if (_assetTable == null || !_assetTable.Columns.Contains("RoomId")) return 0m;
+
+            var rows = _assetTable.AsEnumerable()
+                .Where(r => TryGetInt(r, "RoomId") == roomId)
+                .Where(r =>
+                {
+                    var active = TryGetBool(r, "IsActive");
+                    return active == null || active.Value;
+                });
+
+            decimal total = 0m;
+            foreach (var asset in rows)
+            {
+                int qty = Math.Max(1, TryGetInt(asset, "Quantity"));
+                decimal price = TryGetDecimal(asset, "PurchasePrice") ?? 0m;
+                total += qty * price;
+            }
+
+            return total;
+        }
+
+        private decimal CalculateRoomRental(int roomId)
+        {
+            var roomRow = GetRoomRow(roomId);
+            decimal basePrice = TryGetDecimal(roomRow, "RoomPrice") ?? 0m;
+            return basePrice;
+        }
+
+        private decimal CalculateUtilityCharge(int roomId)
+        {
+            if (_utilityTable == null || !_utilityTable.Columns.Contains("RoomId")) return 0m;
+
+            var rows = _utilityTable.AsEnumerable()
+                .Where(r => TryGetInt(r, "RoomId") == roomId)
+                .Where(r => TryGetBool(r, "IsActive") != false); // ignore explicitly inactive rows if flag exists
+
+            var latestPerType = rows
+                .GroupBy(r => TryGetInt(r, "UtilityTypeId"))
+                .Select(g => g
+                    .OrderByDescending(r => TryGetDate(r, "ReadingDate") ?? DateTime.MinValue)
+                    .FirstOrDefault())
+                .Where(r => r != null);
+
+            decimal total = 0m;
+            foreach (var reading in latestPerType)
+            {
+                total += TryGetDecimal(reading, "TotalCost") ?? 0m;
+            }
+
+            return total;
+        }
+
+        private DataRow GetRoomRow(int roomId)
+        {
+            if (_roomTable == null || !_roomTable.Columns.Contains("RoomId")) return null;
+            return _roomTable.AsEnumerable().FirstOrDefault(r => TryGetInt(r, "RoomId") == roomId);
+        }
+
+        private static int TryGetInt(DataRow row, string column)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(column)) return 0;
+            return int.TryParse(row[column]?.ToString(), out var value) ? value : 0;
+        }
+
+        private static decimal? TryGetDecimal(DataRow row, string column)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(column)) return null;
+            return decimal.TryParse(row[column]?.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var value)
+                ? value
+                : (decimal?)null;
+        }
+
+        private static bool? TryGetBool(DataRow row, string column)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(column)) return null;
+            if (bool.TryParse(row[column]?.ToString(), out var value)) return value;
+            return null;
+        }
+
+        private static DateTime? TryGetDate(DataRow row, string column)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(column)) return null;
+            var value = row[column];
+            if (value == null || value == DBNull.Value) return null;
+            if (value is DateTime dt) return dt;
+            return DateTime.TryParse(value.ToString(), out var parsed) ? parsed : (DateTime?)null;
         }
     }
 }

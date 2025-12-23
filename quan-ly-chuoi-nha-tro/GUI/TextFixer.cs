@@ -1,5 +1,7 @@
 using System;
 using System.Data;
+using System.Globalization;
+using System.Linq;
 using System.Text;
 
 namespace quan_ly_chuoi_nha_tro.GUI
@@ -12,120 +14,217 @@ namespace quan_ly_chuoi_nha_tro.GUI
         public static string FixUtf8Mojibake(string input)
         {
             if (string.IsNullOrEmpty(input)) return input;
-            if (!LooksLikeUtf8Mojibake(input)) return input;
-
-            string candidate = TryRecode(input, Win1252);
-            if (IsGoodFix(input, candidate)) return candidate;
-
-            candidate = TryRecode(input, Latin1);
-            if (IsGoodFix(input, candidate)) return candidate;
-
-            return input;
+            byte[] bytes = Encoding.Default.GetBytes(input);
+            var fixedValue = Encoding.UTF8.GetString(bytes);
+            return FixLossyVietnamese(fixedValue);
         }
 
-        public static string ForceFixUtf8Mojibake(string input)
+        private static string ReplaceIgnoreCase(string source, string oldValue, string newValue)
+        {
+            if (string.IsNullOrEmpty(source) || string.IsNullOrEmpty(oldValue)) return source;
+            var comparison = StringComparison.OrdinalIgnoreCase;
+            int index = source.IndexOf(oldValue, comparison);
+            if (index < 0) return source;
+
+            var builder = new StringBuilder(source.Length);
+            int lastIndex = 0;
+
+            while (index >= 0)
+            {
+                builder.Append(source, lastIndex, index - lastIndex);
+                if (!string.IsNullOrEmpty(newValue))
+                    builder.Append(newValue);
+                lastIndex = index + oldValue.Length;
+                index = source.IndexOf(oldValue, lastIndex, comparison);
+            }
+
+            builder.Append(source, lastIndex, source.Length - lastIndex);
+            return builder.ToString();
+        }
+
+        private static string FixLossyVietnamese(string input)
+        {
+            if (string.IsNullOrEmpty(input) || !input.Contains("?")) return input;
+
+            string output = input;
+            output = ReplaceIgnoreCase(output, "Chi nh?nh", "Chi nhánh");
+            output = ReplaceIgnoreCase(output, "C?n Th?", "Cần Thơ");
+            output = ReplaceIgnoreCase(output, "D?y", "Dãy");
+            output = ReplaceIgnoreCase(output, "Ph?ng", "Phòng");
+            output = ReplaceIgnoreCase(output, "??n", "đơn");
+            output = ReplaceIgnoreCase(output, "??i", "đôi");
+            output = ReplaceIgnoreCase(output, "cao c?p", "cao cấp");
+            output = ReplaceIgnoreCase(output, "c?p", "cấp");
+            output = ReplaceIgnoreCase(output, "B?o tr?", "Bảo trì");
+            output = ReplaceIgnoreCase(output, "?? c?c", "Đã cọc");
+            output = ReplaceIgnoreCase(output, "Đ? c?c", "Đã cọc");
+            output = ReplaceIgnoreCase(output, "Dang ?", "Đang ở");
+            output = ReplaceIgnoreCase(output, "Đang ?", "Đang ở");
+
+            var trimmed = output.Trim();
+            if (string.Equals(trimmed, "Tr?ng", StringComparison.OrdinalIgnoreCase))
+                output = output.Replace(trimmed, "Trống");
+            return output;
+        }
+
+        public static string ForceFixUtf8Mojibake(string input, int maxIterations = 2)
         {
             if (string.IsNullOrEmpty(input)) return input;
 
-            string fixedText = FixUtf8Mojibake(input);
-            if (!string.Equals(fixedText, input, StringComparison.Ordinal))
-                return fixedText;
-
-            string candidate = TryRecode(input, Win1252);
-            if (IsGoodFix(input, candidate)) return candidate;
-
-            candidate = TryRecode(input, Latin1);
-            if (IsGoodFix(input, candidate)) return candidate;
-
-            return input;
-        }
-
-        public static void FixDataTable(DataTable table, params string[] columns)
-        {
-            if (table == null || columns == null || columns.Length == 0) return;
-
-            foreach (DataRow row in table.Rows)
+            string current = input;
+            for (int i = 0; i < Math.Max(1, maxIterations); i++)
             {
-                foreach (string column in columns)
-                {
-                    if (string.IsNullOrWhiteSpace(column)) continue;
-                    if (!table.Columns.Contains(column)) continue;
-                    if (row[column] == DBNull.Value) continue;
-
-                    string raw = row[column]?.ToString();
-                    string fixedValue = FixUtf8Mojibake(raw);
-                    if (!string.Equals(raw, fixedValue, StringComparison.Ordinal))
-                        row[column] = fixedValue;
-                }
+                string next = FixUtf8Mojibake(current);
+                if (string.Equals(current, next, StringComparison.Ordinal))
+                    break;
+                current = next;
             }
+
+            return current;
         }
 
-        public static void ForceFixDataTable(DataTable table, params string[] columns)
+        public static string FixCurrencyString(string input)
         {
-            if (table == null || columns == null || columns.Length == 0) return;
-
-            foreach (DataRow row in table.Rows)
-            {
-                foreach (string column in columns)
-                {
-                    if (string.IsNullOrWhiteSpace(column)) continue;
-                    if (!table.Columns.Contains(column)) continue;
-                    if (row[column] == DBNull.Value) continue;
-
-                    string raw = row[column]?.ToString();
-                    string fixedValue = ForceFixUtf8Mojibake(raw);
-                    if (!string.Equals(raw, fixedValue, StringComparison.Ordinal))
-                        row[column] = fixedValue;
-                }
-            }
-        }
-
-        private static bool LooksLikeUtf8Mojibake(string s)
-        {
-            // Heuristic: common sequences when UTF-8 bytes are decoded as Windows-1252/Latin1.
-            // Avoid triggering on valid Vietnamese letters like "Â/Ă/Ê/Ô/Ơ/Ư/Đ".
-            return s.IndexOf('Ã') >= 0
-                || s.IndexOf('Ä') >= 0
-                || s.IndexOf('Æ') >= 0
-                || s.Contains("áº")
-                || s.Contains("á»")
-                || s.Contains("â€");
-        }
-
-        private static string TryRecode(string input, Encoding sourceEncoding)
-        {
-            try
-            {
-                byte[] bytes = sourceEncoding.GetBytes(input);
-                return Encoding.UTF8.GetString(bytes);
-            }
-            catch
-            {
+            if (string.IsNullOrWhiteSpace(input))
                 return input;
-            }
-        }
 
-        private static bool IsGoodFix(string original, string candidate)
-        {
-            if (string.IsNullOrEmpty(candidate)) return false;
-            if (string.Equals(original, candidate, StringComparison.Ordinal)) return false;
-            if (candidate.IndexOf('\uFFFD') >= 0) return false;
-            if (LooksLikeUtf8Mojibake(candidate)) return false;
-            return Score(candidate) > Score(original);
-        }
+            input = input.Trim();
 
-        private static int Score(string s)
-        {
-            int score = 0;
-            foreach (char ch in s)
+            // Replace Vietnamese unit suffixes
+            input = ReplaceIgnoreCase(input, "đ", string.Empty);
+            input = ReplaceIgnoreCase(input, "vnd", string.Empty);
+            input = ReplaceIgnoreCase(input, "vnđ", string.Empty);
+            input = input.Replace("₫", string.Empty);
+
+            // Remove spaces
+            input = input.Replace(" ", "");
+
+            // If contains both dot and comma, assume dot is thousand separator and comma is decimal
+            if (input.Contains(".") && input.Contains(","))
             {
-                if (ch == '\uFFFD') score -= 10;
-                else if (ch == 'Ã' || ch == 'Ä' || ch == 'Æ') score -= 3;
-                else if (ch >= 0x20 && ch <= 0x7E) score += 1;
-                else if (ch > 0x7E) score += 2;
+                input = input.Replace(".", "");
+                input = input.Replace(",", ".");
             }
-            return score;
+            else if (input.Count(ch => ch == '.') > 1 && !input.Contains(","))
+            // If there are multiple dots but no comma, treat dot as thousand separator
+            {
+                input = input.Replace(".", "");
+            }
+            else
+            {
+                // Replace comma with dot for decimal
+                input = input.Replace(",", ".");
+            }
+
+            // Remove any character that's not digit or dot
+            var sanitized = new string(input.Where(ch => char.IsDigit(ch) || ch == '.').ToArray());
+
+            if (string.IsNullOrWhiteSpace(sanitized))
+                return null;
+
+            if (decimal.TryParse(sanitized, NumberStyles.Any, CultureInfo.InvariantCulture, out var value))
+            {
+                return value.ToString("0.##", CultureInfo.InvariantCulture);
+            }
+
+            return null;
+        }
+
+        public static decimal? ParseCurrency(string input)
+        {
+            var fixedString = FixCurrencyString(input);
+            if (fixedString == null)
+                return null;
+
+            if (decimal.TryParse(fixedString, NumberStyles.Any, CultureInfo.InvariantCulture, out var value))
+            {
+                return value;
+            }
+
+            return null;
+        }
+
+        public static void FixDataTable(DataTable table, params string[] columnNames)
+        {
+            if (table == null || columnNames == null || columnNames.Length == 0) return;
+
+            foreach (DataRow row in table.Rows)
+            {
+                foreach (var col in columnNames)
+                {
+                    if (!table.Columns.Contains(col)) continue;
+                    var value = row[col]?.ToString();
+                    row[col] = FixUtf8Mojibake(value);
+                }
+            }
+        }
+
+        public static void ForceFixDataTable(DataTable table, params string[] columnNames)
+        {
+            if (table == null || columnNames == null || columnNames.Length == 0) return;
+
+            foreach (DataRow row in table.Rows)
+            {
+                foreach (var col in columnNames)
+                {
+                    if (!table.Columns.Contains(col)) continue;
+                    var value = row[col]?.ToString();
+                    row[col] = ForceFixUtf8Mojibake(value) ?? value;
+                }
+            }
+        }
+
+        public static string ReadCurrency(DataRow row, string col)
+        {
+            if (row == null || !row.Table.Columns.Contains(col)) return null;
+            var value = row[col]?.ToString();
+            return FixCurrencyString(value);
+        }
+
+        public static decimal ReadDecimal(DataRow row, string col)
+        {
+            if (row == null || !row.Table.Columns.Contains(col)) return 0m;
+            var value = row[col];
+            if (value == null || value == DBNull.Value) return 0m;
+
+            switch (value)
+            {
+                case decimal d:
+                    return d;
+                case double db:
+                    return Convert.ToDecimal(db);
+                case float f:
+                    return Convert.ToDecimal(f);
+                case int i:
+                    return i;
+                case long l:
+                    return l;
+                case short s:
+                    return s;
+            }
+
+            var text = value.ToString();
+            if (decimal.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed))
+                return parsed;
+
+            // Normalize thousand separators (allow dot or comma) before final parse attempt
+            var sanitized = FixCurrencyString(text) ?? StripCurrencySymbols(text)?.Replace(",", "")?.Replace(".", "");
+            if (!string.IsNullOrEmpty(sanitized) && decimal.TryParse(sanitized, NumberStyles.Any, CultureInfo.InvariantCulture, out parsed))
+                return parsed;
+
+            return 0m;
+        }
+
+        public static string StripCurrencySymbols(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input)) return input;
+            var sb = new StringBuilder(input.Length);
+            foreach (var ch in input)
+            {
+                if (char.IsDigit(ch) || ch == '.' || ch == ',' || ch == '-' || ch == ' ')
+                    sb.Append(ch);
+            }
+            return sb.ToString();
         }
     }
 }
-

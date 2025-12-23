@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.IO;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
 
@@ -23,6 +24,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private Label _userPlaceholderLabel;
         private Label _passPlaceholderLabel;
+        private PictureBox _logoBox;
 
         public FrmLogin()
         {
@@ -39,6 +41,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             ApplyModernStyling();
             CenterCard();
+            SetupLogo();
         }
 
         private void ApplyModernStyling()
@@ -76,6 +79,305 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
 
             txtUser.Focus();
+        }
+
+        private void SetupLogo()
+        {
+            if (pnlRight == null) return;
+
+            if (_logoBox == null)
+            {
+                _logoBox = new PictureBox
+                {
+                    SizeMode = PictureBoxSizeMode.Zoom,
+                    BackColor = Color.Transparent
+                };
+                pnlRight.Controls.Add(_logoBox);
+                _logoBox.BringToFront();
+                pnlRight.Resize += (s, e) => CenterLogo();
+            }
+
+            if (_logoBox.Image != null)
+            {
+                var old = _logoBox.Image;
+                _logoBox.Image = null;
+                old.Dispose();
+            }
+
+            _logoBox.Image = LoadLogoImage() ?? BuildLogoImage(360);
+            if (lblLogo != null) lblLogo.Visible = false;
+            CenterLogo();
+        }
+
+        private void CenterLogo()
+        {
+            if (_logoBox == null || pnlRight == null) return;
+            int target = (int)(Math.Min(pnlRight.Width, pnlRight.Height) * 0.9f);
+            if (target < 120) target = Math.Min(pnlRight.Width, pnlRight.Height) - 16;
+            if (target < 80) target = 80;
+            _logoBox.Size = new Size(target, target);
+            _logoBox.Location = new Point(
+                (pnlRight.Width - _logoBox.Width) / 2,
+                (pnlRight.Height - _logoBox.Height) / 2);
+        }
+
+        private static Image LoadLogoImage()
+        {
+            var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            var path = FindLogoPath(baseDir);
+            if (path == null || !File.Exists(path)) return null;
+            try
+            {
+                using (var img = Image.FromFile(path))
+                {
+                    return RemoveDarkBackground(new Bitmap(img), 28, 0.9f);
+                }
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static Bitmap RemoveDarkBackground(Bitmap source, int threshold, float boostSaturation)
+        {
+            if (source == null) return null;
+            var bmp = new Bitmap(source.Width, source.Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            using (var g = Graphics.FromImage(bmp))
+            {
+                g.DrawImageUnscaled(source, 0, 0);
+            }
+
+            for (int y = 0; y < bmp.Height; y++)
+            {
+                for (int x = 0; x < bmp.Width; x++)
+                {
+                    var c = bmp.GetPixel(x, y);
+                    if (c.R <= threshold && c.G <= threshold && c.B <= threshold)
+                    {
+                        bmp.SetPixel(x, y, Color.Transparent);
+                        continue;
+                    }
+
+                    bmp.SetPixel(x, y, BoostSaturation(c, boostSaturation));
+                }
+            }
+            return bmp;
+        }
+
+        private static Color BoostSaturation(Color c, float amount)
+        {
+            float r = c.R / 255f;
+            float g = c.G / 255f;
+            float b = c.B / 255f;
+
+            float max = Math.Max(r, Math.Max(g, b));
+            float min = Math.Min(r, Math.Min(g, b));
+            float delta = max - min;
+            if (delta <= 0.0001f) return c;
+
+            float l = (max + min) * 0.5f;
+            float s = delta / (1f - Math.Abs(2f * l - 1f));
+            s = Math.Min(1f, s + amount);
+
+            float h;
+            if (max == r) h = ((g - b) / delta) % 6f;
+            else if (max == g) h = ((b - r) / delta) + 2f;
+            else h = ((r - g) / delta) + 4f;
+            h *= 60f;
+            if (h < 0) h += 360f;
+
+            return FromHsl(h, s, l, c.A);
+        }
+
+        private static Color FromHsl(float h, float s, float l, int a)
+        {
+            float c = (1f - Math.Abs(2f * l - 1f)) * s;
+            float x = c * (1f - Math.Abs((h / 60f) % 2f - 1f));
+            float m = l - c / 2f;
+
+            float r1, g1, b1;
+            if (h < 60f) { r1 = c; g1 = x; b1 = 0; }
+            else if (h < 120f) { r1 = x; g1 = c; b1 = 0; }
+            else if (h < 180f) { r1 = 0; g1 = c; b1 = x; }
+            else if (h < 240f) { r1 = 0; g1 = x; b1 = c; }
+            else if (h < 300f) { r1 = x; g1 = 0; b1 = c; }
+            else { r1 = c; g1 = 0; b1 = x; }
+
+            int r = (int)Math.Round((r1 + m) * 255);
+            int g = (int)Math.Round((g1 + m) * 255);
+            int b = (int)Math.Round((b1 + m) * 255);
+            r = Math.Max(0, Math.Min(255, r));
+            g = Math.Max(0, Math.Min(255, g));
+            b = Math.Max(0, Math.Min(255, b));
+            return Color.FromArgb(a, r, g, b);
+        }
+
+        private static string FindLogoPath(string baseDir)
+        {
+            var current = new DirectoryInfo(baseDir);
+            for (int i = 0; i < 5 && current != null; i++)
+            {
+                var candidate = Path.Combine(current.FullName, "assets", "logo.png");
+                if (File.Exists(candidate)) return candidate;
+                current = current.Parent;
+            }
+            return null;
+        }
+
+        private static Image BuildLogoImage(int size)
+        {
+            var bmp = new Bitmap(size, size, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            using (var g = Graphics.FromImage(bmp))
+            {
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                g.Clear(Color.Transparent);
+
+                float stroke = size * 0.078f;
+                float innerStroke = stroke * 0.52f;
+
+                var leftGrad = new LinearGradientBrush(
+                    new PointF(size * 0.12f, size * 0.70f),
+                    new PointF(size * 0.52f, size * 0.45f),
+                    Color.FromArgb(70, 160, 245),
+                    Color.FromArgb(120, 210, 255));
+
+                var rightGrad = new LinearGradientBrush(
+                    new PointF(size * 0.48f, size * 0.45f),
+                    new PointF(size * 0.88f, size * 0.70f),
+                    Color.FromArgb(140, 220, 120),
+                    Color.FromArgb(245, 200, 90));
+
+                using (var leftPen = new Pen(leftGrad, stroke))
+                using (var rightPen = new Pen(rightGrad, stroke))
+                using (var leftInner = new Pen(leftGrad, innerStroke))
+                using (var rightInner = new Pen(rightGrad, innerStroke))
+                {
+                    leftPen.StartCap = LineCap.Round;
+                    leftPen.EndCap = LineCap.Round;
+                    leftPen.LineJoin = LineJoin.Round;
+                    rightPen.StartCap = LineCap.Round;
+                    rightPen.EndCap = LineCap.Round;
+                    rightPen.LineJoin = LineJoin.Round;
+                    leftInner.StartCap = LineCap.Round;
+                    leftInner.EndCap = LineCap.Round;
+                    leftInner.LineJoin = LineJoin.Round;
+                    rightInner.StartCap = LineCap.Round;
+                    rightInner.EndCap = LineCap.Round;
+                    rightInner.LineJoin = LineJoin.Round;
+
+                    var leftPath = new[]
+                    {
+                        new PointF(size * 0.26f, size * 0.76f),
+                        new PointF(size * 0.26f, size * 0.48f),
+                        new PointF(size * 0.40f, size * 0.48f),
+                        new PointF(size * 0.50f, size * 0.64f)
+                    };
+                    g.DrawLines(leftPen, leftPath);
+
+                    var rightPath = new[]
+                    {
+                        new PointF(size * 0.74f, size * 0.76f),
+                        new PointF(size * 0.74f, size * 0.48f),
+                        new PointF(size * 0.60f, size * 0.48f),
+                        new PointF(size * 0.50f, size * 0.64f)
+                    };
+                    g.DrawLines(rightPen, rightPath);
+
+                    g.DrawLine(leftPen, size * 0.26f, size * 0.48f, size * 0.40f, size * 0.48f);
+                    g.DrawLine(rightPen, size * 0.60f, size * 0.48f, size * 0.74f, size * 0.48f);
+
+                    g.DrawLine(leftInner, size * 0.32f, size * 0.58f, size * 0.32f, size * 0.68f);
+                    g.DrawLine(rightInner, size * 0.68f, size * 0.58f, size * 0.68f, size * 0.68f);
+                    g.DrawLine(leftInner, size * 0.40f, size * 0.54f, size * 0.46f, size * 0.62f);
+                    g.DrawLine(rightInner, size * 0.60f, size * 0.54f, size * 0.54f, size * 0.62f);
+                    g.DrawLine(leftInner, size * 0.50f, size * 0.58f, size * 0.50f, size * 0.70f);
+                }
+
+                DrawNode(g, new PointF(size * 0.26f, size * 0.48f), size * 0.022f, Color.FromArgb(100, 190, 255));
+                DrawNode(g, new PointF(size * 0.74f, size * 0.48f), size * 0.022f, Color.FromArgb(240, 200, 90));
+                DrawNode(g, new PointF(size * 0.50f, size * 0.64f), size * 0.026f, Color.FromArgb(140, 220, 150));
+                DrawNode(g, new PointF(size * 0.40f, size * 0.48f), size * 0.018f, Color.FromArgb(120, 210, 255));
+                DrawNode(g, new PointF(size * 0.60f, size * 0.48f), size * 0.018f, Color.FromArgb(200, 220, 120));
+
+                DrawHouse(g, new PointF(size * 0.20f, size * 0.26f), size * 0.12f, Color.FromArgb(140, 210, 255));
+                DrawHouse(g, new PointF(size * 0.80f, size * 0.26f), size * 0.12f, Color.FromArgb(140, 210, 255));
+
+                DrawKey(g, new PointF(size * 0.50f, size * 0.34f), size * 0.14f);
+                DrawTopHub(g, size);
+            }
+
+            return bmp;
+        }
+
+        private static void DrawNode(Graphics g, PointF center, float radius, Color color)
+        {
+            using (var brush = new SolidBrush(color))
+            {
+                g.FillEllipse(brush, center.X - radius, center.Y - radius, radius * 2f, radius * 2f);
+            }
+        }
+
+        private static void DrawHouse(Graphics g, PointF center, float size, Color color)
+        {
+            float half = size * 0.5f;
+            var roof = new[]
+            {
+                new PointF(center.X - half, center.Y),
+                new PointF(center.X, center.Y - half),
+                new PointF(center.X + half, center.Y)
+            };
+
+            var body = new RectangleF(center.X - half * 0.7f, center.Y, half * 1.4f, half * 0.9f);
+
+            using (var pen = new Pen(color, size * 0.08f))
+            using (var brush = new SolidBrush(Color.FromArgb(30, color)))
+            {
+                pen.LineJoin = LineJoin.Round;
+                g.DrawPolygon(pen, roof);
+                g.FillRectangle(brush, body);
+                g.DrawRectangle(pen, body.X, body.Y, body.Width, body.Height);
+            }
+        }
+
+        private static void DrawKey(Graphics g, PointF center, float size)
+        {
+            float r = size * 0.22f;
+            using (var pen = new Pen(Color.FromArgb(255, 210, 90), size * 0.08f))
+            {
+                pen.LineJoin = LineJoin.Round;
+                g.DrawEllipse(pen, center.X - r, center.Y - r, r * 2f, r * 2f);
+                g.DrawLine(pen, center.X, center.Y + r, center.X, center.Y + size * 0.8f);
+                g.DrawLine(pen, center.X, center.Y + size * 0.55f, center.X + size * 0.18f, center.Y + size * 0.55f);
+            }
+        }
+
+        private static void DrawTopHub(Graphics g, int size)
+        {
+            using (var pen = new Pen(Color.FromArgb(140, 220, 150), size * 0.04f))
+            {
+                pen.StartCap = LineCap.Round;
+                pen.EndCap = LineCap.Round;
+                g.DrawLine(pen, size * 0.50f, size * 0.26f, size * 0.50f, size * 0.18f);
+                g.DrawLine(pen, size * 0.44f, size * 0.28f, size * 0.36f, size * 0.22f);
+                g.DrawLine(pen, size * 0.56f, size * 0.28f, size * 0.64f, size * 0.22f);
+            }
+
+            DrawNode(g, new PointF(size * 0.50f, size * 0.16f), size * 0.022f, Color.FromArgb(200, 220, 120));
+            DrawNode(g, new PointF(size * 0.34f, size * 0.21f), size * 0.018f, Color.FromArgb(140, 220, 150));
+            DrawNode(g, new PointF(size * 0.66f, size * 0.21f), size * 0.018f, Color.FromArgb(200, 220, 120));
+
+            var roof = new[]
+            {
+                new PointF(size * 0.44f, size * 0.24f),
+                new PointF(size * 0.50f, size * 0.20f),
+                new PointF(size * 0.56f, size * 0.24f)
+            };
+            using (var pen = new Pen(Color.FromArgb(150, 210, 120), size * 0.04f))
+            {
+                pen.LineJoin = LineJoin.Round;
+                g.DrawPolygon(pen, roof);
+            }
         }
 
         private async void btnLogin_Click(object sender, EventArgs e)
