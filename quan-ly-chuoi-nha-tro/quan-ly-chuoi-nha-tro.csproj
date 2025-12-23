@@ -356,6 +356,7 @@
     </Compile>
     <Compile Include="GUI\DataSyncManager.cs" />
     <Compile Include="GUI\UiKit.cs" />
+    <Compile Include="GUI\LogoGenerator.cs" />
     <Compile Include="GUI\AdminBranchScope.cs" />
     <Compile Include="GUI\AdminEvents.cs" />
     <Compile Include="GUI\TextFixer.cs" />

@@ -33,7 +33,16 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.lblWelcome2 = new System.Windows.Forms.Label();
             this.lblWelcome1 = new System.Windows.Forms.Label();
             this.pnlRight = new System.Windows.Forms.Panel();
-            this.lblLogo = new System.Windows.Forms.Label();
+            this.picLogo = new System.Windows.Forms.PictureBox();
+            this.lblLogoText = new System.Windows.Forms.Label();
+            ((System.ComponentModel.ISupportInitialize)(this.picLogo)).BeginInit();
+            this.pnlContainer.SuspendLayout();
+            this.pnlForm.SuspendLayout();
+            this.tblCard.SuspendLayout();
+            this.pnlLeft.SuspendLayout();
+            this.pnlPassBox.SuspendLayout();
+            this.pnlUserBox.SuspendLayout();
+            this.pnlRight.SuspendLayout();
             this.pnlContainer.SuspendLayout();
             this.pnlForm.SuspendLayout();
             this.tblCard.SuspendLayout();
@@ -248,7 +257,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             // 
             // pnlRight
             // 
-            this.pnlRight.Controls.Add(this.lblLogo);
+            this.pnlRight.Controls.Add(this.lblLogoText);
+            this.pnlRight.Controls.Add(this.picLogo);
             this.pnlRight.Dock = System.Windows.Forms.DockStyle.Fill;
             this.pnlRight.Location = new System.Drawing.Point(473, 0);
             this.pnlRight.Margin = new System.Windows.Forms.Padding(0);
@@ -257,17 +267,27 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.pnlRight.TabIndex = 1;
             this.pnlRight.Paint += new System.Windows.Forms.PaintEventHandler(this.pnlRight_Paint);
             // 
-            // lblLogo
+            // picLogo
             // 
-            this.lblLogo.AutoSize = true;
-            this.lblLogo.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.lblLogo.Font = new System.Drawing.Font("Segoe UI", 16F, System.Drawing.FontStyle.Bold);
-            this.lblLogo.ForeColor = System.Drawing.Color.White;
-            this.lblLogo.Location = new System.Drawing.Point(250, 380);
-            this.lblLogo.Name = "lblLogo";
-            this.lblLogo.Size = new System.Drawing.Size(112, 30);
-            this.lblLogo.TabIndex = 0;
-            this.lblLogo.Text = "YOUR LOGO";
+            this.picLogo.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.picLogo.Location = new System.Drawing.Point(93, 70);
+            this.picLogo.Name = "picLogo";
+            this.picLogo.Size = new System.Drawing.Size(200, 200);
+            this.picLogo.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
+            this.picLogo.TabIndex = 0;
+            this.picLogo.TabStop = false;
+            // 
+            // lblLogoText
+            // 
+            this.lblLogoText.AutoSize = true;
+            this.lblLogoText.Font = new System.Drawing.Font("Segoe UI", 14F, System.Drawing.FontStyle.Bold);
+            this.lblLogoText.ForeColor = System.Drawing.Color.White;
+            this.lblLogoText.Location = new System.Drawing.Point(45, 290);
+            this.lblLogoText.Name = "lblLogoText";
+            this.lblLogoText.Size = new System.Drawing.Size(296, 25);
+            this.lblLogoText.TabIndex = 1;
+            this.lblLogoText.Text = "Quản Lý Chuỗi Nhà Trọ";
+            this.lblLogoText.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
             // FrmLogin
             // 
@@ -294,6 +314,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.pnlUserBox.PerformLayout();
             this.pnlRight.ResumeLayout(false);
             this.pnlRight.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.picLogo)).EndInit();
             this.ResumeLayout(false);
 
         }
@@ -316,6 +337,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private System.Windows.Forms.LinkLabel lnkForgot;
         private System.Windows.Forms.LinkLabel lnkRegister;
         private System.Windows.Forms.Button btnLogin;
-        private System.Windows.Forms.Label lblLogo;
+        private System.Windows.Forms.PictureBox picLogo;
+        private System.Windows.Forms.Label lblLogoText;
     }
 }

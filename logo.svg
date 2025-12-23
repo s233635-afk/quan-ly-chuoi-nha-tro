@@ -1,0 +1,70 @@
+<svg viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="150" cy="150" r="145" fill="#E8F0F7" stroke="#007ACC" stroke-width="3"/>
+  
+  <!-- Main house shape -->
+  <g id="house">
+    <!-- Roof -->
+    <polygon points="80,130 150,60 220,130" fill="#FF6B6B" stroke="#C92A2A" stroke-width="2"/>
+    
+    <!-- Roof shine effect -->
+    <polygon points="150,60 170,95 130,95" fill="#FFB3B3" opacity="0.6"/>
+    
+    <!-- Main walls -->
+    <rect x="80" y="130" width="140" height="110" fill="#FFFFFF" stroke="#007ACC" stroke-width="2"/>
+    
+    <!-- Door -->
+    <rect x="130" y="180" width="40" height="60" fill="#D4A574" stroke="#8B6F47" stroke-width="1.5"/>
+    <!-- Door handle -->
+    <circle cx="165" cy="210" r="3" fill="#FFD700"/>
+    
+    <!-- Windows -->
+    <!-- Window 1 (top-left) -->
+    <rect x="100" y="145" width="28" height="28" fill="#87CEEB" stroke="#0066CC" stroke-width="1.5"/>
+    <line x1="114" y1="145" x2="114" y2="173" stroke="#0066CC" stroke-width="1"/>
+    <line x1="100" y1="159" x2="128" y2="159" stroke="#0066CC" stroke-width="1"/>
+    
+    <!-- Window 2 (top-right) -->
+    <rect x="172" y="145" width="28" height="28" fill="#87CEEB" stroke="#0066CC" stroke-width="1.5"/>
+    <line x1="186" y1="145" x2="186" y2="173" stroke="#0066CC" stroke-width="1"/>
+    <line x1="172" y1="159" x2="200" y2="159" stroke="#0066CC" stroke-width="1"/>
+    
+    <!-- Window 3 (middle-left) -->
+    <rect x="100" y="165" width="28" height="28" fill="#87CEEB" stroke="#0066CC" stroke-width="1.5"/>
+    <line x1="114" y1="165" x2="114" y2="193" stroke="#0066CC" stroke-width="1"/>
+    <line x1="100" y1="179" x2="128" y2="179" stroke="#0066CC" stroke-width="1"/>
+    
+    <!-- Window 4 (middle-right) -->
+    <rect x="172" y="165" width="28" height="28" fill="#87CEEB" stroke="#0066CC" stroke-width="1.5"/>
+    <line x1="186" y1="165" x2="186" y2="193" stroke="#0066CC" stroke-width="1"/>
+    <line x1="172" y1="179" x2="200" y2="179" stroke="#0066CC" stroke-width="1"/>
+  </g>
+  
+  <!-- Chimney -->
+  <rect x="210" y="85" width="15" height="35" fill="#8B4513" stroke="#654321" stroke-width="1.5"/>
+  <rect x="207" y="80" width="21" height="8" fill="#A0522D" stroke="#654321" stroke-width="1"/>
+  
+  <!-- Ground line -->
+  <line x1="50" y1="245" x2="250" y2="245" stroke="#7DBD8F" stroke-width="3"/>
+  
+  <!-- Grass decoration -->
+  <g id="grass">
+    <line x1="60" y1="245" x2="55" y2="255" stroke="#7DBD8F" stroke-width="2" stroke-linecap="round"/>
+    <line x1="80" y1="245" x2="75" y2="255" stroke="#7DBD8F" stroke-width="2" stroke-linecap="round"/>
+    <line x1="100" y1="245" x2="95" y2="255" stroke="#7DBD8F" stroke-width="2" stroke-linecap="round"/>
+    <line x1="220" y1="245" x2="225" y2="255" stroke="#7DBD8F" stroke-width="2" stroke-linecap="round"/>
+    <line x1="240" y1="245" x2="245" y2="255" stroke="#7DBD8F" stroke-width="2" stroke-linecap="round"/>
+  </g>
+  
+  <!-- Light effect on windows -->
+  <circle cx="114" cy="158" r="2" fill="#FFFF99" opacity="0.7"/>
+  <circle cx="186" cy="158" r="2" fill="#FFFF99" opacity="0.7"/>
+  
+  <!-- Text: Project name -->
+  <text x="150" y="275" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#007ACC">
+    QUẢN LÝ NHÀ TRỌ
+  </text>
+  <text x="150" y="295" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#666666">
+    Dormitory Management
+  </text>
+</svg>

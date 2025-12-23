@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logo - Quản Lý Chuỗi Nhà Trọ</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 1200px;
+            width: 100%;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .header h1 {
+            color: #007ACC;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .logos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .logo-item {
+            border: 2px solid #E8F0F7;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .logo-item:hover {
+            border-color: #007ACC;
+            box-shadow: 0 10px 30px rgba(0, 122, 204, 0.2);
+            transform: translateY(-5px);
+        }
+        
+        .logo-item h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .logo-preview {
+            width: 250px;
+            height: 250px;
+            margin: 0 auto 20px;
+            background: #F5F5F5;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .logo-description {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        
+        .colors {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .color-box {
+            width: 40px;
+            height: 40px;
+            border-radius: 5px;
+            border: 2px solid #ddd;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .color-box:hover {
+            transform: scale(1.1);
+        }
+        
+        .color-primary {
+            background: #007ACC;
+        }
+        
+        .color-accent {
+            background: #FF6B6B;
+        }
+        
+        .color-light {
+            background: #E8F0F7;
+        }
+        
+        .color-text {
+            background: #333;
+        }
+        
+        .download-btn {
+            display: inline-block;
+            background: #007ACC;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 14px;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .download-btn:hover {
+            background: #005a9e;
+            transform: scale(1.05);
+        }
+        
+        .design-notes {
+            background: #F0F8FF;
+            border-left: 4px solid #007ACC;
+            padding: 20px;
+            border-radius: 5px;
+            margin-top: 40px;
+        }
+        
+        .design-notes h3 {
+            color: #007ACC;
+            margin-bottom: 15px;
+        }
+        
+        .design-notes ul {
+            margin-left: 20px;
+            color: #666;
+            line-height: 1.8;
+        }
+        
+        .design-notes li {
+            margin-bottom: 8px;
+        }
+        
+        .icon {
+            font-size: 24px;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏠 Logo Design - Quản Lý Chuỗi Nhà Trọ</h1>
+            <p>Thiết kế logo chuyên nghiệp cho hệ thống quản lý nhà trọ</p>
+        </div>
+        
+        <div class="logos-grid">
+            <!-- Logo 1: Main Logo -->
+            <div class="logo-item">
+                <h3>📍 Logo Chính</h3>
+                <div class="logo-preview">
+                    <svg viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="150" cy="150" r="145" fill="#E8F0F7" stroke="#007ACC" stroke-width="3"/>
+                        <polygon points="80,130 150,60 220,130" fill="#FF6B6B" stroke="#C92A2A" stroke-width="2"/>
+                        <polygon points="150,60 170,95 130,95" fill="#FFB3B3" opacity="0.6"/>
+                        <rect x="80" y="130" width="140" height="110" fill="#FFFFFF" stroke="#007ACC" stroke-width="2"/>
+                        <rect x="130" y="180" width="40" height="60" fill="#D4A574" stroke="#8B6F47" stroke-width="1.5"/>
+                        <circle cx="165" cy="210" r="3" fill="#FFD700"/>
+                        <rect x="100" y="145" width="28" height="28" fill="#87CEEB" stroke="#0066CC" stroke-width="1.5"/>
+                        <line x1="114" y1="145" x2="114" y2="173" stroke="#0066CC" stroke-width="1"/>
+                        <line x1="100" y1="159" x2="128" y2="159" stroke="#0066CC" stroke-width="1"/>
+                        <rect x="172" y="145" width="28" height="28" fill="#87CEEB" stroke="#0066CC" stroke-width="1.5"/>
+                        <line x1="186" y1="145" x2="186" y2="173" stroke="#0066CC" stroke-width="1"/>
+                        <line x1="172" y1="159" x2="200" y2="159" stroke="#0066CC" stroke-width="1"/>
+                        <rect x="100" y="165" width="28" height="28" fill="#87CEEB" stroke="#0066CC" stroke-width="1.5"/>
+                        <line x1="114" y1="165" x2="114" y2="193" stroke="#0066CC" stroke-width="1"/>
+                        <line x1="100" y1="179" x2="128" y2="179" stroke="#0066CC" stroke-width="1"/>
+                        <rect x="172" y="165" width="28" height="28" fill="#87CEEB" stroke="#0066CC" stroke-width="1.5"/>
+                        <line x1="186" y1="165" x2="186" y2="193" stroke="#0066CC" stroke-width="1"/>
+                        <line x1="172" y1="179" x2="200" y2="179" stroke="#0066CC" stroke-width="1"/>
+                        <rect x="210" y="85" width="15" height="35" fill="#8B4513" stroke="#654321" stroke-width="1.5"/>
+                        <rect x="207" y="80" width="21" height="8" fill="#A0522D" stroke="#654321" stroke-width="1"/>
+                        <line x1="50" y1="245" x2="250" y2="245" stroke="#7DBD8F" stroke-width="3"/>
+                        <circle cx="114" cy="158" r="2" fill="#FFFF99" opacity="0.7"/>
+                        <circle cx="186" cy="158" r="2" fill="#FFFF99" opacity="0.7"/>
+                    </svg>
+                </div>
+                <div class="logo-description">
+                    Logo chính với ngôi nhà 4 phòng, mái đỏ, cửa chính, cửa sổ xanh và ống khói. Biểu tượng cho hệ thống quản lý nhà trọ hiện đại.
+                </div>
+                <div class="colors">
+                    <div class="color-box color-primary" title="Xanh chính #007ACC"></div>
+                    <div class="color-box color-accent" title="Đỏ mái #FF6B6B"></div>
+                    <div class="color-box color-light" title="Xanh nhạt #E8F0F7"></div>
+                    <div class="color-box color-text" title="Đen #333"></div>
+                </div>
+                <button class="download-btn">📥 Download SVG</button>
+            </div>
+            
+            <!-- Logo 2: Icon Only -->
+            <div class="logo-item">
+                <h3>🏠 Icon Đơn Giản</h3>
+                <div class="logo-preview">
+                    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                        <polygon points="40,90 100,30 160,90" fill="#FF6B6B" stroke="#007ACC" stroke-width="2"/>
+                        <rect x="40" y="90" width="120" height="80" fill="#FFFFFF" stroke="#007ACC" stroke-width="2"/>
+                        <rect x="75" y="110" width="25" height="25" fill="#87CEEB" stroke="#0066CC" stroke-width="1.5"/>
+                        <rect x="100" y="110" width="25" height="25" fill="#87CEEB" stroke="#0066CC" stroke-width="1.5"/>
+                        <rect x="75" y="140" width="25" height="30" fill="#D4A574" stroke="#8B6F47" stroke-width="1.5"/>
+                        <rect x="155" y="50" width="12" height="28" fill="#8B4513" stroke="#654321" stroke-width="1"/>
+                    </svg>
+                </div>
+                <div class="logo-description">
+                    Phiên bản icon đơn giản của logo, dễ sử dụng cho favicon, button, và các ứng dụng nhỏ. Tốt để hiển thị ở kích thước nhỏ.
+                </div>
+                <div class="colors">
+                    <div class="color-box color-primary" title="Xanh chính #007ACC"></div>
+                    <div class="color-box color-accent" title="Đỏ #FF6B6B"></div>
+                </div>
+                <button class="download-btn">📥 Download SVG</button>
+            </div>
+            
+            <!-- Logo 3: Horizontal -->
+            <div class="logo-item">
+                <h3>📐 Logo Ngang</h3>
+                <div class="logo-preview" style="background: linear-gradient(135deg, #E8F0F7 0%, #F5F5F5 100%);">
+                    <svg viewBox="0 0 400 150" xmlns="http://www.w3.org/2000/svg">
+                        <!-- House icon -->
+                        <polygon points="50,80 100,40 150,80" fill="#FF6B6B" stroke="#007ACC" stroke-width="2"/>
+                        <rect x="50" y="80" width="100" height="60" fill="#FFFFFF" stroke="#007ACC" stroke-width="2"/>
+                        <rect x="65" y="90" width="18" height="18" fill="#87CEEB" stroke="#0066CC" stroke-width="1"/>
+                        <rect x="87" y="90" width="18" height="18" fill="#87CEEB" stroke="#0066CC" stroke-width="1"/>
+                        <rect x="76" y="115" width="28" height="25" fill="#D4A574" stroke="#8B6F47" stroke-width="1"/>
+                        
+                        <!-- Text -->
+                        <text x="180" y="75" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#007ACC">
+                            QUẢN LÝ
+                        </text>
+                        <text x="180" y="110" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#FF6B6B">
+                            NHÀ TRỌ
+                        </text>
+                    </svg>
+                </div>
+                <div class="logo-description">
+                    Logo ngang kết hợp icon và tên dự án. Phù hợp cho header, banner, và các khoảng trống ngang hẹp.
+                </div>
+                <div class="colors">
+                    <div class="color-box color-primary" title="Xanh chính"></div>
+                    <div class="color-box color-accent" title="Đỏ"></div>
+                </div>
+                <button class="download-btn">📥 Download SVG</button>
+            </div>
+        </div>
+        
+        <div class="design-notes">
+            <h3><span class="icon">✨</span>Hướng Dẫn Thiết Kế Logo</h3>
+            <ul>
+                <li><strong>Khái Niệm:</strong> Logo biểu tượng ngôi nhà với 4 phòng, tượng trưng cho hệ thống quản lý nhà trọ hiện đại</li>
+                <li><strong>Màu Sắc Chính:</strong>
+                    <ul style="margin-top: 8px;">
+                        <li>🔵 Xanh Chính (#007ACC) - Tin cậy, chuyên nghiệp, công nghệ</li>
+                        <li>🔴 Đỏ Mái (#FF6B6B) - Năng động, chú ý, nhấn mạnh</li>
+                        <li>⚫ Xanh Nhạt (#E8F0F7) - Nền, sạch sẽ, hiện đại</li>
+                    </ul>
+                </li>
+                <li><strong>Các Yếu Tố:</strong>
+                    <ul style="margin-top: 8px;">
+                        <li>Mái nhà đỏ - Biểu tượng của nhà cửa</li>
+                        <li>4 cửa sổ xanh - Biểu tượng 4 phòng/không gian</li>
+                        <li>Cửa chính - Trung tâm, khách vào nhà</li>
+                        <li>Ống khói - Chi tiết thực, tính chuyên nghiệp</li>
+                    </ul>
+                </li>
+                <li><strong>Cách Sử Dụng:</strong> Logo có thể sử dụng ở mọi kích thước, từ favicon (16x16px) đến poster (500x500px)</li>
+                <li><strong>Biến Thể:</strong> Chuẩn bị 3 phiên bản: logo đầy đủ, icon đơn giản, và logo ngang cho các bối cảnh khác nhau</li>
+                <li><strong>Format Cấp Độ:</strong>
+                    <ul style="margin-top: 8px;">
+                        <li>SVG - Để sửa đổi và mở rộng (trong Illustrator, Inkscape)</li>
+                        <li>PNG 256x256 - Cho web (transparent background)</li>
+                        <li>PNG 512x512 - Cho high-res display</li>
+                        <li>JPG - Cho in ấn và đồ vật quảng cáo</li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="design-notes" style="background: #FFF8E8; border-left-color: #FF6B6B; margin-top: 20px;">
+            <h3><span class="icon">💡</span>Mẹo Sử Dụng Logo Trong Ứng Dụng</h3>
+            <ul>
+                <li><strong>Favicon:</strong> Thêm vào <code>Properties/Resources.resx</code> hoặc tạo <code>.ico</code> file cho WinForms</li>
+                <li><strong>Form Header:</strong> Đặt logo ở góc trên cùng của FrmAdminDashboard</li>
+                <li><strong>About Dialog:</strong> Hiển thị logo lớn trong form About</li>
+                <li><strong>Login Form:</strong> Đặt logo ở trung tâm màn hình đăng nhập để tăng tính thương hiệu</li>
+                <li><strong>Taskbar Icon:</strong> Sử dụng icon đơn giản cho biểu tượng taskbar</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

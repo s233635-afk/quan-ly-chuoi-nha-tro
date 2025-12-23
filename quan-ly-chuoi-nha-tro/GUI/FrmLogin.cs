@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -38,7 +39,27 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private void FrmLogin_Load(object sender, EventArgs e)
         {
             ApplyModernStyling();
+            LoadLogo();
             CenterCard();
+        }
+
+        /// <summary>
+        /// Tải logo vào PictureBox
+        /// </summary>
+        private void LoadLogo()
+        {
+            try
+            {
+                // Tạo logo từ LogoGenerator
+                Bitmap logo = LogoGenerator.GenerateLogo(200);
+                picLogo.Image = logo;
+                picLogo.BackColor = Color.Transparent;
+            }
+            catch (Exception ex)
+            {
+                // Nếu có lỗi, hiển thị placeholder
+                System.Diagnostics.Debug.WriteLine($"Logo load error: {ex.Message}");
+            }
         }
 
         private void ApplyModernStyling()
