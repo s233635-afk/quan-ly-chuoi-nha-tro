@@ -10,10 +10,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
     {
         private static readonly Encoding Win1252 = Encoding.GetEncoding(1252);
         private static readonly Encoding Latin1 = Encoding.GetEncoding(28591);
+        private static readonly string[] MojibakeMarkers = { "Ã", "Â", "Ä", "Å", "Ê", "Ô", "Ð", "ø", "æ", "¤", "¢" };
 
         public static string FixUtf8Mojibake(string input)
         {
             if (string.IsNullOrEmpty(input)) return input;
+            if (!LooksLikeMojibake(input))
+                return FixLossyVietnamese(input);
+
             byte[] bytes = Encoding.Default.GetBytes(input);
             var fixedValue = Encoding.UTF8.GetString(bytes);
             return FixLossyVietnamese(fixedValue);
@@ -42,27 +46,45 @@ namespace quan_ly_chuoi_nha_tro.GUI
             return builder.ToString();
         }
 
+        private static readonly (string broken, string corrected)[] LossyVietnameseMap = new[]
+        {
+            ("Chi nh?nh", "Chi nhánh"), ("Chi nhanh", "Chi nhánh"), ("Chi Nh�nh", "Chi nhánh"), ("Nh�nh", "nhánh"),
+            ("C?n Th?", "Cần Thơ"), ("Can Tho", "Cần Thơ"), ("C?n Th�", "Cần Thơ"),
+            ("Ninh Ki?u", "Ninh Kiều"), ("Ninh Kieu", "Ninh Kiều"), ("Ninh Ki�u", "Ninh Kiều"),
+            ("D?y", "Dãy"),
+            ("Ph?ng", "Phòng"), ("Phong", "Phòng"),
+            ("??n", "đơn"), ("Don", "Đơn"),
+            ("??i", "đôi"), ("Doi", "Đôi"),
+            ("cao c?p", "cao cấp"), ("cao cap", "cao cấp"),
+            ("c?p", "cấp"),
+            ("B?o tr?", "Bảo trì"), ("Bao tri", "Bảo trì"),
+            ("?? c?c", "Đã cọc"), ("Đ? c?c", "Đã cọc"), ("Da coc", "Đã cọc"),
+            ("Dang ?", "Đang ở"), ("Đang ?", "Đang ở"), ("Dang o", "Đang ở"),
+            ("V? sinh", "Vệ sinh"), ("Ve sinh", "Vệ sinh"), ("V� sinh", "Vệ sinh"),
+            ("Kh?ch", "Khách"),
+            ("M?y", "Máy"), ("May", "Máy"),
+            ("Máy l?nh", "Máy lạnh"), ("Máy l�nh", "Máy lạnh"),
+            ("l?nh", "lạnh"), ("lanh", "lạnh"),
+            ("Nguy?n", "Nguyễn"),
+            ("Nh?t", "Nhật"),
+            ("Ki?n", "Kiện"), ("Kien", "Kiện"),
+            ("Ki?n", "Kiện"),
+            ("S? ng??i", "Số người"), ("So nguoi", "Số người"),
+            ("T? Do", "Tự do")
+        };
+
         private static string FixLossyVietnamese(string input)
         {
-            if (string.IsNullOrEmpty(input) || !input.Contains("?")) return input;
+            if (string.IsNullOrEmpty(input)) return input;
 
             string output = input;
-            output = ReplaceIgnoreCase(output, "Chi nh?nh", "Chi nhánh");
-            output = ReplaceIgnoreCase(output, "C?n Th?", "Cần Thơ");
-            output = ReplaceIgnoreCase(output, "D?y", "Dãy");
-            output = ReplaceIgnoreCase(output, "Ph?ng", "Phòng");
-            output = ReplaceIgnoreCase(output, "??n", "đơn");
-            output = ReplaceIgnoreCase(output, "??i", "đôi");
-            output = ReplaceIgnoreCase(output, "cao c?p", "cao cấp");
-            output = ReplaceIgnoreCase(output, "c?p", "cấp");
-            output = ReplaceIgnoreCase(output, "B?o tr?", "Bảo trì");
-            output = ReplaceIgnoreCase(output, "?? c?c", "Đã cọc");
-            output = ReplaceIgnoreCase(output, "Đ? c?c", "Đã cọc");
-            output = ReplaceIgnoreCase(output, "Dang ?", "Đang ở");
-            output = ReplaceIgnoreCase(output, "Đang ?", "Đang ở");
+            foreach (var (broken, corrected) in LossyVietnameseMap)
+            {
+                output = ReplaceIgnoreCase(output, broken, corrected);
+            }
 
             var trimmed = output.Trim();
-            if (string.Equals(trimmed, "Tr?ng", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(trimmed, "Tr?ng", StringComparison.OrdinalIgnoreCase) || string.Equals(trimmed, "Trong", StringComparison.OrdinalIgnoreCase))
                 output = output.Replace(trimmed, "Trống");
             return output;
         }
@@ -71,16 +93,25 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (string.IsNullOrEmpty(input)) return input;
 
-            string current = input;
-            for (int i = 0; i < Math.Max(1, maxIterations); i++)
+            string original = input;
+            string current = original;
+
+            if (LooksLikeMojibake(input))
             {
-                string next = FixUtf8Mojibake(current);
-                if (string.Equals(current, next, StringComparison.Ordinal))
-                    break;
-                current = next;
+                int originalQuestions = CountChar(original, '?');
+                for (int i = 0; i < Math.Max(1, maxIterations); i++)
+                {
+                    string next = FixUtf8Mojibake(current);
+                    if (string.Equals(current, next, StringComparison.Ordinal))
+                        break;
+                    current = next;
+                }
+
+                if (originalQuestions == 0 && CountChar(current, '?') > 0)
+                    current = original;
             }
 
-            return current;
+            return FixLossyVietnamese(current);
         }
 
         public static string FixCurrencyString(string input)
@@ -169,7 +200,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 {
                     if (!table.Columns.Contains(col)) continue;
                     var value = row[col]?.ToString();
-                    row[col] = ForceFixUtf8Mojibake(value) ?? value;
+                    var fixedValue = ForceFixUtf8Mojibake(value);
+                    row[col] = fixedValue ?? value;
                 }
             }
         }
@@ -225,6 +257,30 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     sb.Append(ch);
             }
             return sb.ToString();
+        }
+
+        private static bool LooksLikeMojibake(string input)
+        {
+            if (string.IsNullOrEmpty(input)) return false;
+            if (input.IndexOf('?') >= 0) return true;
+            if (input.IndexOf('\uFFFD') >= 0) return true;
+            foreach (var marker in MojibakeMarkers)
+            {
+                if (input.IndexOf(marker, StringComparison.Ordinal) >= 0)
+                    return true;
+            }
+            return false;
+        }
+
+        private static int CountChar(string text, char ch)
+        {
+            if (string.IsNullOrEmpty(text)) return 0;
+            int count = 0;
+            foreach (var c in text)
+            {
+                if (c == ch) count++;
+            }
+            return count;
         }
     }
 }

@@ -491,10 +491,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private static string NormalizeAssetText(string value)
         {
             if (string.IsNullOrWhiteSpace(value)) return value;
-            var fixedValue = TextFixer.FixUtf8Mojibake(value) ?? value;
-            fixedValue = fixedValue.Replace("Máy lạnh", "Máy lạnh")
-                                   .Replace("Máy lạnh", "Máy lạnh");
-            return fixedValue;
+            var fixedValue = TextFixer.ForceFixUtf8Mojibake(value) ?? value;
+            return fixedValue.Trim();
         }
 
         private async void HandleAdminDataChanged()
