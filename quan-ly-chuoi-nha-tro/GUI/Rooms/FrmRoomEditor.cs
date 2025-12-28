@@ -102,7 +102,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             numFloor = new NumericUpDown { Minimum = 0, Maximum = 1000, DecimalPlaces = 0, Increment = 1, ThousandsSeparator = true };
             numArea = new NumericUpDown { Minimum = 0, Maximum = 1000000m, DecimalPlaces = 2, Increment = 0.5m, ThousandsSeparator = true };
 
-            btnAutoPrice = new Button { Text = "Lấy giá", Width = 90, Height = 28 };
+            btnAutoPrice = new ModernButton { Text = "Lấy giá", Width = 90, Height = 28, BaseColor = Color.FromArgb(240, 240, 240), BackColor = Color.Transparent, ForeColor = Color.Black };
             btnAutoPrice.Click += (s, e) => ForceAutoFillPrice();
             btnAutoPrice.FlatStyle = FlatStyle.Flat;
             btnAutoPrice.FlatAppearance.BorderSize = 1;
@@ -122,7 +122,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             cboSection.Parent = pnlSection;
             cboSection.Location = new Point(0, 0);
             cboSection.Width = inputWidth - 110;
-            btnAddSection = new Button { Text = "Thêm khu/dãy", Width = 100, Height = 28 };
+            btnAddSection = new ModernButton { Text = "Thêm khu/dãy", Width = 100, Height = 28, BaseColor = Color.FromArgb(240, 240, 240), BackColor = Color.Transparent, ForeColor = Color.Black };
             btnAddSection.Parent = pnlSection;
             btnAddSection.Location = new Point(inputWidth - btnAddSection.Width, 1);
             btnAddSection.FlatStyle = FlatStyle.Flat;
@@ -170,25 +170,29 @@ namespace quan_ly_chuoi_nha_tro.GUI
             chkActive.Location = new Point(left + labelWidth, top + 4);
             pnlBody.Controls.Add(chkActive);
 
-            btnSave = new Button
+            btnSave = new ModernButton
             {
-                Text = "cập nhật",
+                Text = "Cập nhật",
                 Width = 110,
                 Height = 34,
-                Anchor = AnchorStyles.Right | AnchorStyles.Bottom
+                Anchor = AnchorStyles.Right | AnchorStyles.Bottom,
+                BaseColor = Color.FromArgb(0, 122, 204),
+                BackColor = Color.Transparent,
+                ForeColor = Color.White
             };
             btnSave.Click += async (s, e) => await SaveAsync();
             btnSave.FlatStyle = FlatStyle.Flat;
             btnSave.FlatAppearance.BorderSize = 0;
-            btnSave.BackColor = Color.FromArgb(0, 122, 204);
-            btnSave.ForeColor = Color.White;
 
-            btnCancel = new Button
+            btnCancel = new ModernButton
             {
                 Text = "Hủy",
                 Width = 110,
                 Height = 34,
-                Anchor = AnchorStyles.Right | AnchorStyles.Bottom
+                Anchor = AnchorStyles.Right | AnchorStyles.Bottom,
+                BaseColor = Color.FromArgb(108, 117, 125),
+                BackColor = Color.Transparent,
+                ForeColor = Color.White
             };
             btnCancel.Click += (s, e) => DialogResult = DialogResult.Cancel;
             btnCancel.FlatStyle = FlatStyle.Flat;

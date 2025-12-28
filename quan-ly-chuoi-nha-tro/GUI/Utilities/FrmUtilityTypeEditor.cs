@@ -113,27 +113,30 @@ namespace quan_ly_chuoi_nha_tro.GUI
             pnlBody.Controls.Add(MakeLabel("Mô tả", top));
             pnlBody.Controls.Add(MakeInput(txtDescription, top));
 
-            btnCancel = new Button
+            btnCancel = new ModernButton
             {
                 Text = "Hủy",
                 Width = 110,
                 Height = 34,
                 Anchor = AnchorStyles.Right | AnchorStyles.Top,
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.White
+                BaseColor = Color.White,
+                BackColor = Color.Transparent,
+                ForeColor = Color.Black
             };
             btnCancel.FlatAppearance.BorderColor = Color.FromArgb(210, 210, 210);
             btnCancel.FlatAppearance.BorderSize = 1;
             btnCancel.Click += (s, e) => DialogResult = DialogResult.Cancel;
 
-            btnSave = new Button
+            btnSave = new ModernButton
             {
                 Text = "Lưu",
                 Width = 110,
                 Height = 34,
                 Anchor = AnchorStyles.Right | AnchorStyles.Top,
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(0, 122, 204),
+                BaseColor = Color.FromArgb(0, 122, 204),
+                BackColor = Color.Transparent,
                 ForeColor = Color.White
             };
             btnSave.FlatAppearance.BorderSize = 0;

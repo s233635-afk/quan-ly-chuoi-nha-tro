@@ -178,13 +178,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Margin = new Padding(0, 18, 15, 0) // Top margin to center vertically with button (approx)
             };
 
-            _btnLogout = new Button
+            _btnLogout = new ModernButton
             {
                 Text = "Đăng xuất",
                 Width = 110,
                 Height = 36,
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(231, 76, 60),
+                BaseColor = Color.FromArgb(231, 76, 60),
+                BackColor = Color.Transparent,
                 ForeColor = Color.White,
                 Cursor = Cursors.Hand,
                 Margin = new Padding(0, 12, 20, 0) // Right margin 20 from edge
@@ -226,12 +227,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private Button MakeNavButton(string text, EventHandler onClick)
         {
-            var btn = new Button
+            var btn = new ModernButton
             {
                 Text = text,
                 Width = 220,
                 Height = 45,
                 FlatStyle = FlatStyle.Flat,
+                BaseColor = Color.Transparent,
                 BackColor = Color.Transparent,
                 ForeColor = Color.FromArgb(189, 195, 199),
                 TextAlign = ContentAlignment.MiddleLeft,
@@ -432,7 +434,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 {
                     foreach(DataRow row in invoices.AsEnumerable().OrderByDescending(r => r["CreatedDate"]).Take(5))
                     {
-                        dtRecent.Rows.Add("Hóa đơn", $"Phòng {row["RoomNumber"]} - {TryDecimal(row["TotalAmount"]):N0} đ", row["CreatedDate"], row["Status"]);
+                        string status = TextFixer.ToVietnameseInvoiceStatus(row["Status"]?.ToString());
+                        dtRecent.Rows.Add("Hóa đơn", $"Phòng {row["RoomNumber"]} - {TryDecimal(row["TotalAmount"]):N0} đ", row["CreatedDate"], status);
                     }
                 }
                 if (maintenance != null)
@@ -440,7 +443,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     foreach (DataRow row in maintenance.AsEnumerable().OrderByDescending(r => r["RequestDate"]).Take(5))
                     {
                         var roomNum = row.Table.Columns.Contains("RoomNumber") ? row["RoomNumber"].ToString() : "N/A";
-                        dtRecent.Rows.Add("Bảo trì", $"Phòng {roomNum} - {row["IssueDescription"]}", row["RequestDate"], row["Status"]);
+                        string status = row["Status"]?.ToString();
+                        if (string.Equals(status, "Done", StringComparison.OrdinalIgnoreCase)) status = "Hoàn tất";
+                        else if (string.Equals(status, "Pending", StringComparison.OrdinalIgnoreCase)) status = "Đang xử lý";
+                        
+                        dtRecent.Rows.Add("Bảo trì", $"Phòng {roomNum} - {row["IssueDescription"]}", row["RequestDate"], status);
                     }
                 }
 

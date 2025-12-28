@@ -326,13 +326,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private static Button MakeButton(string text, Color backColor, EventHandler onClick)
         {
-            var b = new Button
+            var b = new ModernButton
             {
                 Text = text,
                 Width = 110,
                 Height = 34,
                 FlatStyle = FlatStyle.Flat,
-                BackColor = backColor,
+                BaseColor = backColor,
+                BackColor = Color.Transparent,
                 ForeColor = Color.White,
                 Margin = new Padding(0, 0, 6, 0),
                 Font = new Font("Segoe UI", 10, FontStyle.Regular),

@@ -689,14 +689,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private static Button MakeButton(string text, Color backColor, EventHandler onClick)
         {
-            var b = new Button
+            var b = new ModernButton
             {
                 Text = text,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 Height = 34,
                 FlatStyle = FlatStyle.Flat,
-                BackColor = backColor,
+                BaseColor = backColor,
+                BackColor = Color.Transparent,
                 ForeColor = Color.White,
                 Margin = new Padding(0, 0, 8, 0),
                 Padding = new Padding(10, 0, 10, 0)
@@ -705,6 +706,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             b.Click += onClick;
             return b;
         }
+
 
         private void SetHeader(string columnName, string headerText)
         {
@@ -891,12 +893,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 panel.Controls.Add(lblNotes);
                 panel.Controls.Add(_txtNotes);
 
-                var btnOk = new Button
+                var btnOk = new ModernButton
                 {
                     Text = "Xác nhận",
                     Width = 110,
                     Height = 32,
-                    BackColor = Color.FromArgb(0, 122, 204),
+                    BaseColor = Color.FromArgb(0, 122, 204),
+                    BackColor = Color.Transparent,
                     ForeColor = Color.White,
                     FlatStyle = FlatStyle.Flat,
                     Location = new Point(274, 292)
@@ -904,12 +907,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 btnOk.FlatAppearance.BorderSize = 0;
                 btnOk.Click += (s, e) => HandleSave();
 
-                var btnCancel = new Button
+                var btnCancel = new ModernButton
                 {
                     Text = "Hủy",
                     Width = 90,
                     Height = 32,
-                    BackColor = Color.FromArgb(200, 200, 200),
+                    BaseColor = Color.FromArgb(200, 200, 200),
+                    BackColor = Color.Transparent,
                     ForeColor = Color.Black,
                     FlatStyle = FlatStyle.Flat,
                     Location = new Point(394, 292),

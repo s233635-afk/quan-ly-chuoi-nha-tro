@@ -31,8 +31,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Label _lblRoomInfo;
         private Label _lblTenantInfo;
 
-        private Button _btnEdit;
-        private Button _btnClose;
+        private ModernButton _btnEdit;
+        private ModernButton _btnClose;
         private ContextMenuStrip _editMenu;
 
         public FrmRoomTenantQuickView(AdminDataBLL bll, Func<int, Task> refreshRoomAsync, bool staffMode = false)
@@ -74,26 +74,26 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Location = new Point(16, 38)
             };
 
-            _btnClose = new Button
+            _btnClose = new ModernButton
             {
                 Text = "Đóng",
                 Width = 90,
                 Height = 34,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(108, 117, 125),
+                BaseColor = Color.FromArgb(108, 117, 125),
+                BackColor = Color.Transparent,
                 ForeColor = Color.White,
                 Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
             _btnClose.FlatAppearance.BorderSize = 0;
             _btnClose.Click += (s, e) => Close();
 
-            _btnEdit = new Button
+            _btnEdit = new ModernButton
             {
                 Text = "Chỉnh sửa",
                 Width = 110,
                 Height = 34,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(255, 193, 7),
+                BaseColor = Color.FromArgb(255, 193, 7),
+                BackColor = Color.Transparent,
                 ForeColor = Color.Black,
                 Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
@@ -105,7 +105,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 _btnEdit.Width = 120;
                 _btnEdit.Height = 36;
                 _btnEdit.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
-                _btnEdit.BackColor = Color.FromArgb(0, 122, 204);
+                _btnEdit.BaseColor = Color.FromArgb(0, 122, 204);
                 _btnEdit.ForeColor = Color.White;
 
                 _btnClose.Visible = false;

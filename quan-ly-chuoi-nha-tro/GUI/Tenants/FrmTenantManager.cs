@@ -148,12 +148,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private Button MakeButton(string text, Color backColor, EventHandler onClick)
         {
-            var btn = new Button
+            var btn = new ModernButton
             {
                 Text = text,
                 Width = 90,
                 Height = 32,
-                BackColor = backColor,
+                BaseColor = backColor,
+                BackColor = Color.Transparent,
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Margin = new Padding(0, 4, 8, 0),
@@ -640,42 +641,51 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     ForeColor = Color.FromArgb(80, 80, 80)
                 };
 
-                var btnSelectAll = new Button
+                var btnSelectAll = new ModernButton
                 {
                     Text = "Chọn tất cả",
                     Width = 110,
                     Height = 28,
                     FlatStyle = FlatStyle.Flat,
+                    BaseColor = Color.White,
+                    BackColor = Color.Transparent,
+                    ForeColor = Color.Black,
                     Location = new Point(230, 342)
                 };
                 btnSelectAll.FlatAppearance.BorderSize = 1;
+                btnSelectAll.FlatAppearance.BorderColor = Color.FromArgb(200, 200, 200);
                 btnSelectAll.Click += (s, e) =>
                 {
                     for (int i = 0; i < _list.Items.Count; i++)
                         _list.SetItemChecked(i, true);
                 };
 
-                var btnClear = new Button
+                var btnClear = new ModernButton
                 {
                     Text = "Bỏ chọn",
                     Width = 90,
                     Height = 28,
                     FlatStyle = FlatStyle.Flat,
+                    BaseColor = Color.White,
+                    BackColor = Color.Transparent,
+                    ForeColor = Color.Black,
                     Location = new Point(346, 342)
                 };
                 btnClear.FlatAppearance.BorderSize = 1;
+                btnClear.FlatAppearance.BorderColor = Color.FromArgb(200, 200, 200);
                 btnClear.Click += (s, e) =>
                 {
                     for (int i = 0; i < _list.Items.Count; i++)
                         _list.SetItemChecked(i, false);
                 };
 
-                var btnOk = new Button
+                var btnOk = new ModernButton
                 {
                     Text = "Xóa",
                     Width = 100,
                     Height = 32,
-                    BackColor = Color.FromArgb(220, 53, 69),
+                    BaseColor = Color.FromArgb(220, 53, 69),
+                    BackColor = Color.Transparent,
                     ForeColor = Color.White,
                     FlatStyle = FlatStyle.Flat,
                     Location = new Point(296, 360),
@@ -684,12 +694,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 btnOk.FlatAppearance.BorderSize = 0;
                 btnOk.Click += (s, e) => CollectSelection();
 
-                var btnCancel = new Button
+                var btnCancel = new ModernButton
                 {
                     Text = "Hủy",
                     Width = 90,
                     Height = 32,
-                    BackColor = Color.FromArgb(220, 220, 220),
+                    BaseColor = Color.FromArgb(220, 220, 220),
+                    BackColor = Color.Transparent,
                     ForeColor = Color.Black,
                     FlatStyle = FlatStyle.Flat,
                     Location = new Point(412, 360),

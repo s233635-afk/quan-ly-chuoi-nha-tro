@@ -190,7 +190,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             pnlBody.Controls.Add(MakeLabel("Ảnh CCCD (mặt trước)", top));
             var pnlFront = new Panel { Location = new Point(left + labelWidth, top), Width = inputWidth, Height = 26, AutoSize = false };
             txtFrontIdPhoto = new TextBox { Dock = DockStyle.Fill, ReadOnly = true, BorderStyle = BorderStyle.FixedSingle };
-            btnBrowseFront = new Button { Text = "Chọn...", Width = 80, Dock = DockStyle.Right, Margin = new Padding(4, 0, 0, 0) };
+            btnBrowseFront = new ModernButton { Text = "Chọn...", Width = 80, Dock = DockStyle.Right, Margin = new Padding(4, 0, 0, 0), BaseColor = Color.FromArgb(240, 240, 240), BackColor = Color.Transparent, ForeColor = Color.Black };
             btnBrowseFront.Click += (s, e) => BrowseFileToTextBox(txtFrontIdPhoto, "Chọn ảnh CCCD mặt trước");
             pnlFront.Controls.Add(txtFrontIdPhoto);
             pnlFront.Controls.Add(btnBrowseFront);
@@ -201,7 +201,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             pnlBody.Controls.Add(MakeLabel("Ảnh CCCD (mặt sau)", top));
             var pnlBack = new Panel { Location = new Point(left + labelWidth, top), Width = inputWidth, Height = 26, AutoSize = false };
             txtBackIdPhoto = new TextBox { Dock = DockStyle.Fill, ReadOnly = true, BorderStyle = BorderStyle.FixedSingle };
-            btnBrowseBack = new Button { Text = "Chọn...", Width = 80, Dock = DockStyle.Right, Margin = new Padding(4, 0, 0, 0) };
+            btnBrowseBack = new ModernButton { Text = "Chọn...", Width = 80, Dock = DockStyle.Right, Margin = new Padding(4, 0, 0, 0), BaseColor = Color.FromArgb(240, 240, 240), BackColor = Color.Transparent, ForeColor = Color.Black };
             btnBrowseBack.Click += (s, e) => BrowseFileToTextBox(txtBackIdPhoto, "Chọn ảnh CCCD mặt sau");
             pnlBack.Controls.Add(txtBackIdPhoto);
             pnlBack.Controls.Add(btnBrowseBack);
@@ -287,12 +287,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
             pnlBody.Controls.Add(chkActive);
 
             // Buttons
-            btnSave = new Button
+            btnSave = new ModernButton
             {
                 Text = "Lưu",
                 Width = 100,
                 Height = 36,
-                BackColor = Color.FromArgb(0, 123, 255),
+                BaseColor = Color.FromArgb(0, 123, 255),
+                BackColor = Color.Transparent,
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand
@@ -300,12 +301,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
             btnSave.FlatAppearance.BorderSize = 0;
             btnSave.Click += async (s, e) => await SaveAsync();
 
-            btnCancel = new Button
+            btnCancel = new ModernButton
             {
                 Text = "Hủy",
                 Width = 100,
                 Height = 36,
-                BackColor = Color.FromArgb(108, 117, 125),
+                BaseColor = Color.FromArgb(108, 117, 125),
+                BackColor = Color.Transparent,
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand,

@@ -9,46 +9,119 @@ namespace quan_ly_chuoi_nha_tro.GUI
     /// </summary>
     public class ModernButton : Button
     {
-        private Color _hoverColor;
-        private Color _pressedColor;
-        private Color _normalColor;
-        private bool _isHovered;
+        private int _borderRadius = 18;
+        public int BorderRadius 
+        { 
+            get => _borderRadius; 
+            set { _borderRadius = value; UpdateRegion(); Invalidate(); } 
+        }
+        private Color _baseColor = UiKit.Primary;
+        private bool _isHovered = false;
+
+        public Color BaseColor
+        {
+            get => _baseColor;
+            set { _baseColor = value; Invalidate(); }
+        }
+
+        private Color? _hoverColor;
+        public Color HoverColor
+        {
+            get => _hoverColor ?? ControlPaint.Light(BaseColor);
+            set => _hoverColor = value;
+        }
+
+        public class ButtonParameters
+        {
+            public Color BaseColor { get; set; }
+            public Color HoverColor { get; set; }
+            public int BorderRadius { get; set; } = 18;
+            public Font TextFont { get; set; }
+            public Color TextColor { get; set; }
+        }
+
+        public ButtonParameters Parameters
+        {
+            set
+            {
+                if (value == null) return;
+                BaseColor = value.BaseColor;
+                if (value.HoverColor != Color.Empty) HoverColor = value.HoverColor;
+                BorderRadius = value.BorderRadius;
+                if (value.TextFont != null) Font = value.TextFont;
+                if (value.TextColor != Color.Empty) ForeColor = value.TextColor;
+            }
+        }
 
         public ModernButton()
         {
             FlatStyle = FlatStyle.Flat;
             FlatAppearance.BorderSize = 0;
+            BackColor = Color.Transparent;
             Cursor = Cursors.Hand;
             Height = 36;
             Font = ModernTheme.Fonts.Bold(ModernTheme.Fonts.Normal);
-            SetStyle(ControlStyles.UserPaint | ControlStyles.DoubleBuffer | ControlStyles.AllPaintingInWmPaint, true);
-        }
-
-        public Color HoverColor
-        {
-            get => _hoverColor == Color.Empty ? ControlPaint.Dark(BackColor, 0.1f) : _hoverColor;
-            set => _hoverColor = value;
-        }
-
-        public Color PressedColor
-        {
-            get => _pressedColor == Color.Empty ? ControlPaint.Dark(BackColor, 0.2f) : _pressedColor;
-            set => _pressedColor = value;
+            // Enable transparency and smooth redrawing
+            SetStyle(ControlStyles.UserPaint | ControlStyles.DoubleBuffer | ControlStyles.AllPaintingInWmPaint | 
+                     ControlStyles.OptimizedDoubleBuffer | ControlStyles.SupportsTransparentBackColor, true);
         }
 
         protected override void OnMouseEnter(EventArgs e)
         {
             base.OnMouseEnter(e);
             _isHovered = true;
-            _normalColor = BackColor;
-            BackColor = HoverColor;
+            Invalidate();
         }
 
         protected override void OnMouseLeave(EventArgs e)
         {
             base.OnMouseLeave(e);
             _isHovered = false;
-            BackColor = _normalColor;
+            Invalidate();
+        }
+
+        protected override void OnParentChanged(EventArgs e)
+        {
+            base.OnParentChanged(e);
+            UpdateRegion();
+        }
+
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+            UpdateRegion();
+        }
+
+        private void UpdateRegion()
+        {
+            UiKit.SetRoundedRegion(this, BorderRadius);
+        }
+
+        protected override void OnPaint(PaintEventArgs pevent)
+        {
+            var g = pevent.Graphics;
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+
+            // This tells the parent to paint its background behind the button
+            InvokePaintBackground(this, pevent);
+
+            var rect = ClientRectangle;
+            rect.Width -= 1;
+            rect.Height -= 1;
+
+            var color = _isHovered ? HoverColor : BaseColor;
+
+            using (var path = UiKit.GetRoundPath(rect, BorderRadius))
+            {
+                using (var brush = new SolidBrush(color))
+                {
+                    g.FillPath(brush, path);
+                }
+
+                TextRenderer.DrawText(g, Text, Font, ClientRectangle, ForeColor, 
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+            }
         }
     }
 

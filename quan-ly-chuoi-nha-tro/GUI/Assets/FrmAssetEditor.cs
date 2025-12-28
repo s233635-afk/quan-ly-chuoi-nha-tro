@@ -75,13 +75,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 BorderStyle = BorderStyle.FixedSingle
             };
 
-            btnCancel = new Button
+            btnCancel = new ModernButton
             {
                 Text = "❌ Hủy",
                 Width = 120,
                 Height = 36,
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.White,
+                BaseColor = Color.White,
+                BackColor = Color.Transparent,
                 ForeColor = Color.FromArgb(100, 100, 100),
                 Font = new Font("Segoe UI", 10, FontStyle.Regular),
                 Cursor = Cursors.Hand,
@@ -91,13 +92,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
             btnCancel.FlatAppearance.BorderSize = 1;
             btnCancel.Click += (s, e) => DialogResult = DialogResult.Cancel;
 
-            btnSave = new Button
+            btnSave = new ModernButton
             {
                 Text = "✓ Lưu",
                 Width = 120,
                 Height = 36,
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(0, 122, 204),
+                BaseColor = Color.FromArgb(0, 122, 204),
+                BackColor = Color.Transparent,
                 ForeColor = Color.White,
                 Font = new Font("Segoe UI", 10, FontStyle.Regular),
                 Cursor = Cursors.Hand,
@@ -135,7 +137,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             cboRoom = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.White };
             numQty = new NumericUpDown { Minimum = 1, Maximum = 100000, DecimalPlaces = 0, Value = 1, ThousandsSeparator = true, BorderStyle = BorderStyle.FixedSingle };
             cboCondition = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.White };
-            cboCondition.Items.AddRange(new object[] { "Good", "Fair", "Poor", "Damaged" });
+            cboCondition.Items.AddRange(new object[] { "Tốt", "Bình thường", "Kém", "Hư hỏng" });
             cboCondition.SelectedIndex = 0;
             dtPurchase = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true, Checked = false };
             numPrice = new NumericUpDown { Minimum = 0, Maximum = 100000000000, DecimalPlaces = 0, ThousandsSeparator = true, BorderStyle = BorderStyle.FixedSingle };
@@ -233,8 +235,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
             string cond = ReadString(_existingRow, "Condition");
             if (!string.IsNullOrWhiteSpace(cond))
             {
-                int idx = cboCondition.FindStringExact(cond);
+                string vnCond = TextFixer.ToVietnameseCondition(cond);
+                int idx = cboCondition.FindStringExact(vnCond);
                 if (idx >= 0) cboCondition.SelectedIndex = idx;
+                else
+                {
+                    // If not found in exact items, it might be a custom string or mixed case
+                    idx = cboCondition.FindString(vnCond);
+                    if (idx >= 0) cboCondition.SelectedIndex = idx;
+                }
             }
 
             if (DateTime.TryParse(ReadString(_existingRow, "PurchaseDate"), out var pd))

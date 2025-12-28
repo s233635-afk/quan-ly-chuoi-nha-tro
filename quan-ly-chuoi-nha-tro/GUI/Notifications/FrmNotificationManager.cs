@@ -444,7 +444,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private static Button MakeButton(string text, Color backColor, EventHandler onClick)
         {
-            var b = new Button { Text = text, Width = 96, Height = 34, FlatStyle = FlatStyle.Flat, BackColor = backColor, ForeColor = Color.White, Margin = new Padding(0, 0, 8, 0), Font = new Font("Segoe UI", 9, FontStyle.Bold) };
+            var b = new ModernButton { Text = text, Width = 96, Height = 34, FlatStyle = FlatStyle.Flat, BaseColor = backColor, BackColor = Color.Transparent, ForeColor = Color.White, Margin = new Padding(0, 0, 8, 0), Font = new Font("Segoe UI", 9, FontStyle.Bold) };
             b.FlatAppearance.BorderSize = 0;
             b.Click += onClick;
             return b;
@@ -590,11 +590,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
             pnlBody.Controls.Add(txtMessage);
 
             var pnlBottom = new Panel { Dock = DockStyle.Bottom, Height = 70, BackColor = Color.FromArgb(245, 247, 250), Padding = new Padding(20) };
-            btnSend = new Button { Text = "Gửi Thông Báo", Width = 140, Height = 40, BackColor = Color.FromArgb(46, 125, 50), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10, FontStyle.Bold), Anchor = AnchorStyles.Right };
+            btnSend = new ModernButton { Text = "Gửi Thông Báo", Width = 140, Height = 40, BaseColor = Color.FromArgb(46, 125, 50), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10, FontStyle.Bold), Anchor = AnchorStyles.Right, BackColor = Color.Transparent };
             btnSend.FlatAppearance.BorderSize = 0;
             btnSend.Click += async (s, e) => await SendAsync();
 
-            btnCancel = new Button { Text = "Hủy", Width = 140, Height = 40, BackColor = Color.White, ForeColor = Color.FromArgb(64, 64, 64), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10, FontStyle.Bold), Anchor = AnchorStyles.Right };
+            btnCancel = new ModernButton { Text = "Hủy", Width = 140, Height = 40, BaseColor = Color.White, ForeColor = Color.FromArgb(64, 64, 64), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10, FontStyle.Bold), Anchor = AnchorStyles.Right, BackColor = Color.Transparent };
             btnCancel.FlatAppearance.BorderColor = Color.FromArgb(200, 200, 200);
             btnCancel.FlatAppearance.BorderSize = 1;
             btnCancel.Click += (s, e) => DialogResult = DialogResult.Cancel;
@@ -644,4 +644,3 @@ namespace quan_ly_chuoi_nha_tro.GUI
         }
     }
 }
-

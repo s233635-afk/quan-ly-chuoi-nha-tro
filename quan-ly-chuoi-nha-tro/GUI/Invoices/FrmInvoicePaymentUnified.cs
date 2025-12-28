@@ -149,10 +149,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnDeleteInvoice.Enabled = !_isStaffMode;
 
             // Top Panel with Controls
-            var topPanel = new Panel { Dock = DockStyle.Top, Height = 100, Padding = new Padding(12), BackColor = Color.White };
+            var topPanel = new Panel { Dock = DockStyle.Top, Height = 135, Padding = new Padding(15, 12, 15, 0), BackColor = Color.White };
             topPanel.Paint += (s, e) =>
             {
-                using (var pen = new Pen(Color.FromArgb(200, 200, 200), 1))
+                using (var pen = new Pen(Color.FromArgb(225, 230, 235), 1))
                 {
                     e.Graphics.DrawLine(pen, 0, topPanel.Height - 1, topPanel.Width, topPanel.Height - 1);
                 }
@@ -160,12 +160,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             var actionsPanel = new FlowLayoutPanel
             {
-                Dock = DockStyle.Top,
+                Dock = DockStyle.Bottom,
                 AutoSize = true,
                 WrapContents = true,
                 FlowDirection = FlowDirection.LeftToRight,
                 BackColor = Color.Transparent,
-                Height = 40
+                Height = 50,
+                Padding = new Padding(0, 5, 0, 10)
             };
             actionsPanel.Controls.Add(_btnAddInvoice);
             actionsPanel.Controls.Add(_btnEditInvoice);
@@ -176,13 +177,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             actionsPanel.Controls.Add(_btnExportInvoices);
             actionsPanel.Controls.Add(_btnRefreshInvoices);
 
-            var searchPanel = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent };
-            var lblSearch = new Label { Text = "Tìm:", AutoSize = true, ForeColor = UiKit.MutedText };
-            _txtSearchInvoice.Location = new Point(lblSearch.Width + 8, 8);
+            var searchPanel = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent, Padding = new Padding(0, 0, 0, 5) };
+            var lblSearch = new Label { Text = "Tìm kiếm:", AutoSize = true, ForeColor = UiKit.MutedText, Location = new Point(0, 12) };
+            _txtSearchInvoice.Location = new Point(lblSearch.Right + 8, 11);
 
-            var lblStatus = new Label { Text = "Trạng thái:", AutoSize = true, ForeColor = UiKit.MutedText };
-            lblStatus.Location = new Point(_txtSearchInvoice.Right + 20, 8);
-            _cboInvoiceStatus.Location = new Point(lblStatus.Right + 8, 5);
+            var lblStatus = new Label { Text = "Trạng thái:", AutoSize = true, ForeColor = UiKit.MutedText, Location = new Point(_txtSearchInvoice.Right + 25, 12) };
+            _cboInvoiceStatus.Location = new Point(lblStatus.Right + 8, 8);
 
             searchPanel.Controls.Add(lblSearch);
             searchPanel.Controls.Add(_txtSearchInvoice);
@@ -283,10 +283,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnDeletePayment.Enabled = !_isStaffMode;
 
             // Top Panel
-            var topPanel = new Panel { Dock = DockStyle.Top, Height = 120, Padding = new Padding(12), BackColor = Color.White };
+            var topPanel = new Panel { Dock = DockStyle.Top, Height = 135, Padding = new Padding(15, 12, 15, 0), BackColor = Color.White };
             topPanel.Paint += (s, e) =>
             {
-                using (var pen = new Pen(Color.FromArgb(200, 200, 200), 1))
+                using (var pen = new Pen(Color.FromArgb(225, 230, 235), 1))
                 {
                     e.Graphics.DrawLine(pen, 0, topPanel.Height - 1, topPanel.Width, topPanel.Height - 1);
                 }
@@ -299,7 +299,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 WrapContents = true,
                 FlowDirection = FlowDirection.LeftToRight,
                 BackColor = Color.Transparent,
-                Height = 40
+                Height = 50,
+                Padding = new Padding(0, 5, 0, 10)
             };
             actionsPanel.Controls.Add(_btnAddPayment);
             actionsPanel.Controls.Add(_btnEditPayment);
@@ -309,20 +310,20 @@ namespace quan_ly_chuoi_nha_tro.GUI
             actionsPanel.Controls.Add(_btnExportPayments);
             actionsPanel.Controls.Add(_btnRefreshPayments);
 
-            var filterPanel = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent };
+            var filterPanel = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent, Padding = new Padding(0, 0, 0, 5) };
 
-            var lblSearch = new Label { Text = "Tìm:", AutoSize = true, ForeColor = UiKit.MutedText, Location = new Point(0, 8) };
-            _txtSearchPayment.Location = new Point(lblSearch.Width + 8, 8);
+            var lblSearch = new Label { Text = "Tìm kiếm:", AutoSize = true, ForeColor = UiKit.MutedText, Location = new Point(0, 12) };
+            _txtSearchPayment.Location = new Point(lblSearch.Right + 8, 11);
 
-            var lblMethod = new Label { Text = "Hình thức:", AutoSize = true, ForeColor = UiKit.MutedText, Location = new Point(_txtSearchPayment.Right + 20, 8) };
-            _cboPaymentMethod.Location = new Point(lblMethod.Right + 8, 5);
+            var lblMethod = new Label { Text = "Hình thức:", AutoSize = true, ForeColor = UiKit.MutedText, Location = new Point(_txtSearchPayment.Right + 25, 12) };
+            _cboPaymentMethod.Location = new Point(lblMethod.Right + 8, 8);
 
-            var lblFrom = new Label { Text = "Từ:", AutoSize = true, ForeColor = UiKit.MutedText, Location = new Point(_cboPaymentMethod.Right + 20, 8) };
-            _dtFromDate.Location = new Point(lblFrom.Right + 8, 5);
+            var lblFrom = new Label { Text = "Từ:", AutoSize = true, ForeColor = UiKit.MutedText, Location = new Point(_cboPaymentMethod.Right + 25, 12) };
+            _dtFromDate.Location = new Point(lblFrom.Right + 8, 8);
             _dtFromDate.Width = 120;
 
-            var lblTo = new Label { Text = "Đến:", AutoSize = true, ForeColor = UiKit.MutedText, Location = new Point(_dtFromDate.Right + 20, 8) };
-            _dtToDate.Location = new Point(lblTo.Right + 8, 5);
+            var lblTo = new Label { Text = "Đến:", AutoSize = true, ForeColor = UiKit.MutedText, Location = new Point(_dtFromDate.Right + 25, 12) };
+            _dtToDate.Location = new Point(lblTo.Right + 8, 8);
             _dtToDate.Width = 120;
 
             filterPanel.Controls.Add(lblSearch);
@@ -338,10 +339,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             topPanel.Controls.Add(actionsPanel);
 
             // Bottom Panel
-            var bottomPanel = new Panel { Dock = DockStyle.Bottom, Height = 60, Padding = new Padding(12, 10, 12, 10), BackColor = Color.White };
+            var bottomPanel = new Panel { Dock = DockStyle.Bottom, Height = 65, Padding = new Padding(15, 12, 15, 12), BackColor = Color.White };
             bottomPanel.Paint += (s, e) =>
             {
-                using (var pen = new Pen(Color.FromArgb(200, 200, 200), 1))
+                using (var pen = new Pen(Color.FromArgb(225, 230, 235), 1))
                 {
                     e.Graphics.DrawLine(pen, 0, 0, bottomPanel.Width, 0);
                 }
@@ -774,20 +775,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private static string ToVietnameseStatus(string status)
         {
-            if (string.IsNullOrWhiteSpace(status)) return "Chưa thanh toán";
-            switch (status)
-            {
-                case "Issued":
-                    return "Chưa thanh toán";
-                case "PartialPaid":
-                    return "Thanh toán một phần";
-                case "Paid":
-                    return "Đã thanh toán";
-                case "Overdue":
-                    return "Quá hạn";
-                default:
-                    return status;
-            }
+            return TextFixer.ToVietnameseInvoiceStatus(status);
         }
 
         private static Color GetStatusColor(string status)

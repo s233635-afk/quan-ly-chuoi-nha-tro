@@ -318,30 +318,40 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Margin = new Padding(0, 2, 0, 0)
             };
 
-            _btnClose = new Button
+            _btnClose = new ModernButton
             {
                 Text = "Đóng",
                 Width = 90,
                 Height = 34,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(108, 117, 125),
-                ForeColor = Color.White,
+                Parameters = new ModernButton.ButtonParameters
+                {
+                    BaseColor = Color.FromArgb(108, 117, 125),
+                    HoverColor = Color.FromArgb(90, 99, 107),
+                    BorderRadius = 6,
+                    TextFont = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                    TextColor = Color.White
+                },
+                BackColor = Color.Transparent,
                 Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
-            _btnClose.FlatAppearance.BorderSize = 0;
             _btnClose.Click += (s, e) => Close();
 
-            _btnEdit = new Button
+            _btnEdit = new ModernButton
             {
                 Text = "Sửa",
                 Width = 90,
                 Height = 34,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(255, 193, 7),
-                ForeColor = Color.Black,
+                Parameters = new ModernButton.ButtonParameters
+                {
+                    BaseColor = Color.FromArgb(255, 193, 7),
+                    HoverColor = Color.FromArgb(230, 170, 0),
+                    BorderRadius = 6,
+                    TextFont = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                    TextColor = Color.Black
+                },
+                BackColor = Color.Transparent,
                 Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
-            _btnEdit.FlatAppearance.BorderSize = 0;
             _btnEdit.Click += async (s, e) => await EditBranchAsync();
 
             var headerLayout = new TableLayoutPanel
@@ -1565,11 +1575,41 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             // Buttons
             var btnPanel = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, WrapContents = false, FlowDirection = FlowDirection.LeftToRight, BackColor = Color.Transparent, Margin = new Padding(0, 8, 0, 0) };
-            var btnSave = new Button { Text = "💾 Lưu", Width = 100, Height = 34, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(40, 167, 69), ForeColor = Color.White, Cursor = Cursors.Hand, Margin = new Padding(0, 0, 10, 0) };
-            btnSave.FlatAppearance.BorderSize = 0;
+            var btnSave = new ModernButton
+            {
+                Text = "💾 Lưu",
+                Width = 100,
+                Height = 34,
+                Parameters = new ModernButton.ButtonParameters
+                {
+                    BaseColor = Color.FromArgb(40, 167, 69),
+                    HoverColor = Color.FromArgb(30, 140, 50),
+                    BorderRadius = 6,
+                    TextFont = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                    TextColor = Color.White
+                },
+                BackColor = Color.Transparent,
+                Cursor = Cursors.Hand,
+                Margin = new Padding(0, 0, 10, 0)
+            };
             btnSave.Click += async (s, e) => await SaveBranchAsync();
-            var btnCancel = new Button { Text = "❌ Hủy", Width = 100, Height = 34, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(108, 117, 125), ForeColor = Color.White, Cursor = Cursors.Hand };
-            btnCancel.FlatAppearance.BorderSize = 0;
+
+            var btnCancel = new ModernButton
+            {
+                Text = "❌ Hủy",
+                Width = 100,
+                Height = 34,
+                Parameters = new ModernButton.ButtonParameters
+                {
+                    BaseColor = Color.FromArgb(108, 117, 125),
+                    HoverColor = Color.FromArgb(90, 99, 107),
+                    BorderRadius = 6,
+                    TextFont = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                    TextColor = Color.White
+                },
+                BackColor = Color.Transparent,
+                Cursor = Cursors.Hand
+            };
             btnCancel.Click += (s, e) => ReloadBranchInfo();
             btnPanel.Controls.Add(btnSave);
             btnPanel.Controls.Add(btnCancel);
@@ -1733,19 +1773,23 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 }
             };
 
-            var btnEdit = new Button
+            var btnEdit = new ModernButton
             {
                 Text = "✎ Sửa",
                 Width = 60,
                 Height = 26,
-                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(255, 193, 7),
-                ForeColor = Color.Black,
+                Parameters = new ModernButton.ButtonParameters
+                {
+                    BaseColor = Color.FromArgb(255, 193, 7),
+                    HoverColor = Color.FromArgb(230, 170, 0),
+                    BorderRadius = 4,
+                    TextFont = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                    TextColor = Color.Black
+                },
+                BackColor = Color.Transparent,
                 Cursor = Cursors.Hand,
                 Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
-            btnEdit.FlatAppearance.BorderSize = 0;
 
             var status = new Label
             {
@@ -2170,32 +2214,40 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 }
             }
 
-            var btnEdit = new Button
+            var btnEdit = new ModernButton
             {
                 Text = "Sửa",
                 Width = 56,
                 Height = 28,
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(255, 193, 7),
-                ForeColor = Color.Black,
+                Parameters = new ModernButton.ButtonParameters
+                {
+                    BaseColor = Color.FromArgb(255, 193, 7),
+                    HoverColor = Color.FromArgb(230, 170, 0),
+                    BorderRadius = 4,
+                    TextFont = new Font("Segoe UI", 9f, FontStyle.Bold),
+                    TextColor = Color.Black
+                },
+                BackColor = Color.Transparent,
                 Cursor = Cursors.Hand
             };
-            btnEdit.FlatAppearance.BorderSize = 0;
             btnEdit.Click += async (s, e) => await EditSectionAsync();
 
-            var btnDelete = new Button
+            var btnDelete = new ModernButton
             {
                 Text = "Xóa",
                 Width = 56,
                 Height = 28,
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(220, 53, 69),
-                ForeColor = Color.White,
+                Parameters = new ModernButton.ButtonParameters
+                {
+                    BaseColor = Color.FromArgb(220, 53, 69),
+                    HoverColor = Color.FromArgb(200, 40, 50),
+                    BorderRadius = 4,
+                    TextFont = new Font("Segoe UI", 9f, FontStyle.Bold),
+                    TextColor = Color.White
+                },
+                BackColor = Color.Transparent,
                 Cursor = Cursors.Hand
             };
-            btnDelete.FlatAppearance.BorderSize = 0;
             btnDelete.Click += async (s, e) => await DeleteSectionAsync();
 
             border.Controls.Add(btnEdit);
@@ -3478,20 +3530,23 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private Button CreateActionButton(string text, Action onClick)
         {
-            var btn = new Button
+            var btn = new ModernButton
             {
                 Text = text,
                 Width = 120,
                 Height = 34,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.White,
-                ForeColor = Color.FromArgb(0, 79, 159),
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Parameters = new ModernButton.ButtonParameters
+                {
+                    BaseColor = Color.White,
+                    HoverColor = Color.FromArgb(240, 245, 255),
+                    BorderRadius = 6,
+                    TextFont = new Font("Segoe UI", 9f, FontStyle.Bold),
+                    TextColor = Color.FromArgb(0, 79, 159)
+                },
+                BackColor = Color.Transparent,
                 Margin = new Padding(6, 0, 6, 0),
                 Cursor = Cursors.Hand
             };
-            btn.FlatAppearance.BorderSize = 1;
-            btn.FlatAppearance.BorderColor = Color.FromArgb(200, 220, 240);
             btn.Click += (s, e) => onClick?.Invoke();
             return btn;
         }
@@ -3548,47 +3603,62 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 BorderStyle = BorderStyle.FixedSingle
             };
 
-            _btnStaffSave = new Button
+            _btnStaffSave = new ModernButton
             {
                 Text = "💾 Lưu",
                 Width = 100,
                 Height = 34,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(40, 167, 69),
-                ForeColor = Color.White,
+                Parameters = new ModernButton.ButtonParameters
+                {
+                    BaseColor = Color.FromArgb(40, 167, 69),
+                    HoverColor = Color.FromArgb(30, 140, 50),
+                    BorderRadius = 6,
+                    TextFont = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                    TextColor = Color.White
+                },
+                BackColor = Color.Transparent,
                 Cursor = Cursors.Hand,
                 Margin = new Padding(0, 0, 10, 0)
             };
-            _btnStaffSave.FlatAppearance.BorderSize = 0;
             _btnStaffSave.Click += SaveStaffChanges;
             _btnStaffSave.Visible = false;
 
-            _btnStaffDelete = new Button
+            _btnStaffDelete = new ModernButton
             {
                 Text = "🗑️ Xóa",
                 Width = 100,
                 Height = 34,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(220, 53, 69),
-                ForeColor = Color.White,
+                Parameters = new ModernButton.ButtonParameters
+                {
+                    BaseColor = Color.FromArgb(220, 53, 69),
+                    HoverColor = Color.FromArgb(200, 40, 50),
+                    BorderRadius = 6,
+                    TextFont = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                    TextColor = Color.White
+                },
+                BackColor = Color.Transparent,
                 Cursor = Cursors.Hand,
                 Margin = new Padding(0, 0, 10, 0)
             };
-            _btnStaffDelete.FlatAppearance.BorderSize = 0;
             _btnStaffDelete.Click += (s, e) => MessageBox.Show("Chức năng xóa sẽ được cập nhập", "Thông báo");
             _btnStaffDelete.Visible = false;
 
-            var btnCancel = new Button
+            var btnCancel = new ModernButton
             {
                 Text = "❌ Hủy",
                 Width = 100,
                 Height = 34,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(108, 117, 125),
-                ForeColor = Color.White,
+                Parameters = new ModernButton.ButtonParameters
+                {
+                    BaseColor = Color.FromArgb(108, 117, 125),
+                    HoverColor = Color.FromArgb(90, 99, 107),
+                    BorderRadius = 6,
+                    TextFont = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                    TextColor = Color.White
+                },
+                BackColor = Color.Transparent,
                 Cursor = Cursors.Hand
             };
-            btnCancel.FlatAppearance.BorderSize = 0;
             btnCancel.Click += (s, e) => CancelStaffEdit();
             btnCancel.Visible = false;
 

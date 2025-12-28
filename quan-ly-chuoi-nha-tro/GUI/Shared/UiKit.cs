@@ -16,26 +16,16 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         public static Button MakeButton(string text, Color backColor, EventHandler onClick, int width = 110)
         {
-            var btn = new Button
+            var btn = new ModernButton
             {
                 Text = text,
                 Width = width,
-                Height = 36, // Slightly taller for better proportions
-                FlatStyle = FlatStyle.Flat,
-                BackColor = backColor,
+                Height = 36,
+                BaseColor = backColor,
+                BackColor = Color.Transparent,
                 ForeColor = Color.White,
-                Cursor = Cursors.Hand
             };
-            btn.FlatAppearance.BorderSize = 0;
             
-            // Apply rounded corners
-            btn.SizeChanged += (s, e) => SetRoundedRegion(btn, 20);
-            SetRoundedRegion(btn, 20); // Initial set
-            
-            // Hover effect
-            btn.MouseEnter += (s, e) => btn.BackColor = ControlPaint.Light(backColor);
-            btn.MouseLeave += (s, e) => btn.BackColor = backColor;
-
             if (onClick != null) btn.Click += onClick;
             return btn;
         }
@@ -44,22 +34,27 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (c == null || c.IsDisposed) return;
             
-            using (var path = new System.Drawing.Drawing2D.GraphicsPath())
+            using (var path = GetRoundPath(c.ClientRectangle, radius))
             {
-                var rect = c.ClientRectangle;
-                rect.Width -= 0;
-                rect.Height -= 0;
-                
-                if (rect.Width <= 0 || rect.Height <= 0) return;
-
-                path.AddArc(rect.X, rect.Y, radius, radius, 180, 90);
-                path.AddArc(rect.Right - radius, rect.Y, radius, radius, 270, 90);
-                path.AddArc(rect.Right - radius, rect.Bottom - radius, radius, radius, 0, 90);
-                path.AddArc(rect.X, rect.Bottom - radius, radius, radius, 90, 90);
-                path.CloseFigure();
-
                 c.Region = new Region(path);
             }
+        }
+
+        public static System.Drawing.Drawing2D.GraphicsPath GetRoundPath(RectangleF rect, int radius)
+        {
+            var path = new System.Drawing.Drawing2D.GraphicsPath();
+            if (radius <= 0)
+            {
+                path.AddRectangle(rect);
+                return path;
+            }
+            float r = Math.Min(radius, Math.Min(rect.Width, rect.Height));
+            path.AddArc(rect.X, rect.Y, r, r, 180, 90);
+            path.AddArc(rect.Right - r, rect.Y, r, r, 270, 90);
+            path.AddArc(rect.Right - r, rect.Bottom - r, r, r, 0, 90);
+            path.AddArc(rect.X, rect.Bottom - r, r, r, 90, 90);
+            path.CloseFigure();
+            return path;
         }
 
         public static void StyleGrid(DataGridView grid)

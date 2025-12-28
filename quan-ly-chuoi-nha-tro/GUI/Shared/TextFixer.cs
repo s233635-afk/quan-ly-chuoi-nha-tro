@@ -282,5 +282,33 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             return count;
         }
+
+        public static string ToVietnameseCondition(string cond)
+        {
+            if (string.IsNullOrWhiteSpace(cond)) return cond;
+            var trimmed = cond.Trim();
+            switch (trimmed.ToLower())
+            {
+                case "good": return "Tốt";
+                case "fair": return "Bình thường";
+                case "poor": return "Kém";
+                case "damaged": return "Hư hỏng";
+                default: return trimmed;
+            }
+        }
+
+        public static string ToVietnameseInvoiceStatus(string status)
+        {
+            if (string.IsNullOrWhiteSpace(status)) return "Chưa xác định";
+            var trimmed = status.Trim();
+            switch (trimmed.ToLower())
+            {
+                case "issued": return "Chưa thanh toán";
+                case "partialpaid": return "Thanh toán một phần";
+                case "paid": return "Đã thanh toán";
+                case "overdue": return "Quá hạn";
+                default: return trimmed;
+            }
+        }
     }
 }

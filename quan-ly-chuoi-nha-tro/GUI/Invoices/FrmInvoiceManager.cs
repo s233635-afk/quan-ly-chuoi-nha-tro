@@ -368,20 +368,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private static string ToVietnameseStatus(string status)
         {
-            if (string.IsNullOrWhiteSpace(status)) return "Chưa thanh toán";
-            switch (status)
-            {
-                case "Issued":
-                    return "Chưa thanh toán";
-                case "PartialPaid":
-                    return "Thanh toán một phần";
-                case "Paid":
-                    return "Đã thanh toán";
-                case "Overdue":
-                    return "Quá hạn";
-                default:
-                    return status;
-            }
+            return TextFixer.ToVietnameseInvoiceStatus(status);
         }
 
         private DataRow GetCurrentRow()
@@ -688,8 +675,42 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Controls.Add(new Label { Text = "Thuế (%), 0=auto", AutoSize = true, Location = new Point(20, 129) });
                 Controls.Add(_numTaxRate);
 
-                _btnOk = new Button { Text = "Tạo", Width = 100, Location = new Point(130, 165) };
-                _btnCancel = new Button { Text = "Hủy", Width = 100, Location = new Point(240, 165) };
+                _btnOk = new ModernButton 
+                { 
+                    Text = "Tạo", 
+                    Width = 100, 
+                    Height = 34,
+                    Location = new Point(130, 165),
+                    Parameters = new ModernButton.ButtonParameters
+                    {
+                        BaseColor = Color.FromArgb(40, 167, 69),
+                        HoverColor = Color.FromArgb(30, 140, 50),
+                        BorderRadius = 6,
+                        TextFont = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                        TextColor = Color.White
+                    },
+                    BackColor = Color.Transparent,
+                    Cursor = Cursors.Hand
+                };
+
+                _btnCancel = new ModernButton 
+                { 
+                    Text = "Hủy", 
+                    Width = 100, 
+                    Height = 34,
+                    Location = new Point(240, 165),
+                    Parameters = new ModernButton.ButtonParameters
+                    {
+                        BaseColor = Color.FromArgb(108, 117, 125),
+                        HoverColor = Color.FromArgb(90, 99, 107),
+                        BorderRadius = 6,
+                        TextFont = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                        TextColor = Color.White
+                    },
+                    BackColor = Color.Transparent,
+                    Cursor = Cursors.Hand
+                };
+
                 _btnOk.Click += (s, e) => DialogResult = DialogResult.OK;
                 _btnCancel.Click += (s, e) => DialogResult = DialogResult.Cancel;
                 Controls.Add(_btnOk);

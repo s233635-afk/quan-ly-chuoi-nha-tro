@@ -740,7 +740,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
             Control statusBadge = null;
             if (row.Table.Columns.Contains("Status"))
             {
-                var status = row["Status"]?.ToString() ?? "";
+                var statusRaw = row["Status"]?.ToString() ?? "";
+                var status = TextFixer.ToVietnameseInvoiceStatus(statusRaw);
+                // Also handle common non-invoice statuses here if needed
+                if (string.Equals(statusRaw, "Active", StringComparison.OrdinalIgnoreCase)) status = "Đang hiệu lực";
+                else if (string.Equals(statusRaw, "Expired", StringComparison.OrdinalIgnoreCase)) status = "Hết hạn";
+                else if (string.Equals(statusRaw, "Done", StringComparison.OrdinalIgnoreCase)) status = "Hoàn tất";
+                
                 if (!string.IsNullOrEmpty(status))
                     statusBadge = CreateStatusBadge(status);
             }

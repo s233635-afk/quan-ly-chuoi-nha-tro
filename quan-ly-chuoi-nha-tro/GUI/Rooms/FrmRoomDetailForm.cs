@@ -19,6 +19,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private DataTable _assets;
         private DataRow _activeTenantRow;
         private DataRow _activeTenantHistory;
+        private Panel _roomInfoHost;
         private Panel _tenantInfoHost;
         private Panel _contractsInfoHost;
         private Panel _utilitiesInfoHost;
@@ -26,10 +27,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private ComboBox _cboUtilityMonth;
         private Label _lblUtilitySummary;
         private Label _lblAssetSummary;
-        private Button _btnAddUtility;
-        private Button _btnEditTenant;
-        private Button _btnEditRoom;
-        private Panel _roomInfoHost;
+        private ModernButton btnClose;
+        private ModernButton _btnEditRoom;
+        private ModernButton _btnEditTenant;
+        private ModernButton _btnAddUtility;
+        private ModernButton _btnEditContract;
+        private ModernButton _btnDeleteContract;
+        private ModernButton _btnEditReading;
         private Label _lblHeaderRoom;
         private Label _lblHeaderInfo;
         private TabControl _tabControl;
@@ -135,16 +139,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             contentPanel.Controls.Add(_tabControl);
 
             var footerPanel = new Panel { Dock = DockStyle.Bottom, Height = 50, BackColor = Color.FromArgb(245, 247, 250), Padding = new Padding(12) };
-            var btnClose = new Button
-            {
-                Text = "Đóng lại",
-                Width = 100,
-                Height = 36,
-                BackColor = Color.FromArgb(0, 122, 204),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Location = new Point(Width - 120, 7)
-            };
+            btnClose = new ModernButton { Text = "Đóng", Width = 90, Height = 34, BaseColor = Color.FromArgb(108, 117, 125), BackColor = Color.Transparent, ForeColor = Color.White, Anchor = AnchorStyles.Top | AnchorStyles.Right };
             btnClose.FlatAppearance.BorderSize = 0;
             btnClose.Click += (s, e) => Close();
             footerPanel.Controls.Add(btnClose);
@@ -168,14 +163,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Padding = new Padding(0, 0, 0, 6)
             };
 
-            _btnEditRoom = new Button
+            _btnEditRoom = new ModernButton
             {
-                Text = "Chỉnh sửa",
+                Text = "Sửa phòng",
                 Width = 110,
-                Height = 32,
-                BackColor = Color.FromArgb(111, 66, 193),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
+                Height = 34,
+                BaseColor = Color.FromArgb(255, 193, 7),
+                BackColor = Color.Transparent,
+                ForeColor = Color.Black,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
             _btnEditRoom.FlatAppearance.BorderSize = 0;
             _btnEditRoom.Click += async (s, e) => await EditRoomAsync();
@@ -208,14 +204,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Padding = new Padding(0, 0, 0, 6)
             };
 
-            _btnEditTenant = new Button
+            _btnEditTenant = new ModernButton
             {
-                Text = "Chỉnh sửa",
+                Text = "Sửa khách",
                 Width = 110,
-                Height = 32,
-                BackColor = Color.FromArgb(111, 66, 193),
+                Height = 34,
+                BaseColor = Color.FromArgb(0, 122, 204),
+                BackColor = Color.Transparent,
                 ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
             _btnEditTenant.FlatAppearance.BorderSize = 0;
             _btnEditTenant.Click += (s, e) => EditActiveTenant();
@@ -266,18 +263,32 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Padding = new Padding(0, 0, 0, 8)
             };
 
-            _btnAddUtility = new Button
+            _btnAddUtility = new ModernButton
             {
                 Text = "Thêm chỉ số",
                 Width = 120,
                 Height = 32,
-                BackColor = Color.FromArgb(0, 122, 204),
+                BaseColor = Color.FromArgb(0, 122, 204),
+                BackColor = Color.Transparent,
                 ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
                 Margin = new Padding(0, 0, 10, 0)
             };
             _btnAddUtility.FlatAppearance.BorderSize = 0;
             _btnAddUtility.Click += async (s, e) => await AddUtilityReadingAsync();
+
+            _btnEditReading = new ModernButton
+            {
+                Text = "Sửa chỉ số",
+                Width = 100,
+                Height = 32,
+                BaseColor = Color.FromArgb(0, 122, 204),
+                BackColor = Color.Transparent,
+                ForeColor = Color.White,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                Visible = false
+            };
+            _btnEditReading.FlatAppearance.BorderSize = 0;
+            // _btnEditReading.Click += async (s, e) => await EditUtilityReadingAsync(); // Assuming this will be added later
 
             _cboUtilityMonth = new ComboBox
             {

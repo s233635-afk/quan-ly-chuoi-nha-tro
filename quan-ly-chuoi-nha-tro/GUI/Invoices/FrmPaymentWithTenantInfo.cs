@@ -70,24 +70,26 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 BackColor = Color.FromArgb(240, 242, 245)
             };
 
-            btnSave = new Button
+            btnSave = new ModernButton
             {
                 Text = "Lưu",
                 Width = 100,
                 Height = 36,
                 DialogResult = DialogResult.None,
-                BackColor = Color.FromArgb(0, 120, 215),
+                BaseColor = Color.FromArgb(0, 120, 215),
+                BackColor = Color.Transparent,
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat
             };
             btnSave.Click += async (s, e) => await SavePaymentAsync();
 
-            btnExportInvoice = new Button
+            btnExportInvoice = new ModernButton
             {
                 Text = "📄 Xuất PDF/In",
                 Width = 140,
                 Height = 36,
-                BackColor = Color.FromArgb(107, 105, 123),
+                BaseColor = Color.FromArgb(107, 105, 123),
+                BackColor = Color.Transparent,
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat
             };
@@ -95,13 +97,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
             btnExportInvoice.Enabled = false;
             _exportAllowed = false;
 
-            btnCancel = new Button
+            btnCancel = new ModernButton
             {
                 Text = "Đóng",
                 Width = 100,
                 Height = 36,
                 DialogResult = DialogResult.Cancel,
-                BackColor = Color.FromArgb(200, 200, 200),
+                BaseColor = Color.FromArgb(200, 200, 200),
+                BackColor = Color.Transparent,
                 ForeColor = Color.Black,
                 FlatStyle = FlatStyle.Flat
             };
@@ -173,7 +176,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             pnlBody.Controls.Add(lblEmailInfo);
             top += 28;
 
-            _btnEditTenant = new Button { Text = "✏️ Chỉnh sửa thông tin khách", Width = 200, Height = 32, Location = new Point(left, top) };
+            _btnEditTenant = new ModernButton { Text = "✏️ Chỉnh sửa thông tin khách", Width = 200, Height = 32, Location = new Point(left, top), BaseColor = Color.FromArgb(240, 240, 240), BackColor = Color.Transparent, ForeColor = Color.Black };
             _btnEditTenant.Click += (s, e) => EditTenantInfo();
             pnlBody.Controls.Add(_btnEditTenant);
             top += 42;
@@ -254,7 +257,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Location = new Point(left + labelWidth, top),
                 Width = 200
             };
-            btnPayFull = new Button { Text = "Thu đủ", Width = 90, Height = 28, Location = new Point(left + labelWidth + 210, top) };
+            btnPayFull = new ModernButton { Text = "Thu đủ", Width = 90, Height = 28, Location = new Point(left + labelWidth + 210, top), BaseColor = Color.FromArgb(240, 240, 240), BackColor = Color.Transparent, ForeColor = Color.Black };
             btnPayFull.Click += (s, e) =>
             {
                 if (numAmount.Maximum > 0)

@@ -161,12 +161,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 ApplyFilter();
             };
 
-            _btnSearch = new Button
+            _btnSearch = new ModernButton
             {
                 Text = "Tìm",
                 Width = 80,
                 Height = 32,
-                BackColor = Color.FromArgb(0, 122, 204),
+                BaseColor = Color.FromArgb(0, 122, 204),
+                BackColor = Color.Transparent,
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Margin = new Padding(0, 4, 6, 0)
@@ -174,12 +175,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnSearch.FlatAppearance.BorderSize = 0;
             _btnSearch.Click += (s, e) => ApplyFilter();
 
-            _btnRefresh = new Button
+            _btnRefresh = new ModernButton
             {
                 Text = "Làm mới",
                 Width = 88,
                 Height = 32,
-                BackColor = Color.FromArgb(40, 167, 69),
+                BaseColor = Color.FromArgb(40, 167, 69),
+                BackColor = Color.Transparent,
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Margin = new Padding(0, 4, 6, 0)
@@ -187,12 +189,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnRefresh.FlatAppearance.BorderSize = 0;
             _btnRefresh.Click += async (s, e) => await LoadRoomsAsync();
 
-            _btnAddRoom = new Button
+            _btnAddRoom = new ModernButton
             {
                 Text = "Thêm phòng",
                 Width = 100,
                 Height = 32,
-                BackColor = Color.FromArgb(23, 162, 184),
+                BaseColor = Color.FromArgb(23, 162, 184),
+                BackColor = Color.Transparent,
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Margin = new Padding(0, 4, 6, 0)
@@ -200,12 +203,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnAddRoom.FlatAppearance.BorderSize = 0;
             _btnAddRoom.Click += async (s, e) => await AddRoomAsync();
 
-            _btnChangeStatus = new Button
+            _btnChangeStatus = new ModernButton
             {
                 Text = "Đổi trạng thái",
                 Width = 120,
                 Height = 32,
-                BackColor = Color.FromArgb(255, 193, 7),
+                BaseColor = Color.FromArgb(255, 193, 7),
+                BackColor = Color.Transparent,
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Margin = new Padding(0, 4, 8, 0),
@@ -214,12 +218,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnChangeStatus.FlatAppearance.BorderSize = 0;
             _btnChangeStatus.Click += (s, e) => ChangeRoomStatus();
 
-            _btnEdit = new Button
+            _btnEdit = new ModernButton
             {
                 Text = "Chỉnh sửa",
                 Width = 90,
                 Height = 32,
-                BackColor = Color.FromArgb(111, 66, 193),
+                BaseColor = Color.FromArgb(111, 66, 193),
+                BackColor = Color.Transparent,
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Margin = new Padding(0, 4, 8, 0),
@@ -228,12 +233,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnEdit.FlatAppearance.BorderSize = 0;
             _btnEdit.Click += (s, e) => EditCurrentRoom();
 
-            _btnDelete = new Button
+            _btnDelete = new ModernButton
             {
                 Text = "Xóa",
                 Width = 70,
                 Height = 32,
-                BackColor = Color.FromArgb(220, 53, 69),
+                BaseColor = Color.FromArgb(220, 53, 69),
+                BackColor = Color.Transparent,
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Margin = new Padding(0, 4, 0, 0),
@@ -621,10 +627,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 }
             }
 
-            _cboStatus.DataSource = dt;
             _cboStatus.DisplayMember = "StatusName";
             _cboStatus.ValueMember = "StatusId";
-            _cboStatus.SelectedIndex = 0;
+            _cboStatus.DataSource = dt;
+            if (dt.Rows.Count > 0)
+            {
+                _cboStatus.SelectedValue = 0;
+            }
         }
 
         private void ApplyFilter()

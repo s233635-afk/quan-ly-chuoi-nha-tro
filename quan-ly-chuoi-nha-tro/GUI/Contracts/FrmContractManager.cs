@@ -29,6 +29,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private DateTimePicker _dtFrom;
         private DateTimePicker _dtTo;
         private Label _lblCount;
+        private Button _btnAdd, _btnDelete, _btnRefresh;
 
         // Biến để theo dõi thẻ và dữ liệu đang được chọn
         private (Panel Card, DataRow Row)? _selectedItem;
@@ -82,12 +83,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             // 3. Panel chứa các nút chức năng (Hàng 1)
             var pnlActions = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false, FlowDirection = FlowDirection.LeftToRight, BackColor = Color.Transparent, AutoSize = true };
-            var btnAdd = UiKit.MakeButton("Thêm Hợp đồng", UiKit.Primary, async (s, e) => await AddNewAsync());
-            var btnDelete = UiKit.MakeButton("Xóa Hợp đồng", Color.IndianRed, async (s, e) => await DeleteSelectedAsync());
-            var btnRefresh = UiKit.MakeButton("Tải lại", Color.Gray, async (s, e) => await LoadDataAsync());
-            btnDelete.Visible = !_isStaffMode;
-            btnDelete.Enabled = !_isStaffMode;
-            pnlActions.Controls.AddRange(new Control[] { btnAdd, btnDelete, btnRefresh });
+            _btnAdd = UiKit.MakeButton("Thêm Hợp đồng", UiKit.Primary, async (s, e) => await AddNewAsync(), 130);
+            _btnDelete = UiKit.MakeButton("Xóa Hợp đồng", UiKit.Danger, async (s, e) => await DeleteSelectedAsync(), 120);
+            _btnRefresh = UiKit.MakeButton("Tải lại", UiKit.Primary, async (s, e) => await LoadDataAsync(), 92);
+            _btnDelete.Visible = !_isStaffMode;
+            _btnDelete.Enabled = !_isStaffMode;
+            pnlActions.Controls.AddRange(new Control[] { _btnAdd, _btnDelete, _btnRefresh });
 
             // 4. Panel chứa các bộ lọc (Hàng 2)
             var pnlFilters = new TableLayoutPanel 
@@ -471,6 +472,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
     {
         private DataRow _row;
         private AdminDataBLL _bll;
+        private Button _btnEdit, _btnClose;
 
         public FrmContractDetail(DataRow row, AdminDataBLL bll)
         {
@@ -510,20 +512,20 @@ namespace quan_ly_chuoi_nha_tro.GUI
             };
 
             // --- Sửa lỗi các nút bị chồng lên nhau ---
-            var btnEdit = UiKit.MakeButton("Sửa", Color.Orange, (s, e) => EditContract());
-            var btnClose = UiKit.MakeButton("Đóng", Color.Gray, (s, e) => Close());
+            _btnEdit = UiKit.MakeButton("Sửa Hợp đồng", UiKit.Warning, (s, e) => EditContract(), 130);
+            _btnClose = UiKit.MakeButton("Đóng", Color.FromArgb(108, 117, 125), (s, e) => Close(), 90);
 
             // 1. Neo các nút vào góc trên bên phải của panel header
-            btnEdit.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnClose.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            _btnEdit.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            _btnClose.Anchor = AnchorStyles.Top | AnchorStyles.Right;
 
             // 2. Đặt vị trí của chúng dựa trên kích thước của panel, tính từ phải qua trái
             int paddingRight = 20;
             int buttonSpacing = 10;
-            btnClose.Location = new Point(pnlHeader.ClientSize.Width - btnClose.Width - paddingRight, 30);
-            btnEdit.Location = new Point(btnClose.Left - btnEdit.Width - buttonSpacing, 30);
+            _btnClose.Location = new Point(pnlHeader.ClientSize.Width - _btnClose.Width - paddingRight, 30);
+            _btnEdit.Location = new Point(_btnClose.Left - _btnEdit.Width - buttonSpacing, 30);
 
-            pnlHeader.Controls.AddRange(new Control[] { lblTitle, lblSub, btnEdit, btnClose });
+            pnlHeader.Controls.AddRange(new Control[] { lblTitle, lblSub, _btnEdit, _btnClose });
             pnlHeader.Controls.Add(new Panel { Dock = DockStyle.Bottom, Height = 1, BackColor = Color.LightGray });
 
             // 2. Tab Control (Tổng quan, Dịch vụ, Thanh toán...)

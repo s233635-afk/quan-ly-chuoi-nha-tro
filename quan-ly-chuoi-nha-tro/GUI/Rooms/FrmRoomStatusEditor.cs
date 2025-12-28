@@ -63,7 +63,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             pnlBody.Controls.Add(Place(_txtDescription, y));
 
             _btnSave = UiKit.MakeButton("Lưu", UiKit.Primary, async (s, e) => await SaveAsync(), 110);
-            _btnCancel = new Button { Text = "Hủy", Width = 110, Height = 32, FlatStyle = FlatStyle.Flat, BackColor = Color.White };
+            _btnCancel = new ModernButton { Text = "Hủy", Width = 110, Height = 32, FlatStyle = FlatStyle.Flat, BaseColor = Color.White, BackColor = Color.Transparent, ForeColor = Color.Black };
             _btnCancel.FlatAppearance.BorderSize = 1;
             _btnCancel.Click += (s, e) => DialogResult = DialogResult.Cancel;
 
