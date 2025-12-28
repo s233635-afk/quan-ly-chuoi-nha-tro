@@ -376,6 +376,7 @@
     <Compile Include="GUI\AdminBranchScope.cs" />
     <Compile Include="GUI\AdminEvents.cs" />
     <Compile Include="GUI\TextFixer.cs" />
+    <Compile Include="GUI\RoomStatusCatalog.cs" />
     <Compile Include="GUI\RoomTypeCatalog.cs" />
     <Compile Include="GUI\BranchSectionCatalog.cs" />
     <Compile Include="GUI\FrmBranchSectionManager.cs">

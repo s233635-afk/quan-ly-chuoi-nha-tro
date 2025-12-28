@@ -9,8 +9,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
 {
     public class FrmDepositEditor : Form
     {
+        private const string BranchTagPrefix = "[CN:";
         private readonly AdminDataBLL _bll;
         private readonly DataRow _existing;
+        private readonly int? _branchId;
+        private readonly bool _isStaffMode;
 
         private ComboBox cboTenant;
         private ComboBox cboRoom;
@@ -28,10 +31,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private DataTable _tenantTable;
         private DataTable _roomTable;
 
-        public FrmDepositEditor(AdminDataBLL bll, DataRow existing = null)
+        public FrmDepositEditor(AdminDataBLL bll, DataRow existing = null, int? branchId = null, bool isStaffMode = false)
         {
             _bll = bll;
             _existing = existing;
+            _branchId = branchId;
+            _isStaffMode = isStaffMode;
             InitializeComponent();
             this.Load += async (s, e) => await LoadLookupAsync();
         }
@@ -354,8 +359,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                     string actionTitle = isRefund ? "Hoàn cọc" : "Xác nhận cọc";
                     string methodLabel = paymentMethod == "Card" ? "Thẻ" : "Tiền mặt";
+                    string title = actionTitle;
                     string message = $"{actionTitle}: {cboTenant.Text} | Phòng: {cboRoom.Text} | Số tiền: {linkAmount:N0} | Hình thức: {methodLabel}";
-                    await _bll.AddNotificationAsync(null, actionTitle, message, "Unread");
+                    if (_isStaffMode && _branchId.HasValue)
+                    {
+                        string tag = BuildBranchTag(_branchId.Value);
+                        title = $"{tag} {title}";
+                        message = $"{message} | Chi nhánh: {_branchId.Value}";
+                    }
+                    await _bll.AddNotificationAsync(null, title, message, "Unread");
                 }
 
                 AdminEvents.NotifyDataChanged();
@@ -386,6 +398,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
             if (string.IsNullOrWhiteSpace(notes)) return tag;
             if (notes.Contains(tag)) return notes;
             return notes.TrimEnd() + " " + tag;
+        }
+
+        private static string BuildBranchTag(int branchId)
+        {
+            return $"{BranchTagPrefix}{branchId}]";
         }
     }
 }

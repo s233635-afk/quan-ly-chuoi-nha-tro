@@ -17,6 +17,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private DataGridView _grid;
         private TextBox _txtSearch;
         private Label _lblCount;
+        private Label _lblEmpty;
 
         private Button _btnAdd;
         private Button _btnEdit;
@@ -45,6 +46,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             _txtSearch = MakeSearchBox(SearchPlaceholder, () => ApplyFilter());
             _lblCount = new Label { AutoSize = true, Text = "Tổng: 0", Font = new Font("Segoe UI", 10, FontStyle.Bold), ForeColor = Color.FromArgb(0, 120, 215) };
+            _lblEmpty = new Label
+            {
+                Text = "Chưa có cấu hình nào. Nhấn \"Thêm\" để tạo mới.",
+                AutoSize = true,
+                ForeColor = Color.FromArgb(120, 120, 120),
+                Font = new Font("Segoe UI", 10, FontStyle.Italic),
+                Visible = false
+            };
 
             _btnAdd = MakeButton("➕ Thêm", Color.FromArgb(0, 122, 204), async (s, e) => await AddNewAsync());
             _btnEdit = MakeButton("✎ Sửa", Color.FromArgb(0, 122, 204), async (s, e) => await EditSelectedAsync());
@@ -85,9 +94,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var pnlActionBar = new Panel
             {
                 Dock = DockStyle.Bottom,
-                Height = 35,
+                Height = 40,
                 BackColor = Color.White,
-                Padding = new Padding(12, 4, 12, 4),
+                Padding = new Padding(12, 6, 12, 6),
                 BorderStyle = BorderStyle.FixedSingle
             };
 
@@ -118,11 +127,47 @@ namespace quan_ly_chuoi_nha_tro.GUI
             filters.Controls.Add(new Label { Text = "  ", AutoSize = true });
             filters.Controls.Add(_lblCount);
 
-            pnlActionBar.Controls.Add(actions);
-            pnlActionBar.Controls.Add(filters);
+            var barLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 1
+            };
+            barLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            barLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+            barLayout.Controls.Add(actions, 0, 0);
+            barLayout.Controls.Add(filters, 1, 0);
+            filters.Anchor = AnchorStyles.Right;
+            barLayout.Padding = new Padding(0);
+
+            pnlActionBar.Controls.Add(barLayout);
             pnlToolbar.Controls.Add(pnlActionBar);
 
-            Controls.Add(_grid);
+            var gridHost = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = BackColor,
+                Padding = new Padding(12)
+            };
+            var gridCard = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White,
+                Padding = new Padding(8)
+            };
+            gridCard.Controls.Add(_grid);
+            _lblEmpty.Parent = gridCard;
+            _lblEmpty.Location = new Point(0, 0);
+            _lblEmpty.Anchor = AnchorStyles.None;
+            gridCard.Resize += (s, e) =>
+            {
+                _lblEmpty.Location = new Point(
+                    (gridCard.Width - _lblEmpty.Width) / 2,
+                    (gridCard.Height - _lblEmpty.Height) / 2);
+            };
+            gridHost.Controls.Add(gridCard);
+
+            Controls.Add(gridHost);
             Controls.Add(pnlToolbar);
             Load += async (s, e) => await LoadAsync();
         }
@@ -181,6 +226,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var filtered = rows.Any() ? rows.CopyToDataTable() : _rawTable.Clone();
             _grid.DataSource = filtered;
             _lblCount.Text = $"Tổng: {filtered.Rows.Count}";
+            UpdateEmptyState(filtered);
+        }
+
+        private void UpdateEmptyState(DataTable table)
+        {
+            bool isEmpty = table == null || table.Rows.Count == 0;
+            _lblEmpty.Visible = isEmpty;
+            _grid.Visible = !isEmpty;
         }
 
         private async System.Threading.Tasks.Task AddNewAsync()

@@ -13,6 +13,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private readonly AdminDataBLL _bll = new AdminDataBLL();
         private readonly int? _presetBranchId;
+        private readonly bool _isStaffMode;
 
         private DataTable _rawTable;
         private DataTable _branchTable;
@@ -30,13 +31,18 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Button _btnToggleActive;
         private Button _btnRefresh;
 
-        public FrmAssetManager() : this(null)
+        public FrmAssetManager() : this(null, false)
         {
         }
 
-        public FrmAssetManager(int? branchId)
+        public FrmAssetManager(int? branchId) : this(branchId, false)
+        {
+        }
+
+        public FrmAssetManager(int? branchId, bool isStaffMode)
         {
             _presetBranchId = branchId;
+            _isStaffMode = isStaffMode;
             InitializeComponent();
             AdminEvents.DataChanged += HandleAdminDataChanged;
             FormClosing += (s, e) => AdminEvents.DataChanged -= HandleAdminDataChanged;
@@ -55,7 +61,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var pnlToolbar = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 45,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 BackColor = Color.White,
                 Padding = new Padding(0),
                 BorderStyle = BorderStyle.None
@@ -64,10 +71,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
             // Actions bar
             var pnlActionBar = new Panel
             {
-                Dock = DockStyle.Fill,
-                Height = 40,
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 BackColor = Color.White,
-                Padding = new Padding(12, 5, 12, 5),
+                Padding = new Padding(12, 8, 12, 8),
                 BorderStyle = BorderStyle.FixedSingle
             };
 
@@ -80,6 +88,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnEdit.Enabled = false;
             _btnDelete.Enabled = false;
             _btnToggleActive.Enabled = false;
+            _btnDelete.Visible = !_isStaffMode;
+            _btnDelete.Enabled = !_isStaffMode && _btnDelete.Enabled;
 
             var pnlActions = new FlowLayoutPanel
             {
@@ -132,7 +142,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             var pnlFilters = new FlowLayoutPanel
             {
-                Dock = DockStyle.Right,
+                Dock = DockStyle.Left,
                 AutoSize = true,
                 WrapContents = false,
                 FlowDirection = FlowDirection.LeftToRight,
@@ -147,8 +157,28 @@ namespace quan_ly_chuoi_nha_tro.GUI
             pnlFilters.Controls.Add(_cboActive);
             pnlFilters.Controls.Add(_lblCount);
 
-            pnlActionBar.Controls.Add(pnlActions);
-            pnlActionBar.Controls.Add(pnlFilters);
+            var barLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 1,
+                RowCount = 2,
+                BackColor = Color.Transparent,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink
+            };
+            barLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            barLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            barLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
+            pnlActions.Dock = DockStyle.Fill;
+            pnlFilters.Dock = DockStyle.Fill;
+            pnlActions.Margin = new Padding(0, 0, 0, 6);
+            pnlFilters.Margin = new Padding(0);
+
+            barLayout.Controls.Add(pnlActions, 0, 0);
+            barLayout.Controls.Add(pnlFilters, 0, 1);
+
+            pnlActionBar.Controls.Add(barLayout);
             pnlToolbar.Controls.Add(pnlActionBar);
 
             _cardsHost = new FlowLayoutPanel
@@ -534,6 +564,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private async System.Threading.Tasks.Task DeleteSelectedAsync()
         {
+            if (_isStaffMode) return;
             var row = GetCurrentRow();
             if (row == null)
             {

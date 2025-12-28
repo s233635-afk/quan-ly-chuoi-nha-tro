@@ -18,6 +18,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private readonly AdminDataBLL _bll = new AdminDataBLL();
         private readonly int? _branchId;
+        private readonly bool _isStaffMode;
         private HashSet<int> _allowedBranchIds;
         private DataTable _rawTable;
 
@@ -32,11 +33,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
         // Biến để theo dõi thẻ và dữ liệu đang được chọn
         private (Panel Card, DataRow Row)? _selectedItem;
 
-        public FrmContractManager() : this(null) { }
+        public FrmContractManager() : this(null, false) { }
 
-        public FrmContractManager(int? branchId)
+        public FrmContractManager(int? branchId) : this(branchId, false) { }
+
+        public FrmContractManager(int? branchId, bool isStaffMode)
         {
             _branchId = branchId;
+            _isStaffMode = isStaffMode;
             InitializeComponent();
             AdminEvents.DataChanged += HandleAdminDataChanged;
             FormClosing += (s, e) => AdminEvents.DataChanged -= HandleAdminDataChanged;
@@ -56,7 +60,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
             // =========================================================================
 
             // 1. Panel Header chính
-            var topPanel = new Panel { Dock = DockStyle.Top, Height = 100, BackColor = Color.White, Padding = new Padding(15) };
+            var topPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 130,
+                BackColor = Color.White,
+                Padding = new Padding(15)
+            };
             topPanel.Controls.Add(new Panel { Dock = DockStyle.Bottom, Height = 1, BackColor = Color.LightGray }); // Đường kẻ dưới
 
             // 2. TableLayoutPanel để chia Header thành 2 hàng (Actions và Filters)
@@ -67,23 +77,26 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 RowCount = 2,
                 BackColor = Color.Transparent
             };
-            tableLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40F)); // Hàng 1 cao 40px
-            tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F)); // Hàng 2 chiếm phần còn lại
+            tableLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            tableLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
             // 3. Panel chứa các nút chức năng (Hàng 1)
-            var pnlActions = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false, FlowDirection = FlowDirection.LeftToRight, BackColor = Color.Transparent };
+            var pnlActions = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false, FlowDirection = FlowDirection.LeftToRight, BackColor = Color.Transparent, AutoSize = true };
             var btnAdd = UiKit.MakeButton("Thêm Hợp đồng", UiKit.Primary, async (s, e) => await AddNewAsync());
             var btnDelete = UiKit.MakeButton("Xóa Hợp đồng", Color.IndianRed, async (s, e) => await DeleteSelectedAsync());
             var btnRefresh = UiKit.MakeButton("Tải lại", Color.Gray, async (s, e) => await LoadDataAsync());
+            btnDelete.Visible = !_isStaffMode;
+            btnDelete.Enabled = !_isStaffMode;
             pnlActions.Controls.AddRange(new Control[] { btnAdd, btnDelete, btnRefresh });
 
             // 4. Panel chứa các bộ lọc (Hàng 2)
             var pnlFilters = new TableLayoutPanel 
             { 
-                Dock = DockStyle.Fill, 
+                Dock = DockStyle.Fill,
                 BackColor = Color.Transparent,
-                ColumnCount = 9, // 1 search, 6 filter controls, 1 label count, 1 spacer
-                RowCount = 1
+                ColumnCount = 10,
+                RowCount = 1,
+                AutoSize = true
             };
             pnlFilters.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 230F)); // Search
             pnlFilters.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));      // Label "Trạng thái"
@@ -100,7 +113,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _txtSearch = new TextBox { Width = 220, Font = new Font("Segoe UI", 10) };
             var pnlSearch = UiKit.MakeSearchPanel(_txtSearch, 230, SearchPlaceholder, ApplyFilter);
 
-            _cboStatus = new ComboBox { Width = 140, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 10), FlatStyle = FlatStyle.Flat, Anchor = AnchorStyles.None };
             _cboStatus = new ComboBox { Width = 150, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 10), FlatStyle = FlatStyle.Flat, Anchor = AnchorStyles.None };
             _cboStatus.Items.AddRange(new object[] { "Tất cả", "Active", "Extended", "Terminated", "Expired" });
             _cboStatus.SelectedIndex = 0;

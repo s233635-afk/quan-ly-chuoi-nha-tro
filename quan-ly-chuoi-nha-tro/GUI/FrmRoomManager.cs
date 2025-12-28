@@ -21,6 +21,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private readonly AdminDataBLL _bll;
         private readonly int? _branchId;
+        private readonly bool _isStaffMode;
 
         private DataTable _rooms;
         private DataTable _statuses;
@@ -52,10 +53,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private DataRow _selectedRoomRow = null;
         private int _displayLimit = DefaultDisplayedRooms;
 
-        public FrmRoomManager(AdminDataBLL bll, int? branchId = null)
+        public FrmRoomManager(AdminDataBLL bll, int? branchId = null, bool isStaffMode = false)
         {
             _bll = bll ?? new AdminDataBLL();
             _branchId = branchId;
+            _isStaffMode = isStaffMode;
             InitializeComponent();
             AdminEvents.DataChanged += HandleAdminDataChanged;
             DataSyncManager.RoomsDataChanged += HandleRoomsDataSync;
@@ -66,7 +68,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             };
         }
 
-        public FrmRoomManager() : this(new AdminDataBLL(), null)
+        public FrmRoomManager() : this(new AdminDataBLL(), null, false)
         {
         }
 
@@ -82,23 +84,36 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var toolbar = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 76,
+                Height = 100,
                 Padding = new Padding(12, 10, 12, 10),
                 BackColor = Color.White
             };
+
+            var toolbarLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 2,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink
+            };
+            toolbarLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            toolbarLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            toolbarLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            toolbarLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
             var filters = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = false,
+                WrapContents = true,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink
             };
 
             var actions = new FlowLayoutPanel
             {
-                Dock = DockStyle.Right,
+                Dock = DockStyle.Fill,
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = false,
                 AutoSize = true,
@@ -222,8 +237,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Margin = new Padding(0, 4, 0, 0),
-                Visible = true,
-                Enabled = true
+                Visible = !_isStaffMode,
+                Enabled = !_isStaffMode
             };
             _btnDelete.FlatAppearance.BorderSize = 0;
             _btnDelete.Click += async (s, e) => await DeleteCurrentRoomAsync();
@@ -244,9 +259,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             var stats = new FlowLayoutPanel
             {
-                Dock = DockStyle.Right,
+                Dock = DockStyle.Fill,
                 FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = false,
+                WrapContents = true,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 Padding = new Padding(0, 6, 0, 0)
@@ -269,9 +284,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
             stats.Controls.Add(_lblSummary);
             stats.Controls.Add(_lblRoomCount);
 
-            toolbar.Controls.Add(actions);
-            toolbar.Controls.Add(stats);
-            toolbar.Controls.Add(filters);
+            toolbarLayout.Controls.Add(filters, 0, 0);
+            toolbarLayout.Controls.Add(actions, 1, 0);
+            toolbarLayout.Controls.Add(stats, 1, 1);
+            toolbarLayout.Controls.Add(new Panel { Dock = DockStyle.Fill }, 0, 1);
+            toolbar.Controls.Add(toolbarLayout);
 
             _splitContainer = new SplitContainer
             {

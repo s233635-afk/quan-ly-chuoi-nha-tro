@@ -30,7 +30,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
         // Các button menu
         private Button _btnOverview;
         private Button _btnRoom;
-        private Button _btnTenant;
         private Button _btnContract;
         private Button _btnDeposit;
         private Button _btnUtility;
@@ -122,21 +121,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnRoom = MakeNavButton("🏠 Phòng", (s, e) =>
             {
                 SetActive(_btnRoom);
-                LoadModule(new FrmRoomManager(_bll, _branchId), "🏠 Phòng");
+                LoadModule(new FrmRoomManager(_bll, _branchId, true), "🏠 Phòng");
             });
-            _btnTenant = MakeNavButton("👥 Khách thuê", (s, e) => { SetActive(_btnTenant); LoadModule(new FrmTenantManager(), "👥 Khách thuê"); });
-            _btnContract = MakeNavButton("📄 Hợp đồng", (s, e) => { SetActive(_btnContract); LoadModule(new FrmContractManager(_branchId), "📄 Hợp đồng"); });
-            _btnDeposit = MakeNavButton("💰 Đặt cọc", (s, e) => { SetActive(_btnDeposit); LoadModule(new FrmDepositManager(_branchId), "💰 Đặt cọc"); });
-            _btnUtility = MakeNavButton("⚡ Điện/Nước/DV", (s, e) => { SetActive(_btnUtility); LoadModule(new FrmDataViewer("Điện - Nước - Dịch vụ", LoadUtilitiesAsync), "⚡ Điện/Nước/DV"); });
-            _btnInvoicePayment = MakeNavButton("💳 Hóa đơn & Thanh toán", (s, e) => { SetActive(_btnInvoicePayment); LoadModule(new FrmInvoicePaymentUnified(_branchId), "💳 Hóa đơn & Thanh toán"); });
-            _btnMaintenance = MakeNavButton("🔧 Bảo trì", (s, e) => { SetActive(_btnMaintenance); LoadModule(new FrmDataViewer("Bảo trì & Sự cố", LoadMaintenanceAsync), "🔧 Bảo trì"); });
-            _btnAsset = MakeNavButton("📦 Tài sản", (s, e) => { SetActive(_btnAsset); LoadModule(new FrmDataViewer("Tài sản phòng", LoadAssetsAsync), "📦 Tài sản"); });
-            _btnReport = MakeNavButton("📈 Báo cáo", (s, e) => { SetActive(_btnReport); LoadModule(new FrmDataViewer("Báo cáo chi nhánh", LoadInvoicesAsync), "📈 Báo cáo"); });
-            _btnStatus = MakeNavButton("🔔 Thông báo", (s, e) => { SetActive(_btnStatus); LoadModule(new FrmDataViewer("Thông báo & Sự kiện", LoadMaintenanceAsync), "🔔 Thông báo"); });
+            _btnContract = MakeNavButton("📄 Hợp đồng", (s, e) => { SetActive(_btnContract); LoadModule(new FrmContractManager(_branchId, true), "📄 Hợp đồng"); });
+            _btnDeposit = MakeNavButton("💰 Đặt cọc", (s, e) => { SetActive(_btnDeposit); LoadModule(new FrmDepositManager(_branchId, true), "💰 Đặt cọc"); });
+            _btnUtility = MakeNavButton("⚡ Điện/Nước/DV", (s, e) => { SetActive(_btnUtility); LoadModule(new FrmUtilityManager(_branchId, true), "⚡ Điện/Nước/DV"); });
+            _btnInvoicePayment = MakeNavButton("💳 Hóa đơn & Thanh toán", (s, e) => { SetActive(_btnInvoicePayment); LoadModule(new FrmInvoicePaymentUnified(_branchId, false, true), "💳 Hóa đơn & Thanh toán"); });
+            _btnMaintenance = MakeNavButton("🔧 Bảo trì", (s, e) => { SetActive(_btnMaintenance); LoadModule(new FrmMaintenanceManager(_branchId, true), "🔧 Bảo trì"); });
+            _btnAsset = MakeNavButton("📦 Tài sản", (s, e) => { SetActive(_btnAsset); LoadModule(new FrmAssetManager(_branchId, true), "📦 Tài sản"); });
+            _btnReport = MakeNavButton("📈 Báo cáo", (s, e) => { SetActive(_btnReport); LoadModule(new FrmReportManager(_branchId, true), "📈 Báo cáo"); });
+            _btnStatus = MakeNavButton("🔔 Thông báo", (s, e) => { SetActive(_btnStatus); LoadModule(new FrmNotificationManager(_branchId, true), "🔔 Thông báo"); });
 
             nav.Controls.Add(_btnOverview);
             nav.Controls.Add(_btnRoom);
-            nav.Controls.Add(_btnTenant);
             nav.Controls.Add(_btnContract);
             nav.Controls.Add(_btnDeposit);
             nav.Controls.Add(_btnUtility);

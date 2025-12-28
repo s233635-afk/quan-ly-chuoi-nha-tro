@@ -562,6 +562,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             if (pnlForm != null && pnlForm.Visible)
             {
                 DrawShadow(g, pnlForm.Bounds, radius: 22);
+                DrawGlow(g, pnlForm.Bounds, radius: 22);
             }
         }
 
@@ -597,13 +598,31 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             for (int i = 10; i >= 1; i--)
             {
-                int alpha = 10 + (i * 7);
+                int alpha = 6 + (i * 5);
                 var r = shadowRect;
                 r.Inflate(-i, -i);
                 using (var path = RoundedRectPath(r, radius + i))
-                using (var brush = new SolidBrush(Color.FromArgb(alpha, 0, 0, 0)))
+                using (var brush = new SolidBrush(Color.FromArgb(alpha, 0, 120, 215)))
                 {
                     g.FillPath(brush, path);
+                }
+            }
+        }
+
+        private void DrawGlow(Graphics g, Rectangle bounds, int radius)
+        {
+            var glowRect = bounds;
+            glowRect.Inflate(10, 10);
+
+            for (int i = 6; i >= 1; i--)
+            {
+                int alpha = 12 + (i * 10);
+                var r = glowRect;
+                r.Inflate(-i, -i);
+                using (var path = RoundedRectPath(r, radius + i))
+                using (var pen = new Pen(Color.FromArgb(alpha, 120, 210, 255), 1.4f))
+                {
+                    g.DrawPath(pen, path);
                 }
             }
         }
@@ -625,10 +644,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
-            using (var pen = new Pen(Color.FromArgb(235, 235, 235), 1f))
-            using (var path = RoundedRectPath(new Rectangle(0, 0, pnlForm.Width - 1, pnlForm.Height - 1), 22))
+            var outerRect = new Rectangle(0, 0, pnlForm.Width - 1, pnlForm.Height - 1);
+            var innerRect = new Rectangle(1, 1, pnlForm.Width - 3, pnlForm.Height - 3);
+            using (var outerPen = new Pen(Color.FromArgb(180, 200, 235, 255), 1.2f))
+            using (var innerPen = new Pen(Color.FromArgb(235, 255, 255, 255), 1f))
+            using (var outerPath = RoundedRectPath(outerRect, 22))
+            using (var innerPath = RoundedRectPath(innerRect, 20))
             {
-                g.DrawPath(pen, path);
+                g.DrawPath(outerPen, outerPath);
+                g.DrawPath(innerPen, innerPath);
             }
         }
 

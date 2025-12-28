@@ -225,12 +225,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     _tabs.SelectedTab = _tabSections;
                     break;
                 case BranchOverviewTab.Tenants:
+                    EnsureTenantTabEmbedded();
                     _tabs.SelectedTab = _tabTenants;
                     break;
                 case BranchOverviewTab.Staff:
                     _tabs.SelectedTab = _tabStaff;
                     break;
                 case BranchOverviewTab.Contracts:
+                    EnsureContractTabEmbedded();
                     _tabs.SelectedTab = _tabContracts;
                     break;
                 case BranchOverviewTab.Deposits:
@@ -398,6 +400,22 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             _tabs.TabPages.AddRange(new[] { _tabSummary, _tabOverview, _tabRooms, _tabSections, _tabTenants, _tabStaff, _tabContracts, _tabDeposits, _tabInvoices, _tabUtilities, _tabMaintenance, _tabAssets, _tabReports, _tabNotifications });
             foreach (TabPage p in _tabs.TabPages) p.BackColor = Color.White;
+            _tabs.Selecting += (s, e) =>
+            {
+                if (e.TabPage == _tabTenants)
+                    EnsureTenantTabEmbedded();
+                if (e.TabPage == _tabContracts)
+                    EnsureContractTabEmbedded();
+            };
+            _tabs.SelectedIndexChanged += (s, e) =>
+            {
+                if (_tabs.SelectedTab == _tabTenants)
+                    EnsureTenantTabEmbedded();
+                if (_tabs.SelectedTab == _tabContracts)
+                    EnsureContractTabEmbedded();
+            };
+            _tabTenants.Enter += (s, e) => EnsureTenantTabEmbedded();
+            _tabContracts.Enter += (s, e) => EnsureContractTabEmbedded();
 
             _summaryPanel = BuildSummaryTab();
             _tabSummary.Controls.Add(_summaryPanel);
@@ -555,6 +573,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _tabTenants.Controls.Clear();
             _tabTenants.BackColor = Color.White;
 
+            EnsureTenantTabEmbedded();
+            return;
+
             var top = new Panel
             {
                 Dock = DockStyle.Top,
@@ -624,6 +645,38 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             _tabTenants.Controls.Add(_tenantSplit);
             _tabTenants.Controls.Add(top);
+        }
+
+        private void EnsureTenantTabEmbedded()
+        {
+            if (_tabTenants == null) return;
+            if (_tenantManagerForm == null || _tenantManagerForm.IsDisposed)
+                _tenantManagerForm = new FrmTenantManager(_adminBll, _branchId);
+
+            if (_tenantManagerForm.Parent != null && !_tenantManagerForm.Parent.IsDisposed)
+                _tenantManagerForm.Parent.Controls.Remove(_tenantManagerForm);
+
+            _tabTenants.Controls.Clear();
+            EmbedFormInTab(_tabTenants, _tenantManagerForm);
+            if (!_tenantManagerForm.Visible)
+                _tenantManagerForm.Show();
+            _tenantManagerForm.BringToFront();
+        }
+
+        private void EnsureContractTabEmbedded()
+        {
+            if (_tabContracts == null) return;
+            if (_contractManagerForm == null || _contractManagerForm.IsDisposed)
+                _contractManagerForm = new FrmContractManager(_branchId);
+
+            if (_contractManagerForm.Parent != null && !_contractManagerForm.Parent.IsDisposed)
+                _contractManagerForm.Parent.Controls.Remove(_contractManagerForm);
+
+            _tabContracts.Controls.Clear();
+            EmbedFormInTab(_tabContracts, _contractManagerForm);
+            if (!_contractManagerForm.Visible)
+                _contractManagerForm.Show();
+            _contractManagerForm.BringToFront();
         }
 
         private Panel BuildSummaryTab()
@@ -801,7 +854,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
             flow.Controls.Add(MakeNavButton("Chi nhánh", () => _tabs.SelectedTab = _tabOverview));
             flow.Controls.Add(MakeNavButton("Phòng", () => _tabs.SelectedTab = _tabRooms));
             flow.Controls.Add(MakeNavButton("Khách thuê", () => _tabs.SelectedTab = _tabTenants));
-            flow.Controls.Add(MakeNavButton("Hợp đồng", () => _tabs.SelectedTab = _tabContracts));
+            flow.Controls.Add(MakeNavButton("Hợp đồng", () =>
+            {
+                EnsureContractTabEmbedded();
+                _tabs.SelectedTab = _tabContracts;
+            }));
             flow.Controls.Add(MakeNavButton("Đặt cọc", () => _tabs.SelectedTab = _tabDeposits));
             flow.Controls.Add(MakeNavButton("Điện/Nước/DV", () => _tabs.SelectedTab = _tabUtilities));
             flow.Controls.Add(MakeNavButton("Hóa đơn/Thanh toán", () => _tabs.SelectedTab = _tabInvoices));
@@ -823,9 +880,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             _roomManagerForm = new FrmRoomManager(_adminBll, _branchId);
             EmbedFormInTab(_tabRooms, _roomManagerForm);
-
-            _tenantManagerForm = new FrmTenantManager(_adminBll, _branchId);
-            EmbedFormInTab(_tabTenants, _tenantManagerForm);
 
             _contractManagerForm = new FrmContractManager(_branchId);
             EmbedFormInTab(_tabContracts, _contractManagerForm);
@@ -2797,19 +2851,42 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void ApplyTenantFilter()
         {
+            if (_tenantManagerForm != null && !_tenantManagerForm.IsDisposed)
+                return;
+
             if (_tenantsBranch == null) return;
+            if (_lblTenantCount == null || _tenantCardsHost == null) return;
 
             string searchText = (_txtTenantSearch?.Text ?? "").Trim().ToLower();
             var view = new DataView(_tenantsBranch);
+            string filter = string.Empty;
 
             if (!string.IsNullOrEmpty(searchText))
             {
                 var escaped = searchText.Replace("'", "''");
-                view.RowFilter = $"Convert(FullName, 'System.String') LIKE '%{escaped}%' OR Convert(PhoneNumber, 'System.String') LIKE '%{escaped}%' OR Convert(IdentityCard, 'System.String') LIKE '%{escaped}%'";
+                bool hasFullName = _tenantsBranch.Columns.Contains("FullName");
+                bool hasPhone = _tenantsBranch.Columns.Contains("PhoneNumber");
+                bool hasIdentity = _tenantsBranch.Columns.Contains("IdentityCard");
+
+                var parts = new System.Collections.Generic.List<string>();
+                if (hasFullName)
+                    parts.Add($"Convert(FullName, 'System.String') LIKE '%{escaped}%'");
+                if (hasPhone)
+                    parts.Add($"Convert(PhoneNumber, 'System.String') LIKE '%{escaped}%'");
+                if (hasIdentity)
+                    parts.Add($"Convert(IdentityCard, 'System.String') LIKE '%{escaped}%'");
+
+                if (parts.Count > 0)
+                    filter = string.Join(" OR ", parts);
             }
-            else
+
+            try
             {
-                view.RowFilter = "";
+                view.RowFilter = filter;
+            }
+            catch
+            {
+                view.RowFilter = string.Empty;
             }
 
             var filtered = view.ToTable();
@@ -3363,8 +3440,18 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnActionBranch = CreateActionButton("Chi nhánh", () => _tabs.SelectedTab = _tabOverview);
             var btnActionSections = CreateActionButton("Khu/Dãy", () => _tabs.SelectedTab = _tabSections);
             _btnActionRooms = CreateActionButton("Phòng", () => _tabs.SelectedTab = _tabRooms);
-            _btnActionTenants = CreateActionButton("Khách thuê", () => _tabs.SelectedTab = _tabTenants);
-            _btnActionContracts = CreateActionButton("Hợp đồng", () => _tabs.SelectedTab = _tabContracts);
+            _btnActionTenants = CreateActionButton("Khách thuê", () =>
+            {
+                EnsureTenantTabEmbedded();
+                _tabs.SelectedTab = _tabTenants;
+                _tabs.BringToFront();
+            });
+            _btnActionContracts = CreateActionButton("Hợp đồng", () =>
+            {
+                EnsureContractTabEmbedded();
+                _tabs.SelectedTab = _tabContracts;
+                _tabs.BringToFront();
+            });
             _btnActionDeposits = CreateActionButton("Đặt cọc", () => _tabs.SelectedTab = _tabDeposits);
             _btnActionUtilities = CreateActionButton("Điện/Nước/DV", () => _tabs.SelectedTab = _tabUtilities);
             var btnActionMaintenance = CreateActionButton("Bảo trì", () => _tabs.SelectedTab = _tabMaintenance);

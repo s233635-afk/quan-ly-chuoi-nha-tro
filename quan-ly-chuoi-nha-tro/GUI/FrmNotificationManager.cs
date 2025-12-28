@@ -10,8 +10,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
     public class FrmNotificationManager : Form
     {
         private const string SearchPlaceholder = "Tìm theo tiêu đề/nội dung...";
+        private const string BranchTagPrefix = "[CN:";
         private readonly AdminDataBLL _bll = new AdminDataBLL();
         private readonly int? _presetBranchId;
+        private readonly bool _isStaffMode;
 
         // Tab Control
         private TabControl _tabControl;
@@ -28,13 +30,18 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Label _lblOverdueCount, _lblExpiredCount, _lblIncompleteCount;
         private Button _btnCreateReminder, _btnViewDetails, _btnSendNew;
 
-        public FrmNotificationManager() : this(null)
+        public FrmNotificationManager() : this(null, false)
         {
         }
 
-        public FrmNotificationManager(int? branchId)
+        public FrmNotificationManager(int? branchId) : this(branchId, false)
+        {
+        }
+
+        public FrmNotificationManager(int? branchId, bool isStaffMode)
         {
             _presetBranchId = branchId;
+            _isStaffMode = isStaffMode;
             InitializeComponent();
             AdminEvents.DataChanged += HandleAdminDataChanged;
             FormClosing += (s, e) => AdminEvents.DataChanged -= HandleAdminDataChanged;
@@ -64,8 +71,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             InitializeTab2(tab2);
             _tabControl.TabPages.Add(tab2);
 
-
-
             Controls.Add(_tabControl);
             Load += async (s, e) => await LoadAsync();
         }
@@ -90,6 +95,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnDelete = MakeButton("Xóa", Color.FromArgb(211, 47, 47), async (s, e) => await DeleteSelectedAsync());
             _btnMarkRead = MakeButton("Đã đọc", Color.FromArgb(46, 125, 50), async (s, e) => await MarkReadAsync());
             _btnRefresh = MakeButton("Tải lại", Color.FromArgb(0, 122, 204), async (s, e) => await LoadAsync());
+            _btnAdd.Visible = !_isStaffMode;
+            _btnAdd.Enabled = !_isStaffMode;
+            _btnEdit.Visible = !_isStaffMode;
+            _btnEdit.Enabled = !_isStaffMode;
+            _btnDelete.Visible = !_isStaffMode;
+            _btnDelete.Enabled = !_isStaffMode;
 
             var top = new Panel { Dock = DockStyle.Top, Height = 70, Padding = new Padding(12, 10, 12, 10), BackColor = Color.White };
             var actions = new FlowLayoutPanel
@@ -158,6 +169,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnViewDetails.Width = 150;
             _btnSendNew = MakeButton("Gửi Thông Báo Mới", Color.FromArgb(0, 150, 136), async (s, e) => await OpenSendNotificationAsync());
             _btnSendNew.Width = 160;
+            _btnCreateReminder.Visible = !_isStaffMode;
+            _btnCreateReminder.Enabled = !_isStaffMode;
+            _btnSendNew.Visible = !_isStaffMode;
+            _btnSendNew.Enabled = !_isStaffMode;
 
             var btnContainer = new FlowLayoutPanel { Dock = DockStyle.Left, AutoSize = true, WrapContents = false, FlowDirection = FlowDirection.LeftToRight, BackColor = Color.Transparent };
             btnContainer.Controls.Add(_btnCreateReminder);
@@ -238,17 +253,31 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private DataTable FilterByBranch(DataTable table)
         {
-            if (!_presetBranchId.HasValue || table == null || !table.Columns.Contains("BranchId"))
+            if (!_presetBranchId.HasValue || table == null)
                 return table;
 
-            var filtered = table.Clone();
+            if (table.Columns.Contains("BranchId"))
+            {
+                var filtered = table.Clone();
+                foreach (DataRow row in table.Rows)
+                {
+                    if (!int.TryParse(row["BranchId"]?.ToString(), out var bid)) continue;
+                    if (bid == _presetBranchId.Value)
+                        filtered.ImportRow(row);
+                }
+                return filtered;
+            }
+
+            string tag = BuildBranchTag(_presetBranchId.Value);
+            var tagged = table.Clone();
             foreach (DataRow row in table.Rows)
             {
-                if (!int.TryParse(row["BranchId"]?.ToString(), out var bid)) continue;
-                if (bid == _presetBranchId.Value)
-                    filtered.ImportRow(row);
+                var title = ReadString(row, "Title");
+                var message = ReadString(row, "Message");
+                if (ContainsBranchTag(title, tag) || ContainsBranchTag(message, tag))
+                    tagged.ImportRow(row);
             }
-            return filtered;
+            return tagged;
         }
         #endregion
 
@@ -455,6 +484,17 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var v = row[column];
             if (v == null || v == DBNull.Value) return false;
             return v.ToString().ToLowerInvariant().Contains(keywordLower);
+        }
+
+        private static string BuildBranchTag(int branchId)
+        {
+            return $"{BranchTagPrefix}{branchId}]";
+        }
+
+        private static bool ContainsBranchTag(string text, string tag)
+        {
+            if (string.IsNullOrWhiteSpace(text) || string.IsNullOrWhiteSpace(tag)) return false;
+            return text.IndexOf(tag, StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private static string ReadString(DataRow row, params string[] cols)

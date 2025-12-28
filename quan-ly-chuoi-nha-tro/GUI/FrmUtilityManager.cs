@@ -14,6 +14,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private readonly AdminDataBLL _bll = new AdminDataBLL();
         private readonly int? _presetBranchId;
+        private readonly bool _isStaffMode;
 
         private DataTable _readingTable;
         private DataTable _readingTableRaw;
@@ -43,13 +44,18 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Button _btnTDelete;
         private Button _btnTRefresh;
 
-        public FrmUtilityManager() : this(null)
+        public FrmUtilityManager() : this(null, false)
         {
         }
 
-        public FrmUtilityManager(int? branchId)
+        public FrmUtilityManager(int? branchId) : this(branchId, false)
+        {
+        }
+
+        public FrmUtilityManager(int? branchId, bool isStaffMode)
         {
             _presetBranchId = branchId;
+            _isStaffMode = isStaffMode;
             InitializeComponent();
             AdminEvents.DataChanged += HandleAdminDataChanged;
             FormClosing += (s, e) => AdminEvents.DataChanged -= HandleAdminDataChanged;
@@ -86,6 +92,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnTEdit = MakeButton("Sửa", Color.FromArgb(0, 122, 204), async (s, e) => await EditTypeAsync());
             _btnTDelete = MakeButton("Xóa", Color.FromArgb(211, 47, 47), async (s, e) => await DeleteTypeAsync());
             _btnTRefresh = MakeButton("Tải lại", Color.FromArgb(0, 122, 204), async (s, e) => await LoadTypesAsync());
+            _btnRDelete.Visible = !_isStaffMode;
+            _btnRDelete.Enabled = !_isStaffMode;
+            _btnTDelete.Visible = !_isStaffMode;
+            _btnTDelete.Enabled = !_isStaffMode;
 
             _txtSearchReadings = MakeSearchBox(SearchPlaceholderReadings, () => ApplyReadingsFilter());
             _cboBranch = new ComboBox { Width = 220, DropDownStyle = ComboBoxStyle.DropDownList };
@@ -408,6 +418,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private async System.Threading.Tasks.Task DeleteReadingAsync()
         {
+            if (_isStaffMode) return;
             var row = GetCurrentRow(_gridReadings);
             if (row == null)
             {
@@ -458,6 +469,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private async System.Threading.Tasks.Task DeleteTypeAsync()
         {
+            if (_isStaffMode) return;
             var row = GetSelectedTypeRow();
             if (row == null)
             {

@@ -1,6 +1,7 @@
 using System;
 using System.Data;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
 
@@ -27,6 +28,23 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private Button btnSave;
         private Button btnCancel;
+
+        private string _notesMeta;
+
+        private const string PrevStatusIdTag = "[PrevRoomStatusId=";
+        private const string PrevStatusNameTag = "[PrevRoomStatusName=";
+
+        private sealed class ComboOption
+        {
+            public string Value { get; }
+            public string Display { get; }
+
+            public ComboOption(string value, string display)
+            {
+                Value = value;
+                Display = display;
+            }
+        }
 
         public FrmMaintenanceEditor(AdminDataBLL bll, DataRow existingRow = null)
         {
@@ -101,23 +119,50 @@ namespace quan_ly_chuoi_nha_tro.GUI
             txtTicketNumber = new TextBox { ReadOnly = true, BackColor = Color.FromArgb(245, 245, 245), ForeColor = Color.Gray };
             cboRoom = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
             cboRequestorType = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
-            cboRequestorType.Items.AddRange(new object[] { "Tenant", "Staff", "System" });
-            cboRequestorType.SelectedIndex = 0;
+            cboRequestorType.DisplayMember = "Display";
+            cboRequestorType.ValueMember = "Value";
+            cboRequestorType.DataSource = new[]
+            {
+                new ComboOption("Tenant", "Khách thuê"),
+                new ComboOption("Staff", "Nhân viên"),
+                new ComboOption("System", "Hệ thống")
+            };
+            if (cboRequestorType.Items.Count > 0)
+                cboRequestorType.SelectedIndex = 0;
 
             numRequestorId = new NumericUpDown { Minimum = 0, Maximum = 1000000000, DecimalPlaces = 0, ThousandsSeparator = true };
 
             cboPriority = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
-            cboPriority.Items.AddRange(new object[] { "🟢 Low", "🟡 Medium", "🔴 High", "⛔ Urgent" });
-            cboPriority.SelectedIndex = 1;
+            cboPriority.DisplayMember = "Display";
+            cboPriority.ValueMember = "Value";
+            cboPriority.DataSource = new[]
+            {
+                new ComboOption("Low", "🟢 Thấp"),
+                new ComboOption("Medium", "🟡 Trung bình"),
+                new ComboOption("High", "🔴 Cao"),
+                new ComboOption("Urgent", "⛔ Khẩn cấp")
+            };
+            if (cboPriority.Items.Count > 0)
+                cboPriority.SelectedValue = "Medium";
 
             cboAssigned = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
 
             cboStatus = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
-            cboStatus.Items.AddRange(new object[] { "Created", "InProgress", "Completed", "Cancelled" });
-            cboStatus.SelectedIndex = 0;
+            cboStatus.DisplayMember = "Display";
+            cboStatus.ValueMember = "Value";
+            cboStatus.DataSource = new[]
+            {
+                new ComboOption("Created", "Mới"),
+                new ComboOption("InProgress", "Đang xử lý"),
+                new ComboOption("Completed", "Hoàn tất"),
+                new ComboOption("Cancelled", "Đã hủy")
+            };
+            if (cboStatus.Items.Count > 0)
+                cboStatus.SelectedValue = "Created";
             cboStatus.SelectedIndexChanged += (s, e) =>
             {
-                if (string.Equals(cboStatus.Text, "Completed", StringComparison.OrdinalIgnoreCase) && !dtCompleted.Checked)
+                var statusValue = GetComboValue(cboStatus);
+                if (string.Equals(statusValue, "Completed", StringComparison.OrdinalIgnoreCase) && !dtCompleted.Checked)
                 {
                     dtCompleted.Checked = true;
                     dtCompleted.Value = DateTime.Now;
@@ -265,31 +310,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
             if (roomId > 0) { try { cboRoom.SelectedValue = roomId; } catch { } }
 
             string reqType = _existingRow.Table.Columns.Contains("RequestorType") ? _existingRow["RequestorType"]?.ToString() : null;
-            if (!string.IsNullOrWhiteSpace(reqType))
-            {
-                int idx = cboRequestorType.FindStringExact(reqType);
-                if (idx >= 0) cboRequestorType.SelectedIndex = idx;
-            }
+            SelectComboValue(cboRequestorType, reqType);
 
             int reqId = ReadInt(_existingRow, "RequestorId");
             if (reqId > 0 && reqId <= numRequestorId.Maximum) numRequestorId.Value = reqId;
 
             string pri = _existingRow.Table.Columns.Contains("Priority") ? _existingRow["Priority"]?.ToString() : null;
-            if (!string.IsNullOrWhiteSpace(pri))
-            {
-                int idx = cboPriority.FindStringExact(pri);
-                if (idx >= 0) cboPriority.SelectedIndex = idx;
-            }
+            SelectComboValue(cboPriority, pri);
 
             int assignedId = ReadInt(_existingRow, "AssignedToUserId");
             if (assignedId > 0) { try { cboAssigned.SelectedValue = assignedId; } catch { } }
 
             string st = _existingRow.Table.Columns.Contains("Status") ? _existingRow["Status"]?.ToString() : null;
-            if (!string.IsNullOrWhiteSpace(st))
-            {
-                int idx = cboStatus.FindStringExact(st);
-                if (idx >= 0) cboStatus.SelectedIndex = idx;
-            }
+            SelectComboValue(cboStatus, st);
 
             if (DateTime.TryParse(_existingRow["CompletedDate"]?.ToString(), out var cd))
             {
@@ -302,7 +335,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
 
             txtIssue.Text = _existingRow.Table.Columns.Contains("IssueDescription") ? _existingRow["IssueDescription"]?.ToString() : string.Empty;
-            txtNotes.Text = _existingRow.Table.Columns.Contains("Notes") ? _existingRow["Notes"]?.ToString() : string.Empty;
+            var rawNotes = _existingRow.Table.Columns.Contains("Notes") ? _existingRow["Notes"]?.ToString() : string.Empty;
+            _notesMeta = ExtractNotesMeta(rawNotes);
+            txtNotes.Text = StripNotesMeta(rawNotes);
         }
 
         private async System.Threading.Tasks.Task LoadRoomsAsync()
@@ -402,26 +437,40 @@ namespace quan_ly_chuoi_nha_tro.GUI
             int? requestorId = numRequestorId.Value > 0 ? (int?)Convert.ToInt32(numRequestorId.Value) : null;
             int? assignedTo = GetSelectedId(cboAssigned) > 0 ? (int?)GetSelectedId(cboAssigned) : null;
 
-            string status = cboStatus.Text;
+            string requestorType = GetComboValue(cboRequestorType);
+            string priority = GetComboValue(cboPriority);
+            string status = GetComboValue(cboStatus);
             DateTime? completed = dtCompleted.Checked ? (DateTime?)dtCompleted.Value : null;
             if (string.Equals(status, "Completed", StringComparison.OrdinalIgnoreCase) && !completed.HasValue)
                 completed = DateTime.Now;
 
             try
             {
+                string notes = txtNotes.Text.Trim();
+                string notesWithMeta = notes;
+                if (IsOpenMaintenanceStatus(status))
+                {
+                    if (string.IsNullOrWhiteSpace(_notesMeta))
+                    {
+                        var prev = await TryGetCurrentRoomStatusAsync(roomId);
+                        _notesMeta = BuildNotesMeta(prev.StatusId, prev.StatusName);
+                    }
+                }
+                notesWithMeta = MergeNotesWithMeta(notes, _notesMeta);
+
                 if (_existingRow == null)
                 {
                     await _bll.AddMaintenanceTicketAsync(
                         ticketNumber,
                         roomId,
-                        cboRequestorType.Text,
+                        requestorType,
                         requestorId,
                         txtIssue.Text.Trim(),
-                        cboPriority.Text,
+                        priority,
                         assignedTo,
                         status,
                         completed,
-                        txtNotes.Text.Trim());
+                        notesWithMeta);
                 }
                 else
                 {
@@ -429,16 +478,18 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     await _bll.UpdateMaintenanceTicketAsync(
                         id,
                         roomId,
-                        cboRequestorType.Text,
+                        requestorType,
                         requestorId,
                         txtIssue.Text.Trim(),
-                        cboPriority.Text,
+                        priority,
                         assignedTo,
                         status,
                         completed,
-                        txtNotes.Text.Trim());
+                        notesWithMeta);
                 }
 
+                await UpdateRoomMaintenanceStatusAsync(roomId, status, notesWithMeta);
+                AdminEvents.NotifyDataChanged();
                 DialogResult = DialogResult.OK;
             }
             catch (Exception ex)
@@ -461,6 +512,207 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch { }
             return 0;
+        }
+
+        private static string GetComboValue(ComboBox cbo)
+        {
+            try
+            {
+                if (cbo.SelectedValue != null)
+                    return cbo.SelectedValue.ToString();
+            }
+            catch { }
+            return cbo.Text;
+        }
+
+        private static void SelectComboValue(ComboBox cbo, string value)
+        {
+            if (string.IsNullOrWhiteSpace(value) || cbo == null) return;
+            try
+            {
+                cbo.SelectedValue = value;
+                if (cbo.SelectedValue != null && string.Equals(cbo.SelectedValue.ToString(), value, StringComparison.OrdinalIgnoreCase))
+                    return;
+            }
+            catch { }
+
+            for (int i = 0; i < cbo.Items.Count; i++)
+            {
+                if (cbo.Items[i] is ComboOption opt)
+                {
+                    if (string.Equals(opt.Value, value, StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(opt.Display, value, StringComparison.OrdinalIgnoreCase))
+                    {
+                        cbo.SelectedIndex = i;
+                        return;
+                    }
+                }
+            }
+        }
+
+        private static bool IsOpenMaintenanceStatus(string status)
+        {
+            if (string.IsNullOrWhiteSpace(status)) return false;
+            return string.Equals(status, "Created", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(status, "InProgress", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsClosedMaintenanceStatus(string status)
+        {
+            if (string.IsNullOrWhiteSpace(status)) return false;
+            return string.Equals(status, "Completed", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(status, "Cancelled", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private async System.Threading.Tasks.Task UpdateRoomMaintenanceStatusAsync(int roomId, string ticketStatus, string notes)
+        {
+            if (roomId <= 0) return;
+            bool open = IsOpenMaintenanceStatus(ticketStatus);
+            bool closed = IsClosedMaintenanceStatus(ticketStatus);
+            if (!open && !closed) return;
+            try
+            {
+                var statuses = await _bll.GetRoomStatusesAsync();
+                if (statuses == null || !statuses.Columns.Contains("StatusId") || !statuses.Columns.Contains("StatusName")) return;
+
+                RoomStatusCatalog.CanonicalizeColumn(statuses, "StatusName");
+                int targetId = 0;
+                string targetName = open ? RoomStatusCatalog.TrangThaiBaoTri : RoomStatusCatalog.TrangThaiTrong;
+                if (closed)
+                {
+                    targetId = TryReadPrevStatusId(notes) ?? 0;
+                    var targetById = targetId > 0
+                        ? statuses.AsEnumerable().FirstOrDefault(r => TryReadId(r, "StatusId") == targetId)
+                        : null;
+                    if (targetById != null)
+                        targetName = targetById["StatusName"]?.ToString() ?? targetName;
+                    else
+                    {
+                        var prevName = TryReadPrevStatusName(notes);
+                        if (!string.IsNullOrWhiteSpace(prevName))
+                            targetName = prevName;
+                    }
+                }
+
+                var row = statuses.AsEnumerable()
+                    .FirstOrDefault(r => string.Equals(r["StatusName"]?.ToString(), targetName, StringComparison.OrdinalIgnoreCase));
+                if (row == null) return;
+
+                int statusId = 0;
+                try { statusId = Convert.ToInt32(row["StatusId"]); } catch { }
+                if (statusId <= 0) return;
+
+                await _bll.UpdateRoomOccupancyStatusAsync(roomId, statusId);
+            }
+            catch
+            {
+                // ignore status sync failures
+            }
+        }
+
+        private async System.Threading.Tasks.Task<(int? StatusId, string StatusName)> TryGetCurrentRoomStatusAsync(int roomId)
+        {
+            try
+            {
+                var rooms = await _bll.GetRoomsAsync();
+                if (rooms == null || !rooms.Columns.Contains("RoomId")) return (null, null);
+                var row = rooms.AsEnumerable().FirstOrDefault(r => TryReadId(r, "RoomId") == roomId);
+                if (row == null) return (null, null);
+                int? statusId = TryReadId(row, "CurrentStatusId");
+                if (!statusId.HasValue) statusId = TryReadId(row, "StatusId");
+                string statusName = row.Table.Columns.Contains("StatusName") ? row["StatusName"]?.ToString() : null;
+                if (!string.IsNullOrWhiteSpace(statusName))
+                    statusName = RoomStatusCatalog.Canonicalize(statusName);
+                return (statusId, statusName);
+            }
+            catch
+            {
+                return (null, null);
+            }
+        }
+
+        private static int? TryReadId(DataRow row, string column)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(column)) return null;
+            var v = row[column];
+            if (v == null || v == DBNull.Value) return null;
+            if (int.TryParse(v.ToString(), out var i)) return i;
+            try { return Convert.ToInt32(v); } catch { return null; }
+        }
+
+        private static string BuildNotesMeta(int? statusId, string statusName)
+        {
+            string meta = string.Empty;
+            if (statusId.HasValue && statusId.Value > 0)
+                meta += $"{PrevStatusIdTag}{statusId.Value}]";
+            if (!string.IsNullOrWhiteSpace(statusName))
+                meta += $"{PrevStatusNameTag}{statusName}]";
+            return meta;
+        }
+
+        private static string MergeNotesWithMeta(string notes, string meta)
+        {
+            var cleaned = StripNotesMeta(notes);
+            if (string.IsNullOrWhiteSpace(meta)) return cleaned;
+            return string.IsNullOrWhiteSpace(cleaned) ? meta : $"{cleaned} {meta}";
+        }
+
+        private static string ExtractNotesMeta(string notes)
+        {
+            var meta = string.Empty;
+            var id = TryReadPrevStatusId(notes);
+            var name = TryReadPrevStatusName(notes);
+            if (id.HasValue && id.Value > 0)
+                meta += $"{PrevStatusIdTag}{id.Value}]";
+            if (!string.IsNullOrWhiteSpace(name))
+                meta += $"{PrevStatusNameTag}{name}]";
+            return meta;
+        }
+
+        private static string StripNotesMeta(string notes)
+        {
+            if (string.IsNullOrWhiteSpace(notes)) return string.Empty;
+            var cleaned = RemoveTag(notes, PrevStatusIdTag);
+            cleaned = RemoveTag(cleaned, PrevStatusNameTag);
+            return cleaned.Trim();
+        }
+
+        private static string RemoveTag(string text, string tag)
+        {
+            if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(tag)) return text;
+            int idx = text.IndexOf(tag, StringComparison.OrdinalIgnoreCase);
+            while (idx >= 0)
+            {
+                int end = text.IndexOf(']', idx);
+                if (end < 0) break;
+                text = text.Remove(idx, end - idx + 1);
+                idx = text.IndexOf(tag, StringComparison.OrdinalIgnoreCase);
+            }
+            return text;
+        }
+
+        private static int? TryReadPrevStatusId(string notes)
+        {
+            var value = ExtractTagValue(notes, PrevStatusIdTag);
+            if (string.IsNullOrWhiteSpace(value)) return null;
+            if (int.TryParse(value, out var id)) return id;
+            return null;
+        }
+
+        private static string TryReadPrevStatusName(string notes)
+        {
+            return ExtractTagValue(notes, PrevStatusNameTag);
+        }
+
+        private static string ExtractTagValue(string notes, string tag)
+        {
+            if (string.IsNullOrWhiteSpace(notes) || string.IsNullOrWhiteSpace(tag)) return null;
+            int idx = notes.IndexOf(tag, StringComparison.OrdinalIgnoreCase);
+            if (idx < 0) return null;
+            int start = idx + tag.Length;
+            int end = notes.IndexOf(']', start);
+            if (end < 0) return null;
+            return notes.Substring(start, end - start);
         }
 
         private static int ReadInt(DataRow row, string col)

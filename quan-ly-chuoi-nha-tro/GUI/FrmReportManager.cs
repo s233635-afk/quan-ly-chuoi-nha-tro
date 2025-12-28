@@ -15,6 +15,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private readonly AdminDataBLL _bll;
         private readonly int? _presetBranchId;
+        private readonly bool _isStaffMode;
         private System.Collections.Generic.HashSet<int> _allowedBranchIds;
 
         private ComboBox _cboSource;
@@ -38,13 +39,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private DataTable _raw;
         private DataTable _viewTable;
 
-        public FrmReportManager(AdminDataBLL bll, int? branchId = null)
+        public FrmReportManager(AdminDataBLL bll, int? branchId = null, bool isStaffMode = false)
         {
             _bll = bll ?? throw new ArgumentNullException(nameof(bll));
             _presetBranchId = branchId;
+            _isStaffMode = isStaffMode;
             InitializeComponent();
             AdminEvents.DataChanged += HandleAdminDataChanged;
             FormClosing += (s, e) => AdminEvents.DataChanged -= HandleAdminDataChanged;
+        }
+
+        public FrmReportManager(int? branchId, bool isStaffMode)
+            : this(new AdminDataBLL(), branchId, isStaffMode)
+        {
         }
 
         private void InitializeComponent()
@@ -83,20 +90,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 BackColor = Color.White,
                 ForeColor = Color.Black
             };
-            _cboSource.Items.AddRange(new object[]
-            {
-                "Hóa Đơn",
-                "Thanh Toán",
-                "Thuế Doanh Thu",
-                "Khách Thuê",
-                "Phòng",
-                "Hợp Đồng",
-                "Đặt Cọc",
-                "Bảo Trì",
-                "Tài Sản",
-                "Thông Báo",
-                "Cấu Hình Hệ Thống"
-            });
+            _cboSource.Items.AddRange(GetReportSources());
             _cboSource.SelectedIndex = 0;
             _cboSource.SelectedIndexChanged += async (s, e) => await LoadDataAsync();
 
@@ -193,7 +187,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             // ===== TAX FILTER PANEL (only for revenue tax report) =====
             _pnlTaxFilters = BuildTaxFilterPanel();
             _pnlTaxFilters.Dock = DockStyle.Top;
-            _pnlTaxFilters.Visible = false;
+            _pnlTaxFilters.Visible = !_isStaffMode && false;
 
             // ===== GRID HOST =====
             var gridHost = new Panel 
@@ -232,6 +226,40 @@ namespace quan_ly_chuoi_nha_tro.GUI
             Controls.Add(pnlHeader);
 
             Load += async (s, e) => await LoadDataAsync();
+        }
+
+        private object[] GetReportSources()
+        {
+            if (_isStaffMode)
+            {
+                return new object[]
+                {
+                    "Hóa Đơn",
+                    "Thanh Toán",
+                    "Khách Thuê",
+                    "Phòng",
+                    "Hợp Đồng",
+                    "Đặt Cọc",
+                    "Bảo Trì",
+                    "Tài Sản",
+                    "Thông Báo"
+                };
+            }
+
+            return new object[]
+            {
+                "Hóa Đơn",
+                "Thanh Toán",
+                "Thuế Doanh Thu",
+                "Khách Thuê",
+                "Phòng",
+                "Hợp Đồng",
+                "Đặt Cọc",
+                "Bảo Trì",
+                "Tài Sản",
+                "Thông Báo",
+                "Cấu Hình Hệ Thống"
+            };
         }
 
         private async System.Threading.Tasks.Task LoadDataAsync()
@@ -605,6 +633,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 case "Thanh Toán":
                     return _bll.GetPaymentsViewAsync();
                 case "Thuế Doanh Thu":
+                    if (_isStaffMode)
+                        return _bll.GetInvoicesViewAsync();
                     return LoadRevenueTaxAsync();
                 case "Khách Thuê":
                     return _bll.GetTenantsAsync();
@@ -621,6 +651,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 case "Thông Báo":
                     return _bll.GetNotificationsAsync();
                 case "Cấu Hình Hệ Thống":
+                    if (_isStaffMode)
+                        return _bll.GetInvoicesViewAsync();
                     return _bll.GetSystemSettingsAsync();
                 default:
                     return _bll.GetInvoicesViewAsync();
@@ -1006,7 +1038,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private void ApplyTaxReportDefaults()
         {
             bool isTaxReport = (_cboSource.SelectedItem?.ToString() ?? string.Empty) == "Thuế Doanh Thu";
-            _pnlTaxFilters.Visible = isTaxReport;
+            _pnlTaxFilters.Visible = !_isStaffMode && isTaxReport;
             if (!isTaxReport)
                 return;
 

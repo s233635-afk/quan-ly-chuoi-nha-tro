@@ -10,9 +10,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
     public class FrmDepositManager : Form
     {
         private const string SearchPlaceholder = "Tìm theo khách/phòng/trạng thái...";
+        private const string BranchTagPrefix = "[CN:";
 
         private readonly AdminDataBLL _bll = new AdminDataBLL();
         private readonly int? _branchId;
+        private readonly bool _isStaffMode;
         private System.Collections.Generic.HashSet<int> _allowedBranchIds;
         private DataTable _table;
         private DataGridView _grid;
@@ -23,13 +25,18 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Button _btnAdd, _btnEdit, _btnDelete, _btnRefresh;
         private Button _btnConfirm, _btnReturn;
 
-        public FrmDepositManager() : this(null)
+        public FrmDepositManager() : this(null, false)
         {
         }
 
-        public FrmDepositManager(int? branchId)
+        public FrmDepositManager(int? branchId) : this(branchId, false)
+        {
+        }
+
+        public FrmDepositManager(int? branchId, bool isStaffMode)
         {
             _branchId = branchId;
+            _isStaffMode = isStaffMode;
             InitializeComponent();
             AdminEvents.DataChanged += HandleAdminDataChanged;
             FormClosing += (s, e) => AdminEvents.DataChanged -= HandleAdminDataChanged;
@@ -55,23 +62,25 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 AllowUserToDeleteRows = false,
                 RowHeadersVisible = false,
                 BackgroundColor = Color.White,
-                BorderStyle = BorderStyle.None
+                BorderStyle = BorderStyle.None,
+                EnableHeadersVisualStyles = false
             };
             _grid.DoubleClick += (s, e) => EditSelected();
             _grid.MouseDown += (s, e) => HandleGridMouseDown(e);
-            _grid.EnableHeadersVisualStyles = false;
             _grid.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(12, 99, 166);
             _grid.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
             _grid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9.75f, FontStyle.Bold);
             _grid.ColumnHeadersDefaultCellStyle.Padding = new Padding(6, 0, 6, 0);
             _grid.DefaultCellStyle.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
             _grid.DefaultCellStyle.Padding = new Padding(6, 0, 6, 0);
+            _grid.DefaultCellStyle.BackColor = Color.White;
             _grid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(247, 250, 255);
             _grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(232, 244, 252);
             _grid.DefaultCellStyle.SelectionForeColor = Color.Black;
             _grid.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
-            _grid.ColumnHeadersHeight = 38;
-            _grid.RowTemplate.Height = 34;
+            _grid.ColumnHeadersHeight = 40;
+            _grid.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
+            _grid.RowTemplate.Height = 36;
             _grid.GridColor = Color.FromArgb(225, 232, 240);
             _grid.CellFormatting += Grid_CellFormatting;
 
@@ -108,6 +117,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnConfirm = MakeButton("✔ Xác nhận cọc", Color.FromArgb(46, 125, 50), async (s, e) => await MarkStatusAsync("Confirmed"));
             _btnReturn = MakeButton("💸 Hoàn cọc", Color.FromArgb(121, 85, 72), async (s, e) => await MarkReturnedAsync());
             _btnRefresh = MakeButton("🔄 Tải lại", Color.FromArgb(0, 122, 204), async (s, e) => await LoadDataAsync());
+            _btnDelete.Visible = !_isStaffMode;
+            _btnDelete.Enabled = !_isStaffMode;
 
             var header = new Panel { Dock = DockStyle.Top, Height = 54, Padding = new Padding(16, 10, 16, 10), BackColor = Color.White };
             var lblTitle = new Label
@@ -190,7 +201,23 @@ namespace quan_ly_chuoi_nha_tro.GUI
             toolbar.Controls.Add(actions);
 
             var gridHost = new Panel { Dock = DockStyle.Fill, Padding = new Padding(12), BackColor = this.BackColor };
-            gridHost.Controls.Add(_grid);
+            var gridCard = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White,
+                Padding = new Padding(8)
+            };
+            gridCard.Paint += (s, e) =>
+            {
+                using (var pen = new Pen(Color.FromArgb(230, 235, 240)))
+                {
+                    var rect = new Rectangle(0, 0, gridCard.Width - 1, gridCard.Height - 1);
+                    e.Graphics.DrawRectangle(pen, rect);
+                }
+            };
+            gridCard.Controls.Add(_grid);
+
+            gridHost.Controls.Add(gridCard);
 
             this.Controls.Add(gridHost);
             this.Controls.Add(toolbar);
@@ -394,7 +421,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void AddNew()
         {
-            using (var frm = new FrmDepositEditor(_bll))
+            using (var frm = new FrmDepositEditor(_bll, null, _branchId, _isStaffMode))
             {
                 if (frm.ShowDialog(this) == DialogResult.OK)
                 {
@@ -413,7 +440,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 return;
             }
 
-            using (var frm = new FrmDepositEditor(_bll, row))
+            using (var frm = new FrmDepositEditor(_bll, row, _branchId, _isStaffMode))
             {
                 if (frm.ShowDialog(this) == DialogResult.OK)
                 {
@@ -425,6 +452,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private async System.Threading.Tasks.Task DeleteSelectedAsync()
         {
+            if (_isStaffMode) return;
             var row = GetCurrentRow();
             if (row == null)
             {
@@ -607,13 +635,25 @@ namespace quan_ly_chuoi_nha_tro.GUI
             try
             {
                 string methodText = paymentMethod == "Card" ? "Thẻ" : "Tiền mặt";
+                string title = actionTitle;
                 string message = $"{actionTitle}: {tenantName ?? "—"} | Phòng: {roomNumber ?? "—"} | Số tiền: {amount:N0} | Hình thức: {methodText}";
-                await _bll.AddNotificationAsync(null, actionTitle, message, "Unread");
+                if (_isStaffMode && _branchId.HasValue)
+                {
+                    string tag = BuildBranchTag(_branchId.Value);
+                    title = $"{tag} {title}";
+                    message = $"{message} | Chi nhánh: {_branchId.Value}";
+                }
+                await _bll.AddNotificationAsync(null, title, message, "Unread");
             }
             catch
             {
                 // ignore notification errors
             }
+        }
+
+        private static string BuildBranchTag(int branchId)
+        {
+            return $"{BranchTagPrefix}{branchId}]";
         }
 
         private async System.Threading.Tasks.Task EnsureAllowedBranchScopeAsync()
@@ -997,7 +1037,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             menu.Items.Add("-"); // Separator
             menu.Items.Add("Sửa", null, (s, e) => EditSelected());
-            menu.Items.Add("Xóa", null, async (s, e) => await DeleteSelectedAsync());
+            if (!_isStaffMode)
+                menu.Items.Add("Xóa", null, async (s, e) => await DeleteSelectedAsync());
             
             _grid.ContextMenuStrip = menu;
             menu.Show(_grid, x, y);

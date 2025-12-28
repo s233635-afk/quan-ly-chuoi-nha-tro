@@ -23,6 +23,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private readonly AdminDataBLL _bll = new AdminDataBLL();
         private readonly int? _branchId;
         private readonly bool _showPayments;
+        private readonly bool _isStaffMode;
         private HashSet<int> _allowedBranchIds;
         private DataTable _invoiceTable;
         private DataTable _paymentTable;
@@ -53,14 +54,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Button _btnRoomPayment;
         private Button _btnBulkPayment;
 
-        public FrmInvoicePaymentUnified() : this(null, false)
+        public FrmInvoicePaymentUnified() : this(null, false, false)
         {
         }
 
-        public FrmInvoicePaymentUnified(int? branchId, bool showPayments = false)
+        public FrmInvoicePaymentUnified(int? branchId, bool showPayments = false, bool isStaffMode = false)
         {
             _branchId = branchId;
             _showPayments = showPayments;
+            _isStaffMode = isStaffMode;
             InitializeComponent();
             AdminEvents.DataChanged += HandleAdminDataChanged;
             FormClosing += (s, e) => AdminEvents.DataChanged -= HandleAdminDataChanged;
@@ -143,6 +145,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnGenerateInvoices = UiKit.MakeButton("📅 Tạo tháng", UiKit.Warning, async (s, e) => await GenerateMonthlyAsync(), 140);
             _btnExportInvoices = UiKit.MakeButton("📊 Xuất CSV", UiKit.Purple, (s, e) => ExportInvoicesCsv(), 110);
             _btnRefreshInvoices = UiKit.MakeButton("🔄 Tải lại", UiKit.Primary, async (s, e) => await LoadInvoicesAsync(), 110);
+            _btnDeleteInvoice.Visible = !_isStaffMode;
+            _btnDeleteInvoice.Enabled = !_isStaffMode;
 
             // Top Panel with Controls
             var topPanel = new Panel { Dock = DockStyle.Top, Height = 100, Padding = new Padding(12), BackColor = Color.White };
@@ -265,6 +269,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnRefreshPayments = UiKit.MakeButton("🔄 Tải lại", UiKit.Primary, async (s, e) => await LoadPaymentsAsync(), 110);
             _btnRoomPayment = UiKit.MakeButton("🏠 Thu tiền phòng", Color.FromArgb(0, 123, 255), (s, e) => OpenRoomPaymentSelector(), 140);
             _btnBulkPayment = UiKit.MakeButton("🧾 Thu tiền tất cả", UiKit.Success, async (s, e) => await OpenBulkPaymentRunnerAsync(), 150);
+            _btnDeletePayment.Visible = !_isStaffMode;
+            _btnDeletePayment.Enabled = !_isStaffMode;
 
             // Top Panel
             var topPanel = new Panel { Dock = DockStyle.Top, Height = 120, Padding = new Padding(12), BackColor = Color.White };
@@ -830,6 +836,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private async System.Threading.Tasks.Task DeleteSelectedInvoiceAsync()
         {
+            if (_isStaffMode) return;
             var row = GetCurrentInvoiceRow();
             if (row == null)
             {
@@ -1030,6 +1037,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private async System.Threading.Tasks.Task DeleteSelectedPaymentAsync()
         {
+            if (_isStaffMode) return;
             var row = GetCurrentPaymentRow();
             if (row == null)
             {

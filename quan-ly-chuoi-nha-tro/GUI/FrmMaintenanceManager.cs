@@ -10,9 +10,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
     public class FrmMaintenanceManager : Form
     {
         private const string SearchPlaceholder = "Tìm theo số phiếu/phòng/nội dung...";
+        private const string PrevStatusIdTag = "[PrevRoomStatusId=";
+        private const string PrevStatusNameTag = "[PrevRoomStatusName=";
 
         private readonly AdminDataBLL _bll = new AdminDataBLL();
         private readonly int? _presetBranchId;
+        private readonly bool _isStaffMode;
 
         private DataTable _rawTable;
         private DataTable _branchTable;
@@ -31,13 +34,30 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Button _btnDone;
         private Button _btnRefresh;
 
-        public FrmMaintenanceManager() : this(null)
+        private sealed class ComboOption
+        {
+            public string Value { get; }
+            public string Display { get; }
+
+            public ComboOption(string value, string display)
+            {
+                Value = value;
+                Display = display;
+            }
+        }
+
+        public FrmMaintenanceManager() : this(null, false)
         {
         }
 
-        public FrmMaintenanceManager(int? branchId)
+        public FrmMaintenanceManager(int? branchId) : this(branchId, false)
+        {
+        }
+
+        public FrmMaintenanceManager(int? branchId, bool isStaffMode)
         {
             _presetBranchId = branchId;
+            _isStaffMode = isStaffMode;
             InitializeComponent();
             AdminEvents.DataChanged += HandleAdminDataChanged;
             FormClosing += (s, e) => AdminEvents.DataChanged -= HandleAdminDataChanged;
@@ -56,7 +76,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var pnlToolbar = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 45,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 BackColor = Color.White,
                 Padding = new Padding(0),
                 BorderStyle = BorderStyle.None
@@ -65,10 +86,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
             // Actions bar
             var pnlActionBar = new Panel
             {
-                Dock = DockStyle.Fill,
-                Height = 40,
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 BackColor = Color.White,
-                Padding = new Padding(12, 5, 12, 5),
+                Padding = new Padding(12, 8, 12, 8),
                 BorderStyle = BorderStyle.FixedSingle
             };
 
@@ -81,6 +103,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnEdit.Enabled = false;
             _btnDelete.Enabled = false;
             _btnDone.Enabled = false;
+            _btnDelete.Visible = !_isStaffMode;
+            _btnDelete.Enabled = !_isStaffMode && _btnDelete.Enabled;
 
             var pnlActions = new FlowLayoutPanel
             {
@@ -118,8 +142,18 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 ForeColor = Color.Black,
                 Font = new Font("Segoe UI", 9)
             };
-            _cboStatus.Items.AddRange(new object[] { "Tất cả", "Created", "InProgress", "Completed", "Cancelled" });
-            _cboStatus.SelectedIndex = 0;
+            _cboStatus.DisplayMember = "Display";
+            _cboStatus.ValueMember = "Value";
+            _cboStatus.DataSource = new[]
+            {
+                new ComboOption(string.Empty, "Tất cả"),
+                new ComboOption("Created", "Mới"),
+                new ComboOption("InProgress", "Đang xử lý"),
+                new ComboOption("Completed", "Hoàn tất"),
+                new ComboOption("Cancelled", "Đã hủy")
+            };
+            if (_cboStatus.Items.Count > 0)
+                _cboStatus.SelectedIndex = 0;
             _cboStatus.SelectedIndexChanged += (s, e) => ApplyFilter();
 
             _lblCount = new Label
@@ -133,7 +167,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             var pnlFilters = new FlowLayoutPanel
             {
-                Dock = DockStyle.Right,
+                Dock = DockStyle.Left,
                 AutoSize = true,
                 WrapContents = false,
                 FlowDirection = FlowDirection.LeftToRight,
@@ -148,8 +182,28 @@ namespace quan_ly_chuoi_nha_tro.GUI
             pnlFilters.Controls.Add(_cboStatus);
             pnlFilters.Controls.Add(_lblCount);
 
-            pnlActionBar.Controls.Add(pnlActions);
-            pnlActionBar.Controls.Add(pnlFilters);
+            var barLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 1,
+                RowCount = 2,
+                BackColor = Color.Transparent,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink
+            };
+            barLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            barLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            barLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
+            pnlActions.Dock = DockStyle.Fill;
+            pnlFilters.Dock = DockStyle.Fill;
+            pnlActions.Margin = new Padding(0, 0, 0, 6);
+            pnlFilters.Margin = new Padding(0);
+
+            barLayout.Controls.Add(pnlActions, 0, 0);
+            barLayout.Controls.Add(pnlFilters, 0, 1);
+
+            pnlActionBar.Controls.Add(barLayout);
             pnlToolbar.Controls.Add(pnlActionBar);
 
             _cardsHost = new FlowLayoutPanel
@@ -239,7 +293,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 _cboBranch.Items.Clear();
                 _cboBranch.Items.Add("Tất cả");
-                _cboBranch.SelectedIndex = 0;
+                if (_cboBranch.Items.Count > 0)
+                    _cboBranch.SelectedIndex = 0;
             }
         }
 
@@ -270,7 +325,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             string status = ReadString(row, "Status") ?? "Created";
             string priority = ReadString(row, "Priority") ?? "Normal";
             string issue = ReadString(row, "IssueDescription") ?? "—";
-            string notes = ReadString(row, "Notes") ?? string.Empty;
+            string notes = StripNotesMeta(ReadString(row, "Notes") ?? string.Empty);
             string created = FormatDate(ReadString(row, "CreatedDate"));
             string completed = FormatDate(ReadString(row, "CompletedDate"));
             string assignee = ReadString(row, "AssignedToUserId") ?? "—";
@@ -462,6 +517,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 case "Low":
                     return "Thấp";
+                case "Medium":
+                    return "Trung bình";
                 case "High":
                     return "Cao";
                 case "Urgent":
@@ -494,6 +551,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     return Color.Firebrick;
                 case "Urgent":
                     return Color.DarkRed;
+                case "Medium":
+                    return Color.DarkOrange;
                 case "Low":
                     return Color.DimGray;
                 default:
@@ -510,7 +569,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             string keyword = rawKeyword.ToLowerInvariant();
 
             int branchId = _cboBranch.SelectedValue is int b ? b : 0;
-            string status = _cboStatus.SelectedIndex > 0 ? _cboStatus.Text : null;
+            string status = _cboStatus.SelectedValue?.ToString();
+            if (string.IsNullOrWhiteSpace(status)) status = null;
 
             var rows = _rawTable.AsEnumerable();
 
@@ -568,6 +628,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private async System.Threading.Tasks.Task DeleteSelectedAsync()
         {
+            if (_isStaffMode) return;
             var row = GetCurrentRow();
             if (row == null)
             {
@@ -584,6 +645,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             try
             {
                 await _bll.DeleteMaintenanceTicketAsync(id);
+                await UpdateRoomStatusForTicketAsync(row, "Cancelled");
                 await LoadAsync();
                 AdminEvents.NotifyDataChanged();
             }
@@ -630,6 +692,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     DateTime.Now,
                     ReadString(row, "Notes"));
 
+                await UpdateRoomStatusForTicketAsync(row, "Completed");
                 await LoadAsync();
                 AdminEvents.NotifyDataChanged();
             }
@@ -747,6 +810,117 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             int i = ReadInt(row, cols);
             return i > 0 ? (int?)i : null;
+        }
+
+        private async System.Threading.Tasks.Task UpdateRoomStatusForTicketAsync(DataRow row, string ticketStatus)
+        {
+            if (row == null) return;
+            int roomId = ReadInt(row, "RoomId");
+            if (roomId <= 0) return;
+
+            bool open = IsOpenMaintenanceStatus(ticketStatus);
+            bool closed = IsClosedMaintenanceStatus(ticketStatus);
+            if (!open && !closed) return;
+
+            try
+            {
+                var statuses = await _bll.GetRoomStatusesAsync();
+                if (statuses == null || !statuses.Columns.Contains("StatusId") || !statuses.Columns.Contains("StatusName")) return;
+
+                RoomStatusCatalog.CanonicalizeColumn(statuses, "StatusName");
+                string notes = ReadString(row, "Notes") ?? string.Empty;
+                int targetId = 0;
+                string targetName = open ? RoomStatusCatalog.TrangThaiBaoTri : RoomStatusCatalog.TrangThaiTrong;
+                if (closed)
+                {
+                    targetId = TryReadPrevStatusId(notes) ?? 0;
+                    var targetById = targetId > 0
+                        ? statuses.AsEnumerable().FirstOrDefault(r => ReadInt(r, "StatusId") == targetId)
+                        : null;
+                    if (targetById != null)
+                        targetName = targetById["StatusName"]?.ToString() ?? targetName;
+                    else
+                    {
+                        var prevName = TryReadPrevStatusName(notes);
+                        if (!string.IsNullOrWhiteSpace(prevName))
+                            targetName = prevName;
+                    }
+                }
+
+                var target = statuses.AsEnumerable()
+                    .FirstOrDefault(r => string.Equals(r["StatusName"]?.ToString(), targetName, StringComparison.OrdinalIgnoreCase));
+                if (target == null) return;
+
+                int statusId = 0;
+                try { statusId = Convert.ToInt32(target["StatusId"]); } catch { }
+                if (statusId <= 0) return;
+
+                await _bll.UpdateRoomOccupancyStatusAsync(roomId, statusId);
+            }
+            catch
+            {
+                // ignore status sync failures
+            }
+        }
+
+        private static bool IsOpenMaintenanceStatus(string status)
+        {
+            if (string.IsNullOrWhiteSpace(status)) return false;
+            return string.Equals(status, "Created", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(status, "InProgress", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsClosedMaintenanceStatus(string status)
+        {
+            if (string.IsNullOrWhiteSpace(status)) return false;
+            return string.Equals(status, "Completed", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(status, "Cancelled", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string StripNotesMeta(string notes)
+        {
+            if (string.IsNullOrWhiteSpace(notes)) return string.Empty;
+            var cleaned = RemoveTag(notes, PrevStatusIdTag);
+            cleaned = RemoveTag(cleaned, PrevStatusNameTag);
+            return cleaned.Trim();
+        }
+
+        private static string RemoveTag(string text, string tag)
+        {
+            if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(tag)) return text;
+            int idx = text.IndexOf(tag, StringComparison.OrdinalIgnoreCase);
+            while (idx >= 0)
+            {
+                int end = text.IndexOf(']', idx);
+                if (end < 0) break;
+                text = text.Remove(idx, end - idx + 1);
+                idx = text.IndexOf(tag, StringComparison.OrdinalIgnoreCase);
+            }
+            return text;
+        }
+
+        private static int? TryReadPrevStatusId(string notes)
+        {
+            var value = ExtractTagValue(notes, PrevStatusIdTag);
+            if (string.IsNullOrWhiteSpace(value)) return null;
+            if (int.TryParse(value, out var id)) return id;
+            return null;
+        }
+
+        private static string TryReadPrevStatusName(string notes)
+        {
+            return ExtractTagValue(notes, PrevStatusNameTag);
+        }
+
+        private static string ExtractTagValue(string notes, string tag)
+        {
+            if (string.IsNullOrWhiteSpace(notes) || string.IsNullOrWhiteSpace(tag)) return null;
+            int idx = notes.IndexOf(tag, StringComparison.OrdinalIgnoreCase);
+            if (idx < 0) return null;
+            int start = idx + tag.Length;
+            int end = notes.IndexOf(']', start);
+            if (end < 0) return null;
+            return notes.Substring(start, end - start);
         }
     }
 }
