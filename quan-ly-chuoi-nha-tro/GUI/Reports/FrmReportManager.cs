@@ -700,62 +700,121 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Control CreateCard(DataRow row, System.Collections.Generic.List<DataColumn> columns,
             System.Collections.Generic.Dictionary<string, string> columnMap, string reportType)
         {
-            int rowCount = columns?.Count ?? 0;
+            Color accentColor = GetCardAccentColor(row, reportType);
+
             var card = new Panel
             {
-                Width = 320,
-                Height = Math.Max(120, 52 + rowCount * 20),
-                BackColor = Color.White,
-                Margin = new Padding(6),
-                Padding = new Padding(10)
-            };
-
-            var title = new Label
-            {
-                Text = BuildCardTitle(row, columns, columnMap, reportType),
-                Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
-                ForeColor = Color.FromArgb(0, 79, 159),
+                Width = 360,
+                MinimumSize = new Size(360, 60),
                 AutoSize = true,
-                Dock = DockStyle.Top
+                MaximumSize = new Size(360, 0),
+                BackColor = Color.White,
+                Margin = new Padding(8),
+                Padding = new Padding(1) // Border space
             };
 
+            // Update region when size changes
+            card.SizeChanged += (s, e) => UiKit.SetRoundedRegion(card, 20);
+
+            var container = new Panel
+            {
+                Dock = DockStyle.Top,
+                Width = 360,
+                AutoSize = true,
+                BackColor = Color.White,
+                Padding = new Padding(15, 12, 12, 12)
+            };
+
+            // Title
+            var titleText = BuildCardTitle(row, columns, columnMap, reportType);
+            var lblTitle = new Label
+            {
+                Text = titleText,
+                Font = new Font("Segoe UI", 11.5f, FontStyle.Bold),
+                ForeColor = accentColor,
+                AutoSize = true,
+                MaximumSize = new Size(240, 0)
+            };
+
+            // Badge
+            Control statusBadge = null;
+            if (row.Table.Columns.Contains("Status"))
+            {
+                var status = row["Status"]?.ToString() ?? "";
+                if (!string.IsNullOrEmpty(status))
+                    statusBadge = CreateStatusBadge(status);
+            }
+
+            // Header Layout (Flexible)
+            var headerTable = new TableLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                ColumnCount = 2,
+                RowCount = 1,
+                Margin = new Padding(0, 0, 0, 10)
+            };
+            headerTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+            headerTable.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            
+            headerTable.Controls.Add(lblTitle, 0, 0);
+            
+            if (statusBadge != null)
+            {
+                statusBadge.Margin = new Padding(5, 0, 0, 0);
+                headerTable.Controls.Add(statusBadge, 1, 0);
+            }
+            
+            container.Controls.Add(new Panel { Height = 1, Dock = DockStyle.Top }); // Shim for table space
+            container.Controls.Add(headerTable);
+            
+            // Content Table
             var table = new TableLayoutPanel
             {
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Top,
                 ColumnCount = 2,
-                AutoSize = false,
+                AutoSize = true,
                 BackColor = Color.Transparent,
                 Padding = new Padding(0, 8, 0, 0)
             };
-            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 110));
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
 
             int rowIndex = 0;
             foreach (var col in columns)
             {
-                string labelText = columnMap.TryGetValue(col.ColumnName, out var mapped)
-                    ? mapped
-                    : col.ColumnName;
+                if (col.ColumnName == "Status") continue;
+
+                string labelText = columnMap.TryGetValue(col.ColumnName, out var mapped) ? mapped : col.ColumnName;
                 string valueText = FormatValue(row, col);
+
+                if (string.IsNullOrEmpty(valueText)) continue;
 
                 var lblKey = new Label
                 {
-                    Text = labelText + ":",
-                    Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                    ForeColor = Color.FromArgb(90, 90, 90),
+                    Text = labelText,
+                    Font = new Font("Segoe UI", 9f, FontStyle.Regular),
+                    ForeColor = Color.FromArgb(100, 100, 100),
                     AutoSize = true,
-                    Margin = new Padding(0, 2, 6, 2)
+                    Margin = new Padding(0, 2, 0, 2)
                 };
 
                 var lblValue = new Label
                 {
                     Text = valueText,
-                    Font = new Font("Segoe UI", 9f),
+                    Font = new Font("Segoe UI", 9f, FontStyle.Regular),
                     ForeColor = Color.FromArgb(40, 40, 40),
                     AutoSize = true,
-                    MaximumSize = new Size(190, 0),
+                    MaximumSize = new Size(210, 0),
                     Margin = new Padding(0, 2, 0, 2)
                 };
+
+                // Highlight Money
+                if (col.ColumnName.Contains("Amount") || col.ColumnName.Contains("Price") || col.ColumnName == "Revenue")
+                {
+                    lblValue.Font = new Font("Segoe UI", 9f, FontStyle.Bold);
+                    lblValue.ForeColor = Color.FromArgb(0, 120, 215);
+                }
 
                 table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
                 table.Controls.Add(lblKey, 0, rowIndex);
@@ -763,17 +822,119 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 rowIndex++;
             }
 
-            card.Controls.Add(table);
-            card.Controls.Add(title);
+            container.Controls.Add(table);
+            // headerTable is already added above via container.Controls.Add(headerTable)
+            // But wait, WinForms adds controls in reverse order of display if using Dock.Top.
+            // Let's re-add them clearly.
+            container.Controls.Clear();
+            container.Controls.Add(table);
+            container.Controls.Add(headerTable);
+            
+            card.Controls.Add(container);
+
             card.Paint += (s, e) =>
             {
-                using (var pen = new Pen(Color.FromArgb(220, 230, 240), 1.4f))
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
+                // Draw border
+                using (var pen = new Pen(Color.FromArgb(220, 230, 240), 1.5f))
+                using (var path = new System.Drawing.Drawing2D.GraphicsPath())
                 {
-                    e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
+                    int radius = 20;
+                    var rect = new Rectangle(0, 0, card.Width - 1, card.Height - 1);
+                    path.AddArc(rect.X, rect.Y, radius, radius, 180, 90);
+                    path.AddArc(rect.Right - radius, rect.Y, radius, radius, 270, 90);
+                    path.AddArc(rect.Right - radius, rect.Bottom - radius, radius, radius, 0, 90);
+                    path.AddArc(rect.X, rect.Bottom - radius, radius, radius, 90, 90);
+                    path.CloseFigure();
+                    
+                    e.Graphics.DrawPath(pen, path);
+                }
+
+                // Draw colored strip
+                using (var brush = new SolidBrush(accentColor))
+                using (var path = new System.Drawing.Drawing2D.GraphicsPath())
+                {
+                    path.AddArc(0, 0, 20, 20, 180, 90);
+                    path.AddLine(10, 0, 5, 0);
+                    path.AddLine(5, 0, 5, card.Height);
+                    path.AddLine(5, card.Height, 10, card.Height);
+                    path.AddArc(0, card.Height - 20, 20, 20, 90, 90);
+                    path.CloseFigure();
+                    e.Graphics.FillPath(brush, path);
                 }
             };
 
+            // Set rounded region once or on resize
+            card.SizeChanged += (s, e) => UiKit.SetRoundedRegion(card, 20);
+            UiKit.SetRoundedRegion(card, 20);
+
+            // Recursively bind hover
+            BindHoverRecursive(card, card, container);
+
             return card;
+        }
+
+        private void BindHoverRecursive(Control control, Panel card, Panel container)
+        {
+             control.MouseEnter += (s, e) => { 
+                card.BackColor = Color.FromArgb(240, 248, 255); 
+                container.BackColor = Color.FromArgb(240, 248, 255); 
+             };
+             control.MouseLeave += (s, e) => { 
+                card.BackColor = Color.White; 
+                container.BackColor = Color.White; 
+             };
+
+             foreach(Control child in control.Controls)
+             {
+                 BindHoverRecursive(child, card, container);
+             }
+        }
+
+        private Color GetCardAccentColor(DataRow row, string reportType)
+        {
+            if (row.Table.Columns.Contains("Status"))
+            {
+                var status = row["Status"]?.ToString();
+                if (new[] { "Đã TT", "Đã Thanh Toán", "Hoàn Thành", "Trống" }.Contains(status)) return Color.FromArgb(46, 125, 50);
+                if (new[] { "Chưa TT", "Chưa Thanh Toán", "Còn Nợ" }.Contains(status)) return Color.FromArgb(211, 47, 47);
+                if (status == "Đã Thuê") return Color.FromArgb(0, 122, 204);
+            }
+            return Color.FromArgb(0, 122, 204);
+        }
+
+        private Control CreateStatusBadge(string status)
+        {
+            var lbl = new Label
+            {
+                Text = status,
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                AutoSize = true,
+                Padding = new Padding(8, 4, 8, 4),
+                TextAlign = ContentAlignment.MiddleCenter
+            };
+
+            if (new[] { "Đã TT", "Đã Thanh Toán", "Hoàn Thành", "Trống" }.Contains(status))
+            {
+                lbl.BackColor = Color.FromArgb(232, 245, 233);
+                lbl.ForeColor = Color.FromArgb(46, 125, 50);
+            }
+            else if (new[] { "Chưa TT", "Chưa Thanh Toán", "Còn Nợ" }.Contains(status))
+            {
+                lbl.BackColor = Color.FromArgb(255, 235, 238);
+                lbl.ForeColor = Color.FromArgb(198, 40, 40);
+            }
+            else
+            {
+                lbl.BackColor = Color.FromArgb(227, 242, 253);
+                lbl.ForeColor = Color.FromArgb(21, 101, 192);
+            }
+            
+            // Round Badge
+            lbl.Paint += (s, e) => UiKit.SetRoundedRegion(lbl, 12);
+            
+            return lbl;
         }
 
         private static string BuildCardTitle(DataRow row, System.Collections.Generic.List<DataColumn> columns,

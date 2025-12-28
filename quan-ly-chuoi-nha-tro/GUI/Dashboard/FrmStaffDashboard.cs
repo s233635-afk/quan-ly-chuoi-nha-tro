@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -66,7 +67,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             Text = $"Staff Dashboard - {_username}";
             WindowState = FormWindowState.Maximized;
-            _lblUser.Text = $"👤 {_fullName} ({_username})" + (_branchId.HasValue ? $" | Chi nhánh: {_branchId.Value}" : "");
+            _lblUser.Text = $"{_fullName}";
             ShowOverview();
         }
 
@@ -86,25 +87,26 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void InitializeComponent()
         {
-            BackColor = Color.FromArgb(245, 247, 250);
+            BackColor = Color.FromArgb(245, 247, 250); // Light Gray Background
 
+            // --- SIDEBAR ---
             _sidebar = new Panel
             {
                 Dock = DockStyle.Left,
-                Width = 210,
-                BackColor = Color.FromArgb(0, 122, 204)
+                Width = 240,
+                BackColor = Color.FromArgb(44, 62, 80) // Dark Navy
             };
 
             var brand = new Label
             {
-                Text = "Quản Lý Nhà Trọ",
+                Text = "QUẢN LÝ NHÀ TRỌ",
                 ForeColor = Color.White,
                 Font = new Font("Segoe UI", 14, FontStyle.Bold),
                 AutoSize = false,
-                Height = 60,
+                Height = 70,
                 Dock = DockStyle.Top,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(14, 0, 0, 0)
+                TextAlign = ContentAlignment.MiddleCenter,
+                BackColor = Color.FromArgb(34, 49, 63) // Darker header
             };
 
             var nav = new FlowLayoutPanel
@@ -113,24 +115,24 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 FlowDirection = FlowDirection.TopDown,
                 WrapContents = false,
                 AutoScroll = true,
-                Padding = new Padding(10, 8, 10, 10),
+                Padding = new Padding(10, 15, 10, 10),
                 BackColor = Color.Transparent
             };
 
-            _btnOverview = MakeNavButton("🏠 Tổng quan", (s, e) => ShowOverview());
-            _btnRoom = MakeNavButton("🏠 Phòng", (s, e) =>
+            _btnOverview = MakeNavButton("🏠  Tổng quan", (s, e) => ShowOverview());
+            _btnRoom = MakeNavButton("�️  Phòng", (s, e) =>
             {
                 SetActive(_btnRoom);
-                LoadModule(new FrmRoomManager(_bll, _branchId, true), "🏠 Phòng");
+                LoadModule(new FrmRoomManager(_bll, _branchId, true), "Phòng");
             });
-            _btnContract = MakeNavButton("📄 Hợp đồng", (s, e) => { SetActive(_btnContract); LoadModule(new FrmContractManager(_branchId, true), "📄 Hợp đồng"); });
-            _btnDeposit = MakeNavButton("💰 Đặt cọc", (s, e) => { SetActive(_btnDeposit); LoadModule(new FrmDepositManager(_branchId, true), "💰 Đặt cọc"); });
-            _btnUtility = MakeNavButton("⚡ Điện/Nước/DV", (s, e) => { SetActive(_btnUtility); LoadModule(new FrmUtilityManager(_branchId, true), "⚡ Điện/Nước/DV"); });
-            _btnInvoicePayment = MakeNavButton("💳 Hóa đơn & Thanh toán", (s, e) => { SetActive(_btnInvoicePayment); LoadModule(new FrmInvoicePaymentUnified(_branchId, false, true), "💳 Hóa đơn & Thanh toán"); });
-            _btnMaintenance = MakeNavButton("🔧 Bảo trì", (s, e) => { SetActive(_btnMaintenance); LoadModule(new FrmMaintenanceManager(_branchId, true), "🔧 Bảo trì"); });
-            _btnAsset = MakeNavButton("📦 Tài sản", (s, e) => { SetActive(_btnAsset); LoadModule(new FrmAssetManager(_branchId, true), "📦 Tài sản"); });
-            _btnReport = MakeNavButton("📈 Báo cáo", (s, e) => { SetActive(_btnReport); LoadModule(new FrmReportManager(_branchId, true), "📈 Báo cáo"); });
-            _btnStatus = MakeNavButton("🔔 Thông báo", (s, e) => { SetActive(_btnStatus); LoadModule(new FrmNotificationManager(_branchId, true), "🔔 Thông báo"); });
+            _btnContract = MakeNavButton("📄  Hợp đồng", (s, e) => { SetActive(_btnContract); LoadModule(new FrmContractManager(_branchId, true), "Hợp đồng"); });
+            _btnDeposit = MakeNavButton("💰  Đặt cọc", (s, e) => { SetActive(_btnDeposit); LoadModule(new FrmDepositManager(_branchId, true), "Đặt cọc"); });
+            _btnUtility = MakeNavButton("⚡  Điện/Nước/DV", (s, e) => { SetActive(_btnUtility); LoadModule(new FrmUtilityManager(_branchId, true), "Điện/Nước/DV"); });
+            _btnInvoicePayment = MakeNavButton("💳  Hóa đơn & TT", (s, e) => { SetActive(_btnInvoicePayment); LoadModule(new FrmInvoicePaymentUnified(_branchId, false, true), "Hóa đơn & Thanh toán"); });
+            _btnMaintenance = MakeNavButton("🔧  Bảo trì", (s, e) => { SetActive(_btnMaintenance); LoadModule(new FrmMaintenanceManager(_branchId, true), "Bảo trì"); });
+            _btnAsset = MakeNavButton("📦  Tài sản", (s, e) => { SetActive(_btnAsset); LoadModule(new FrmAssetManager(_branchId, true), "Tài sản"); });
+            _btnReport = MakeNavButton("📈  Báo cáo", (s, e) => { SetActive(_btnReport); LoadModule(new FrmReportManager(_branchId, true), "Báo cáo"); });
+            _btnStatus = MakeNavButton("🔔  Thông báo", (s, e) => { SetActive(_btnStatus); LoadModule(new FrmNotificationManager(_branchId, true), "Thông báo"); });
 
             nav.Controls.Add(_btnOverview);
             nav.Controls.Add(_btnRoom);
@@ -146,54 +148,74 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _sidebar.Controls.Add(nav);
             _sidebar.Controls.Add(brand);
 
+            // --- HEADER ---
             _header = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 62,
+                Height = 60,
                 BackColor = Color.White
+            };
+            _header.Paint += (s, e) => {
+                using (var pen = new Pen(Color.FromArgb(230, 230, 230)))
+                    e.Graphics.DrawLine(pen, 0, _header.Height - 1, _header.Width, _header.Height - 1);
             };
 
             _lblHeader = new Label
             {
-                Text = "🏠 Tổng quan",
+                Text = "Tổng quan",
                 Font = new Font("Segoe UI", 16, FontStyle.Bold),
-                ForeColor = Color.FromArgb(0, 122, 204),
+                ForeColor = Color.FromArgb(44, 62, 80),
                 AutoSize = true,
-                Location = new Point(18, 16)
+                Location = new Point(20, 15)
             };
 
             _lblUser = new Label
             {
                 AutoSize = true,
-                ForeColor = Color.FromArgb(90, 90, 90),
-                Location = new Point(22, 42)
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                ForeColor = Color.FromArgb(44, 62, 80),
+                TextAlign = ContentAlignment.MiddleRight,
+                Margin = new Padding(0, 18, 15, 0) // Top margin to center vertically with button (approx)
             };
 
             _btnLogout = new Button
             {
                 Text = "Đăng xuất",
                 Width = 110,
-                Height = 34,
+                Height = 36,
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(0, 122, 204),
+                BackColor = Color.FromArgb(231, 76, 60),
                 ForeColor = Color.White,
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
+                Cursor = Cursors.Hand,
+                Margin = new Padding(0, 12, 20, 0) // Right margin 20 from edge
             };
             _btnLogout.FlatAppearance.BorderSize = 0;
-            _btnLogout.Location = new Point(Width - 150, 14);
             _btnLogout.Click += (s, e) =>
             {
                 if (MessageBox.Show("Bạn chắc chắn muốn đăng xuất?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
                     Close();
             };
-            _header.Resize += (s, e) => _btnLogout.Location = new Point(_header.ClientSize.Width - _btnLogout.Width - 18, 14);
 
+            // Container for right-aligned items
+            var rightPanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Right,
+                Width = 400, // Initial, but AutoSize will handle it
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                FlowDirection = FlowDirection.RightToLeft,
+                BackColor = Color.Transparent,
+                WrapContents = false
+            };
+            
+            rightPanel.Controls.Add(_btnLogout); // Added first, stays rightmost
+            rightPanel.Controls.Add(_lblUser);   // Added second, stays left of button
+
+            _header.Controls.Add(rightPanel);
             _header.Controls.Add(_lblHeader);
-            _header.Controls.Add(_lblUser);
-            _header.Controls.Add(_btnLogout);
 
-            _host = new Panel { Dock = DockStyle.Fill, BackColor = BackColor };
-            _overviewHost = new Panel { Dock = DockStyle.Fill, BackColor = BackColor, Padding = new Padding(18) };
+            _host = new Panel { Dock = DockStyle.Fill, BackColor = Color.FromArgb(245, 247, 250) };
+            _overviewHost = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent, Padding = new Padding(20) };
 
             Controls.Add(_host);
             Controls.Add(_header);
@@ -207,17 +229,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var btn = new Button
             {
                 Text = text,
-                Width = 180,
-                Height = 42,
+                Width = 220,
+                Height = 45,
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(0, 122, 204),
-                ForeColor = Color.White,
+                BackColor = Color.Transparent,
+                ForeColor = Color.FromArgb(189, 195, 199),
                 TextAlign = ContentAlignment.MiddleLeft,
-                Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                Margin = new Padding(0, 0, 0, 10),
-                Cursor = Cursors.Hand
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                Margin = new Padding(0, 0, 0, 5),
+                Cursor = Cursors.Hand,
+                Padding = new Padding(15, 0, 0, 0)
             };
             btn.FlatAppearance.BorderSize = 0;
+            btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(52, 73, 94);
             btn.Click += onClick;
             return btn;
         }
@@ -230,7 +254,20 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 foreach (Control child in flp.Controls)
                 {
                     if (child is Button b)
-                        b.BackColor = b == active ? Color.FromArgb(0, 90, 160) : Color.FromArgb(0, 122, 204);
+                    {
+                        if (b == active)
+                        {
+                            b.BackColor = Color.FromArgb(52, 152, 219); // Active Blue
+                            b.ForeColor = Color.White;
+                            b.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+                        }
+                        else
+                        {
+                            b.BackColor = Color.Transparent;
+                            b.ForeColor = Color.FromArgb(189, 195, 199);
+                            b.Font = new Font("Segoe UI", 10, FontStyle.Regular);
+                        }
+                    }
                 }
             }
         }
@@ -264,44 +301,84 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private void ShowOverview()
         {
             SetActive(_btnOverview);
-            _lblHeader.Text = "🏠 Tổng quan";
+            _lblHeader.Text = "Tổng quan";
             ClearCurrentModule();
 
-            _overviewHost = new Panel { Dock = DockStyle.Fill, BackColor = BackColor, Padding = new Padding(18) };
+            _overviewHost = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent, Padding = new Padding(20) };
+            _overviewHost.AutoScroll = true;
+
             var title = new Label
             {
-                Text = "Công việc hôm nay",
+                Text = "Tổng quan trong ngày",
                 Font = new Font("Segoe UI", 14, FontStyle.Bold),
-                ForeColor = Color.FromArgb(33, 37, 41),
+                ForeColor = Color.FromArgb(44, 62, 80),
                 AutoSize = true,
-                Location = new Point(0, 0)
+                Location = new Point(20, 10),
+                Margin = new Padding(0, 0, 0, 20)
             };
             _overviewHost.Controls.Add(title);
 
-            var grid = new TableLayoutPanel
+            // Grid for Cards
+            var cardGrid = new TableLayoutPanel
             {
-                ColumnCount = 3,
-                RowCount = 2,
-                Location = new Point(0, 46),
-                Width = 980,
-                Height = 260,
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+                ColumnCount = 6,
+                RowCount = 1,
+                Location = new Point(10, 50),
+                Width = 1000,
+                Height = 160,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                BackColor = Color.Transparent
             };
-            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
-            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
-            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.34f));
-            grid.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
-            grid.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
+            cardGrid.ColumnStyles.Clear();
+            for (int i = 0; i < 6; i++) 
+                cardGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f / 6f));
+            
+            cardGrid.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+            _overviewHost.Controls.Add(cardGrid);
 
-            var loading = new Label { Text = "Đang tải thống kê...", AutoSize = true, ForeColor = Color.Gray, Location = new Point(0, 320) };
-            _overviewHost.Controls.Add(grid);
+            // Recent Activity Section
+            var recentLabel = new Label
+            {
+                Text = "Hoạt động gần đây",
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                ForeColor = Color.FromArgb(44, 62, 80),
+                AutoSize = true,
+                Location = new Point(20, 230),
+                Margin = new Padding(0, 20, 0, 10)
+            };
+             _overviewHost.Controls.Add(recentLabel);
+
+            var recentGrid = new DataGridView
+            {
+                Location = new Point(20, 265),
+                Width = 1000,
+                Height = 200,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
+                BackgroundColor = Color.White,
+                BorderStyle = BorderStyle.None,
+                RowHeadersVisible = false,
+                AllowUserToAddRows = false,
+                ReadOnly = true,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+            };
+            recentGrid.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(240, 242, 245);
+            recentGrid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+            recentGrid.ColumnHeadersHeight = 35;
+            recentGrid.DefaultCellStyle.Font = new Font("Segoe UI", 9);
+            recentGrid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(236, 240, 241);
+            recentGrid.DefaultCellStyle.SelectionForeColor = Color.Black;
+            recentGrid.EnableHeadersVisualStyles = false;
+            _overviewHost.Controls.Add(recentGrid);
+            
+            var loading = new Label { Text = "Đang tải thống kê...", AutoSize = true, ForeColor = Color.Gray, Location = new Point(20, 670) };
             _overviewHost.Controls.Add(loading);
 
             _host.Controls.Add(_overviewHost);
-            _ = LoadOverviewAsync(grid, loading);
+            _ = LoadOverviewAsync(cardGrid, recentGrid, loading);
         }
 
-        private async Task LoadOverviewAsync(TableLayoutPanel grid, Label loadingLabel)
+        private async Task LoadOverviewAsync(TableLayoutPanel grid, DataGridView recentList, Label loadingLabel)
         {
             try
             {
@@ -336,14 +413,51 @@ namespace quan_ly_chuoi_nha_tro.GUI
                                                                             && !string.Equals(r["Status"]?.ToString(), "Hoan tat", StringComparison.OrdinalIgnoreCase)) ?? 0;
 
                 grid.Controls.Clear();
-                grid.Controls.Add(MakeMetricCard("🏠 Phòng", $"{occupied:N0}/{totalRooms:N0}", "Đang sử dụng / Tổng phòng", Color.FromArgb(0, 150, 136), (s, e) => _btnRoom.PerformClick()), 0, 0);
-                grid.Controls.Add(MakeMetricCard("🧾 Công nợ", $"{debt:N0}", "Tổng tiền còn nợ", Color.FromArgb(244, 67, 54), (s, e) => _btnInvoicePayment.PerformClick()), 1, 0);
-                grid.Controls.Add(MakeMetricCard("⏰ Quá hạn", $"{overdueCount:N0}", "Hóa đơn overdue", Color.FromArgb(255, 152, 0), (s, e) => _btnInvoicePayment.PerformClick()), 2, 0);
-                grid.Controls.Add(MakeMetricCard("💳 Thu tháng này", $"{collectedThisMonth:N0}", "Tổng tiền đã thu", Color.FromArgb(76, 175, 80), (s, e) => _btnInvoicePayment.PerformClick()), 0, 1);
-                grid.Controls.Add(MakeMetricCard("📄 Sắp hết hạn", $"{endingSoon:N0}", "Hợp đồng trong 7 ngày", Color.FromArgb(103, 58, 183), (s, e) => _btnContract.PerformClick()), 1, 1);
-                grid.Controls.Add(MakeMetricCard("🔧 Bảo trì mở", $"{openMaintenance:N0}", "Ticket chưa hoàn thành", Color.FromArgb(156, 39, 176), (s, e) => _btnMaintenance.PerformClick()), 2, 1);
+                // Add margins to panels inside grid
+                grid.Controls.Add(MakeMetricCard("Phòng", $"{occupied}/{totalRooms}", "Đang sử dụng / Tổng", Color.FromArgb(26, 188, 156), (s, e) => _btnRoom.PerformClick()), 0, 0);
+                grid.Controls.Add(MakeMetricCard("Công nợ", $"{debt:N0} đ", "Tổng tiền còn nợ", Color.FromArgb(231, 76, 60), (s, e) => _btnInvoicePayment.PerformClick()), 1, 0);
+                grid.Controls.Add(MakeMetricCard("Thu tháng này", $"{collectedThisMonth:N0} đ", "Đã thu trong tháng", Color.FromArgb(46, 204, 113), (s, e) => _btnInvoicePayment.PerformClick()), 2, 0);
+                grid.Controls.Add(MakeMetricCard("Quá hạn", $"{overdueCount}", "Hóa đơn quá hạn", Color.FromArgb(243, 156, 18), (s, e) => _btnInvoicePayment.PerformClick()), 3, 0);
+                grid.Controls.Add(MakeMetricCard("Sắp hết hạn", $"{endingSoon}", "Hợp đồng (7 ngày)", Color.FromArgb(155, 89, 182), (s, e) => _btnContract.PerformClick()), 4, 0);
+                grid.Controls.Add(MakeMetricCard("Bảo trì", $"{openMaintenance}", "Yêu cầu chưa xử lý", Color.FromArgb(52, 152, 219), (s, e) => _btnMaintenance.PerformClick()), 5, 0);
 
-                loadingLabel.Visible = false;
+                // Populate Recent Activity (Mockup mostly using Invoice data for now as example)
+                var dtRecent = new DataTable();
+                dtRecent.Columns.Add("LOẠI", typeof(string));
+                dtRecent.Columns.Add("MÔ TẢ", typeof(string));
+                dtRecent.Columns.Add("THỜI GIAN", typeof(DateTime));
+                dtRecent.Columns.Add("TRẠNG THÁI", typeof(string));
+
+                if (invoices != null)
+                {
+                    foreach(DataRow row in invoices.AsEnumerable().OrderByDescending(r => r["CreatedDate"]).Take(5))
+                    {
+                        dtRecent.Rows.Add("Hóa đơn", $"Phòng {row["RoomNumber"]} - {TryDecimal(row["TotalAmount"]):N0} đ", row["CreatedDate"], row["Status"]);
+                    }
+                }
+                if (maintenance != null)
+                {
+                    foreach (DataRow row in maintenance.AsEnumerable().OrderByDescending(r => r["RequestDate"]).Take(5))
+                    {
+                        var roomNum = row.Table.Columns.Contains("RoomNumber") ? row["RoomNumber"].ToString() : "N/A";
+                        dtRecent.Rows.Add("Bảo trì", $"Phòng {roomNum} - {row["IssueDescription"]}", row["RequestDate"], row["Status"]);
+                    }
+                }
+
+                DataView dv = dtRecent.DefaultView;
+                dv.Sort = "THỜI GIAN DESC";
+                recentList.DataSource = dv.ToTable();
+
+                // Handle empty state
+                if (dtRecent.Rows.Count == 0)
+                {
+                    loadingLabel.Text = "Không có hoạt động gần đây";
+                    loadingLabel.ForeColor = Color.FromArgb(149, 165, 166);
+                }
+                else
+                {
+                    loadingLabel.Visible = false;
+                }
             }
             catch (Exception ex)
             {
@@ -357,24 +471,78 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var card = new Panel
             {
                 Dock = DockStyle.Fill,
-                Margin = new Padding(8),
-                BackColor = Color.White,
+                Margin = new Padding(10), // Padding between grid cells
+                BackColor = Color.Transparent, // Parent is transparent, we draw the white bg
                 Cursor = Cursors.Hand
             };
 
-            var bar = new Panel { Dock = DockStyle.Left, Width = 6, BackColor = accent };
-            var lblTitle = new Label { Text = title, AutoSize = true, Font = new Font("Segoe UI", 11, FontStyle.Bold), Location = new Point(14, 16) };
-            var lblValue = new Label { Text = value, AutoSize = true, Font = new Font("Segoe UI", 18, FontStyle.Bold), ForeColor = accent, Location = new Point(14, 44) };
-            var lblSub = new Label { Text = subtitle, AutoSize = true, ForeColor = Color.Gray, Location = new Point(14, 86) };
+            // Custom Paint for Rounded Corners and Shadow
+            card.Paint += (s, e) =>
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var rect = card.ClientRectangle;
+                rect.Width -= 1; rect.Height -= 1;
+                // Shadow offset
+                var shadowRect = rect;
+                shadowRect.Offset(2, 2);
 
-            card.Controls.Add(bar);
+                using (var path = GetRoundedPath(rect, 10))
+                using (var shadowPath = GetRoundedPath(shadowRect, 10))
+                using (var brush = new SolidBrush(Color.White))
+                using (var pen = new Pen(Color.FromArgb(220, 220, 220)))
+                using (var shadowBrush = new SolidBrush(Color.FromArgb(20, 0, 0, 0)))
+                {
+                    // Draw Shadow
+                    e.Graphics.FillPath(shadowBrush, shadowPath);
+                    // Draw Card Background
+                    e.Graphics.FillPath(brush, path);
+                    // Draw Border
+                    e.Graphics.DrawPath(pen, path);
+                    
+                    // Draw Accent Left Stripe
+                    using(var accentBrush = new SolidBrush(accent))
+                    using(var headerPath = GetRoundedCorner(rect, 10, true)) // Only left side rounded
+                    {
+                        // Draw a colored strip on the left
+                         e.Graphics.FillRectangle(accentBrush, 4, 4, 6, rect.Height - 8);
+                    }
+                }
+            };
+
+            var lblTitle = new Label { Text = title, AutoSize = true, Font = new Font("Segoe UI", 11, FontStyle.Regular), ForeColor = Color.Gray, Location = new Point(25, 20), BackColor = Color.White };
+            var lblValue = new Label { Text = value, AutoSize = true, Font = new Font("Segoe UI", 22, FontStyle.Bold), ForeColor = Color.FromArgb(44, 62, 80), Location = new Point(22, 50), BackColor = Color.White };
+            var lblSub = new Label { Text = subtitle, AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Regular), ForeColor = Color.FromArgb(149, 165, 166), Location = new Point(25, 100), BackColor = Color.White };
+
             card.Controls.Add(lblTitle);
             card.Controls.Add(lblValue);
             card.Controls.Add(lblSub);
 
+            // Forward click events
             card.Click += onClick;
-            foreach (Control c in card.Controls) c.Click += onClick;
+            lblTitle.Click += onClick;
+            lblValue.Click += onClick;
+            lblSub.Click += onClick;
+
             return card;
+        }
+        
+        // Helper for Rounded Rectangle
+        private GraphicsPath GetRoundedPath(Rectangle rect, int radius)
+        {
+            GraphicsPath path = new GraphicsPath();
+            int d = radius * 2;
+            path.AddArc(rect.X, rect.Y, d, d, 180, 90);
+            path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+            path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+            path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
+            path.CloseFigure();
+            return path;
+        }
+         private GraphicsPath GetRoundedCorner(Rectangle rect, int radius, bool leftOnly)
+        {
+            // Simplified for just drawing a strip inside
+             GraphicsPath path = new GraphicsPath();
+             return path; 
         }
 
         // =========================================================================================

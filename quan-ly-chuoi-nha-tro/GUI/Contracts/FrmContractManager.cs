@@ -114,7 +114,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var pnlSearch = UiKit.MakeSearchPanel(_txtSearch, 230, SearchPlaceholder, ApplyFilter);
 
             _cboStatus = new ComboBox { Width = 150, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 10), FlatStyle = FlatStyle.Flat, Anchor = AnchorStyles.None };
-            _cboStatus.Items.AddRange(new object[] { "Tất cả", "Active", "Extended", "Terminated", "Expired" });
+            _cboStatus.Items.AddRange(new object[] { "Tất cả", "Đang hiệu lực", "Gia hạn", "Đã chấm dứt", "Hết hạn" });
             _cboStatus.SelectedIndex = 0;
 
             _dtFrom = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true, Checked = false, Width = 110, Font = new Font("Segoe UI", 10), Anchor = AnchorStyles.None };
@@ -220,7 +220,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             var query = _rawTable.AsEnumerable();
             if (!string.IsNullOrEmpty(status) && status != "Tất cả")
-                query = query.Where(r => string.Equals(r["Status"]?.ToString(), status, StringComparison.OrdinalIgnoreCase));
+            {
+                string dbStatus = FrmContractDetail.FromVietnameseStatus(status);
+                query = query.Where(r => string.Equals(r["Status"]?.ToString(), dbStatus, StringComparison.OrdinalIgnoreCase));
+            }
             if (from.HasValue) query = query.Where(r => DateTime.TryParse(r["StartDate"]?.ToString(), out var d) && d.Date >= from.Value);
             if (to.HasValue) query = query.Where(r => DateTime.TryParse(r["EndDate"]?.ToString(), out var d) && d.Date <= to.Value);
             if (!string.IsNullOrEmpty(keyword))
@@ -275,7 +278,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                 var lblStatus = new Label
                 {
-                    Text = status,
+                    Text = FrmContractDetail.ToVietnameseStatus(status),
                     Font = new Font("Segoe UI", 9, FontStyle.Bold),
                     ForeColor = statusColor,
                     AutoSize = true,
@@ -532,7 +535,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             tabOverview.Controls.Add(CreateLabel("Ngày kết thúc:", Convert.ToDateTime(_row["EndDate"]).ToString("dd/MM/yyyy"), 20, 60));
             tabOverview.Controls.Add(CreateLabel("Giá thuê:", string.Format("{0:N0} đ", _row["RentalPrice"]), 20, 100));
             tabOverview.Controls.Add(CreateLabel("Tiền cọc:", string.Format("{0:N0} đ", _row["DepositRequired"]), 20, 140));
-            tabOverview.Controls.Add(CreateLabel("Trạng thái:", _row["Status"]?.ToString(), 20, 180));
+            tabOverview.Controls.Add(CreateLabel("Trạng thái:", ToVietnameseStatus(_row["Status"]?.ToString()), 20, 180));
             
             // Tab 2: Dịch vụ (Minh họa)
             var tabServices = new TabPage("Dịch vụ") { BackColor = Color.WhiteSmoke };
@@ -568,6 +571,30 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     this.DialogResult = DialogResult.OK;
                     Close();
                 }
+            }
+        }
+
+        public static string ToVietnameseStatus(string status)
+        {
+            switch (status)
+            {
+                case "Active": return "Đang hiệu lực";
+                case "Extended": return "Gia hạn";
+                case "Terminated": return "Đã chấm dứt";
+                case "Expired": return "Hết hạn";
+                default: return status;
+            }
+        }
+
+        public static string FromVietnameseStatus(string status)
+        {
+            switch (status)
+            {
+                case "Đang hiệu lực": return "Active";
+                case "Gia hạn": return "Extended";
+                case "Đã chấm dứt": return "Terminated";
+                case "Hết hạn": return "Expired";
+                default: return status;
             }
         }
     }

@@ -257,6 +257,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
             actions.Controls.Add(_btnChangeStatus);
             actions.Controls.Add(_btnDelete);
 
+            // Apply Staff Mode restrictions
+            if (_isStaffMode)
+            {
+                _btnAddRoom.Visible = false;
+                _btnAddRoom.Enabled = false;
+                _btnEdit.Enabled = false;
+                _btnChangeStatus.Enabled = false;
+            }
+
             var stats = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
@@ -286,8 +295,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             toolbarLayout.Controls.Add(filters, 0, 0);
             toolbarLayout.Controls.Add(actions, 1, 0);
-            toolbarLayout.Controls.Add(stats, 1, 1);
-            toolbarLayout.Controls.Add(new Panel { Dock = DockStyle.Fill }, 0, 1);
+            toolbarLayout.Controls.Add(stats, 0, 1);
+            toolbarLayout.SetColumnSpan(stats, 2); // Span across both columns
             toolbar.Controls.Add(toolbarLayout);
 
             _splitContainer = new SplitContainer

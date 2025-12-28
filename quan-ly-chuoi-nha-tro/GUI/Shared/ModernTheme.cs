@@ -130,7 +130,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         /// </summary>
         public static void StyleButton(Button button, Color bgColor, Color textColor = default)
         {
-            if (textColor == default)
+            if (textColor.IsEmpty)
                 textColor = Colors.TextInverse;
 
             button.BackColor = bgColor;
@@ -157,7 +157,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         /// </summary>
         public static void StyleOutlineButton(Button button, Color borderColor = default)
         {
-            if (borderColor == default)
+            if (borderColor.IsEmpty)
                 borderColor = Colors.Primary;
 
             button.BackColor = Colors.Background;
@@ -268,7 +268,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         /// </summary>
         public static void StylePanel(Panel panel, Color bgColor = default)
         {
-            if (bgColor == default)
+            if (bgColor.IsEmpty)
                 bgColor = Colors.Surface;
 
             panel.BackColor = bgColor;

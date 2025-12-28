@@ -55,7 +55,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         /// </summary>
         public static Panel CreateHeaderedPanel(string title, Color headerColor = default)
         {
-            if (headerColor == default)
+            if (headerColor.IsEmpty)
                 headerColor = ModernTheme.Colors.Primary;
 
             var container = new Panel
@@ -211,7 +211,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         /// </summary>
         public static Panel CreateInfoBox(string label, string value, Color accentColor = default)
         {
-            if (accentColor == default)
+            if (accentColor.IsEmpty)
                 accentColor = ModernTheme.Colors.Primary;
 
             var panel = new Panel
@@ -281,7 +281,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             var searchBox = new TextBox
             {
-                PlaceholderText = "🔍 Tìm kiếm...",
                 BackColor = ModernTheme.Colors.Surface,
                 ForeColor = ModernTheme.Colors.TextPrimary,
                 Font = ModernTheme.Fonts.NormalFont,
@@ -301,7 +300,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         /// </summary>
         public static Button CreateQuickActionButton(string emoji, string text, Color color = default)
         {
-            if (color == default)
+            if (color.IsEmpty)
                 color = ModernTheme.Colors.Primary;
 
             var btn = new ModernButton
@@ -336,7 +335,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         /// </summary>
         public static Label CreateBadge(string text, Color backgroundColor = default)
         {
-            if (backgroundColor == default)
+            if (backgroundColor.IsEmpty)
                 backgroundColor = ModernTheme.Colors.Primary;
 
             var badge = new Label
@@ -367,6 +366,16 @@ namespace quan_ly_chuoi_nha_tro.GUI
             };
 
             return tabControl;
+        }
+
+        /// <summary>
+        /// Style a basic label
+        /// </summary>
+        public static void StyleLabel(Label label, bool isBold = false)
+        {
+            if (label == null) return;
+            label.Font = isBold ? ModernTheme.Fonts.Bold(ModernTheme.Fonts.Normal) : ModernTheme.Fonts.NormalFont;
+            label.ForeColor = ModernTheme.Colors.TextPrimary;
         }
     }
 }

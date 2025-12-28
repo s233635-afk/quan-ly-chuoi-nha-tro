@@ -595,7 +595,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             public TenantDeletePicker(List<DataRow> rows, int preselectedTenantId)
             {
-                Text = "Ch?n khách thuê c?n xóa";
+                Text = "Chọn khách thuê cần xóa";
                 StartPosition = FormStartPosition.CenterParent;
                 FormBorderStyle = FormBorderStyle.FixedDialog;
                 MaximizeBox = false;
@@ -606,7 +606,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                 var lbl = new Label
                 {
-                    Text = "Ch?n khách thuê:",
+                    Text = "Chọn khách thuê:",
                     AutoSize = true,
                     Location = new Point(14, 12)
                 };
@@ -634,7 +634,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                 _lblCount = new Label
                 {
-                    Text = $"T?ng: {rows.Count}",
+                    Text = $"Tổng: {rows.Count}",
                     AutoSize = true,
                     Location = new Point(14, 346),
                     ForeColor = Color.FromArgb(80, 80, 80)
@@ -642,7 +642,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                 var btnSelectAll = new Button
                 {
-                    Text = "Ch?n t?t c?",
+                    Text = "Chọn tất cả",
                     Width = 110,
                     Height = 28,
                     FlatStyle = FlatStyle.Flat,
@@ -657,7 +657,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                 var btnClear = new Button
                 {
-                    Text = "B? ch?n",
+                    Text = "Bỏ chọn",
                     Width = 90,
                     Height = 28,
                     FlatStyle = FlatStyle.Flat,
@@ -672,7 +672,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                 var btnOk = new Button
                 {
-                    Text = "X?a",
+                    Text = "Xóa",
                     Width = 100,
                     Height = 32,
                     BackColor = Color.FromArgb(220, 53, 69),
@@ -686,7 +686,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                 var btnCancel = new Button
                 {
-                    Text = "H?y",
+                    Text = "Hủy",
                     Width = 90,
                     Height = 32,
                     BackColor = Color.FromArgb(220, 220, 220),

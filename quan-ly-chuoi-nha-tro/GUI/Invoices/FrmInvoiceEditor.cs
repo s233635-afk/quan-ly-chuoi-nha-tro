@@ -54,45 +54,112 @@ namespace quan_ly_chuoi_nha_tro.GUI
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
-            ClientSize = new Size(620, 500);
+            ClientSize = new Size(680, 750); // Slightly wider to avoid clipping
+            BackColor = ModernTheme.Colors.Background;
+            Font = ModernTheme.Fonts.NormalFont;
 
-            int labelWidth = 160;
-            int inputWidth = 380;
-            int top = 18;
-            int left = 20;
-            int line = 32;
-
-            Label MakeLabel(string text, int y) => new Label
+            // Main scrollable container
+            var mainScroll = new Panel
             {
-                Text = text,
-                Location = new Point(left, y),
-                Width = labelWidth,
-                TextAlign = ContentAlignment.MiddleLeft
+                Dock = DockStyle.Fill,
+                AutoScroll = true,
+                BackColor = ModernTheme.Colors.Background,
+                Padding = new Padding(25, 10, 25, 10)
             };
 
-            Control MakeInput(Control ctl, int y)
+            // Internal panel to hold sections (forces width and allows Dock.Top)
+            var pnlContent = new Panel
             {
-                ctl.Location = new Point(left + labelWidth, y);
-                ctl.Width = inputWidth;
-                return ctl;
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                BackColor = Color.Transparent
+            };
+            mainScroll.Controls.Add(pnlContent);
+
+            int labelWidth = 150;
+            int inputWidth = 400;
+            int rowHeight = 35;
+
+            // Helper to create a row
+            Panel MakeRow(string labelText, Control inputControl)
+            {
+                var row = new Panel { Dock = DockStyle.Top, Height = rowHeight, Margin = new Padding(0, 0, 0, 6) };
+                var lbl = new Label
+                {
+                    Text = labelText,
+                    Location = new Point(0, 6),
+                    Width = labelWidth,
+                    TextAlign = ContentAlignment.MiddleLeft,
+                    ForeColor = ModernTheme.Colors.TextSecondary,
+                    Font = ModernTheme.Fonts.Regular(ModernTheme.Fonts.Normal)
+                };
+                inputControl.Location = new Point(labelWidth, 2);
+                inputControl.Width = inputWidth;
+
+                if (inputControl is TextBox tb) ModernTheme.StyleTextBox(tb);
+                if (inputControl is ComboBox cb) ModernTheme.StyleComboBox(cb);
+                
+                row.Controls.Add(lbl);
+                row.Controls.Add(inputControl);
+                return row;
             }
 
-            txtInvoiceNumber = new TextBox();
+            // Helper to create a section
+            GroupBox MakeSection(string title, Color accentColor, int height)
+            {
+                var grp = new GroupBox
+                {
+                    Text = title,
+                    Dock = DockStyle.Top,
+                    Height = height,
+                    ForeColor = accentColor,
+                    Font = ModernTheme.Fonts.Bold(ModernTheme.Fonts.Normal),
+                    Margin = new Padding(0, 0, 0, 20),
+                    Padding = new Padding(15, 25, 15, 10),
+                    BackColor = ModernTheme.Colors.Background
+                };
+                return grp;
+            }
+
+            // --- 1. GENERAL INFO ---
+            var grpGeneral = MakeSection("📝 THÔNG TIN CHUNG", ModernTheme.Colors.Primary, 185);
+            
+            txtInvoiceNumber = new TextBox { ReadOnly = true, BackColor = ModernTheme.Colors.Surface, TabStop = false };
             lblHint = new Label
             {
-                Text = "Để trống để hệ thống tự sinh số hóa đơn.",
+                Text = "Số hóa đơn được tạo tự động.",
                 AutoSize = true,
-                ForeColor = Color.DimGray,
-                Location = new Point(left + labelWidth, top + 24)
+                Font = ModernTheme.Fonts.Italic(ModernTheme.Fonts.Small),
+                ForeColor = ModernTheme.Colors.TextTertiary,
+                Location = new Point(labelWidth + 5, 28) // Relative to its position in the flow
             };
 
-            cboTenant = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
-            cboRoom = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
+            cboTenant = new ComboBox();
+            cboRoom = new ComboBox();
 
-            dtInvoiceDate = new DateTimePicker { Format = DateTimePickerFormat.Short };
-            dtFromDate = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true };
-            dtToDate = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true };
-            dtDueDate = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true };
+            grpGeneral.Controls.Add(MakeRow("Phòng (*)", cboRoom));
+            grpGeneral.Controls.Add(MakeRow("Khách thuê (*)", cboTenant));
+            // For general info, we add hint below invoice number manually
+            var rowInv = MakeRow("Số hóa đơn", txtInvoiceNumber);
+            rowInv.Height = 55;
+            rowInv.Controls.Add(lblHint);
+            grpGeneral.Controls.Add(rowInv);
+
+            // --- 2. DATES ---
+            var grpDates = MakeSection("📅 THỜI GIAN", ModernTheme.Colors.Warning, 185);
+            
+            dtInvoiceDate = new DateTimePicker { Format = DateTimePickerFormat.Short, Width = 200 };
+            dtFromDate = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true, Width = 200 };
+            dtToDate = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true, Width = 200 };
+            dtDueDate = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true, Width = 200 };
+
+            grpDates.Controls.Add(MakeRow("Hạn thanh toán", dtDueDate));
+            grpDates.Controls.Add(MakeRow("Kỳ đến ngày", dtToDate));
+            grpDates.Controls.Add(MakeRow("Kỳ từ ngày", dtFromDate));
+            grpDates.Controls.Add(MakeRow("Ngày lập h.đơn", dtInvoiceDate));
+
+            // --- 3. FINANCIALS ---
+            var grpCosts = MakeSection("💰 CHI TIẾT TÀI CHÍNH", ModernTheme.Colors.Success, 260);
 
             numRental = MakeMoney();
             numUtility = MakeMoney();
@@ -108,100 +175,57 @@ namespace quan_ly_chuoi_nha_tro.GUI
             numTaxRate.ValueChanged += (s, e) => SyncTaxAmountFromRate();
             numTaxAmount.ValueChanged += (s, e) => SyncTaxRateFromAmount();
 
-            lblTotal = new Label { AutoSize = true, Font = new Font("Segoe UI", 10F, FontStyle.Bold) };
+            grpCosts.Controls.Add(MakeRow("Tiền thuế", numTaxAmount));
+            grpCosts.Controls.Add(MakeRow("Thuế (%)", numTaxRate));
+            grpCosts.Controls.Add(MakeRow("Phí tài sản", numAsset));
+            grpCosts.Controls.Add(MakeRow("Phí bảo trì/khác", numOther));
+            grpCosts.Controls.Add(MakeRow("Điện/Nước/DV", numUtility));
+            grpCosts.Controls.Add(MakeRow("Tiền phòng", numRental));
 
-            Controls.Add(MakeLabel("Số hóa đơn", top));
-            Controls.Add(MakeInput(txtInvoiceNumber, top));
-            Controls.Add(lblHint);
-            top += line + 10;
+            // Add sections in REVERSE order for Dock.Top to maintain logical sequence
+            pnlContent.Controls.Add(grpCosts);
+            pnlContent.Controls.Add(grpDates);
+            pnlContent.Controls.Add(grpGeneral);
 
-            Controls.Add(MakeLabel("Khách thuê (*)", top));
-            Controls.Add(MakeInput(cboTenant, top));
-            top += line;
+            // --- BOTTOM PANEL (Total & Actions) ---
+            var pnlBottom = new Panel { Dock = DockStyle.Bottom, Height = 90, BackColor = ModernTheme.Colors.Surface };
+            var pnlSep = new Panel { Dock = DockStyle.Top, Height = 1, BackColor = ModernTheme.Colors.Divider };
+            pnlBottom.Controls.Add(pnlSep);
 
-            Controls.Add(MakeLabel("Phòng (*)", top));
-            Controls.Add(MakeInput(cboRoom, top));
-            top += line;
-
-            Controls.Add(MakeLabel("Ngày hóa đơn (*)", top));
-            Controls.Add(MakeInput(dtInvoiceDate, top));
-            top += line;
-
-            Controls.Add(MakeLabel("Từ ngày", top));
-            Controls.Add(MakeInput(dtFromDate, top));
-            top += line;
-
-            Controls.Add(MakeLabel("Đến ngày", top));
-            Controls.Add(MakeInput(dtToDate, top));
-            top += line;
-
-            Controls.Add(MakeLabel("Hạn thanh toán", top));
-            Controls.Add(MakeInput(dtDueDate, top));
-            top += line;
-
-            Controls.Add(MakeLabel("Tiền phòng", top));
-            Controls.Add(MakeInput(numRental, top));
-            top += line;
-
-            Controls.Add(MakeLabel("Điện/Nước/DV", top));
-            Controls.Add(MakeInput(numUtility, top));
-            top += line;
-
-            Controls.Add(MakeLabel("Phí khác", top));
-            Controls.Add(MakeInput(numOther, top));
-            top += line;
-
-            Controls.Add(MakeLabel("Phí tài sản", top));
-            Controls.Add(MakeInput(numAsset, top));
-            top += line;
-
-            Controls.Add(MakeLabel("Thuế (%)", top));
-            Controls.Add(MakeInput(numTaxRate, top));
-            top += line;
-
-            Controls.Add(MakeLabel("Tiền thuế", top));
-            Controls.Add(MakeInput(numTaxAmount, top));
-            top += line;
-
-            Controls.Add(MakeLabel("Tổng cộng", top));
-            lblTotal.Location = new Point(left + labelWidth, top + 6);
-            Controls.Add(lblTotal);
-            top += line;
-
-            btnSave = new Button
-            {
-                Text = "Lưu",
-                Width = 100,
-                Height = 32,
-                Location = new Point(ClientSize.Width - 350, ClientSize.Height - 50),
-                Anchor = AnchorStyles.Right | AnchorStyles.Bottom
+            lblTotal = new Label 
+            { 
+                Text = "0 VNĐ",
+                Font = ModernTheme.Fonts.Bold(20),
+                ForeColor = ModernTheme.Colors.Primary,
+                AutoSize = true,
+                Location = new Point(20, 35)
             };
+            var lblTotalCap = new Label { Text = "TỔNG CỘNG:", Location = new Point(20, 15), AutoSize = true, Font = ModernTheme.Fonts.Bold(ModernTheme.Fonts.Small), ForeColor = ModernTheme.Colors.TextSecondary };
+
+            btnCancel = new Button { Text = "Hủy", Width = 90 };
+            btnSave = new Button { Text = "Lưu", Width = 100 };
+            btnPayNow = new Button { Text = "Thanh toán ngay", Width = 140, Visible = _existing == null };
+
+            ModernTheme.StyleOutlineButton(btnCancel, ModernTheme.Colors.TextSecondary);
+            ModernTheme.StylePrimaryButton(btnSave);
+            ModernTheme.StyleSuccessButton(btnPayNow);
+
+            btnCancel.Location = new Point(ClientSize.Width - 110, 27);
+            btnSave.Location = new Point(ClientSize.Width - 220, 27);
+            btnPayNow.Location = new Point(ClientSize.Width - 370, 27);
+
+            pnlBottom.Controls.Add(lblTotalCap);
+            pnlBottom.Controls.Add(lblTotal);
+            pnlBottom.Controls.Add(btnCancel);
+            pnlBottom.Controls.Add(btnSave);
+            pnlBottom.Controls.Add(btnPayNow);
+
+            btnCancel.Click += (s, e) => DialogResult = DialogResult.Cancel;
             btnSave.Click += async (s, e) => await SaveAsync(false);
-
-            btnPayNow = new Button
-            {
-                Text = "Thanh toán ngay",
-                Width = 120,
-                Height = 32,
-                Location = new Point(ClientSize.Width - 240, ClientSize.Height - 50),
-                Anchor = AnchorStyles.Right | AnchorStyles.Bottom,
-                Visible = _existing == null
-            };
             btnPayNow.Click += async (s, e) => await SaveAsync(true);
 
-            btnCancel = new Button
-            {
-                Text = "Hủy",
-                Width = 100,
-                Height = 32,
-                Location = new Point(ClientSize.Width - 110, ClientSize.Height - 50),
-                Anchor = AnchorStyles.Right | AnchorStyles.Bottom
-            };
-            btnCancel.Click += (s, e) => DialogResult = DialogResult.Cancel;
-
-            Controls.Add(btnSave);
-            Controls.Add(btnPayNow);
-            Controls.Add(btnCancel);
+            Controls.Add(mainScroll);
+            Controls.Add(pnlBottom);
         }
 
         private static NumericUpDown MakeMoney()
@@ -268,7 +292,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                 LoadExisting();
                 if (_existing == null)
+                {
+                    txtInvoiceNumber.Text = "HD-" + DateTime.Now.ToString("yyyyMMdd-HHmmss");
                     await LoadDefaultTaxRateAsync();
+                }
                 RefreshRoomDerivedValues();
                 UpdateTotal();
             }

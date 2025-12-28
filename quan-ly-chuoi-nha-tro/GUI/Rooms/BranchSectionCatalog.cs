@@ -51,9 +51,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     .Where(r =>
                     {
                         var c = (r["SectionCode"]?.ToString() ?? string.Empty).Trim();
-                        return c.Equals("A", StringComparison.OrdinalIgnoreCase)
-                            || c.Equals("B", StringComparison.OrdinalIgnoreCase)
-                            || c.Equals("C", StringComparison.OrdinalIgnoreCase);
+                        return string.Equals(c, "A", StringComparison.OrdinalIgnoreCase)
+                            || string.Equals(c, "B", StringComparison.OrdinalIgnoreCase)
+                            || string.Equals(c, "C", StringComparison.OrdinalIgnoreCase);
                     })
                     .ToList();
 

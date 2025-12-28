@@ -249,9 +249,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _txtSearchPayment.Text = SearchPlaceholder;
 
             _cboPaymentMethod = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 140 };
-            _cboPaymentMethod.Items.AddRange(new object[] { "Tất cả", "Cash", "Transfer", "Check", "Card" });
+            _cboPaymentMethod.Items.AddRange(new object[] { "Tất cả", "Tiền mặt", "Chuyển khoản", "Séc", "Thẻ" });
             _cboPaymentMethod.SelectedIndex = 0;
             _cboPaymentMethod.SelectedIndexChanged += (s, e) => ApplyPaymentFilter();
+            _gridPayments.CellFormatting += (s, e) =>
+            {
+                if (e.RowIndex < 0 || e.ColumnIndex < 0) return;
+                var col = _gridPayments.Columns[e.ColumnIndex];
+                if (col.Name == "PaymentMethod" && e.Value != null)
+                {
+                    e.Value = ToVietnamesePaymentMethod(e.Value.ToString());
+                    e.FormattingApplied = true;
+                }
+            };
 
             _dtFromDate = new DateTimePicker { Format = DateTimePickerFormat.Short, Value = DateTime.Today.AddMonths(-1) };
             _dtFromDate.ValueChanged += (s, e) => ApplyPaymentFilter();
@@ -511,119 +521,193 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private Control CreateInvoiceCard(DataRow row)
         {
+            // 1. Get Data
             string invoiceNumber = ReadString(row, "InvoiceNumber") ?? ReadString(row, "InvoiceId") ?? "—";
             string tenant = ReadString(row, "TenantName") ?? ReadString(row, "TenantId") ?? "—";
             string room = ReadString(row, "RoomNumber") ?? ReadString(row, "RoomId") ?? "—";
             string date = TryReadDate(row, "InvoiceDate")?.ToString("dd/MM/yyyy") ?? "—";
-            string status = ToVietnameseStatus(ReadString(row, "Status"));
+            string statusKey = ReadString(row, "Status");
+            string statusText = ToVietnameseStatus(statusKey);
 
             decimal total = ReadDecimal(row, "TotalAmount");
             decimal paid = ReadDecimal(row, "PaidAmount");
             decimal remaining = ReadDecimal(row, "RemainingAmount");
 
+            Color statusColor = GetStatusColor(statusKey);
+
+            // 2. Main Card Container
             var card = new Panel
             {
-                Width = 360,
-                Height = 160,
-                BackColor = Color.White,
-                Margin = new Padding(6),
-                Padding = new Padding(8),
+                Width = 380,
+                Height = 180,
+                BackColor = ModernTheme.Colors.Background,
+                Margin = new Padding(8),
+                Padding = new Padding(1), // Border width
                 Cursor = Cursors.Hand,
                 Tag = row
             };
 
-            var statusStrip = new Panel
+            // 3. Selection Highlighting (Border)
+            card.Paint += (s, e) =>
             {
-                Dock = DockStyle.Left,
-                Width = 6,
-                BackColor = GetStatusColor(ReadString(row, "Status"))
-            };
-
-            var content = new Panel { Dock = DockStyle.Fill, Padding = new Padding(8, 4, 8, 4) };
-
-            var lblTitle = new Label
-            {
-                Text = $"HĐ {invoiceNumber}",
-                Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
-                ForeColor = Color.FromArgb(0, 79, 159),
-                AutoSize = true,
-                Location = new Point(0, 0)
-            };
-
-            var lblStatus = new Label
-            {
-                Text = status,
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                ForeColor = GetStatusColor(ReadString(row, "Status")),
-                AutoSize = true,
-                Location = new Point(240, 2)
-            };
-
-            var lblTenant = new Label
-            {
-                Text = $"Khách: {tenant}",
-                Font = new Font("Segoe UI", 9.5f),
-                AutoSize = true,
-                Location = new Point(0, 28)
-            };
-
-            var lblRoom = new Label
-            {
-                Text = $"Phòng: {room} | Ngày: {date}",
-                Font = new Font("Segoe UI", 9f),
-                ForeColor = Color.DimGray,
-                AutoSize = true,
-                Location = new Point(0, 50)
-            };
-
-            var lblAmounts = new Label
-            {
-                Text = $"Tổng: {total:N0} | Đã thu: {paid:N0} | Còn nợ: {remaining:N0}",
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
-                ForeColor = Color.FromArgb(60, 80, 90),
-                AutoSize = true,
-                Location = new Point(0, 80)
-            };
-
-            var border = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0) };
-            border.Paint += (s, e) =>
-            {
-                using (var pen = new Pen(IsSelectedCard(card) ? Color.FromArgb(0, 122, 204) : Color.FromArgb(230, 230, 230), 1.4f))
+                bool isSelected = IsSelectedCard(card);
+                Color borderColor = isSelected ? ModernTheme.Colors.Primary : ModernTheme.Colors.Border;
+                int borderWidth = isSelected ? 2 : 1;
+                
+                using (var pen = new Pen(borderColor, borderWidth))
                 {
-                    e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
+                    Rectangle rect = card.ClientRectangle;
+                    rect.Width -= 1;
+                    rect.Height -= 1;
+                    e.Graphics.DrawRectangle(pen, rect);
                 }
             };
 
-            content.Controls.Add(lblTitle);
-            content.Controls.Add(lblStatus);
-            content.Controls.Add(lblTenant);
-            content.Controls.Add(lblRoom);
-            content.Controls.Add(lblAmounts);
-
-            border.Controls.Add(content);
-            card.Controls.Add(border);
-            card.Controls.Add(statusStrip);
-
-            void SelectAction()
+            // 4. Inner Content Panel
+            var content = new Panel
             {
-                SelectInvoiceCard(card, row);
-            }
+                Dock = DockStyle.Fill,
+                BackColor = ModernTheme.Colors.Background,
+                Padding = new Padding(12)
+            };
 
+            // --- Header Section: Invoice # and Status Badge ---
+            var pnlHeader = new Panel { Dock = DockStyle.Top, Height = 32 };
+            
+            var lblTitle = new Label
+            {
+                Text = $"Hóa đơn: {invoiceNumber}",
+                Font = ModernTheme.Fonts.Bold(11),
+                ForeColor = ModernTheme.Colors.Primary,
+                AutoSize = true,
+                Location = new Point(0, 4)
+            };
+
+            var lblStatusBadge = UIHelper.CreateBadge(statusText, statusColor);
+            lblStatusBadge.Left = content.Width - lblStatusBadge.Width - 25; // Align right (approx)
+            lblStatusBadge.Top = 2;
+            // Fix badge auto-positioning logic purely for this absolute layout if needed, 
+            // but FlowLayout/Dock is safer. Let's use Dock Right container for badge.
+            var pnlBadgeContainer = new FlowLayoutPanel 
+            { 
+                Dock = DockStyle.Right, 
+                AutoSize = true, 
+                FlowDirection = FlowDirection.RightToLeft,
+                Padding = new Padding(0, 2, 0, 0)
+            };
+            pnlBadgeContainer.Controls.Add(lblStatusBadge);
+
+            pnlHeader.Controls.Add(pnlBadgeContainer);
+            pnlHeader.Controls.Add(lblTitle);
+
+            // --- Body Section: Tenant and Room ---
+            var pnlBody = new Panel { Dock = DockStyle.Top, Height = 60, Padding = new Padding(0, 8, 0, 0) };
+            
+            var lblTenant = new Label
+            {
+                Text = $"👤 {tenant}",
+                Font = ModernTheme.Fonts.Regular(10),
+                ForeColor = ModernTheme.Colors.TextPrimary,
+                AutoSize = true,
+                Location = new Point(0, 8)
+            };
+            
+            var lblRoom = new Label
+            {
+                Text = $"🏠 {room}   📅 {date}",
+                Font = ModernTheme.Fonts.Regular(9.5f),
+                ForeColor = ModernTheme.Colors.TextSecondary,
+                AutoSize = true,
+                Location = new Point(0, 32)
+            };
+
+            pnlBody.Controls.Add(lblRoom);
+            pnlBody.Controls.Add(lblTenant);
+
+            // --- Divider ---
+            var divider = new Panel { Dock = DockStyle.Top, Height = 1, BackColor = ModernTheme.Colors.Divider, Margin = new Padding(0, 4, 0, 4) };
+
+            // --- Footer Section: Financials ---
+            var pnlFooter = new Panel { Dock = DockStyle.Bottom, Height = 50 };
+
+            var lblTotalLabel = new Label
+            {
+                Text = "Tổng cộng",
+                Font = ModernTheme.Fonts.Regular(8.5f),
+                ForeColor = ModernTheme.Colors.TextSecondary,
+                AutoSize = true,
+                Location = new Point(0, 6)
+            };
+            var lblTotalValue = new Label
+            {
+                Text = $"{total:N0}đ",
+                Font = ModernTheme.Fonts.Bold(12),
+                ForeColor = ModernTheme.Colors.TextPrimary,
+                AutoSize = true,
+                Location = new Point(0, 22)
+            };
+
+            var pnlDebt = new Panel { Dock = DockStyle.Right, Width = 150 };
+            var lblDebtLabel = new Label
+            {
+                Text = remaining > 0 ? "Còn nợ" : "Đã thanh toán",
+                Font = ModernTheme.Fonts.Regular(8.5f),
+                ForeColor = remaining > 0 ? ModernTheme.Colors.Error : ModernTheme.Colors.Success,
+                AutoSize = false,
+                TextAlign = ContentAlignment.TopRight,
+                Dock = DockStyle.Top,
+                Height = 18
+            };
+            var lblDebtValue = new Label
+            {
+                Text = remaining > 0 ? $"{remaining:N0}đ" : "✓",
+                Font = ModernTheme.Fonts.Bold(12),
+                ForeColor = remaining > 0 ? ModernTheme.Colors.Error : ModernTheme.Colors.Success,
+                AutoSize = false,
+                TextAlign = ContentAlignment.TopRight,
+                Dock = DockStyle.Fill
+            };
+            pnlDebt.Controls.Add(lblDebtValue);
+            pnlDebt.Controls.Add(lblDebtLabel);
+
+            pnlFooter.Controls.Add(lblTotalValue);
+            pnlFooter.Controls.Add(lblTotalLabel);
+            pnlFooter.Controls.Add(pnlDebt);
+
+
+            // Assemble
+            content.Controls.Add(pnlFooter);
+            content.Controls.Add(divider);
+            content.Controls.Add(pnlBody);
+            content.Controls.Add(pnlHeader);
+            
+            card.Controls.Add(content);
+
+            // --- Event Wiring ---
+            void SelectAction() => SelectInvoiceCard(card, row);
+            
             card.Click += (s, e) => SelectAction();
-            foreach (Control c in content.Controls) c.Click += (s, e) => SelectAction();
-            card.DoubleClick += (s, e) =>
+            // Rekursively add click handlers to all children
+            void AddClickRecursively(Control c)
+            {
+                c.Click += (s, e) => SelectAction();
+                if (c.HasChildren) foreach (Control child in c.Controls) AddClickRecursively(child);
+            }
+            AddClickRecursively(content);
+
+            // Double click to open details
+            void DoubleClickAction()
             {
                 SelectAction();
                 ShowInvoiceDetail();
-            };
-            foreach (Control c in content.Controls)
-            {
-                c.DoubleClick += (s, e) =>
-                {
-                    SelectAction();
-                    ShowInvoiceDetail();
-                };
             }
+            card.DoubleClick += (s, e) => DoubleClickAction();
+            void AddDoubleClickRecursively(Control c)
+            {
+                c.DoubleClick += (s, e) => DoubleClickAction();
+                if (c.HasChildren) foreach (Control child in c.Controls) AddDoubleClickRecursively(child);
+            }
+            AddDoubleClickRecursively(content);
 
             return card;
         }
@@ -658,6 +742,33 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     return "Overdue";
                 default:
                     return selected;
+            }
+        }
+
+
+
+        private static string MapPaymentMethod(string selected)
+        {
+            if (string.IsNullOrWhiteSpace(selected) || selected == "Tất cả") return null;
+            switch (selected)
+            {
+                case "Tiền mặt": return "Cash";
+                case "Chuyển khoản": return "Transfer";
+                case "Séc": return "Check";
+                case "Thẻ": return "Card";
+                default: return selected;
+            }
+        }
+
+        private static string ToVietnamesePaymentMethod(string method)
+        {
+            switch (method)
+            {
+                case "Cash": return "Tiền mặt";
+                case "Transfer": return "Chuyển khoản";
+                case "Check": return "Séc";
+                case "Card": return "Thẻ";
+                default: return method;
             }
         }
 
@@ -713,7 +824,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             if (_paymentTable == null) return;
             var keyword = _txtSearchPayment.Text == SearchPlaceholder ? string.Empty : _txtSearchPayment.Text.Trim();
             keyword = keyword.Replace("'", "''");
-            var method = _cboPaymentMethod.SelectedItem?.ToString();
+            var method = MapPaymentMethod(_cboPaymentMethod.SelectedItem?.ToString());
 
             var filters = new List<string>();
 

@@ -20,14 +20,46 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 Text = text,
                 Width = width,
-                Height = 32,
+                Height = 36, // Slightly taller for better proportions
                 FlatStyle = FlatStyle.Flat,
                 BackColor = backColor,
-                ForeColor = Color.White
+                ForeColor = Color.White,
+                Cursor = Cursors.Hand
             };
             btn.FlatAppearance.BorderSize = 0;
+            
+            // Apply rounded corners
+            btn.SizeChanged += (s, e) => SetRoundedRegion(btn, 20);
+            SetRoundedRegion(btn, 20); // Initial set
+            
+            // Hover effect
+            btn.MouseEnter += (s, e) => btn.BackColor = ControlPaint.Light(backColor);
+            btn.MouseLeave += (s, e) => btn.BackColor = backColor;
+
             if (onClick != null) btn.Click += onClick;
             return btn;
+        }
+
+        public static void SetRoundedRegion(Control c, int radius)
+        {
+            if (c == null || c.IsDisposed) return;
+            
+            using (var path = new System.Drawing.Drawing2D.GraphicsPath())
+            {
+                var rect = c.ClientRectangle;
+                rect.Width -= 0;
+                rect.Height -= 0;
+                
+                if (rect.Width <= 0 || rect.Height <= 0) return;
+
+                path.AddArc(rect.X, rect.Y, radius, radius, 180, 90);
+                path.AddArc(rect.Right - radius, rect.Y, radius, radius, 270, 90);
+                path.AddArc(rect.Right - radius, rect.Bottom - radius, radius, radius, 0, 90);
+                path.AddArc(rect.X, rect.Bottom - radius, radius, radius, 90, 90);
+                path.CloseFigure();
+
+                c.Region = new Region(path);
+            }
         }
 
         public static void StyleGrid(DataGridView grid)

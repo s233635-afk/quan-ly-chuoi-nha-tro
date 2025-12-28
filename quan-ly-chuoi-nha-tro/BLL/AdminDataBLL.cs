@@ -305,6 +305,9 @@ namespace QuanLyNhaTro.BLL
         public Task<bool> DeleteUtilityTypeAsync(int utilityTypeId)
             => dbHelper.DeleteUtilityTypeAsync(utilityTypeId);
 
+        public Task<DataTable> GetUtilityReadingsAsync()
+            => dbHelper.GetUtilityReadingsAsync();
+
         // --- UTILITY READING CRUD ---
         public Task<int> AddUtilityReadingAsync(int roomId, int utilityTypeId, DateTime? readingDate, decimal? previousReading, decimal? currentReading, decimal? usageAmount, decimal? unitPrice, decimal? totalCost, string notes)
             => dbHelper.AddUtilityReadingAsync(roomId, utilityTypeId, readingDate, previousReading, currentReading, usageAmount, unitPrice, totalCost, notes);
