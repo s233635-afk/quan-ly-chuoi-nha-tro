@@ -77,8 +77,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (btn == null) return;
             btn.FlatAppearance.BorderSize = 0;
-            btn.FlatAppearance.MouseOverBackColor = ControlPaint.Dark(btn.BackColor);
-            btn.FlatAppearance.MouseDownBackColor = ControlPaint.DarkDark(btn.BackColor);
+            btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(52, 73, 94);
+            btn.FlatAppearance.MouseDownBackColor = Color.FromArgb(41, 128, 185);
             btn.Cursor = Cursors.Hand;
         }
 
@@ -88,13 +88,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             if (_activeNavButton != null && !_activeNavButton.IsDisposed)
             {
-                _activeNavButton.BackColor = Color.FromArgb(0, 122, 204);
-                _activeNavButton.ForeColor = Color.White;
+                _activeNavButton.BackColor = Color.Transparent;
+                _activeNavButton.ForeColor = Color.FromArgb(189, 195, 199);
+                _activeNavButton.Font = new Font("Segoe UI", 10, FontStyle.Regular);
             }
 
             _activeNavButton = btn;
-            _activeNavButton.BackColor = Color.FromArgb(0, 90, 170);
+            _activeNavButton.BackColor = Color.FromArgb(52, 152, 219); // Active Blue
             _activeNavButton.ForeColor = Color.White;
+            _activeNavButton.Font = new Font("Segoe UI", 10, FontStyle.Bold);
         }
 
         /// <summary>
@@ -131,8 +133,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
             tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
             tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.34F));
-            tableLayoutPanel1.Padding = new Padding(10, 6, 10, 10);
-            tableLayoutPanel1.BackColor = Color.FromArgb(244, 248, 252);
+            tableLayoutPanel1.Padding = new Padding(20, 10, 20, 20);
+            tableLayoutPanel1.BackColor = Color.FromArgb(248, 250, 252);
             tableLayoutPanel1.GrowStyle = TableLayoutPanelGrowStyle.FixedSize;
 
             int GetInt(string col)
@@ -165,15 +167,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             var metrics = new[]
             {
-                new StatMetric("Chi nhánh", totalBranches.ToString("N0"), "Tổng số chi nhánh", Color.FromArgb(0, 122, 204), (EventHandler)btnBranch_Click),
-                new StatMetric("Phòng", totalRooms.ToString("N0"), "Tổng số phòng", Color.FromArgb(0, 150, 136), (EventHandler)btnRoom_Click),
-                new StatMetric("Khách thuê", totalTenants.ToString("N0"), "Tổng khách thuê", Color.FromArgb(63, 81, 181), (EventHandler)btnTenant_Click),
-                new StatMetric("Hợp đồng", totalContracts.ToString("N0"), "Tổng hợp đồng", Color.FromArgb(103, 58, 183), (EventHandler)btnContract_Click),
-                new StatMetric("Hóa đơn", totalInvoices.ToString("N0"), $"Còn nợ: {outstandingCount:N0}", Color.FromArgb(255, 152, 0), (EventHandler)btnInvoice_Click),
-                new StatMetric("Công nợ", outstandingAmount.ToString("N0"), "Tổng tiền còn nợ", Color.FromArgb(244, 67, 54), (EventHandler)btnInvoice_Click),
-                new StatMetric("Đặt cọc", depositAmount.ToString("N0"), $"Phiếu cọc: {totalDeposits:N0}", Color.FromArgb(33, 150, 243), (EventHandler)btnDeposit_Click),
-                new StatMetric("Thu tháng này", paymentsThisMonth.ToString("N0"), "Tổng tiền đã thu", Color.FromArgb(76, 175, 80), (EventHandler)btnPayment_Click),
-                new StatMetric("Bảo trì", openMaintenance.ToString("N0"), "Yêu cầu đang mở", Color.FromArgb(156, 39, 176), (EventHandler)btnMaintenance_Click),
+                new StatMetric("Chi nhánh", totalBranches.ToString("N0"), "Tổng số chi nhánh", Color.FromArgb(0, 122, 204), "🏢", (EventHandler)btnBranch_Click),
+                new StatMetric("Phòng", totalRooms.ToString("N0"), "Tổng số phòng", Color.FromArgb(0, 150, 136), "🏠", (EventHandler)btnRoom_Click),
+                new StatMetric("Khách thuê", totalTenants.ToString("N0"), "Tổng khách thuê", Color.FromArgb(63, 81, 181), "👥", (EventHandler)btnTenant_Click),
+                new StatMetric("Hợp đồng", totalContracts.ToString("N0"), "Tổng hợp đồng", Color.FromArgb(103, 58, 183), "📋", (EventHandler)btnContract_Click),
+                new StatMetric("Hóa đơn", totalInvoices.ToString("N0"), $"Còn nợ: {outstandingCount:N0}", Color.FromArgb(255, 152, 0), "🧾", (EventHandler)btnInvoice_Click),
+                new StatMetric("Công nợ", outstandingAmount.ToString("N0"), "Tổng tiền còn nợ", Color.FromArgb(244, 67, 54), "💰", (EventHandler)btnInvoice_Click),
+                new StatMetric("Đặt cọc", depositAmount.ToString("N0"), $"Phiếu cọc: {totalDeposits:N0}", Color.FromArgb(33, 150, 243), "💵", (EventHandler)btnDeposit_Click),
+                new StatMetric("Thu tháng này", paymentsThisMonth.ToString("N0"), "Tổng tiền đã thu", Color.FromArgb(76, 175, 80), "📈", (EventHandler)btnPayment_Click),
+                new StatMetric("Bảo trì", openMaintenance.ToString("N0"), "Yêu cầu đang mở", Color.FromArgb(156, 39, 176), "🔧", (EventHandler)btnMaintenance_Click),
             };
 
             int colCount = tableLayoutPanel1.ColumnCount;
@@ -195,12 +197,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private sealed class StatMetric
         {
-            public StatMetric(string title, string valueText, string subText, Color accentColor, EventHandler clickHandler)
+            public StatMetric(string title, string valueText, string subText, Color accentColor, string icon, EventHandler clickHandler)
             {
                 Title = title;
                 ValueText = valueText;
                 SubText = subText;
                 AccentColor = accentColor;
+                Icon = icon;
                 ClickHandler = clickHandler;
             }
 
@@ -208,6 +211,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             public string ValueText { get; }
             public string SubText { get; }
             public Color AccentColor { get; }
+            public string Icon { get; }
             public EventHandler ClickHandler { get; }
         }
 
@@ -216,11 +220,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
             Panel pnl = new Panel
             {
                 Dock = DockStyle.Fill,
-                Margin = new Padding(12),
-                Padding = new Padding(18, 16, 16, 16),
+                Margin = new Padding(16),
+                Padding = new Padding(20, 18, 18, 18),
                 BackColor = Color.White,
                 BorderStyle = BorderStyle.None,
-                MinimumSize = new Size(0, 140)
+                MinimumSize = new Size(0, 160)
             };
 
             bool isHover = false;
@@ -246,10 +250,32 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             pnl.Paint += (s, e) =>
             {
-                using (var pen = new Pen(isHover ? borderHover : borderNormal, 1.6f))
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                
+                // Draw subtle shadow
+                if (!isHover)
+                {
+                    using (var shadowBrush = new SolidBrush(Color.FromArgb(8, 0, 0, 0)))
+                    {
+                        var shadowRect = new Rectangle(3, 3, pnl.Width - 3, pnl.Height - 3);
+                        int radius = 5;
+                        int d = radius * 2;
+                        using (var shadowPath = new System.Drawing.Drawing2D.GraphicsPath())
+                        {
+                            shadowPath.AddArc(shadowRect.X, shadowRect.Y, d, d, 180, 90);
+                            shadowPath.AddArc(shadowRect.Right - d, shadowRect.Y, d, d, 270, 90);
+                            shadowPath.AddArc(shadowRect.Right - d, shadowRect.Bottom - d, d, d, 0, 90);
+                            shadowPath.AddArc(shadowRect.X, shadowRect.Bottom - d, d, d, 90, 90);
+                            shadowPath.CloseFigure();
+                            e.Graphics.FillPath(shadowBrush, shadowPath);
+                        }
+                    }
+                }
+                
+                // Draw border
+                using (var pen = new Pen(isHover ? borderHover : borderNormal, 1.8f))
                 {
                     var rect = new Rectangle(0, 0, pnl.Width - 1, pnl.Height - 1);
-                    e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
                     int radius = 5;
                     int d = radius * 2;
                     using (var path = new System.Drawing.Drawing2D.GraphicsPath())
@@ -267,7 +293,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var accentBar = new Panel
             {
                 BackColor = metric.AccentColor,
-                Width = 6,
+                Width = 8,
                 Dock = DockStyle.Left
             };
 
@@ -283,10 +309,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             Label lblValue = new Label
             {
                 Text = metric.ValueText,
-                Font = new Font("Segoe UI", 24, FontStyle.Bold),
+                Font = new Font("Segoe UI", 26, FontStyle.Bold),
                 ForeColor = Color.FromArgb(28, 48, 78),
                 Dock = DockStyle.Top,
-                Height = 48,
+                Height = 50,
                 Padding = new Padding(0, 0, 0, 0)
             };
 
@@ -300,11 +326,22 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 AutoSize = false,
                 TextAlign = ContentAlignment.TopLeft
             };
+            
+            Label lblIcon = new Label
+            {
+                Text = metric.Icon,
+                Font = new Font("Segoe UI", 32),
+                Dock = DockStyle.Right,
+                Width = 60,
+                TextAlign = ContentAlignment.MiddleCenter,
+                ForeColor = Color.FromArgb(200, metric.AccentColor)
+            };
 
             // Add theo thứ tự để Dock layout đúng (Fill trước, Top sau)
             pnl.Controls.Add(lblSub);
             pnl.Controls.Add(lblValue);
             pnl.Controls.Add(lblTitle);
+            pnl.Controls.Add(lblIcon);
             pnl.Controls.Add(accentBar);
 
             pnl.Cursor = Cursors.Hand;
@@ -316,10 +353,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 lblTitle.Click += metric.ClickHandler;
                 lblValue.Click += metric.ClickHandler;
                 lblSub.Click += metric.ClickHandler;
+                lblIcon.Click += metric.ClickHandler;
             }
             pnl.MouseEnter += (s, e) =>
             {
-                pnl.BackColor = Color.FromArgb(232, 244, 255);
+                pnl.BackColor = Color.FromArgb(240, 248, 255);
                 isHover = true;
                 pnl.Invalidate();
             };
