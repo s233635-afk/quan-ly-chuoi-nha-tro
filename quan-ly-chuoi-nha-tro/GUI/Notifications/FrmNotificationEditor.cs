@@ -3,6 +3,7 @@ using System.Data;
 using System.Drawing;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -164,7 +165,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             string title = txtTitle.Text.Trim();
             if (string.IsNullOrWhiteSpace(title))
             {
-                MessageBox.Show("Vui lòng nhập tiêu đề.", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ToastNotification.Warning("Vui lòng nhập tiêu đề");
                 return;
             }
 
@@ -186,7 +187,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi lưu thông báo: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "SaveNotification", "Lỗi lưu thông báo");
             }
         }
     }

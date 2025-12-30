@@ -3,6 +3,7 @@ using System.Data;
 using System.Drawing;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -145,7 +146,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             string fullName = txtFullName.Text.Trim();
             if (string.IsNullOrWhiteSpace(fullName))
             {
-                MessageBox.Show("Vui lòng nhập Họ tên.", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ToastNotification.Warning("Vui lòng nhập Họ tên");
                 return;
             }
 
@@ -165,7 +166,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi lưu người ở chung: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "SaveDependent", "Lỗi lưu người ở chung");
             }
         }
     }

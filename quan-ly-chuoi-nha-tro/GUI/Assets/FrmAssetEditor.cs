@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Linq;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -328,7 +329,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             string name = txtName.Text.Trim();
             if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(name))
             {
-                MessageBox.Show("Vui lòng nhập Mã và Tên tài sản.", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ToastNotification.Warning("Vui lòng nhập Mã và Tên tài sản");
                 return;
             }
 
@@ -377,7 +378,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi lưu tài sản: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "SaveAsset", "Lỗi lưu tài sản");
             }
         }
 

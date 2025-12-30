@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -239,7 +240,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi tải đặt phòng/cọc: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "LoadDeposits", "Không thể tải đặt phòng/cọc");
             }
         }
 
@@ -436,7 +437,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetCurrentRow();
             if (row == null)
             {
-                MessageBox.Show("Chọn một dòng để sửa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Chọn một dòng để sửa");
                 return;
             }
 
@@ -456,22 +457,23 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetCurrentRow();
             if (row == null)
             {
-                MessageBox.Show("Chọn một dòng để xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Chọn một dòng để xóa");
                 return;
             }
 
             int id = Convert.ToInt32(row["DepositId"]);
-            if (MessageBox.Show($"Xóa đặt phòng/cọc ID {id}?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            if (ModernConfirmDialog.ConfirmDanger($"Xóa đặt phòng/cọc ID {id}?"))
             {
                 try
                 {
                     await _bll.DeleteDepositAsync(id);
+                    ToastNotification.Success("Xóa đặt cọc thành công");
                     await LoadDataAsync();
                     AdminEvents.NotifyDataChanged();
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("Lỗi xóa: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    ErrorLogger.HandleException(ex, "DeleteDeposit", "Lỗi xóa đặt cọc");
                 }
             }
         }
@@ -481,7 +483,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetCurrentRow();
             if (row == null)
             {
-                MessageBox.Show("Chọn một dòng để cập nhật trạng thái.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Chọn một dòng để cập nhật trạng thái");
                 return;
             }
 
@@ -541,7 +543,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi cập nhật trạng thái: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "UpdateDepositStatus", "Lỗi cập nhật trạng thái");
             }
         }
 
@@ -550,7 +552,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetCurrentRow();
             if (row == null)
             {
-                MessageBox.Show("Chọn một dòng để hoàn cọc.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Chọn một dòng để hoàn cọc");
                 return;
             }
 
@@ -610,7 +612,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi hoàn cọc: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "ReturnDeposit", "Lỗi hoàn cọc");
             }
         }
 

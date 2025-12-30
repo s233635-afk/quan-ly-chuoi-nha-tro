@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -39,6 +40,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Button _btnAsset;
         private Button _btnReport;
         private Button _btnStatus;
+        private NotificationBell _notificationBell;
 
         // Room detail caches for staff view
         private FrmDataViewer _roomViewer;
@@ -60,7 +62,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (!await CheckStaffPermissionAsync())
             {
-                MessageBox.Show("Bạn không có quyền truy cập màn Nhân viên!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ToastNotification.Error("Bạn không có quyền truy cập màn Nhân viên!");
                 Close();
                 return;
             }
@@ -68,7 +70,29 @@ namespace quan_ly_chuoi_nha_tro.GUI
             Text = $"Staff Dashboard - {_username}";
             WindowState = FormWindowState.Maximized;
             _lblUser.Text = $"{_fullName}";
+            
+            // Initialize NotificationBell
+            InitializeNotificationBell();
+            
             ShowOverview();
+            
+            // Show unread notification toast
+            if (_notificationBell != null && _notificationBell.UnreadCount > 0)
+            {
+                ToastNotification.Info($"Bạn có {_notificationBell.UnreadCount} thông báo chưa đọc");
+            }
+        }
+        
+        private void InitializeNotificationBell()
+        {
+            _notificationBell = new NotificationBell(_branchId);
+            _notificationBell.Location = new Point(_btnLogout.Left - 55, 10);
+            _notificationBell.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            _notificationBell.BellClicked += (s, e) => {
+                SetActive(_btnStatus);
+                LoadModule(new FrmNotificationManager(_branchId, true), "Thông báo");
+            };
+            _header.Controls.Add(_notificationBell);
         }
 
         private async Task<bool> CheckStaffPermissionAsync()
@@ -193,7 +217,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnLogout.FlatAppearance.BorderSize = 0;
             _btnLogout.Click += (s, e) =>
             {
-                if (MessageBox.Show("Bạn chắc chắn muốn đăng xuất?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                if (ModernConfirmDialog.Confirm("Bạn chắc chắn muốn đăng xuất?", "Xác nhận"))
                     Close();
             };
 

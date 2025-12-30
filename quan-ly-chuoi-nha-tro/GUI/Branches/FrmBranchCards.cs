@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -244,7 +245,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi tải chi nhánh: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "LoadBranches", "Không thể tải chi nhánh");
             }
             finally
             {
@@ -547,7 +548,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (branchId <= 0)
             {
-                MessageBox.Show("Vui lòng chọn một chi nhánh trước.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Vui lòng chọn một chi nhánh trước");
                 return;
             }
 
@@ -575,7 +576,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (_selectedBranchId <= 0)
             {
-                MessageBox.Show("Vui lòng chọn 1 chi nhánh.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Vui lòng chọn 1 chi nhánh");
                 return;
             }
 
@@ -594,23 +595,22 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (_selectedBranchId <= 0)
             {
-                MessageBox.Show("Vui lòng chọn 1 chi nhánh.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Vui lòng chọn 1 chi nhánh");
                 return;
             }
 
-            if (MessageBox.Show("Bạn chắc chắn muốn xóa chi nhánh này? (xóa mềm)", "Xác nhận",
-                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                return;
+            if (!ModernConfirmDialog.ConfirmDanger("Xóa chi nhánh này? (xóa mềm)")) return;
 
             try
             {
                 await _branchBll.DeleteBranchAsync(_selectedBranchId);
+                ToastNotification.Success("Xóa thành công");
                 await LoadDataAsync();
                 AdminEvents.NotifyDataChanged();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi xóa chi nhánh: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "DeleteBranch", "Lỗi xóa chi nhánh");
             }
         }
     }

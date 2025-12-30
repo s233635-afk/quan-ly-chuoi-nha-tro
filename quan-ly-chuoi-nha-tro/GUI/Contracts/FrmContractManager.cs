@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -193,7 +194,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi: " + ex.Message);
+                ErrorLogger.HandleException(ex, "LoadContracts", "Không thể tải hợp đồng");
             }
         }
 
@@ -379,28 +380,24 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (_selectedItem == null)
             {
-                MessageBox.Show("Vui lòng chọn một hợp đồng để xóa.", "Chưa chọn hợp đồng", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Vui lòng chọn một hợp đồng để xóa");
                 return;
             }
 
             var contractNumber = _selectedItem.Value.Row["ContractNumber"]?.ToString();
-            var result = MessageBox.Show($"Bạn có chắc chắn muốn xóa hợp đồng '{contractNumber}' không? Hành động này không thể hoàn tác.", "Xác nhận xóa", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            if (!ModernConfirmDialog.ConfirmDanger($"Xóa hợp đồng '{contractNumber}'?\nHành động này không thể hoàn tác.")) return;
 
-            if (result == DialogResult.Yes)
+            try
             {
-                try
-                {
-                    int contractId = Convert.ToInt32(_selectedItem.Value.Row["ContractId"]);
-                    // Giả sử bạn có phương thức DeleteContractAsync trong BLL
-                    await _bll.DeleteContractAsync(contractId); 
-                    MessageBox.Show("Đã xóa hợp đồng thành công.", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    await LoadDataAsync(); // Tải lại danh sách
-                    AdminEvents.NotifyDataChanged();
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Lỗi khi xóa hợp đồng: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
+                int contractId = Convert.ToInt32(_selectedItem.Value.Row["ContractId"]);
+                await _bll.DeleteContractAsync(contractId);
+                ToastNotification.Success("Xóa hợp đồng thành công");
+                await LoadDataAsync();
+                AdminEvents.NotifyDataChanged();
+            }
+            catch (Exception ex)
+            {
+                ErrorLogger.HandleException(ex, "DeleteContract", "Không thể xóa hợp đồng");
             }
         }
 

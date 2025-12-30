@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -301,7 +302,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi tải dữ liệu tham chiếu: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "LoadLookup", "Lỗi tải dữ liệu tham chiếu");
             }
         }
 
@@ -477,7 +478,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (cboTenant.SelectedValue == null || cboRoom.SelectedValue == null)
             {
-                MessageBox.Show("Chọn khách thuê và phòng.", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ToastNotification.Warning("Chọn khách thuê và phòng");
                 return;
             }
 
@@ -521,7 +522,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi lưu hóa đơn: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "SaveInvoice", "Lỗi lưu hóa đơn");
             }
         }
 
@@ -533,7 +534,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 var row = table?.AsEnumerable().FirstOrDefault(r => Convert.ToInt32(r["InvoiceId"]) == invoiceId);
                 if (row == null)
                 {
-                    MessageBox.Show("Không tìm thấy hóa đơn vừa tạo để thanh toán.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    ToastNotification.Info("Không tìm thấy hóa đơn vừa tạo để thanh toán");
                     return;
                 }
 
@@ -544,7 +545,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi mở thanh toán: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "OpenPayment", "Lỗi mở thanh toán");
             }
         }
 

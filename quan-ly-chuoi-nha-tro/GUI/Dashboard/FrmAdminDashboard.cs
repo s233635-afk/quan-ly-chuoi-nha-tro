@@ -3,6 +3,7 @@ using System.Data;
 using System.Drawing;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -19,6 +20,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private readonly string defaultPlaceholderText = "Chọn chức năng ở thanh bên hoặc nhấn \"Tổng quan\" để xem thống kê nhanh.";
         private bool _overviewDirty = true;
         private Button _activeNavButton;
+        private NotificationBell _notificationBell;
 
         public FrmAdminDashboard(string username, int userId)
         {
@@ -34,7 +36,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             // Kiểm tra quyền Admin
             if (!await CheckAdminPermissionAsync())
             {
-                MessageBox.Show("Bạn không có quyền truy cập Admin!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ToastNotification.Error("Bạn không có quyền truy cập Admin!");
                 this.Close();
                 return;
             }
@@ -50,6 +52,27 @@ namespace quan_ly_chuoi_nha_tro.GUI
             lblPlaceholder.Text = defaultPlaceholderText;
             SetActiveNav(btnNavOverview);
             await ShowOverviewAsync();
+            
+            // Initialize NotificationBell
+            InitializeNotificationBell();
+            
+            // Show unread notification toast
+            if (_notificationBell != null && _notificationBell.UnreadCount > 0)
+            {
+                ToastNotification.Info($"Bạn có {_notificationBell.UnreadCount} thông báo chưa đọc", "Thông báo");
+            }
+        }
+        
+        private void InitializeNotificationBell()
+        {
+            _notificationBell = new NotificationBell();
+            _notificationBell.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            _notificationBell.Location = new Point(btnLogout.Left - 55, 22);
+            _notificationBell.BellClicked += (s, e) => {
+                SetActiveNav(btnNavNotification);
+                btnNotification_Click(s, e);
+            };
+            pnlHeader.Controls.Add(_notificationBell);
         }
 
         private void ApplyNavStyling()

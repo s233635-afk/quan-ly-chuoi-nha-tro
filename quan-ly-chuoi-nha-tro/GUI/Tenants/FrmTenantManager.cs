@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -187,7 +188,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Lỗi tải dữ liệu khách thuê: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "LoadTenants", "Không thể tải dữ liệu khách thuê");
             }
             finally
             {
@@ -376,7 +377,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetSelectedTenant();
             if (row == null)
             {
-                MessageBox.Show("Chọn khách thuê trước.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Chọn khách thuê trước");
                 return;
             }
 
@@ -480,7 +481,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var candidates = GetFilteredTenantsForDelete();
             if (candidates.Count == 0)
             {
-                MessageBox.Show("Không có khách thuê để xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Không có khách thuê để xóa");
                 return;
             }
 
@@ -490,12 +491,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 var selected = picker.SelectedRows;
                 if (selected == null || selected.Count == 0)
                 {
-                    MessageBox.Show("Chưa chọn khách thuê cần xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    ToastNotification.Warning("Chưa chọn khách thuê cần xóa");
                     return;
                 }
 
-                if (MessageBox.Show($"Xóa {selected.Count} khách thuê?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                    return;
+                if (!ModernConfirmDialog.ConfirmDanger($"Xóa {selected.Count} khách thuê?")) return;
 
                 _ = DeleteTenantsAsync(selected);
             }
@@ -537,17 +537,16 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                 if (failures.Count > 0)
                 {
-                    MessageBox.Show("Một số khách thuê không xóa được:\n" + string.Join("\n", failures), "Cảnh báo",
-                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    ToastNotification.Warning($"Một số khách thuê không xóa được: {failures.Count}");
                 }
                 else if (deleted > 0)
                 {
-                    MessageBox.Show($"Đã xóa {deleted} khách thuê.", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    ToastNotification.Success($"Đã xóa {deleted} khách thuê");
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Lỗi xóa khách thuê: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "DeleteTenants", "Lỗi xóa khách thuê");
             }
         }
 

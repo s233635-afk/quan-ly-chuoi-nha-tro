@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -237,7 +238,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi tải bảo trì: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "LoadMaintenance", "Lỗi tải bảo trì");
             }
         }
 
@@ -612,7 +613,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetCurrentRow();
             if (row == null)
             {
-                MessageBox.Show("Chọn một dòng để sửa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Chọn một dòng để sửa");
                 return;
             }
 
@@ -632,26 +633,26 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetCurrentRow();
             if (row == null)
             {
-                MessageBox.Show("Chọn một dòng để xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Chọn một dòng để xóa");
                 return;
             }
 
             int id = ReadInt(row, "TicketId");
             string no = ReadString(row, "TicketNumber") ?? id.ToString();
 
-            if (MessageBox.Show($"Xóa phiếu \"{no}\"?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                return;
+            if (!ModernConfirmDialog.ConfirmDanger($"Xóa phiếu \"{no}\"?")) return;
 
             try
             {
                 await _bll.DeleteMaintenanceTicketAsync(id);
                 await UpdateRoomStatusForTicketAsync(row, "Cancelled");
+                ToastNotification.Success("Xóa thành công");
                 await LoadAsync();
                 AdminEvents.NotifyDataChanged();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi xóa phiếu: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "DeleteTicket", "Lỗi xóa phiếu");
             }
         }
 
@@ -660,7 +661,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetCurrentRow();
             if (row == null)
             {
-                MessageBox.Show("Chọn một dòng để hoàn tất.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Chọn một dòng để hoàn tất");
                 return;
             }
 
@@ -670,13 +671,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             if (string.Equals(currentStatus, "Completed", StringComparison.OrdinalIgnoreCase))
             {
-                MessageBox.Show("Phiếu đã ở trạng thái Completed.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Info("Phiếu đã ở trạng thái Completed");
                 return;
             }
 
-            if (MessageBox.Show($"Chuyển phiếu \"{no}\" sang Completed?", "Xác nhận",
-                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                return;
+            if (!ModernConfirmDialog.Confirm($"Chuyển phiếu \"{no}\" sang Completed?", "Xác nhận")) return;
 
             try
             {
@@ -693,12 +692,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     ReadString(row, "Notes"));
 
                 await UpdateRoomStatusForTicketAsync(row, "Completed");
+                ToastNotification.Success("Hoàn tất phiếu thành công");
                 await LoadAsync();
                 AdminEvents.NotifyDataChanged();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi cập nhật trạng thái: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "MarkDone", "Lỗi cập nhật trạng thái");
             }
         }
 

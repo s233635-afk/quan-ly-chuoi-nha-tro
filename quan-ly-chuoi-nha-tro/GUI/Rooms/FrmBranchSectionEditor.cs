@@ -3,6 +3,7 @@ using System.Data;
 using System.Drawing;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -148,7 +149,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi tải danh sách chi nhánh: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "LoadLookups", "Lỗi tải danh sách chi nhánh");
             }
         }
 
@@ -181,7 +182,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (!(_cboBranch.SelectedValue is int branchId) || branchId <= 0)
             {
-                MessageBox.Show("Vui lòng chọn Chi nhánh.", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ToastNotification.Warning("Vui lòng chọn Chi nhánh");
                 return;
             }
 
@@ -191,12 +192,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             if (string.IsNullOrWhiteSpace(code))
             {
-                MessageBox.Show("Vui lòng nhập Mã khu/dãy.", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ToastNotification.Warning("Vui lòng nhập Mã khu/dãy");
                 return;
             }
             if (string.IsNullOrWhiteSpace(name))
             {
-                MessageBox.Show("Vui lòng nhập Tên khu/dãy.", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ToastNotification.Warning("Vui lòng nhập Tên khu/dãy");
                 return;
             }
 
@@ -218,7 +219,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi lưu khu/dãy: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "SaveSection", "Lỗi lưu khu/dãy");
             }
         }
     }

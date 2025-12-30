@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -114,7 +115,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi tải trạng thái: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "LoadStatuses", "Lỗi tải trạng thái");
             }
         }
 
@@ -179,7 +180,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetCurrentRow();
             if (row == null)
             {
-                MessageBox.Show("Chọn một trạng thái để sửa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Info("Chọn một trạng thái để sửa");
                 return;
             }
 
@@ -195,15 +196,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetCurrentRow();
             if (row == null)
             {
-                MessageBox.Show("Chọn một trạng thái để xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Info("Chọn một trạng thái để xóa");
                 return;
             }
 
             int id = row.Table.Columns.Contains("StatusId") ? Convert.ToInt32(row["StatusId"]) : 0;
             if (id <= 0) return;
 
-            if (MessageBox.Show("Bạn chắc chắn muốn xóa trạng thái này?\n(Lưu ý: nếu đang được dùng bởi Phòng thì sẽ không xóa được)", "Xác nhận",
-                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+            if (!await ModernConfirmDialog.ShowAsync("Bạn chắc chắn muốn xóa trạng thái này?\n(Lưu ý: nếu đang được dùng bởi Phòng thì sẽ không xóa được)", "Xác nhận"))
                 return;
 
             try
@@ -213,7 +213,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi xóa trạng thái: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "DeleteStatus", "Lỗi xóa trạng thái");
             }
         }
 

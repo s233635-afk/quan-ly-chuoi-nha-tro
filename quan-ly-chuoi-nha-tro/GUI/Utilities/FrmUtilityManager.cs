@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -264,7 +265,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi tải chỉ số: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "LoadReadings", "Lỗi tải chỉ số");
             }
         }
 
@@ -281,7 +282,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi tải loại dịch vụ: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "LoadTypes", "Lỗi tải loại dịch vụ");
             }
         }
 
@@ -402,7 +403,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetCurrentRow(_gridReadings);
             if (row == null)
             {
-                MessageBox.Show("Chọn một dòng để sửa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Chọn một dòng để sửa");
                 return;
             }
 
@@ -422,23 +423,23 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetCurrentRow(_gridReadings);
             if (row == null)
             {
-                MessageBox.Show("Chọn một dòng để xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Chọn một dòng để xóa");
                 return;
             }
 
             int id = ReadInt(row, "ReadingId");
-            if (MessageBox.Show($"Xóa chỉ số ID {id}?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                return;
+            if (!ModernConfirmDialog.ConfirmDanger($"Xóa chỉ số ID {id}?")) return;
 
             try
             {
                 await _bll.DeleteUtilityReadingAsync(id);
+                ToastNotification.Success("Xóa thành công");
                 await LoadReadingsAsync();
                 AdminEvents.NotifyDataChanged();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi xóa chỉ số: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "DeleteReading", "Lỗi xóa chỉ số");
             }
         }
 
@@ -456,7 +457,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetSelectedTypeRow();
             if (row == null)
             {
-                MessageBox.Show("Chọn một dòng để sửa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Chọn một dòng để sửa");
                 return;
             }
 
@@ -473,25 +474,24 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetSelectedTypeRow();
             if (row == null)
             {
-                MessageBox.Show("Chọn một dòng để xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Chọn một dòng để xóa");
                 return;
             }
 
             int id = ReadInt(row, "UtilityTypeId");
             string name = ReadString(row, "UtilityName") ?? id.ToString();
 
-            if (MessageBox.Show($"Xóa loại \"{name}\"?\n(Nếu đã có chỉ số sử dụng thì có thể xóa thất bại)", "Xác nhận",
-                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                return;
+            if (!ModernConfirmDialog.ConfirmDanger($"Xóa loại \"{name}\"?\n(Nếu đã có chỉ số sử dụng thì có thể xóa thất bại)")) return;
 
             try
             {
                 await _bll.DeleteUtilityTypeAsync(id);
+                ToastNotification.Success("Xóa thành công");
                 await LoadTypesAsync();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi xóa loại dịch vụ: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "DeleteType", "Lỗi xóa loại dịch vụ");
             }
         }
 

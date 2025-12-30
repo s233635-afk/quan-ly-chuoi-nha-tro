@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -174,7 +175,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi tải khu/dãy: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "LoadSections", "Lỗi tải khu/dãy");
             }
         }
 
@@ -317,7 +318,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetCurrentRow();
             if (row == null)
             {
-                MessageBox.Show("Chọn một khu/dãy để sửa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Info("Chọn một khu/dãy để sửa");
                 return;
             }
 
@@ -336,14 +337,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetCurrentRow();
             if (row == null)
             {
-                MessageBox.Show("Chọn một khu/dãy để xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Info("Chọn một khu/dãy để xóa");
                 return;
             }
 
             int id = row.Table.Columns.Contains("SectionId") ? Convert.ToInt32(row["SectionId"]) : 0;
             if (id <= 0) return;
 
-            if (MessageBox.Show("Bạn chắc chắn muốn xóa (tắt) khu/dãy này?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+            if (!await ModernConfirmDialog.ShowAsync("Bạn chắc chắn muốn xóa (tắt) khu/dãy này?", "Xác nhận"))
                 return;
 
             try
@@ -354,7 +355,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi xóa khu/dãy: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "DeleteSection", "Lỗi xóa khu/dãy");
             }
         }
 

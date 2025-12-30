@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -238,7 +239,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi tải dữ liệu tham chiếu: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "LoadLookup", "Lỗi tải dữ liệu tham chiếu");
             }
         }
 
@@ -402,13 +403,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
             string roomNumber = (txtRoomNumber.Text ?? string.Empty).Trim();
             if (string.IsNullOrWhiteSpace(roomNumber))
             {
-                MessageBox.Show("Vui lòng nhập Số phòng.", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ToastNotification.Warning("Vui lòng nhập Số phòng");
                 return;
             }
 
             if (!(cboBranch.SelectedValue is int branchId) || branchId <= 0)
             {
-                MessageBox.Show("Vui lòng chọn Chi nhánh.", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ToastNotification.Warning("Vui lòng chọn Chi nhánh");
                 return;
             }
 
@@ -418,13 +419,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             if (!sectionId.HasValue)
             {
-                MessageBox.Show("Vui lòng chọn Khu/Dãy.", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ToastNotification.Warning("Vui lòng chọn Khu/Dãy");
                 return;
             }
 
             if (!roomTypeId.HasValue)
             {
-                MessageBox.Show("Vui lòng chọn Loại phòng.", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ToastNotification.Warning("Vui lòng chọn Loại phòng");
                 return;
             }
 
@@ -457,7 +458,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi lưu phòng: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "SaveRoom", "Lỗi lưu phòng");
             }
         }
     }

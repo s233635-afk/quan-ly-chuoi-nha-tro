@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -183,7 +184,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi tải cấu hình: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "LoadSettings", "Lỗi tải cấu hình");
             }
         }
 
@@ -250,7 +251,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetCurrentRow();
             if (row == null)
             {
-                MessageBox.Show("Chọn một dòng để sửa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Info("Chọn một dòng để sửa");
                 return;
             }
 
@@ -266,14 +267,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetCurrentRow();
             if (row == null)
             {
-                MessageBox.Show("Chọn một dòng để xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Info("Chọn một dòng để xóa");
                 return;
             }
 
             string key = ReadString(row, "SettingKey");
             if (string.IsNullOrWhiteSpace(key)) return;
 
-            if (MessageBox.Show($"Xóa cấu hình \"{key}\"?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+            if (!await ModernConfirmDialog.ShowAsync($"Xóa cấu hình \"{key}\"?", "Xác nhận"))
                 return;
 
             try
@@ -283,7 +284,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi xóa cấu hình: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "DeleteSetting", "Lỗi xóa cấu hình");
             }
         }
 

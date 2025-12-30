@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -192,7 +193,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi tải dữ liệu tham chiếu: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "LoadLookup", "Lỗi tải dữ liệu tham chiếu");
             }
         }
 
@@ -255,14 +256,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (cboTenant.SelectedValue == null || cboRoom.SelectedValue == null)
             {
-                MessageBox.Show("Chọn khách thuê và phòng.", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ToastNotification.Warning("Chọn khách thuê và phòng");
                 return;
             }
 
             // Kiểm tra Ngày hoàn không được để trống
             if (!dtReturned.Checked && cboStatus.Text == "Hoàn cọc")
             {
-                MessageBox.Show("Ngày hoàn không được để trống.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ToastNotification.Warning("Ngày hoàn không được để trống");
                 dtReturned.Focus();
                 return;
             }
@@ -270,14 +271,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
             // Kiểm tra Trạng thái không được để trống và không được là Chờ xử lý khi tạo mới
             if (string.IsNullOrWhiteSpace(cboStatus.Text))
             {
-                MessageBox.Show("Trạng thái không được để trống.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ToastNotification.Warning("Trạng thái không được để trống");
                 cboStatus.Focus();
                 return;
             }
 
             if ((cboStatus.Text == "Đã xác nhận" || cboStatus.Text == "Hoàn cọc") && cboPaymentMethod.SelectedIndex < 0)
             {
-                MessageBox.Show("Vui lòng chọn hình thức thanh toán.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ToastNotification.Warning("Vui lòng chọn hình thức thanh toán");
                 cboPaymentMethod.Focus();
                 return;
             }
@@ -380,7 +381,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi lưu đặt phòng/cọc: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "SaveDeposit", "Lỗi lưu đặt phòng/cọc");
             }
         }
 

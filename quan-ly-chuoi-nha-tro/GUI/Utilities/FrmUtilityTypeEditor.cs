@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Globalization;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -181,7 +182,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             string name = txtName.Text.Trim();
             if (string.IsNullOrWhiteSpace(name))
             {
-                MessageBox.Show("Vui lòng nhập tên dịch vụ.", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ToastNotification.Warning("Vui lòng nhập tên dịch vụ");
                 return;
             }
 
@@ -218,7 +219,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi lưu loại dịch vụ: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "SaveUtilityType", "Lỗi lưu loại dịch vụ");
             }
         }
 

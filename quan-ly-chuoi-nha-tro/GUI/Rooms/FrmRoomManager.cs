@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -394,7 +395,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Lỗi tải phòng: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "LoadRooms", "Không thể tải danh sách phòng");
             }
             finally
             {
@@ -1117,12 +1118,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 }
                 else
                 {
-                    MessageBox.Show("Form chi tiết phòng chưa được tải. Vui lòng rebuild project.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    ToastNotification.Warning("Form chi tiết phòng chưa được tải");
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Lỗi: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "ShowRoomDetails", "Lỗi hiển thị chi tiết phòng");
             }
         }
 
@@ -1153,7 +1154,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var candidates = GetFilteredRowsForDelete();
             if (candidates.Count == 0)
             {
-                MessageBox.Show("Không có phòng nào để xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Không có phòng nào để xóa");
                 return;
             }
 
@@ -1163,13 +1164,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 var selected = picker.SelectedRows;
                 if (selected == null || selected.Count == 0)
                 {
-                    MessageBox.Show("Chưa chọn phòng cần xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    ToastNotification.Warning("Chưa chọn phòng cần xóa");
                     return;
                 }
 
-                var confirm = MessageBox.Show($"Bạn Có Chắc Muốn Xóa {selected.Count} phòng?",
-                    "Xác nhận xóa", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-                if (confirm != DialogResult.Yes) return;
+                if (!ModernConfirmDialog.ConfirmDanger($"Xóa {selected.Count} phòng?")) return;
 
                 try
                 {
@@ -1213,17 +1212,16 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                     if (failures.Count > 0)
                     {
-                        MessageBox.Show("Một số phòng không xóa được:\n" + string.Join("\n", failures), "Cảnh báo",
-                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        ToastNotification.Warning($"Một số phòng không xóa được: {failures.Count}");
                     }
                     else if (deleted > 0)
                     {
-                        MessageBox.Show($"Đã xóa {deleted} phòng.", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        ToastNotification.Success($"Đã xóa {deleted} phòng");
                     }
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Lỗi xóa phòng: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    ErrorLogger.HandleException(ex, "DeleteRooms", "Lỗi xóa phòng");
                 }
             }
         }
@@ -1753,7 +1751,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (_selectedRoomId <= 0)
             {
-                MessageBox.Show("Chọn một phòng trước.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Chọn một phòng trước");
                 return;
             }
 
@@ -1816,8 +1814,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                         int currentOccupants = TryGetInt(_selectedRoomRow, "Occupants");
                         if (IsOccupiedStatusId(newStatusId) && currentOccupants < 1)
                         {
-                            MessageBox.Show("Phòng chưa có người, không thể chuyển sang Đang ở.", "Cảnh báo",
-                                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            ToastNotification.Warning("Phòng chưa có người, không thể chuyển sang Đang ở");
                             return;
                         }
 
@@ -1826,7 +1823,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show($"Lỗi cập nhật: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        ErrorLogger.HandleException(ex, "ChangeStatus", "Lỗi cập nhật trạng thái");
                     }
                 }
             }
@@ -1836,7 +1833,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (_selectedRoomRow == null)
             {
-                MessageBox.Show("Chọn một phòng trước.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Chọn một phòng trước");
                 return;
             }
 
@@ -1861,7 +1858,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                     if (occupants > 5)
                     {
-                        MessageBox.Show("Mỗi phòng tối đa 5 người.", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        ToastNotification.Warning("Mỗi phòng tối đa 5 người");
                         return;
                     }
 
@@ -1871,12 +1868,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
                         if (emptyId.HasValue)
                         {
                             statusId = emptyId.Value;
-                            MessageBox.Show("Phòng chưa có người, tự chuyển trạng thái về Trống.", "Thông báo",
-                                MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            ToastNotification.Info("Phòng chưa có người, tự chuyển trạng thái về Trống");
                         }
                         else
                         {
-                            MessageBox.Show("Trạng thái Đang ở yêu cầu ít nhất 1 người.", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            ToastNotification.Warning("Trạng thái Đang ở yêu cầu ít nhất 1 người");
                             return;
                         }
                     }
@@ -1898,7 +1894,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("Lỗi cập nhật phòng: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    ErrorLogger.HandleException(ex, "EditRoom", "Lỗi cập nhật phòng");
                 }
             }
         }

@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Linq;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -348,7 +349,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Lỗi tải danh sách phòng: {ex.Message}", "Lỗi");
+                ErrorLogger.HandleException(ex, "LoadRooms", "Lỗi tải danh sách phòng");
             }
         }
 
@@ -430,7 +431,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (string.IsNullOrWhiteSpace(txtFullName.Text))
             {
-                MessageBox.Show("Họ và tên không được trống.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ToastNotification.Warning("Họ và tên không được trống");
                 return;
             }
 
@@ -438,19 +439,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 if (string.IsNullOrWhiteSpace(txtContractId.Text))
                 {
-                    MessageBox.Show("Vui lòng nhập Mã Hợp Đồng.", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    ToastNotification.Warning("Vui lòng nhập Mã Hợp Đồng");
                     return;
                 }
 
                 if (!(cboRoom.SelectedValue is int roomId) || roomId <= 0)
                 {
-                    MessageBox.Show("Vui lòng chọn Phòng.", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    ToastNotification.Warning("Vui lòng chọn Phòng");
                     return;
                 }
 
                 if (!dtStartDate.Checked)
                 {
-                    MessageBox.Show("Vui lòng chọn Ngày bắt đầu.", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    ToastNotification.Warning("Vui lòng chọn Ngày bắt đầu");
                     return;
                 }
             }
@@ -541,7 +542,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Lỗi lưu khách thuê: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "SaveTenant", "Lỗi lưu khách thuê");
             }
         }
 

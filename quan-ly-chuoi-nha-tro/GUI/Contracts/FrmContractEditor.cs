@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -211,7 +212,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 if (_bll == null)
                 {
-                    MessageBox.Show("Thiếu kết nối dữ liệu (AdminDataBLL).", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    ToastNotification.Error("Thiếu kết nối dữ liệu (AdminDataBLL)");
                     DialogResult = DialogResult.Cancel;
                     return;
                 }
@@ -257,7 +258,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi tải dữ liệu tham chiếu: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "LoadLookup", "Lỗi tải dữ liệu tham chiếu");
             }
         }
 
@@ -315,12 +316,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             string contractNumber = (txtContractNumber.Text ?? string.Empty).Trim();
             if (string.IsNullOrWhiteSpace(contractNumber))
             {
-                MessageBox.Show("Nhập số hợp đồng.", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ToastNotification.Warning("Nhập số hợp đồng");
                 return;
             }
             if (cboTenant.SelectedValue == null || cboRoom.SelectedValue == null)
             {
-                MessageBox.Show("Chọn khách thuê và phòng.", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ToastNotification.Warning("Chọn khách thuê và phòng");
                 return;
             }
 
@@ -328,7 +329,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             DateTime end = dtEnd.Value.Date;
             if (end < start)
             {
-                MessageBox.Show("Ngày kết thúc phải >= ngày bắt đầu.", "Sai dữ liệu", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ToastNotification.Warning("Ngày kết thúc phải >= ngày bắt đầu");
                 return;
             }
 
@@ -346,7 +347,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             if (_bll == null)
             {
-                MessageBox.Show("Thiếu kết nối dữ liệu (AdminDataBLL).", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ToastNotification.Error("Thiếu kết nối dữ liệu (AdminDataBLL)");
                 return;
             }
 
@@ -372,7 +373,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi lưu hợp đồng: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "SaveContract", "Lỗi lưu hợp đồng");
             }
         }
     }

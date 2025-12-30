@@ -259,6 +259,14 @@ namespace quan_ly_chuoi_nha_tro.GUI.Shared.Components
         // Static helper methods
 
         /// <summary>
+        /// Show a confirmation dialog asynchronously (for async methods)
+        /// </summary>
+        public static System.Threading.Tasks.Task<bool> ShowAsync(string message, string title = "Xác nhận")
+        {
+            return System.Threading.Tasks.Task.FromResult(Confirm(message, title));
+        }
+
+        /// <summary>
         /// Show a confirmation dialog
         /// </summary>
         public static bool Confirm(string message, string title = "Xác nhận")

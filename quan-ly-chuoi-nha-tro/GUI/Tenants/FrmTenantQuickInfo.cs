@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -287,7 +288,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                 if (result)
                 {
-                    MessageBox.Show("Cập nhật thông tin khách thuê thành công!", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    ToastNotification.Success("Cập nhật thông tin khách thuê thành công!");
 
                     // Auto-reload contracts and history
                     await ReloadContractsAndHistoryAsync();
@@ -300,12 +301,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 }
                 else
                 {
-                    MessageBox.Show("Cập nhật thất bại. Vui lòng thử lại.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    ToastNotification.Error("Cập nhật thất bại. Vui lòng thử lại.");
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi lưu dữ liệu: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "SaveTenantInfo", "Lỗi lưu dữ liệu");
             }
         }
 
@@ -351,7 +352,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi cập nhật dữ liệu: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "ReloadData", "Lỗi cập nhật dữ liệu");
             }
         }
 
@@ -421,7 +422,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi tải dữ liệu: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "LoadData", "Lỗi tải dữ liệu");
             }
         }
 

@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -198,7 +199,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi tải hóa đơn: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "LoadInvoices", "Không thể tải hóa đơn");
             }
         }
 
@@ -395,7 +396,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetCurrentRow();
             if (row == null)
             {
-                MessageBox.Show("Chọn một hóa đơn để sửa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Chọn một hóa đơn để sửa");
                 return;
             }
 
@@ -414,7 +415,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetCurrentRow();
             if (row == null)
             {
-                MessageBox.Show("Chọn một hóa đơn để xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Chọn một hóa đơn để xóa");
                 return;
             }
 
@@ -423,21 +424,21 @@ namespace quan_ly_chuoi_nha_tro.GUI
             bool hasPayment = paid > 0;
 
             string msg = hasPayment
-                ? $"Hóa đơn ID {invoiceId} đã có thanh toán. Xóa cả lịch sử thanh toán?"
+                ? $"Hóa đơn ID {invoiceId} đã có thanh toán. Xóa cả lịch sử?"
                 : $"Xóa hóa đơn ID {invoiceId}?";
 
-            var confirm = MessageBox.Show(msg, "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-            if (confirm != DialogResult.Yes) return;
+            if (!ModernConfirmDialog.ConfirmDanger(msg)) return;
 
             try
             {
                 await _bll.DeleteInvoiceAsync(invoiceId, deletePaymentsFirst: hasPayment);
+                ToastNotification.Success("Xóa hóa đơn thành công");
                 await LoadDataAsync();
                 AdminEvents.NotifyDataChanged();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi xóa hóa đơn: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "DeleteInvoice", "Không thể xóa hóa đơn");
             }
         }
 
@@ -446,14 +447,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetCurrentRow();
             if (row == null)
             {
-                MessageBox.Show("Chọn một hóa đơn để thu tiền.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Chọn một hóa đơn để thu tiền");
                 return;
             }
 
             decimal remaining = ReadDecimal(row, "RemainingAmount");
             if (remaining <= 0)
             {
-                MessageBox.Show("Hóa đơn đã thanh toán đủ.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Info("Hóa đơn đã thanh toán đủ");
                 return;
             }
 
@@ -474,7 +475,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetCurrentRow();
             if (row == null)
             {
-                MessageBox.Show("Chọn một hóa đơn để xem chi tiết.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Chọn một hóa đơn để xem chi tiết");
                 return;
             }
 
@@ -509,14 +510,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetCurrentRow();
             if (row == null)
             {
-                MessageBox.Show("Chọn một hóa đơn để xuất.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Chọn một hóa đơn để xuất");
                 return;
             }
 
             decimal remaining = ReadDecimal(row, "RemainingAmount");
             if (remaining > 0)
             {
-                MessageBox.Show("Hóa đơn chỉ có thể xuất sau khi thanh toán đủ.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ToastNotification.Warning("Hóa đơn chỉ có thể xuất sau khi thanh toán đủ");
                 return;
             }
 
@@ -536,11 +537,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     int created = await _bll.GenerateMonthlyInvoicesAsync(dlg.SelectedYear, dlg.SelectedMonth, DateTime.Today, dlg.DueDay, dlg.TaxRateOverride);
                     await LoadDataAsync();
                     AdminEvents.NotifyDataChanged();
-                    MessageBox.Show($"Đã tạo {created} hóa đơn cho {dlg.SelectedMonth:00}/{dlg.SelectedYear}.", "Hoàn tất", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    ToastNotification.Success($"Đã tạo {created} hóa đơn cho {dlg.SelectedMonth:00}/{dlg.SelectedYear}");
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("Lỗi tạo hóa đơn tháng: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    ErrorLogger.HandleException(ex, "GenerateInvoices", "Không thể tạo hóa đơn tháng");
                 }
             }
         }
@@ -563,7 +564,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (_table == null || _table.DefaultView.Count == 0)
             {
-                MessageBox.Show("Không có dữ liệu để xuất.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Không có dữ liệu để xuất");
                 return;
             }
 
@@ -578,11 +579,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 try
                 {
                     WriteCsvFromView(_table.DefaultView, sfd.FileName);
-                    MessageBox.Show("Đã xuất CSV: " + sfd.FileName, "Hoàn tất", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    ToastNotification.Success("Xuất CSV thành công: " + sfd.FileName);
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("Lỗi xuất CSV: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    ErrorLogger.HandleException(ex, "ExportCSV", "Không thể xuất CSV");
                 }
             }
         }

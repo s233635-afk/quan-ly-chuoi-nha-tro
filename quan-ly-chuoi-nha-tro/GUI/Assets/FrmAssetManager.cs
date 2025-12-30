@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -212,7 +213,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi tải tài sản: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "LoadAssets", "Không thể tải tài sản");
             }
         }
 
@@ -547,7 +548,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetCurrentRow();
             if (row == null)
             {
-                MessageBox.Show("Chọn một dòng để sửa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Chọn một dòng để sửa");
                 return;
             }
 
@@ -568,26 +569,26 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetCurrentRow();
             if (row == null)
             {
-                MessageBox.Show("Chọn một dòng để xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Chọn một dòng để xóa");
                 return;
             }
 
             int id = ReadInt(row, "AssetId");
             string code = ReadString(row, "AssetCode") ?? id.ToString();
 
-            if (MessageBox.Show($"Xóa tài sản \"{code}\"?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                return;
+            if (!ModernConfirmDialog.ConfirmDanger($"Xóa tài sản \"{code}\"?")) return;
 
             try
             {
                 await _bll.DeleteAssetAsync(id);
+                ToastNotification.Success("Xóa tài sản thành công");
                 await LoadAsync();
                 AdminEvents.NotifyDataChanged();
                 DataSyncManager.NotifyRoomsChanged();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi xóa tài sản: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "DeleteAsset", "Lỗi xóa tài sản");
             }
         }
 
@@ -596,7 +597,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetCurrentRow();
             if (row == null)
             {
-                MessageBox.Show("Chọn một dòng để bật/tắt.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Chọn một dòng để bật/tắt");
                 return;
             }
 
@@ -605,9 +606,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             bool current = TryReadBool(row, "IsActive") ?? true;
             bool next = !current;
 
-            if (MessageBox.Show($"Chuyển \"{name}\" sang {(next ? "Kích hoạt" : "Đã tắt")}?", "Xác nhận",
-                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                return;
+            if (!ModernConfirmDialog.Confirm($"Chuyển \"{name}\" sang {(next ? "Kích hoạt" : "Đã tắt")}?", "Xác nhận")) return;
 
             try
             {
@@ -624,12 +623,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     ReadString(row, "Description"),
                     next);
 
+                ToastNotification.Success($"Đã {(next ? "kích hoạt" : "tắt")} tài sản");
                 await LoadAsync();
                 AdminEvents.NotifyDataChanged();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi cập nhật trạng thái: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "ToggleAsset", "Lỗi cập nhật trạng thái");
             }
         }
 

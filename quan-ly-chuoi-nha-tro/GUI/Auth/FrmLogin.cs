@@ -5,6 +5,7 @@ using System.Drawing.Drawing2D;
 using System.IO;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -392,7 +393,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                 if (string.IsNullOrWhiteSpace(user) || string.IsNullOrEmpty(pass))
                 {
-                    MessageBox.Show("Vui lòng nhập tên đăng nhập và mật khẩu!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    ToastNotification.Warning("Vui lòng nhập tên đăng nhập và mật khẩu!");
                     return;
                 }
 
@@ -400,7 +401,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 var access = await userBLL.GetUserAccessAsync(user);
                 int roleId = access.RoleId;
 
-                MessageBox.Show($"Xin chào {fullName}!", "Đăng nhập thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Success($"Xin chào {fullName}!");
 
                 Hide();
 
@@ -426,7 +427,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Lỗi đăng nhập", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ToastNotification.Error(ex.Message);
             }
             finally
             {
@@ -759,7 +760,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void lnkRegister_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            MessageBox.Show("Hệ thống chỉ sử dụng tài khoản Admin. Vui lòng liên hệ quản trị viên để cấp tài khoản.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            ToastNotification.Info("Hệ thống chỉ sử dụng tài khoản Admin. Vui lòng liên hệ quản trị viên để cấp tài khoản.");
         }
     }
 }

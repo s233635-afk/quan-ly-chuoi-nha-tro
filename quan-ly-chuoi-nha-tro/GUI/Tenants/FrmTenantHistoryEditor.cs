@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -244,7 +245,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             if (roomId <= 0)
             {
-                MessageBox.Show("Vui lòng chọn phòng.", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ToastNotification.Warning("Vui lòng chọn phòng");
                 return;
             }
 
@@ -252,7 +253,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             DateTime? checkOut = dtCheckOut.Checked ? (DateTime?)dtCheckOut.Value.Date : null;
             if (checkOut.HasValue && checkOut.Value.Date < checkIn.Date)
             {
-                MessageBox.Show("Ngày ra phải >= ngày vào.", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ToastNotification.Warning("Ngày ra phải >= ngày vào");
                 return;
             }
 
@@ -274,7 +275,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi lưu lịch sử phòng: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "SaveHistory", "Lỗi lưu lịch sử phòng");
             }
         }
 

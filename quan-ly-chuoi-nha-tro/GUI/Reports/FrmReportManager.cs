@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -279,7 +280,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi tải báo cáo: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "LoadReport", "Lỗi tải báo cáo");
             }
         }
 
@@ -1068,7 +1069,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var dt = _viewTable ?? _raw;
             if (dt == null || dt.Rows.Count == 0)
             {
-                MessageBox.Show("Không có dữ liệu để xuất.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Không có dữ liệu để xuất");
                 return;
             }
 
@@ -1091,11 +1092,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     }
 
                     File.WriteAllText(sfd.FileName, sb.ToString(), new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
-                    MessageBox.Show("Đã xuất: " + sfd.FileName, "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    ToastNotification.Success("Đã xuất: " + sfd.FileName);
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("Lỗi xuất CSV: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    ErrorLogger.HandleException(ex, "ExportCsv", "Lỗi xuất CSV");
                 }
             }
         }
@@ -1278,11 +1279,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 else
                     await _bll.AddSystemSettingAsync("DefaultTaxRatePercent", rateText, "Mức thuế (%) áp dụng theo doanh thu hóa đơn");
 
-                MessageBox.Show("Đã lưu mức thuế.", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Success("Đã lưu mức thuế");
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi lưu mức thuế: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "SaveTaxRate", "Lỗi lưu mức thuế");
             }
         }
 

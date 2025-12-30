@@ -3,6 +3,7 @@ using System.Data;
 using System.Drawing;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -144,7 +145,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             string key = txtKey.Text.Trim();
             if (string.IsNullOrWhiteSpace(key))
             {
-                MessageBox.Show("Vui lòng nhập SettingKey.", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ToastNotification.Warning("Vui lòng nhập SettingKey");
                 return;
             }
 
@@ -163,7 +164,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi lưu cấu hình: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "SaveSetting", "Lỗi lưu cấu hình");
             }
         }
     }

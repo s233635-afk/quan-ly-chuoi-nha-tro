@@ -425,6 +425,16 @@
     </Compile>
     <Compile Include="GUI\Shared\Components\DataCache.cs" />
     <Compile Include="GUI\Shared\Components\AsyncHelper.cs" />
+    <Compile Include="GUI\Shared\Components\ExcelExporter.cs" />
+    <Compile Include="GUI\Shared\Components\ThemeManager.cs" />
+    <Compile Include="GUI\Shared\Components\ErrorLogger.cs" />
+    <Compile Include="GUI\Shared\Components\GlobalSearchBox.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="GUI\Shared\Components\NotificationBell.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="GUI\Shared\Components\ModernDialog.cs" />
     <Compile Include="GUI\Branches\AdminBranchScope.cs" />
     <Compile Include="GUI\Branches\AdminEvents.cs" />
     <Compile Include="GUI\Shared\TextFixer.cs" />

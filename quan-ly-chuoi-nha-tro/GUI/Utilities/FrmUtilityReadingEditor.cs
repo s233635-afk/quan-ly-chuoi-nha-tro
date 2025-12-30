@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -524,18 +525,18 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             if (roomId <= 0)
             {
-                MessageBox.Show("Vui lòng chọn phòng.", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ToastNotification.Warning("Vui lòng chọn phòng");
                 return;
             }
             if (typeId <= 0)
             {
-                MessageBox.Show("Vui lòng chọn loại dịch vụ.", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ToastNotification.Warning("Vui lòng chọn loại dịch vụ");
                 return;
             }
 
             if (numCurr.Value < numPrev.Value)
             {
-                MessageBox.Show("Chỉ số mới phải >= chỉ số cũ.", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ToastNotification.Warning("Chỉ số mới phải >= chỉ số cũ");
                 return;
             }
 
@@ -570,7 +571,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi lưu chỉ số: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "SaveReading", "Lỗi lưu chỉ số");
             }
         }
 

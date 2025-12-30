@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -137,7 +138,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi tải loại phòng: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "LoadRoomTypes", "Lỗi tải loại phòng");
             }
         }
 
@@ -216,7 +217,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetCurrentRow();
             if (row == null)
             {
-                MessageBox.Show("Chọn một loại phòng để sửa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Info("Chọn một loại phòng để sửa");
                 return;
             }
 
@@ -232,14 +233,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetCurrentRow();
             if (row == null)
             {
-                MessageBox.Show("Chọn một loại phòng để xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Info("Chọn một loại phòng để xóa");
                 return;
             }
 
             int id = row.Table.Columns.Contains("RoomTypeId") ? Convert.ToInt32(row["RoomTypeId"]) : 0;
             if (id <= 0) return;
 
-            if (MessageBox.Show("Bạn chắc chắn muốn xóa (tắt) loại phòng này?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+            if (!await ModernConfirmDialog.ShowAsync("Bạn chắc chắn muốn xóa (tắt) loại phòng này?", "Xác nhận"))
                 return;
 
             try
@@ -249,7 +250,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi xóa loại phòng: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "DeleteRoomType", "Lỗi xóa loại phòng");
             }
         }
 

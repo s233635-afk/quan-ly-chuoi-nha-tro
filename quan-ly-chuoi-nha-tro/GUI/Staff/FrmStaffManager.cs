@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -191,7 +192,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi tải nhân viên: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "LoadStaff", "Không thể tải nhân viên");
             }
         }
 
@@ -334,7 +335,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetCurrentRow();
             if (row == null)
             {
-                MessageBox.Show("Chọn một dòng để sửa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Chọn một dòng để sửa");
                 return;
             }
 
@@ -350,7 +351,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetCurrentRow();
             if (row == null)
             {
-                MessageBox.Show("Chọn một dòng để xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Chọn một dòng để xóa");
                 return;
             }
 
@@ -358,21 +359,21 @@ namespace quan_ly_chuoi_nha_tro.GUI
             string name = ReadString(row, "FullName") ?? ReadString(row, "UserName") ?? id.ToString();
             if (id <= 0)
             {
-                MessageBox.Show("Không xác định được UserId.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ToastNotification.Error("Không xác định được UserId");
                 return;
             }
 
-            if (MessageBox.Show($"Xóa nhân viên \"{name}\" (ID {id})?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                return;
+            if (!ModernConfirmDialog.ConfirmDanger($"Xóa nhân viên \"{name}\" (ID {id})?")) return;
 
             try
             {
                 await _bll.DeleteStaffUserAsync(id);
+                ToastNotification.Success("Xóa thành công");
                 await LoadDataAsync();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi xóa nhân viên: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "DeleteStaff", "Lỗi xóa nhân viên");
             }
         }
 
@@ -381,14 +382,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetCurrentRow();
             if (row == null)
             {
-                MessageBox.Show("Chọn một nhân viên để bật/tắt.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Chọn một nhân viên để bật/tắt");
                 return;
             }
 
             int id = ReadInt(row, "UserId");
             if (id <= 0)
             {
-                MessageBox.Show("Không xác định được UserId.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ToastNotification.Error("Không xác định được UserId");
                 return;
             }
 
@@ -396,9 +397,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             bool next = !current;
             string name = ReadString(row, "FullName") ?? ReadString(row, "UserName") ?? id.ToString();
 
-            if (MessageBox.Show($"Chuyển \"{name}\" sang {(next ? "Kích hoạt" : "Đã tắt")}?", "Xác nhận",
-                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                return;
+            if (!ModernConfirmDialog.Confirm($"Chuyển \"{name}\" sang {(next ? "Kích hoạt" : "Đã tắt")}?", "Xác nhận")) return;
 
             try
             {
@@ -407,11 +406,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 string email = ReadString(row, "Email");
                 string phone = ReadString(row, "Phone");
                 await _bll.UpdateStaffUserAsync(id, fullName, email, phone, branchId, next, null);
+                ToastNotification.Success($"Đã {(next ? "kích hoạt" : "tắt")} nhân viên");
                 await LoadDataAsync();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi cập nhật trạng thái: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "ToggleStaff", "Lỗi cập nhật trạng thái");
             }
         }
 

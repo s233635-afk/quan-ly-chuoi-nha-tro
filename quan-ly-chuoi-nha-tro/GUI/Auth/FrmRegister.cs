@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -87,37 +88,37 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                 if (string.IsNullOrWhiteSpace(user) || string.IsNullOrWhiteSpace(pass) || string.IsNullOrWhiteSpace(confirm) || string.IsNullOrWhiteSpace(name))
                 {
-                    MessageBox.Show("Vui lòng điền đầy đủ thông tin!", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    ToastNotification.Warning("Vui lòng điền đầy đủ thông tin!");
                     return;
                 }
 
                 if (user.Length < 3)
                 {
-                    MessageBox.Show("Tên đăng nhập phải có ít nhất 3 ký tự!", "Không hợp lệ", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    ToastNotification.Warning("Tên đăng nhập phải có ít nhất 3 ký tự!");
                     return;
                 }
 
                 if (pass.Length < 6)
                 {
-                    MessageBox.Show("Mật khẩu phải có ít nhất 6 ký tự!", "Không hợp lệ", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    ToastNotification.Warning("Mật khẩu phải có ít nhất 6 ký tự!");
                     return;
                 }
 
                 if (!string.Equals(pass, confirm, StringComparison.Ordinal))
                 {
-                    MessageBox.Show("Mật khẩu nhập lại không khớp!", "Không hợp lệ", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    ToastNotification.Warning("Mật khẩu nhập lại không khớp!");
                     return;
                 }
 
                 if (name.Length < 2)
                 {
-                    MessageBox.Show("Họ tên phải có ít nhất 2 ký tự!", "Không hợp lệ", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    ToastNotification.Warning("Họ tên phải có ít nhất 2 ký tự!");
                     return;
                 }
 
                 if (!string.IsNullOrWhiteSpace(email) && (!email.Contains("@") || !email.Contains(".")))
                 {
-                    MessageBox.Show("Email không hợp lệ!", "Không hợp lệ", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    ToastNotification.Warning("Email không hợp lệ!");
                     return;
                 }
 
@@ -126,7 +127,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     string digits = new string(phone.Where(char.IsDigit).ToArray());
                     if (digits.Length < 8 || digits.Length > 15)
                     {
-                        MessageBox.Show("Số điện thoại không hợp lệ!", "Không hợp lệ", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        ToastNotification.Warning("Số điện thoại không hợp lệ!");
                         return;
                     }
                 }
@@ -134,7 +135,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 bool isSuccess = await userBLL.DangKy(user, pass, name, email, phone);
                 if (isSuccess)
                 {
-                    MessageBox.Show("Đăng ký thành công! Bạn có thể đăng nhập ngay.", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    ToastNotification.Success("Đăng ký thành công! Bạn có thể đăng nhập ngay.");
                     txtUser.Text = "";
                     txtPass.Text = "";
                     txtConfirmPass.Text = "";
@@ -146,7 +147,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Lỗi đăng ký", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "Register", "Lỗi đăng ký");
             }
             finally
             {

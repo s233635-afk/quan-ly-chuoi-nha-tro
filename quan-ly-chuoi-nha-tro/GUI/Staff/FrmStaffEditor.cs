@@ -3,6 +3,7 @@ using System.Data;
 using System.Drawing;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -257,13 +258,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             if (string.IsNullOrWhiteSpace(username))
             {
-                MessageBox.Show("Tên đăng nhập không được trống.", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ToastNotification.Warning("Tên đăng nhập không được trống");
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(fullName))
             {
-                MessageBox.Show("Họ tên không được trống.", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ToastNotification.Warning("Họ tên không được trống");
                 return;
             }
 
@@ -271,13 +272,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 if (string.IsNullOrWhiteSpace(password) || password.Length < 6)
                 {
-                    MessageBox.Show("Mật khẩu phải có ít nhất 6 ký tự.", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    ToastNotification.Warning("Mật khẩu phải có ít nhất 6 ký tự");
                     return;
                 }
 
                 if (password != confirm)
                 {
-                    MessageBox.Show("Xác nhận mật khẩu không khớp.", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    ToastNotification.Warning("Xác nhận mật khẩu không khớp");
                     return;
                 }
             }
@@ -299,7 +300,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi lưu nhân viên: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "SaveStaff", "Lỗi lưu nhân viên");
             }
         }
 

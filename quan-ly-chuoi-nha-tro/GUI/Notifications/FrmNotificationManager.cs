@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -212,7 +213,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi tải thông báo: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "LoadNotifications", "Không thể tải thông báo");
             }
         }
 
@@ -325,7 +326,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetCurrentRow();
             if (row == null)
             {
-                MessageBox.Show("Chọn một dòng để sửa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Chọn một dòng để sửa");
                 return;
             }
             using (var frm = new FrmNotificationEditor(_bll, row))
@@ -339,20 +340,21 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetCurrentRow();
             if (row == null)
             {
-                MessageBox.Show("Chọn một dòng để xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Chọn một dòng để xóa");
                 return;
             }
             int id = ReadInt(row, "NotificationId");
             string title = ReadString(row, "Title") ?? id.ToString();
-            if (MessageBox.Show($"Xóa thông báo \"{title}\"?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+            if (!ModernConfirmDialog.ConfirmDanger($"Xóa thông báo \"{title}\"?")) return;
             try
             {
                 await _bll.DeleteNotificationAsync(id);
+                ToastNotification.Success("Xóa thông báo thành công");
                 await LoadAsync();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi xóa thông báo: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "DeleteNotification");
             }
         }
 
@@ -361,25 +363,26 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetCurrentRow();
             if (row == null)
             {
-                MessageBox.Show("Chọn một dòng để đánh dấu đã đọc.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Chọn một dòng để đánh dấu đã đọc");
                 return;
             }
             int id = ReadInt(row, "NotificationId");
             string current = ReadString(row, "Status");
             if (string.Equals(current, "Read", StringComparison.OrdinalIgnoreCase))
             {
-                MessageBox.Show("Đã ở trạng thái Read.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Info("Đã ở trạng thái đã đọc");
                 return;
             }
             try
             {
                 int? userId = TryReadIntNullable(row, "UserId");
                 await _bll.UpdateNotificationAsync(id, userId, ReadString(row, "Title"), ReadString(row, "Message"), "Read");
+                ToastNotification.Success("Đánh dấu đã đọc thành công");
                 await LoadAsync();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi cập nhật trạng thái: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "MarkRead");
             }
         }
 
@@ -396,25 +399,22 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             try
             {
-                string msg = $"Hệ thống sẽ gửi thông báo nhắc nhở cho tất cả người dùng về:\n";
-                msg += $"• Công nợ quá hạn: {_lblOverdueCount.Text} hóa đơn\n";
-                msg += $"• Hợp đồng hết hạn: {_lblExpiredCount.Text} hợp đồng\n";
-                msg += $"• Chưa nhập chỉ số: {_lblIncompleteCount.Text} dịch vụ";
-                if (MessageBox.Show(msg, "Tạo nhắc nhở", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return;
+                string msg = $"Gửi nhắc nhở về:\n• Công nợ quá hạn: {_lblOverdueCount.Text}\n• HĐ hết hạn: {_lblExpiredCount.Text}\n• Chưa nhập chỉ số: {_lblIncompleteCount.Text}";
+                if (!ModernConfirmDialog.Confirm(msg, "Tạo nhắc nhở?")) return;
                 await _bll.AddNotificationAsync(null, "Nhắc nhở từ hệ thống", msg, "Sent");
-                MessageBox.Show("Gửi nhắc nhở thành công!", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Success("Gửi nhắc nhở thành công!");
                 await LoadAsync();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ErrorLogger.HandleException(ex, "CreateReminder");
             }
         }
 
         private async System.Threading.Tasks.Task ViewDetailsAsync()
         {
             await System.Threading.Tasks.Task.Delay(0);
-            MessageBox.Show("Tính năng xem chi tiết sẽ hiển thị danh sách chi tiết các đối tượng quá hạn, hết hạn, chưa nhập chỉ số.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            ToastNotification.Info("Tính năng đang phát triển");
         }
 
         private async System.Threading.Tasks.Task OpenSendNotificationAsync()
