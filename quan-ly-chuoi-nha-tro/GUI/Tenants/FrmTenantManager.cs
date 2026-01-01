@@ -405,7 +405,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetSelectedTenant();
             if (row == null)
             {
-                MessageBox.Show("Chọn khách thuê trước.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Chọn khách thuê trước");
                 return;
             }
 
@@ -462,7 +462,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetSelectedTenant();
             if (row == null)
             {
-                MessageBox.Show("Chọn khách thuê trước.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Chọn khách thuê trước");
                 return;
             }
 

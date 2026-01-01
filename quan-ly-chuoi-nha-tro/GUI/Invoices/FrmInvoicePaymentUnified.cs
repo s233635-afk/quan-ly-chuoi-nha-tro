@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -370,7 +371,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi tải dữ liệu: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ModernDialog.Error("Lỗi tải dữ liệu: " + ex.Message);
             }
         }
 
@@ -392,7 +393,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi tải hóa đơn: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ModernDialog.Error("Lỗi tải hóa đơn: " + ex.Message);
             }
         }
 
@@ -416,7 +417,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi tải thanh toán: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ModernDialog.Error("Lỗi tải thanh toán: " + ex.Message);
             }
         }
 
@@ -919,7 +920,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetCurrentInvoiceRow();
             if (row == null)
             {
-                MessageBox.Show("Chọn một hóa đơn để sửa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Chọn một hóa đơn để sửa");
                 return;
             }
 
@@ -939,7 +940,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetCurrentInvoiceRow();
             if (row == null)
             {
-                MessageBox.Show("Chọn một hóa đơn để xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Chọn một hóa đơn để xóa");
                 return;
             }
 
@@ -951,7 +952,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 ? $"Hóa đơn ID {invoiceId} đã có thanh toán. Xóa cả lịch sử thanh toán?"
                 : $"Xóa hóa đơn ID {invoiceId}?";
 
-            if (MessageBox.Show(msg, "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+            if (!ModernConfirmDialog.ConfirmDanger(msg)) return;
 
             try
             {
@@ -961,7 +962,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi xóa hóa đơn: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ModernDialog.Error("Lỗi xóa hóa đơn: " + ex.Message);
             }
         }
 
@@ -970,14 +971,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetCurrentInvoiceRow();
             if (row == null)
             {
-                MessageBox.Show("Chọn một hóa đơn để thu tiền.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Chọn một hóa đơn để thu tiền");
                 return;
             }
 
             decimal remaining = ReadDecimal(row, "RemainingAmount");
             if (remaining <= 0)
             {
-                MessageBox.Show("Hóa đơn đã thanh toán đủ.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Info("Hóa đơn đã thanh toán đủ");
                 return;
             }
 
@@ -999,14 +1000,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetCurrentInvoiceRow();
             if (row == null)
             {
-                MessageBox.Show("Chọn một hóa đơn để xuất.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Chọn một hóa đơn để xuất");
                 return;
             }
 
             decimal remaining = ReadDecimal(row, "RemainingAmount");
             if (remaining > 0)
             {
-                MessageBox.Show("Hóa đơn chỉ có thể xuất sau khi thanh toán đủ.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ToastNotification.Warning("Hóa đơn chỉ có thể xuất sau khi thanh toán đủ");
                 return;
             }
 
@@ -1021,7 +1022,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var row = GetCurrentInvoiceRow();
             if (row == null)
             {
-                MessageBox.Show("Chọn một hóa đơn để xem chi tiết.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Chọn một hóa đơn để xem chi tiết");
                 return;
             }
 
@@ -1045,11 +1046,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     int created = await _bll.GenerateMonthlyInvoicesAsync(dlg.SelectedYear, dlg.SelectedMonth, DateTime.Today, dlg.DueDay, dlg.TaxRateOverride);
                     await LoadInvoicesAsync();
                     AdminEvents.NotifyDataChanged();
-                    MessageBox.Show($"Đã tạo {created} hóa đơn cho {dlg.SelectedMonth:00}/{dlg.SelectedYear}.", "Hoàn tất", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    ToastNotification.Success($"Đã tạo {created} hóa đơn cho {dlg.SelectedMonth:00}/{dlg.SelectedYear}");
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("Lỗi tạo hóa đơn tháng: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    ModernDialog.Error("Lỗi tạo hóa đơn tháng: " + ex.Message);
                 }
             }
         }
@@ -1058,7 +1059,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (_invoiceTable == null || _invoiceTable.DefaultView.Count == 0)
             {
-                MessageBox.Show("Không có dữ liệu để xuất.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Info("Không có dữ liệu để xuất");
                 return;
             }
 

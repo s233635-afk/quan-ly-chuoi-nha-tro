@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -313,7 +314,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Lỗi tải dữ liệu: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ModernDialog.Error($"Lỗi tải dữ liệu: {ex.Message}");
             }
         }
 
@@ -445,7 +446,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (_grid.SelectedRows.Count == 0)
             {
-                MessageBox.Show("Vui lòng chọn một thanh toán để sửa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Vui lòng chọn một thanh toán để sửa");
                 return;
             }
 
@@ -463,23 +464,23 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (_grid.SelectedRows.Count == 0)
             {
-                MessageBox.Show("Vui lòng chọn một thanh toán để xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Vui lòng chọn một thanh toán để xóa");
                 return;
             }
 
-            if (MessageBox.Show("Bạn chắc chắn muốn xóa thanh toán này?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+            if (!ModernConfirmDialog.ConfirmDanger("Bạn chắc chắn muốn xóa thanh toán này?"))
                 return;
 
             int paymentId = Convert.ToInt32(_grid.SelectedRows[0].Cells["PaymentId"].Value);
             try
             {
                 await _bll.DeletePaymentAsync(paymentId);
-                MessageBox.Show("Xóa thành công!", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Success("Xóa thành công!");
                 await LoadDataAsync();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Lỗi xóa: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ModernDialog.Error($"Lỗi xóa: {ex.Message}");
             }
         }
 
@@ -489,22 +490,22 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 if (_grid.DataSource == null)
                 {
-                    MessageBox.Show("Không có dữ liệu để xuất.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    ToastNotification.Info("Không có dữ liệu để xuất");
                     return;
                 }
 
                 // Implement Excel export using a library like EPPlus
-                MessageBox.Show("Tính năng xuất Excel sắp được bổ sung.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Info("Tính năng xuất Excel sắp được bổ sung");
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Lỗi xuất: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ModernDialog.Error($"Lỗi xuất: {ex.Message}");
             }
         }
 
         private void PrintData()
         {
-            MessageBox.Show("Tính năng in sắp được bổ sung.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            ToastNotification.Info("Tính năng in sắp được bổ sung");
         }
     }
 }

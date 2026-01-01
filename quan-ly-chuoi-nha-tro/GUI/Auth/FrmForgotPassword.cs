@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -73,28 +74,25 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                 if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(newPass) || string.IsNullOrWhiteSpace(confirm))
                 {
-                    MessageBox.Show("Vui lòng nhập Tên đăng nhập, Mật khẩu mới và Nhập lại mật khẩu.", "Thiếu thông tin",
-                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    ToastNotification.Warning("Vui lòng nhập Tên đăng nhập, Mật khẩu mới và Nhập lại mật khẩu");
                     return;
                 }
 
                 if (!string.Equals(newPass, confirm, StringComparison.Ordinal))
                 {
-                    MessageBox.Show("Mật khẩu nhập lại không khớp.", "Không hợp lệ",
-                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    ToastNotification.Warning("Mật khẩu nhập lại không khớp");
                     return;
                 }
 
                 await _userBll.ResetPasswordAsync(username, fullName, email, phone, newPass);
 
-                MessageBox.Show("Đặt lại mật khẩu thành công! Bạn có thể đăng nhập lại.", "Thành công",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Success("Đặt lại mật khẩu thành công! Bạn có thể đăng nhập lại");
                 DialogResult = DialogResult.OK;
                 Close();
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Không thể đặt lại mật khẩu", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ModernDialog.Error(ex.Message);
             }
             finally
             {

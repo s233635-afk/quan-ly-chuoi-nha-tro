@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -295,9 +296,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (_roomRow == null)
             {
-                var message = "Không tìm thấy dữ liệu phòng.";
-                var title = "Thông báo";
-                MessageBox.Show(message, title, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Info("Không tìm thấy dữ liệu phòng");
                 return;
             }
 
@@ -332,7 +331,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                 if (occupants > 5)
                 {
-                    MessageBox.Show("Mỗi phòng tối đa 5 người.", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    ToastNotification.Warning("Mỗi phòng tối đa 5 người");
                     return;
                 }
 
@@ -348,12 +347,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     if (emptyId.HasValue)
                     {
                         statusId = emptyId.Value;
-                        MessageBox.Show("Phòng chưa có người, tự động chuyển trạng thái về Trống.", "Thông báo",
-                            MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        ToastNotification.Info("Phòng chưa có người, tự động chuyển trạng thái về Trống");
                     }
                     else
                     {
-                        MessageBox.Show("Trạng thái Đang ở yêu cầu ít nhất 1 người.", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        ToastNotification.Warning("Trạng thái Đang ở yêu cầu ít nhất 1 người");
                         return;
                     }
                 }
@@ -372,7 +370,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (_tenantRow == null)
             {
-                MessageBox.Show("Phòng hiện chưa có người thuê để chỉnh sửa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Info("Phòng hiện chưa có người thuê để chỉnh sửa");
                 return;
             }
 

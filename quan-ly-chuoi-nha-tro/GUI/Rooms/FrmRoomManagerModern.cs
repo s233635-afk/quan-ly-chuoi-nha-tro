@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -305,7 +306,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi tải dữ liệu: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ModernDialog.Error("Lỗi tải dữ liệu: " + ex.Message);
             }
             finally
             {
@@ -475,7 +476,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (_grid.SelectedRows.Count == 0)
             {
-                MessageBox.Show("Vui lòng chọn một phòng để sửa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Vui lòng chọn một phòng để sửa");
                 return;
             }
 
@@ -493,18 +494,18 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (_grid.SelectedRows.Count == 0)
             {
-                MessageBox.Show("Vui lòng chọn một phòng để xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Warning("Vui lòng chọn một phòng để xóa");
                 return;
             }
 
-            if (MessageBox.Show("Bạn chắc chắn muốn xóa phòng này?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+            if (!ModernConfirmDialog.ConfirmDanger("Bạn chắc chắn muốn xóa phòng này?"))
                 return;
 
             int roomId = Convert.ToInt32(_grid.SelectedRows[0].Cells["RoomId"].Value);
             try
             {
                 await _bll.DeleteRoomAsync(roomId);
-                MessageBox.Show("Xóa thành công!", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Success("Xóa thành công!");
                 AdminEvents.NotifyDataChanged();
                 DataSyncManager.NotifyRoomsChanged();
                 DataSyncManager.NotifyTenantsChanged();
@@ -515,7 +516,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Lỗi xóa: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ModernDialog.Error($"Lỗi xóa: {ex.Message}");
             }
         }
 
@@ -528,7 +529,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
 
             // Implementation for status change dialog
-            MessageBox.Show("Tính năng thay đổi trạng thái sắp được bổ sung.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            ToastNotification.Info("Tính năng thay đổi trạng thái sắp được bổ sung");
         }
 
         private void ViewRoomTenant()
@@ -540,7 +541,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
 
             var tenantName = _grid.SelectedRows[0].Cells["TenantName"].Value?.ToString();
-            MessageBox.Show($"Khách thuê: {tenantName ?? "Chưa có khách"}", "Thông tin khách", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            ToastNotification.Info($"Khách thuê: {tenantName ?? "Chưa có khách"}");
         }
     }
 }

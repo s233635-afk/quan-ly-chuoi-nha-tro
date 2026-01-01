@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -309,7 +310,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 // Get tenant ID from invoice
                 if (_invoiceRow == null || !_invoiceRow.Table.Columns.Contains("TenantId"))
                 {
-                    MessageBox.Show("Không tìm thấy thông tin khách thuê.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    ModernDialog.Error("Không tìm thấy thông tin khách thuê");
                     return;
                 }
 
@@ -317,7 +318,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 var tenantTable = await _bll.GetTenantsAsync();
                 if (tenantTable == null || tenantTable.Rows.Count == 0)
                 {
-                    MessageBox.Show("Không tìm thấy dữ liệu khách thuê.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    ModernDialog.Error("Không tìm thấy dữ liệu khách thuê");
                     return;
                 }
 
@@ -333,12 +334,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                 if (_tenantRow == null)
                 {
-                    MessageBox.Show($"Không tìm thấy khách thuê ID {tenantId}.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    ModernDialog.Error($"Không tìm thấy khách thuê ID {tenantId}");
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi tải thông tin: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ModernDialog.Error("Lỗi tải thông tin: " + ex.Message);
             }
             finally
             {
@@ -440,7 +441,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 if (_invoiceRow == null)
                 {
-                    MessageBox.Show("Không tìm thấy thông tin hóa đơn.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    ModernDialog.Error("Không tìm thấy thông tin hóa đơn");
                     return;
                 }
 
@@ -449,7 +450,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                 if (amount <= 0)
                 {
-                    MessageBox.Show("Số tiền phải lớn hơn 0.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    ToastNotification.Warning("Số tiền phải lớn hơn 0");
                     return;
                 }
 
@@ -475,11 +476,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 DataSyncManager.NotifyPaymentsChanged();
                 DataSyncManager.NotifyRoomsChanged();
 
-                if (_exportAllowed && MessageBox.Show(
+                if (_exportAllowed && ModernConfirmDialog.Confirm(
                     "Đã thanh toán đủ.\nBạn có muốn xuất/in hóa đơn ngay?",
-                    "Hoàn tất",
-                    MessageBoxButtons.YesNo,
-                    MessageBoxIcon.Information) == DialogResult.Yes)
+                    "Hoàn tất"))
                 {
                     OpenExportForm();
                 }
@@ -489,7 +488,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi lưu thanh toán: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ModernDialog.Error("Lỗi lưu thanh toán: " + ex.Message);
             }
         }
 
@@ -540,7 +539,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 ?? ReadInvoiceValue("TenantName")
                 ?? "khách thuê";
             string tenantEmail = _tenantRow?["Email"]?.ToString() ?? _invoiceRow?["TenantEmail"]?.ToString() ?? "chưa cung cấp";
-            MessageBox.Show($"Hóa đơn đã được gửi đến {tenantName} ({tenantEmail}).", "Đã gửi hóa đơn", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            ToastNotification.Success($"Hóa đơn đã được gửi đến {tenantName} ({tenantEmail})");
         }
 
         private static string ReadTenantValue(DataRow row, params string[] cols)
@@ -569,7 +568,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (!_exportAllowed)
             {
-                MessageBox.Show("Hóa đơn chỉ có thể xuất sau khi thanh toán xong.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ToastNotification.Warning("Hóa đơn chỉ có thể xuất sau khi thanh toán xong");
                 return;
             }
 
@@ -592,7 +591,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi tải lại hóa đơn: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ModernDialog.Error("Lỗi tải lại hóa đơn: " + ex.Message);
             }
         }
 

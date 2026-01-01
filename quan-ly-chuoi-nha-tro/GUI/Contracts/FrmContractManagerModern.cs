@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -254,7 +255,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Lỗi tải dữ liệu: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ModernDialog.Error($"Lỗi tải dữ liệu: {ex.Message}");
             }
         }
 
@@ -520,7 +521,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private async Task AddNewContractAsync()
         {
-            MessageBox.Show("Tính năng thêm hợp đồng sắp được bổ sung.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            ToastNotification.Info("Tính năng thêm hợp đồng sắp được bổ sung");
             await Task.CompletedTask;
         }
     }

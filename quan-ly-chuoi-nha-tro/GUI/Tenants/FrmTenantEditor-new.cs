@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -345,7 +346,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Lỗi tải danh sách phòng: {ex.Message}", "Lỗi");
+                ModernDialog.Error($"Lỗi tải danh sách phòng: {ex.Message}");
             }
         }
 
@@ -427,7 +428,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (string.IsNullOrWhiteSpace(txtFullName.Text))
             {
-                MessageBox.Show("Họ và tên không được trống.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ToastNotification.Warning("Họ và tên không được trống");
                 return;
             }
 
@@ -484,7 +485,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Lỗi lưu khách thuê: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ModernDialog.Error($"Lỗi lưu khách thuê: {ex.Message}");
             }
         }
     }

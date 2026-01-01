@@ -621,25 +621,25 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             if (string.IsNullOrWhiteSpace(title))
             {
-                MessageBox.Show("Vui lòng nhập tiêu đề.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ToastNotification.Warning("Vui lòng nhập tiêu đề");
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(message))
             {
-                MessageBox.Show("Vui lòng nhập nội dung.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ToastNotification.Warning("Vui lòng nhập nội dung");
                 return;
             }
 
             try
             {
                 await _bll.AddNotificationAsync(null, title, message, "Sent");
-                MessageBox.Show("Gửi thông báo thành công!", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ToastNotification.Success("Gửi thông báo thành công!");
                 DialogResult = DialogResult.OK;
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ModernDialog.Error("Lỗi: " + ex.Message);
             }
         }
     }

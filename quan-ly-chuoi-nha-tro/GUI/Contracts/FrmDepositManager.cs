@@ -937,7 +937,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 if (_cboMethod.SelectedIndex < 0)
                 {
-                    MessageBox.Show("Vui lòng chọn hình thức thanh toán.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    ToastNotification.Warning("Vui lòng chọn hình thức thanh toán");
                     return;
                 }
 
@@ -945,12 +945,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 {
                     if (_numReturn.Value <= 0)
                     {
-                        MessageBox.Show("Tiền hoàn phải lớn hơn 0.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        ToastNotification.Warning("Tiền hoàn phải lớn hơn 0");
                         return;
                     }
                     if (_numReturn.Value > _depositAmount)
                     {
-                        MessageBox.Show("Tiền hoàn không được vượt quá tiền cọc.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        ToastNotification.Warning("Tiền hoàn không được vượt quá tiền cọc");
                         return;
                     }
 
@@ -1037,7 +1037,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("Lỗi: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    ModernDialog.Error($"Lỗi tải dữ liệu: {ex.Message}");
                 }
             });
 
