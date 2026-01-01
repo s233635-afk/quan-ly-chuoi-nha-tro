@@ -240,158 +240,27 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void AddStatCard(int row, int col, StatMetric metric)
         {
-            Panel pnl = new Panel
+            // Use enhanced ModernStatCard instead of manual Panel
+            var card = new ModernStatCard(
+                metric.Title,
+                metric.ValueText,
+                metric.SubText,
+                metric.AccentColor
+            )
             {
                 Dock = DockStyle.Fill,
                 Margin = new Padding(16),
-                Padding = new Padding(20, 18, 18, 18),
-                BackColor = Color.White,
-                BorderStyle = BorderStyle.None,
-                MinimumSize = new Size(0, 160)
+                MinimumSize = new Size(0, 160),
+                Icon = metric.Icon
             };
 
-            bool isHover = false;
-            Color borderNormal = Color.FromArgb(224, 231, 240);
-            Color borderHover = Color.FromArgb(183, 210, 237);
-
-            pnl.Resize += (s, e) =>
-            {
-                int radius = 5;
-                var rect = new Rectangle(0, 0, pnl.Width, pnl.Height);
-                using (var path = new System.Drawing.Drawing2D.GraphicsPath())
-                {
-                    int d = radius * 2;
-                    path.AddArc(rect.X, rect.Y, d, d, 180, 90);
-                    path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
-                    path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
-                    path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
-                    path.CloseFigure();
-                    pnl.Region = new Region(path);
-                }
-                pnl.Invalidate();
-            };
-
-            pnl.Paint += (s, e) =>
-            {
-                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                
-                // Draw subtle shadow
-                if (!isHover)
-                {
-                    using (var shadowBrush = new SolidBrush(Color.FromArgb(8, 0, 0, 0)))
-                    {
-                        var shadowRect = new Rectangle(3, 3, pnl.Width - 3, pnl.Height - 3);
-                        int radius = 5;
-                        int d = radius * 2;
-                        using (var shadowPath = new System.Drawing.Drawing2D.GraphicsPath())
-                        {
-                            shadowPath.AddArc(shadowRect.X, shadowRect.Y, d, d, 180, 90);
-                            shadowPath.AddArc(shadowRect.Right - d, shadowRect.Y, d, d, 270, 90);
-                            shadowPath.AddArc(shadowRect.Right - d, shadowRect.Bottom - d, d, d, 0, 90);
-                            shadowPath.AddArc(shadowRect.X, shadowRect.Bottom - d, d, d, 90, 90);
-                            shadowPath.CloseFigure();
-                            e.Graphics.FillPath(shadowBrush, shadowPath);
-                        }
-                    }
-                }
-                
-                // Draw border
-                using (var pen = new Pen(isHover ? borderHover : borderNormal, 1.8f))
-                {
-                    var rect = new Rectangle(0, 0, pnl.Width - 1, pnl.Height - 1);
-                    int radius = 5;
-                    int d = radius * 2;
-                    using (var path = new System.Drawing.Drawing2D.GraphicsPath())
-                    {
-                        path.AddArc(rect.X, rect.Y, d, d, 180, 90);
-                        path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
-                        path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
-                        path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
-                        path.CloseFigure();
-                        e.Graphics.DrawPath(pen, path);
-                    }
-                }
-            };
-
-            var accentBar = new Panel
-            {
-                BackColor = metric.AccentColor,
-                Width = 8,
-                Dock = DockStyle.Left
-            };
-
-            Label lblTitle = new Label
-            {
-                Text = metric.Title,
-                Font = new System.Drawing.Font("Segoe UI", 11, System.Drawing.FontStyle.Bold),
-                ForeColor = Color.FromArgb(0, 79, 159),
-                Dock = DockStyle.Top,
-                Padding = new Padding(0, 2, 0, 4)
-            };
-
-            Label lblValue = new Label
-            {
-                Text = metric.ValueText,
-                Font = new Font("Segoe UI", 26, FontStyle.Bold),
-                ForeColor = Color.FromArgb(28, 48, 78),
-                Dock = DockStyle.Top,
-                Height = 50,
-                Padding = new Padding(0, 0, 0, 0)
-            };
-
-            Label lblSub = new Label
-            {
-                Text = metric.SubText,
-                Font = new Font("Segoe UI", 10),
-                ForeColor = Color.FromArgb(70, 94, 120),
-                Dock = DockStyle.Fill,
-                Padding = new Padding(0, 4, 0, 0),
-                AutoSize = false,
-                TextAlign = ContentAlignment.TopLeft
-            };
-            
-            Label lblIcon = new Label
-            {
-                Text = metric.Icon,
-                Font = new Font("Segoe UI", 32),
-                Dock = DockStyle.Right,
-                Width = 60,
-                TextAlign = ContentAlignment.MiddleCenter,
-                ForeColor = Color.FromArgb(200, metric.AccentColor)
-            };
-
-            // Add theo thứ tự để Dock layout đúng (Fill trước, Top sau)
-            pnl.Controls.Add(lblSub);
-            pnl.Controls.Add(lblValue);
-            pnl.Controls.Add(lblTitle);
-            pnl.Controls.Add(lblIcon);
-            pnl.Controls.Add(accentBar);
-
-            pnl.Cursor = Cursors.Hand;
-
-            // Xử lý sự kiện click
+            // Attach click handler
             if (metric.ClickHandler != null)
             {
-                pnl.Click += metric.ClickHandler;
-                lblTitle.Click += metric.ClickHandler;
-                lblValue.Click += metric.ClickHandler;
-                lblSub.Click += metric.ClickHandler;
-                lblIcon.Click += metric.ClickHandler;
+                card.OnCardClick += metric.ClickHandler;
             }
-            pnl.MouseEnter += (s, e) =>
-            {
-                pnl.BackColor = Color.FromArgb(240, 248, 255);
-                isHover = true;
-                pnl.Invalidate();
-            };
-            pnl.MouseLeave += (s, e) =>
-            {
-                pnl.BackColor = Color.White;
-                isHover = false;
-                pnl.Invalidate();
-            };
 
-            tableLayoutPanel1.Controls.Add(pnl, col, row);
+            tableLayoutPanel1.Controls.Add(card, col, row);
         }
 
         private void ClearCurrentModule()

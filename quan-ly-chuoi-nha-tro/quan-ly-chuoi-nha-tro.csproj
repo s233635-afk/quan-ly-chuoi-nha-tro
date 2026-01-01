@@ -15,6 +15,7 @@
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
     <UseRoslyn>true</UseRoslyn>
+    <LangVersion>8.0</LangVersion>
     <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
     <DisableOutOfProcTaskHost>true</DisableOutOfProcTaskHost>
     <SkipGenerateResourceDesigner>true</SkipGenerateResourceDesigner>
@@ -435,6 +436,24 @@
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="GUI\Shared\Components\ModernDialog.cs" />
+    <Compile Include="GUI\Shared\Components\ModernInputField.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="GUI\Shared\Components\ModernCard.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="GUI\Shared\Components\ModernCheckbox.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="GUI\Shared\Components\ModernDatePicker.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="GUI\Shared\Components\SkeletonLoader.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="GUI\Shared\Components\EmptyStatePanel.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="GUI\Branches\AdminBranchScope.cs" />
     <Compile Include="GUI\Branches\AdminEvents.cs" />
     <Compile Include="GUI\Shared\TextFixer.cs" />

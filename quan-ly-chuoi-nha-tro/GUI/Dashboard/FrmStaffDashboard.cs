@@ -251,13 +251,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private Button MakeNavButton(string text, EventHandler onClick)
         {
-            var btn = new ModernButton
+            var btn = new Button
             {
                 Text = text,
                 Width = 220,
                 Height = 45,
                 FlatStyle = FlatStyle.Flat,
-                BaseColor = Color.Transparent,
                 BackColor = Color.Transparent,
                 ForeColor = Color.FromArgb(189, 195, 199),
                 TextAlign = ContentAlignment.MiddleLeft,
@@ -499,81 +498,21 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private Panel MakeMetricCard(string title, string value, string subtitle, Color accent, EventHandler onClick)
         {
-            var card = new Panel
+            // Use enhanced ModernStatCard instead of manual Panel
+            var card = new ModernStatCard(title, value, subtitle, accent)
             {
                 Dock = DockStyle.Fill,
-                Margin = new Padding(10), // Padding between grid cells
-                BackColor = Color.Transparent, // Parent is transparent, we draw the white bg
-                Cursor = Cursors.Hand
+                Margin = new Padding(16),
+                MinimumSize = new Size(0, 160)
             };
 
-            // Custom Paint for Rounded Corners and Shadow
-            card.Paint += (s, e) =>
+            // Attach click handler
+            if (onClick != null)
             {
-                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                var rect = card.ClientRectangle;
-                rect.Width -= 1; rect.Height -= 1;
-                // Shadow offset
-                var shadowRect = rect;
-                shadowRect.Offset(2, 2);
-
-                using (var path = GetRoundedPath(rect, 10))
-                using (var shadowPath = GetRoundedPath(shadowRect, 10))
-                using (var brush = new SolidBrush(Color.White))
-                using (var pen = new Pen(Color.FromArgb(220, 220, 220)))
-                using (var shadowBrush = new SolidBrush(Color.FromArgb(20, 0, 0, 0)))
-                {
-                    // Draw Shadow
-                    e.Graphics.FillPath(shadowBrush, shadowPath);
-                    // Draw Card Background
-                    e.Graphics.FillPath(brush, path);
-                    // Draw Border
-                    e.Graphics.DrawPath(pen, path);
-                    
-                    // Draw Accent Left Stripe
-                    using(var accentBrush = new SolidBrush(accent))
-                    using(var headerPath = GetRoundedCorner(rect, 10, true)) // Only left side rounded
-                    {
-                        // Draw a colored strip on the left
-                         e.Graphics.FillRectangle(accentBrush, 4, 4, 6, rect.Height - 8);
-                    }
-                }
-            };
-
-            var lblTitle = new Label { Text = title, AutoSize = true, Font = new Font("Segoe UI", 11, FontStyle.Regular), ForeColor = Color.Gray, Location = new Point(25, 20), BackColor = Color.White };
-            var lblValue = new Label { Text = value, AutoSize = true, Font = new Font("Segoe UI", 22, FontStyle.Bold), ForeColor = Color.FromArgb(44, 62, 80), Location = new Point(22, 50), BackColor = Color.White };
-            var lblSub = new Label { Text = subtitle, AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Regular), ForeColor = Color.FromArgb(149, 165, 166), Location = new Point(25, 100), BackColor = Color.White };
-
-            card.Controls.Add(lblTitle);
-            card.Controls.Add(lblValue);
-            card.Controls.Add(lblSub);
-
-            // Forward click events
-            card.Click += onClick;
-            lblTitle.Click += onClick;
-            lblValue.Click += onClick;
-            lblSub.Click += onClick;
+                card.OnCardClick += onClick;
+            }
 
             return card;
-        }
-        
-        // Helper for Rounded Rectangle
-        private GraphicsPath GetRoundedPath(Rectangle rect, int radius)
-        {
-            GraphicsPath path = new GraphicsPath();
-            int d = radius * 2;
-            path.AddArc(rect.X, rect.Y, d, d, 180, 90);
-            path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
-            path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
-            path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
-            path.CloseFigure();
-            return path;
-        }
-         private GraphicsPath GetRoundedCorner(Rectangle rect, int radius, bool leftOnly)
-        {
-            // Simplified for just drawing a strip inside
-             GraphicsPath path = new GraphicsPath();
-             return path; 
         }
 
         // =========================================================================================

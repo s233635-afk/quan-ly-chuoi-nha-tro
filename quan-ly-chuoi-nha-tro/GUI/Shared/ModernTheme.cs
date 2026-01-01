@@ -123,6 +123,88 @@ namespace quan_ly_chuoi_nha_tro.GUI
             public const int Elevation4 = 12;
         }
 
+        // ==================== ANIMATION ====================
+        public static class Animation
+        {
+            public const int Fast = 150;        // ms - buttons, small transitions
+            public const int Normal = 250;      // ms - modals, panels
+            public const int Slow = 400;        // ms - page transitions
+            public const int VerySlow = 600;    // ms - complex animations
+        }
+
+        // ==================== ELEVATION HELPERS ====================
+        public static class Elevation
+        {
+            /// <summary>
+            /// Get shadow color based on elevation level (0-4)
+            /// </summary>
+            public static Color GetShadowColor(int level)
+            {
+                int alpha = level switch
+                {
+                    1 => 15,  // Very subtle
+                    2 => 25,  // Subtle
+                    3 => 40,  // Medium
+                    4 => 60,  // Strong
+                    _ => 0
+                };
+                return Color.FromArgb(alpha, 0, 0, 0);
+            }
+
+            /// <summary>
+            /// Get shadow size based on elevation level
+            /// </summary>
+            public static int GetShadowSize(int level)
+            {
+                return level switch
+                {
+                    1 => 2,
+                    2 => 4,
+                    3 => 8,
+                    4 => 12,
+                    _ => 0
+                };
+            }
+        }
+
+        // ==================== GRADIENT HELPERS ====================
+        public static class Gradient
+        {
+            /// <summary>
+            /// Create a lighter shade of a color
+            /// </summary>
+            public static Color Lighten(Color color, float percent)
+            {
+                percent = Math.Max(0, Math.Min(1, percent));
+                int r = (int)(color.R + (255 - color.R) * percent);
+                int g = (int)(color.G + (255 - color.G) * percent);
+                int b = (int)(color.B + (255 - color.B) * percent);
+                return Color.FromArgb(color.A, r, g, b);
+            }
+
+            /// <summary>
+            /// Create a darker shade of a color
+            /// </summary>
+            public static Color Darken(Color color, float percent)
+            {
+                percent = Math.Max(0, Math.Min(1, percent));
+                int r = (int)(color.R * (1 - percent));
+                int g = (int)(color.G * (1 - percent));
+                int b = (int)(color.B * (1 - percent));
+                return Color.FromArgb(color.A, r, g, b);
+            }
+
+            /// <summary>
+            /// Create a semi-transparent version of a color
+            /// </summary>
+            public static Color WithOpacity(Color color, float opacity)
+            {
+                opacity = Math.Max(0, Math.Min(1, opacity));
+                int alpha = (int)(255 * opacity);
+                return Color.FromArgb(alpha, color.R, color.G, color.B);
+            }
+        }
+
         // ==================== HELPER METHODS ====================
         
         /// <summary>
