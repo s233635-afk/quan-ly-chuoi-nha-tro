@@ -22,7 +22,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         // Tab 1: Quản Lý Thông Báo
         private DataTable _rawTable;
         private DataGridView _grid;
-        private TextBox _txtSearch;
+        private ModernSearchBox _txtSearch;
         private ComboBox _cboStatus;
         private Label _lblCount;
         private Button _btnAdd, _btnEdit, _btnDelete, _btnMarkRead, _btnRefresh;
@@ -83,7 +83,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _grid.Dock = DockStyle.Fill;
             _grid.DoubleClick += async (s, e) => await EditSelectedAsync();
 
-            _txtSearch = MakeSearchBox(SearchPlaceholder, () => ApplyFilter());
+            _txtSearch = new ModernSearchBox
+            {
+                Width = 320,
+                PlaceholderText = SearchPlaceholder,
+                Margin = new Padding(0, 0, 12, 0) // Add right margin
+            };
+            _txtSearch.SearchTriggered += (s, e) => ApplyFilter();
             _cboStatus = new ComboBox { Width = 160, DropDownStyle = ComboBoxStyle.DropDownList };
             _cboStatus.Items.AddRange(new object[] { "Tất cả", "Unread", "Read", "Sent" });
             _cboStatus.SelectedIndex = 0;
@@ -103,11 +109,25 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnDelete.Visible = !_isStaffMode;
             _btnDelete.Enabled = !_isStaffMode;
 
-            var top = new Panel { Dock = DockStyle.Top, Height = 70, Padding = new Padding(12, 10, 12, 10), BackColor = Color.White };
+            var top = new Panel { Dock = DockStyle.Top, Height = 100, Padding = new Padding(12, 10, 12, 10), BackColor = Color.White };
+            
+            // Use TableLayoutPanel with 2 rows
+            var tableLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 1,
+                RowCount = 2,
+                BackColor = Color.Transparent
+            };
+            tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            tableLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 45F)); // Row 1: Buttons
+            tableLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 45F)); // Row 2: Search
+            
+            // Row 1: Action Buttons
             var actions = new FlowLayoutPanel
             {
-                Dock = DockStyle.Left,
-                AutoSize = true,
+                Dock = DockStyle.Fill,
+                AutoSize = false,
                 WrapContents = false,
                 FlowDirection = FlowDirection.LeftToRight,
                 BackColor = Color.Transparent
@@ -118,24 +138,26 @@ namespace quan_ly_chuoi_nha_tro.GUI
             actions.Controls.Add(_btnMarkRead);
             actions.Controls.Add(_btnRefresh);
 
+            // Row 2: Search and Filters
             var filters = new FlowLayoutPanel
             {
-                Dock = DockStyle.Right,
-                AutoSize = true,
+                Dock = DockStyle.Fill,
+                AutoSize = false,
                 WrapContents = false,
                 FlowDirection = FlowDirection.LeftToRight,
-                BackColor = Color.Transparent,
-                Padding = new Padding(0, 8, 0, 0)
+                BackColor = Color.Transparent
             };
-            filters.Controls.Add(new Label { Text = "Tìm:", AutoSize = true, Margin = new Padding(0, 6, 6, 0), Font = new Font("Segoe UI", 9) });
+            filters.Controls.Add(new Label { Text = "Tìm:", AutoSize = true, Margin = new Padding(0, 8, 6, 0), Font = new Font("Segoe UI", 9) });
             filters.Controls.Add(_txtSearch);
-            filters.Controls.Add(new Label { Text = "Trạng thái:", AutoSize = true, Margin = new Padding(12, 6, 6, 0), Font = new Font("Segoe UI", 9) });
+            filters.Controls.Add(new Label { Text = "Trạng thái:", AutoSize = true, Margin = new Padding(12, 8, 6, 0), Font = new Font("Segoe UI", 9) });
+            _cboStatus.Margin = new Padding(0, 0, 12, 0);
             filters.Controls.Add(_cboStatus);
             filters.Controls.Add(new Label { Text = "  " });
             filters.Controls.Add(_lblCount);
 
-            top.Controls.Add(actions);
-            top.Controls.Add(filters);
+            tableLayout.Controls.Add(actions, 0, 0);
+            tableLayout.Controls.Add(filters, 0, 1);
+            top.Controls.Add(tableLayout);
 
             tab.Controls.Add(_grid);
             tab.Controls.Add(top);
@@ -299,9 +321,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private void ApplyFilter()
         {
             if (_rawTable == null) return;
-            string rawKeyword = (_txtSearch.Text ?? string.Empty).Trim();
-            if (rawKeyword == SearchPlaceholder) rawKeyword = string.Empty;
-            string keyword = rawKeyword.ToLowerInvariant();
+            string keyword = (_txtSearch.Text ?? string.Empty).Trim().ToLowerInvariant();
             string status = _cboStatus.SelectedIndex > 0 ? _cboStatus.Text : null;
             var rows = _rawTable.AsEnumerable();
             if (!string.IsNullOrWhiteSpace(status) && _rawTable.Columns.Contains("Status"))
@@ -450,14 +470,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             return b;
         }
 
-        private static TextBox MakeSearchBox(string placeholder, Action onChanged)
-        {
-            var tb = new TextBox { Width = 320, ForeColor = Color.Gray, Text = placeholder, Font = new Font("Segoe UI", 9) };
-            tb.GotFocus += (s, e) => { if (tb.Text == placeholder) { tb.Text = string.Empty; tb.ForeColor = Color.Black; } };
-            tb.LostFocus += (s, e) => { if (string.IsNullOrWhiteSpace(tb.Text)) { tb.Text = placeholder; tb.ForeColor = Color.Gray; } };
-            tb.TextChanged += (s, e) => onChanged?.Invoke();
-            return tb;
-        }
 
         private void SetHeader(string columnName, string headerText)
         {

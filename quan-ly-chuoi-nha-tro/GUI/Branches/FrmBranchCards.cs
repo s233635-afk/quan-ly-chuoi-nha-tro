@@ -26,7 +26,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Panel _top;
         private FlowLayoutPanel _cardsHost;
         private SplitContainer _split;
-        private TextBox _txtSearch;
+        private ModernSearchBox _txtSearch;
         private Label _lblCount;
         private Label _lblStatTotalValue;
         private Label _lblStatActiveValue;
@@ -60,7 +60,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _top = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 168,
+                Height = 125,
                 BackColor = Color.White,
                 Padding = new Padding(14, 12, 14, 12)
             };
@@ -71,8 +71,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnDelete = MakeButton("Xóa", Color.FromArgb(220, 53, 69), async (s, e) => await DeleteSelectedAsync());
             _btnRefresh = MakeButton("Tải lại", Color.FromArgb(108, 117, 125), async (s, e) => await LoadDataAsync());
 
-            _txtSearch = new TextBox { Width = 360 };
-            _txtSearch.TextChanged += (s, e) => RebuildCards();
+            _txtSearch = new ModernSearchBox
+            {
+                Width = 360,
+                PlaceholderText = "Tìm theo mã/tên/địa chỉ/số điện thoại..."
+            };
+            _txtSearch.SearchTriggered += (s, e) => RebuildCards();
 
             _lblCount = new Label
             {
@@ -85,7 +89,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var statActive = MakeStatCard("Chi nhánh hoạt động", Color.FromArgb(40, 167, 69), out _lblStatActiveValue);
             var statInactive = MakeStatCard("Chi nhánh tạm dừng", Color.FromArgb(220, 53, 69), out _lblStatInactiveValue);
 
-            var pnlActions = new FlowLayoutPanel
+            // Combined row: Buttons + Search on the same line
+            var pnlActionsAndSearch = new FlowLayoutPanel
             {
                 Dock = DockStyle.Top,
                 Height = 42,
@@ -93,10 +98,24 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 FlowDirection = FlowDirection.LeftToRight,
                 BackColor = Color.Transparent
             };
-            pnlActions.Controls.Add(_btnAdd);
-            pnlActions.Controls.Add(_btnEdit);
-            pnlActions.Controls.Add(_btnDelete);
-            pnlActions.Controls.Add(_btnRefresh);
+            pnlActionsAndSearch.Controls.Add(_btnAdd);
+            pnlActionsAndSearch.Controls.Add(_btnEdit);
+            pnlActionsAndSearch.Controls.Add(_btnDelete);
+            pnlActionsAndSearch.Controls.Add(_btnRefresh);
+            
+            // Add search controls with spacing
+            var lblSearch = new Label
+            {
+                AutoSize = true,
+                Text = "Tìm kiếm:",
+                ForeColor = Color.FromArgb(90, 90, 90),
+                Margin = new Padding(20, 8, 6, 0)
+            };
+            _txtSearch.Margin = new Padding(0, 4, 10, 0);
+            _lblCount.Margin = new Padding(0, 8, 0, 0);
+            pnlActionsAndSearch.Controls.Add(lblSearch);
+            pnlActionsAndSearch.Controls.Add(_txtSearch);
+            pnlActionsAndSearch.Controls.Add(_lblCount);
 
             // Stats row
             var pnlStats = new FlowLayoutPanel
@@ -112,31 +131,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
             pnlStats.Controls.Add(statActive);
             pnlStats.Controls.Add(statInactive);
 
-            var pnlSearch = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Top,
-                Height = 32,
-                WrapContents = false,
-                FlowDirection = FlowDirection.LeftToRight,
-                BackColor = Color.Transparent,
-                Padding = new Padding(0, 4, 0, 0)
-            };
-            var lblSearch = new Label
-            {
-                AutoSize = true,
-                Text = "Tìm kiếm:",
-                ForeColor = Color.FromArgb(90, 90, 90),
-                Margin = new Padding(0, 6, 6, 0)
-            };
-            _txtSearch.Margin = new Padding(0, 2, 10, 0);
-            _lblCount.Margin = new Padding(0, 6, 0, 0);
-            pnlSearch.Controls.Add(lblSearch);
-            pnlSearch.Controls.Add(_txtSearch);
-            pnlSearch.Controls.Add(_lblCount);
-
-            _top.Controls.Add(pnlSearch);
+            // Add in correct order (reverse due to Dock.Top)
             _top.Controls.Add(pnlStats);
-            _top.Controls.Add(pnlActions);
+            _top.Controls.Add(pnlActionsAndSearch);
 
             _split = new SplitContainer
             {
@@ -168,18 +165,23 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private static Button MakeButton(string text, Color color, EventHandler onClick)
         {
-            var btn = new Button
+            var btn = new ModernButton
             {
                 Text = text,
                 Width = 92,
                 Height = 34,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = color,
-                ForeColor = Color.White,
+                Parameters = new ModernButton.ButtonParameters
+                {
+                    BaseColor = color,
+                    HoverColor = ModernTheme.Gradient.Darken(color, 0.1f),
+                    BorderRadius = 8,
+                    TextFont = new Font("Segoe UI", 9f, FontStyle.Bold),
+                    TextColor = Color.White
+                },
                 Margin = new Padding(0, 0, 10, 0),
-                Cursor = Cursors.Hand
+                Cursor = Cursors.Hand,
+                BackColor = Color.Transparent
             };
-            btn.FlatAppearance.BorderSize = 0;
             btn.Click += onClick;
             return btn;
         }
@@ -358,7 +360,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var card = new Panel
             {
                 Width = 360,
-                Height = 170,
+                Height = 200,
                 BackColor = Color.White,
                 Margin = new Padding(0, 0, 14, 14),
                 Cursor = Cursors.Hand,
@@ -390,7 +392,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Dock = DockStyle.Fill,
                 Font = new Font("Segoe UI", 9.5f, FontStyle.Regular),
                 ForeColor = Color.FromArgb(80, 80, 80),
-                Padding = new Padding(12, 0, 12, 8),
+                Padding = new Padding(12, 4, 12, 8),
                 Text = BuildSubText(address, phone, hotline, hours, roomsTotal, roomsActive, isActive)
             };
 
@@ -400,14 +402,32 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 BackColor = Color.Transparent,
                 Padding = new Padding(0)
             };
-            border.Paint += (s, e) =>
+
+            // Update card region for rounded corners
+            EventHandler updateRegion = (s, e) => UiKit.SetRoundedRegion(card, 18);
+            card.Resize += updateRegion;
+            updateRegion(null, null);
+
+            // Paint rounded border
+            card.Paint += (s, e) =>
             {
                 var g = e.Graphics;
                 g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                
+                var rect = new Rectangle(0, 0, card.Width - 1, card.Height - 1);
+                
+                // Draw background
+                using (var path = UiKit.GetRoundPath(rect, 18))
+                using (var bgBrush = new SolidBrush(Color.White))
+                {
+                    g.FillPath(bgBrush, path);
+                }
+                
+                // Draw border
+                using (var path = UiKit.GetRoundPath(rect, 18))
                 using (var pen = new Pen(_selectedBranchId == branchId ? Color.FromArgb(0, 122, 204) : Color.FromArgb(230, 230, 230), 1.4f))
                 {
-                    var rect = new Rectangle(0, 0, card.Width - 1, card.Height - 1);
-                    g.DrawRectangle(pen, rect);
+                    g.DrawPath(pen, path);
                 }
             };
 

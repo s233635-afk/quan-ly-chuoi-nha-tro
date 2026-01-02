@@ -25,7 +25,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private DataTable _rooms;
 
         private FlowLayoutPanel _tenantCardsHost;
-        private TextBox _txtSearch;
+        private ModernSearchBox _txtSearch;
         private Label _lblTotal;
         
         // Selected tenant tracking
@@ -62,24 +62,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
             };
 
             var searchLabel = new Label { Text = "Tìm:", AutoSize = true, Margin = new Padding(0, 8, 6, 0) };
-            _txtSearch = new TextBox { Width = 260, Text = SearchPlaceholder, ForeColor = Color.Gray, Margin = new Padding(0, 4, 12, 0) };
-            _txtSearch.GotFocus += (s, e) =>
+            _txtSearch = new ModernSearchBox
             {
-                if (_txtSearch.Text == SearchPlaceholder)
-                {
-                    _txtSearch.Text = string.Empty;
-                    _txtSearch.ForeColor = Color.Black;
-                }
+                Width = 260,
+                PlaceholderText = SearchPlaceholder,
+                Margin = new Padding(0, 4, 12, 0)
             };
-            _txtSearch.LostFocus += (s, e) =>
-            {
-                if (string.IsNullOrWhiteSpace(_txtSearch.Text))
-                {
-                    _txtSearch.Text = SearchPlaceholder;
-                    _txtSearch.ForeColor = Color.Gray;
-                }
-            };
-            _txtSearch.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) ApplySearch(); };
+            _txtSearch.SearchTriggered += (s, e) => ApplySearch();
 
             var btnSearch = MakeButton("Tìm", Color.FromArgb(0, 122, 204), (s, e) => ApplySearch());
             var btnAdd = MakeButton("Thêm", Color.FromArgb(0, 122, 204), (s, e) => AddTenant());
@@ -201,7 +190,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             if (_tenants == null) return;
 
             string keyword = (_txtSearch.Text ?? string.Empty).Trim();
-            if (keyword == SearchPlaceholder) keyword = string.Empty;
 
             var view = new DataView(_tenants);
             if (!string.IsNullOrWhiteSpace(keyword))
@@ -555,7 +543,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             if (_tenants == null) return new List<DataRow>();
 
             string keyword = (_txtSearch.Text ?? string.Empty).Trim();
-            if (keyword == SearchPlaceholder) keyword = string.Empty;
 
             var view = new DataView(_tenants);
             if (!string.IsNullOrWhiteSpace(keyword))

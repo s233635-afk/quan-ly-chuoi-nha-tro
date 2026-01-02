@@ -56,45 +56,72 @@ namespace quan_ly_chuoi_nha_tro.GUI.Rooms.Components
         private void InitializeCard()
         {
             Width = 320;
-            AutoSize = true;
-            AutoSizeMode = AutoSizeMode.GrowAndShrink;
-            MinimumSize = new Size(320, 0);
-            MaximumSize = new Size(320, 0);
+            Height = 200; // Fixed height for uniform card sizes
+            MinimumSize = new Size(320, 200);
+            MaximumSize = new Size(320, 200);
             BackColor = _isSelected ? Color.FromArgb(236, 242, 255) : Color.White;
             BorderStyle = BorderStyle.None;
             Margin = new Padding(12, 12, 12, 12);
             Cursor = Cursors.Hand;
             Tag = _roomId;
 
+            // Enable smooth rendering for rounded corners
+            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
+                     ControlStyles.OptimizedDoubleBuffer | ControlStyles.SupportsTransparentBackColor, true);
+
             // Custom paint for border and shadow
             Paint += OnCardPaint;
+            Resize += (s, e) => UpdateRegion();
             MouseEnter += OnCardMouseEnter;
             MouseLeave += OnCardMouseLeave;
             Click += OnCardClick;
+            
+            UpdateRegion();
+        }
+
+        private void UpdateRegion()
+        {
+            UiKit.SetRoundedRegion(this, 18);
         }
 
         private void OnCardPaint(object sender, PaintEventArgs e)
         {
-            var borderColor = _isSelected ? Color.FromArgb(0, 95, 180) : Color.FromArgb(210, 215, 220);
-            var borderWidth = _isSelected ? 3 : 1;
+            e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
             
-            using (var pen = new Pen(borderColor, borderWidth))
+            // Enhanced border colors for better visibility
+            var borderColor = _isSelected ? Color.FromArgb(0, 95, 180) : Color.FromArgb(160, 170, 180);
+            var borderWidth = _isSelected ? 3 : 2;
+            var rect = new Rectangle(0, 0, Width - 1, Height - 1);
+            
+            // Draw subtle shadow for depth
+            var shadowRect = new Rectangle(2, 2, Width - 4, Height - 4);
+            using (var shadowPath = UiKit.GetRoundPath(shadowRect, 18))
+            using (var shadowBrush = new SolidBrush(Color.FromArgb(30, 0, 0, 0)))
             {
-                e.Graphics.DrawRectangle(pen, 0, 0, Width - 1, Height - 1);
+                e.Graphics.FillPath(shadowBrush, shadowPath);
             }
             
-            using (var shadowPen = new Pen(Color.FromArgb(230, 235, 240), 1))
+            // Draw background with rounded corners
+            using (var path = UiKit.GetRoundPath(rect, 18))
+            using (var bgBrush = new SolidBrush(BackColor))
             {
-                e.Graphics.DrawRectangle(shadowPen, 1, 1, Width - 3, Height - 3);
+                e.Graphics.FillPath(bgBrush, path);
+            }
+            
+            // Draw prominent border with rounded corners
+            using (var path = UiKit.GetRoundPath(rect, 18))
+            using (var pen = new Pen(borderColor, borderWidth))
+            {
+                e.Graphics.DrawPath(pen, path);
             }
 
             if (_isInspecting)
             {
-                var rect = new Rectangle(Width - 26, Height - 26, 20, 20);
+                var inspectRect = new Rectangle(Width - 26, Height - 26, 20, 20);
                 using (var fill = new SolidBrush(Color.FromArgb(225, 238, 255)))
-                    e.Graphics.FillRectangle(fill, rect);
+                    e.Graphics.FillRectangle(fill, inspectRect);
                 using (var pen = new Pen(Color.FromArgb(0, 122, 204), 2))
-                    e.Graphics.DrawRectangle(pen, rect);
+                    e.Graphics.DrawRectangle(pen, inspectRect);
             }
         }
 

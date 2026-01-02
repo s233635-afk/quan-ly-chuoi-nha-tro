@@ -541,7 +541,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var card = new Panel
             {
                 Width = 380,
-                Height = 180,
+                Height = 200,
                 BackColor = ModernTheme.Colors.Background,
                 Margin = new Padding(8),
                 Padding = new Padding(1), // Border width
@@ -549,21 +549,36 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Tag = row
             };
 
-            // 3. Selection Highlighting (Border)
+            // 3. Selection Highlighting (Border with rounded corners)
             card.Paint += (s, e) =>
             {
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                
                 bool isSelected = IsSelectedCard(card);
                 Color borderColor = isSelected ? ModernTheme.Colors.Primary : ModernTheme.Colors.Border;
                 int borderWidth = isSelected ? 2 : 1;
                 
+                Rectangle rect = new Rectangle(0, 0, card.Width - 1, card.Height - 1);
+                
+                // Draw background with rounded corners
+                using (var path = UiKit.GetRoundPath(rect, 12))
+                using (var bgBrush = new SolidBrush(ModernTheme.Colors.Background))
+                {
+                    e.Graphics.FillPath(bgBrush, path);
+                }
+                
+                // Draw border with rounded corners
+                using (var path = UiKit.GetRoundPath(rect, 12))
                 using (var pen = new Pen(borderColor, borderWidth))
                 {
-                    Rectangle rect = card.ClientRectangle;
-                    rect.Width -= 1;
-                    rect.Height -= 1;
-                    e.Graphics.DrawRectangle(pen, rect);
+                    e.Graphics.DrawPath(pen, path);
                 }
             };
+
+            // Update region for rounded corners
+            EventHandler updateRegion = (s, e) => UiKit.SetRoundedRegion(card, 12);
+            card.Resize += updateRegion;
+            updateRegion(null, null);
 
             // 4. Inner Content Panel
             var content = new Panel

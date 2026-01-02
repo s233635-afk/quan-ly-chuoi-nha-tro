@@ -134,15 +134,22 @@ namespace quan_ly_chuoi_nha_tro.GUI.Shared.Components
             }
 
             // Draw card background
-            using (var path = GetRoundedRectPath(ClientRectangle, _borderRadius))
+            var rect = ClientRectangle;
+            rect.Width -= 1;
+            rect.Height -= 1;
+            
+            using (var path = GetRoundedRectPath(rect, _borderRadius))
             {
                 using (var brush = new SolidBrush(BackColor))
                 {
                     g.FillPath(brush, path);
                 }
 
-                // Optional border
-                using (var pen = new Pen(ModernTheme.Colors.Border, 1))
+                // Enhanced border for better visibility
+                Color borderColor = _isHovered ? ModernTheme.Colors.Primary : Color.FromArgb(160, 170, 180);
+                int borderWidth = _isHovered ? 2 : 2;
+                
+                using (var pen = new Pen(borderColor, borderWidth))
                 {
                     g.DrawPath(pen, path);
                 }
@@ -156,12 +163,14 @@ namespace quan_ly_chuoi_nha_tro.GUI.Shared.Components
             int shadowSize = (int)(_currentElevation * 2);
             Color shadowColor = ModernTheme.Elevation.GetShadowColor((int)_currentElevation);
 
-            // Simple shadow effect (blur would require more complex implementation)
+            // Enhanced shadow effect for better depth perception
             Rectangle shadowRect = ClientRectangle;
             shadowRect.Inflate(-1, -1);
-            shadowRect.Offset(0, (int)_currentElevation);
+            shadowRect.Offset(1, (int)(_currentElevation * 1.5));
 
-            using (var shadowBrush = new SolidBrush(Color.FromArgb(30, 0, 0, 0)))
+            // Draw multiple shadow layers for smooth effect
+            int alpha = Math.Min(40, (int)(_currentElevation * 12));
+            using (var shadowBrush = new SolidBrush(Color.FromArgb(alpha, 0, 0, 0)))
             {
                 using (var path = GetRoundedRectPath(shadowRect, _borderRadius))
                 {

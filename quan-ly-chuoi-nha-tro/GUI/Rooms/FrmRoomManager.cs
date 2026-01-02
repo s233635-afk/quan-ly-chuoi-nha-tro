@@ -17,7 +17,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
     /// </summary>
     public class FrmRoomManager : Form
     {
-        private const string SearchPlaceholder = "Tìm theo số phòng/loại...";
         private const int DefaultDisplayedRooms = 20;
 
         private readonly AdminDataBLL _bll;
@@ -37,7 +36,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private FlowLayoutPanel _roomCardsHost;
         private Panel _roomDetailPanel;
         private ComboBox _cboStatus;
-        private TextBox _txtSearch;
+        private ModernSearchBox _searchBox;
         private Label _lblSummary;
         private Label _lblRoomCount;
         private NumericUpDown _numDisplayLimit;
@@ -85,8 +84,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var toolbar = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 100,
-                Padding = new Padding(12, 10, 12, 10),
+                Height = 110,
+                Padding = new Padding(12, 15, 12, 15),
                 BackColor = Color.White
             };
 
@@ -107,9 +106,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 Dock = DockStyle.Fill,
                 FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = true,
+                WrapContents = false,
                 AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Padding = new Padding(0, 5, 0, 0)
             };
 
             var actions = new FlowLayoutPanel
@@ -122,39 +122,55 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Padding = new Padding(0, 0, 6, 0)
             };
 
-            var lblSearch = new Label { Text = "Tìm kiếm:", AutoSize = true, Margin = new Padding(0, 8, 6, 0) };
-            _txtSearch = new TextBox { Width = 200, ForeColor = Color.Gray, Text = SearchPlaceholder, Margin = new Padding(0, 4, 10, 0) };
-            _txtSearch.GotFocus += (s, e) =>
+            // Remove separate "Tìm kiếm:" label - use placeholder text instead
+            _searchBox = new ModernSearchBox
             {
-                if (_txtSearch.Text == SearchPlaceholder)
-                {
-                    _txtSearch.Text = string.Empty;
-                    _txtSearch.ForeColor = Color.Black;
-                }
+                PlaceholderText = "Tìm theo số phòng/loại...",
+                Width = 320,
+                Height = 40,
+                DebounceMs = 300,
+                Margin = new Padding(0, 0, 20, 0)
             };
-            _txtSearch.LostFocus += (s, e) =>
-            {
-                if (string.IsNullOrWhiteSpace(_txtSearch.Text))
-                {
-                    _txtSearch.Text = SearchPlaceholder;
-                    _txtSearch.ForeColor = Color.Gray;
-                }
-            };
-            _txtSearch.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) ApplyFilter(); };
+            _searchBox.SearchTriggered += (s, e) => ApplyFilter();
 
-            var lblStatus = new Label { Text = "Trạng thái:", AutoSize = true, Margin = new Padding(0, 8, 6, 0) };
-            _cboStatus = new ComboBox { Width = 150, DropDownStyle = ComboBoxStyle.DropDownList, Margin = new Padding(0, 4, 10, 0) };
+            var lblStatus = new Label
+            {
+                Text = "Trạng thái:",
+                AutoSize = false,
+                Width = 75,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Margin = new Padding(0, 6, 6, 0),
+                Height = 40,
+                Font = new Font("Segoe UI", 10F, FontStyle.Regular)
+            };
+            _cboStatus = new ComboBox
+            {
+                Width = 150,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Margin = new Padding(0, 6, 20, 0),
+                Font = new Font("Segoe UI", 10F)
+            };
             _cboStatus.SelectedIndexChanged += (s, e) => ApplyFilter();
 
-            var lblLimit = new Label { Text = "Hiển thị:", AutoSize = true, Margin = new Padding(0, 8, 6, 0) };
+            var lblLimit = new Label
+            {
+                Text = "Hiển thị:",
+                AutoSize = false,
+                Width = 65,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Margin = new Padding(0, 6, 6, 0),
+                Height = 40,
+                Font = new Font("Segoe UI", 10F, FontStyle.Regular)
+            };
             _numDisplayLimit = new NumericUpDown
             {
-                Width = 60,
+                Width = 70,
                 Minimum = 0,
                 Maximum = 9999,
                 Value = DefaultDisplayedRooms,
-                Margin = new Padding(0, 4, 10, 0),
-                ThousandsSeparator = true
+                Margin = new Padding(0, 6, 0, 0),
+                ThousandsSeparator = true,
+                Font = new Font("Segoe UI", 10F)
             };
             _numDisplayLimit.ValueChanged += (s, e) =>
             {
@@ -250,8 +266,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnDelete.FlatAppearance.BorderSize = 0;
             _btnDelete.Click += async (s, e) => await DeleteCurrentRoomAsync();
 
-            filters.Controls.Add(lblSearch);
-            filters.Controls.Add(_txtSearch);
+            filters.Controls.Add(_searchBox);
             filters.Controls.Add(lblStatus);
             filters.Controls.Add(_cboStatus);
             filters.Controls.Add(lblLimit);
@@ -346,60 +361,58 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private async Task LoadRoomsAsync()
         {
-            try
+            using (var loading = new SimpleLoadingOverlay(this, "Đang tải dữ liệu phòng"))
             {
-                Cursor = Cursors.WaitCursor;
-                _selectedRoomId = 0;
-                _selectedRoomRow = null;
-                _btnEdit.Visible = false;
-                _btnDelete.Enabled = true;
-                if (_splitContainer != null)
+                try
                 {
-                    _splitContainer.Panel2Collapsed = true;
+                    _selectedRoomId = 0;
+                    _selectedRoomRow = null;
+                    _btnEdit.Visible = false;
+                    _btnDelete.Enabled = true;
+                    if (_splitContainer != null)
+                    {
+                        _splitContainer.Panel2Collapsed = true;
+                    }
+
+                    var roomsTask = _bll.GetRoomsAsync();
+                    var statusesTask = _bll.GetRoomStatusesAsync();
+                    var typesTask = _bll.GetRoomTypesAsync();
+                    var historyTask = _bll.GetTenantHistoryAsync();
+                    var contractsTask = _bll.GetContractsAsync();
+                    var tenantsTask = _bll.GetTenantsAsync();
+                    var assetsTask = _bll.GetAssetsAsync();
+
+                    await Task.WhenAll(roomsTask, statusesTask, typesTask, historyTask, contractsTask, tenantsTask, assetsTask);
+
+                    _rooms = roomsTask.Result ?? new DataTable();
+                    _statuses = statusesTask.Result ?? new DataTable();
+                    _roomTypes = typesTask.Result ?? new DataTable();
+                    _tenantHistory = historyTask.Result ?? new DataTable();
+                    _contracts = contractsTask.Result ?? new DataTable();
+                    _tenants = tenantsTask.Result ?? new DataTable();
+                    _assets = assetsTask.Result ?? new DataTable();
+
+                    NormalizeLoadedTables();
+
+                    if (_branchId.HasValue && _rooms.Columns.Contains("BranchId"))
+                    {
+                        var filtered = _rooms.AsEnumerable()
+                            .Where(r => int.TryParse(r["BranchId"]?.ToString(), out var bid) && bid == _branchId.Value);
+                        _rooms = filtered.Any() ? filtered.CopyToDataTable() : _rooms.Clone();
+                    }
+
+                    EnsureDisplayColumns();
+                    BuildAssetLookup();
+                    PopulateOccupancy();
+                    NormalizeRoomStatusForOccupancy();
+                    PopulateStatusFilter();
+
+                    ApplyFilter();
                 }
-
-                var roomsTask = _bll.GetRoomsAsync();
-                var statusesTask = _bll.GetRoomStatusesAsync();
-                var typesTask = _bll.GetRoomTypesAsync();
-                var historyTask = _bll.GetTenantHistoryAsync();
-                var contractsTask = _bll.GetContractsAsync();
-                var tenantsTask = _bll.GetTenantsAsync();
-                var assetsTask = _bll.GetAssetsAsync();
-
-                await Task.WhenAll(roomsTask, statusesTask, typesTask, historyTask, contractsTask, tenantsTask, assetsTask);
-
-                _rooms = roomsTask.Result ?? new DataTable();
-                _statuses = statusesTask.Result ?? new DataTable();
-                _roomTypes = typesTask.Result ?? new DataTable();
-                _tenantHistory = historyTask.Result ?? new DataTable();
-                _contracts = contractsTask.Result ?? new DataTable();
-                _tenants = tenantsTask.Result ?? new DataTable();
-                _assets = assetsTask.Result ?? new DataTable();
-
-                NormalizeLoadedTables();
-
-                if (_branchId.HasValue && _rooms.Columns.Contains("BranchId"))
+                catch (Exception ex)
                 {
-                    var filtered = _rooms.AsEnumerable()
-                        .Where(r => int.TryParse(r["BranchId"]?.ToString(), out var bid) && bid == _branchId.Value);
-                    _rooms = filtered.Any() ? filtered.CopyToDataTable() : _rooms.Clone();
+                    ErrorLogger.HandleException(ex, "LoadRooms", "Không thể tải danh sách phòng");
                 }
-
-                EnsureDisplayColumns();
-                BuildAssetLookup();
-                PopulateOccupancy();
-                NormalizeRoomStatusForOccupancy();
-                PopulateStatusFilter();
-
-                ApplyFilter();
-            }
-            catch (Exception ex)
-            {
-                ErrorLogger.HandleException(ex, "LoadRooms", "Không thể tải danh sách phòng");
-            }
-            finally
-            {
-                Cursor = Cursors.Default;
             }
         }
 
@@ -645,8 +658,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var filters = new List<string>();
             bool hasStatusColumn = _rooms.Columns.Contains("CurrentStatusId");
 
-            var raw = (_txtSearch.Text ?? string.Empty).Trim();
-            if (raw == SearchPlaceholder) raw = string.Empty;
+            var raw = (_searchBox.Text ?? string.Empty).Trim();
             if (!string.IsNullOrWhiteSpace(raw))
             {
                 var escaped = raw.Replace("'", "''");
@@ -731,12 +743,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             if (roomsToRender.Count == 0)
             {
-                _roomCardsHost.Controls.Add(new Label
-                {
-                    AutoSize = true,
-                    Text = "Không có phòng nào.",
-                    ForeColor = Color.FromArgb(90, 90, 90)
-                });
+                var emptyState = EmptyStatePanel.ForNoSearchResults();
+                emptyState.Dock = DockStyle.Fill;
+                emptyState.MinimumSize = new Size(400, 300);
+                _roomCardsHost.Controls.Add(emptyState);
                 _roomCardsHost.ResumeLayout();
                 _lblRoomCount.Text = $"Phòng: 0/{GetLimitText()}";
                 return;
@@ -802,12 +812,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             if (rows == null || rows.Count == 0)
             {
-                flow.Controls.Add(new Label
-                {
-                    AutoSize = true,
-                    Text = "Không có phòng.",
-                    ForeColor = Color.FromArgb(90, 90, 90)
-                });
+                var emptyState = EmptyStatePanel.ForNoData("phòng");
+                emptyState.Dock = DockStyle.Fill;
+                emptyState.MinimumSize = new Size(initialWidth - 20, 300);
+                emptyState.Height = 300;
+                flow.Height = 320;
+                flow.AutoSize = false;
+                flow.Controls.Add(emptyState);
             }
             else
             {
@@ -817,11 +828,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     if (roomId <= 0) continue;
                     flow.Controls.Add(CreateRoomCard(row, roomId));
                 }
+                flow.Height = flow.PreferredSize.Height;
             }
 
             container.Controls.Add(header, 0, 0);
             container.Controls.Add(flow, 0, 1);
-            flow.Height = flow.PreferredSize.Height;
             return container;
         }
 
@@ -1234,8 +1245,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var filters = new List<string>();
             bool hasStatusColumn = _rooms.Columns.Contains("CurrentStatusId");
 
-            var raw = (_txtSearch.Text ?? string.Empty).Trim();
-            if (raw == SearchPlaceholder) raw = string.Empty;
+            var raw = (_searchBox.Text ?? string.Empty).Trim();
             if (!string.IsNullOrWhiteSpace(raw))
             {
                 var escaped = raw.Replace("'", "''");
@@ -1618,14 +1628,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             if (activeTenants.Count == 0)
             {
-                container.Controls.Add(new Label
+                var emptyState = new EmptyStatePanel
                 {
-                    Text = "Chưa có khách ở.",
-                    AutoSize = true,
-                    ForeColor = Color.FromArgb(100, 100, 100),
-                    Font = new Font("Segoe UI", 10, FontStyle.Italic),
-                    Margin = new Padding(0, 4, 0, 4)
-                });
+                    Icon = "👥",
+                    Title = "Chưa có khách ở",
+                    Description = "Phòng này chưa có khách thuê",
+                    Dock = DockStyle.Top
+                };
+                container.Controls.Add(emptyState);
             }
             else
             {

@@ -25,7 +25,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Panel _statsPanel;
         private ModernDataGridView _grid;
 
-        private TextBox _txtSearch;
+        private ModernSearchBox _searchBox;
         private ComboBox _cboBranch;
         private ComboBox _cboStatus;
         private ComboBox _cboType;
@@ -140,40 +140,83 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _filterPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 50,
+                Height = 70,
                 BackColor = ModernTheme.Colors.Surface,
-                BorderStyle = BorderStyle.FixedSingle,
-                Padding = new Padding(ModernTheme.Spacing.MD)
+                Padding = new Padding(ModernTheme.Spacing.LG, 10, ModernTheme.Spacing.LG, 10)
             };
 
-            var lblSearch = new Label { Text = "🔍 Tìm:", AutoSize = true, ForeColor = ModernTheme.Colors.TextPrimary };
-            _txtSearch = new TextBox { Width = 200, Height = 32 };
-            ModernTheme.StyleTextBox(_txtSearch);
-            _txtSearch.TextChanged += (s, e) => ApplyFilter();
+            // Modern Search Box with debounce
+            _searchBox = new ModernSearchBox
+            {
+                Width = 280,
+                Height = 40,
+                PlaceholderText = "Tìm theo số phòng/loại/khách...",
+                DebounceMs = 300,
+                ShowClearButton = true,
+                Margin = new Padding(0, 5, ModernTheme.Spacing.LG, 5),
+                Anchor = AnchorStyles.Left | AnchorStyles.Top
+            };
+            _searchBox.SearchTriggered += (s, e) => ApplyFilter();
 
-            var lblBranch = new Label { Text = "Chi nhánh:", AutoSize = true, ForeColor = ModernTheme.Colors.TextPrimary };
-            _cboBranch = new ComboBox { Width = 150, Height = 32, DropDownStyle = ComboBoxStyle.DropDownList };
+            var lblBranch = new Label
+            {
+                Text = "Chi nhánh:",
+                AutoSize = true,
+                ForeColor = ModernTheme.Colors.TextPrimary,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Margin = new Padding(0, 10, ModernTheme.Spacing.SM, 10),
+                Height = 40,
+                Anchor = AnchorStyles.Left | AnchorStyles.Top
+            };
+            _cboBranch = new ComboBox { Width = 140, Height = 40, DropDownStyle = ComboBoxStyle.DropDownList, Margin = new Padding(0, 5, ModernTheme.Spacing.MD, 5) };
             ModernTheme.StyleComboBox(_cboBranch);
             _cboBranch.Items.Add("Tất cả");
             _cboBranch.SelectedIndex = 0;
             _cboBranch.SelectedIndexChanged += (s, e) => ApplyFilter();
 
-            var lblStatus = new Label { Text = "Trạng thái:", AutoSize = true, ForeColor = ModernTheme.Colors.TextPrimary };
-            _cboStatus = new ComboBox { Width = 150, Height = 32, DropDownStyle = ComboBoxStyle.DropDownList };
+            var lblStatus = new Label
+            {
+                Text = "Trạng thái:",
+                AutoSize = true,
+                ForeColor = ModernTheme.Colors.TextPrimary,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Margin = new Padding(0, 10, ModernTheme.Spacing.SM, 10),
+                Height = 40,
+                Anchor = AnchorStyles.Left | AnchorStyles.Top
+            };
+            _cboStatus = new ComboBox { Width = 120, Height = 40, DropDownStyle = ComboBoxStyle.DropDownList, Margin = new Padding(0, 5, ModernTheme.Spacing.MD, 5) };
             ModernTheme.StyleComboBox(_cboStatus);
             _cboStatus.Items.AddRange(new object[] { "Tất cả", "Trống", "Có khách", "Bảo trì", "Tạm khóa" });
             _cboStatus.SelectedIndex = 0;
             _cboStatus.SelectedIndexChanged += (s, e) => ApplyFilter();
 
-            var lblType = new Label { Text = "Loại phòng:", AutoSize = true, ForeColor = ModernTheme.Colors.TextPrimary };
-            _cboType = new ComboBox { Width = 150, Height = 32, DropDownStyle = ComboBoxStyle.DropDownList };
+            var lblType = new Label
+            {
+                Text = "Loại:",
+                AutoSize = true,
+                ForeColor = ModernTheme.Colors.TextPrimary,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Margin = new Padding(0, 10, ModernTheme.Spacing.SM, 10),
+                Height = 40,
+                Anchor = AnchorStyles.Left | AnchorStyles.Top
+            };
+            _cboType = new ComboBox { Width = 120, Height = 40, DropDownStyle = ComboBoxStyle.DropDownList, Margin = new Padding(0, 5, ModernTheme.Spacing.MD, 5) };
             ModernTheme.StyleComboBox(_cboType);
             _cboType.Items.Add("Tất cả");
             _cboType.SelectedIndex = 0;
             _cboType.SelectedIndexChanged += (s, e) => ApplyFilter();
 
-            var lblFloor = new Label { Text = "Tầng:", AutoSize = true, ForeColor = ModernTheme.Colors.TextPrimary };
-            _cboFloor = new ComboBox { Width = 100, Height = 32, DropDownStyle = ComboBoxStyle.DropDownList };
+            var lblFloor = new Label
+            {
+                Text = "Tầng:",
+                AutoSize = true,
+                ForeColor = ModernTheme.Colors.TextPrimary,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Margin = new Padding(0, 10, ModernTheme.Spacing.SM, 10),
+                Height = 40,
+                Anchor = AnchorStyles.Left | AnchorStyles.Top
+            };
+            _cboFloor = new ComboBox { Width = 80, Height = 40, DropDownStyle = ComboBoxStyle.DropDownList, Margin = new Padding(0, 5, 0, 5) };
             ModernTheme.StyleComboBox(_cboFloor);
             _cboFloor.Items.Add("Tất cả");
             _cboFloor.SelectedIndex = 0;
@@ -182,24 +225,21 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var filterFlow = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                AutoSize = true,
-                WrapContents = true,
+                AutoSize = false,
+                WrapContents = false,
                 FlowDirection = FlowDirection.LeftToRight,
-                BackColor = ModernTheme.Colors.Surface
+                BackColor = ModernTheme.Colors.Surface,
+                Padding = new Padding(0),
+                Height = 50
             };
 
-            filterFlow.Controls.Add(lblSearch);
-            filterFlow.Controls.Add(_txtSearch);
-            filterFlow.Controls.Add(new Label { Width = ModernTheme.Spacing.MD, AutoSize = false });
+            filterFlow.Controls.Add(_searchBox);
             filterFlow.Controls.Add(lblBranch);
             filterFlow.Controls.Add(_cboBranch);
-            filterFlow.Controls.Add(new Label { Width = ModernTheme.Spacing.MD, AutoSize = false });
             filterFlow.Controls.Add(lblStatus);
             filterFlow.Controls.Add(_cboStatus);
-            filterFlow.Controls.Add(new Label { Width = ModernTheme.Spacing.MD, AutoSize = false });
             filterFlow.Controls.Add(lblType);
             filterFlow.Controls.Add(_cboType);
-            filterFlow.Controls.Add(new Label { Width = ModernTheme.Spacing.MD, AutoSize = false });
             filterFlow.Controls.Add(lblFloor);
             filterFlow.Controls.Add(_cboFloor);
 
@@ -301,6 +341,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Cursor = Cursors.WaitCursor;
                 var rooms = await _bll.GetRoomsAsync();
                 _rawTable = NormalizeRooms(rooms);
+                LoadFilterData();
                 BindDataToGrid();
                 UpdateStats();
             }
@@ -402,13 +443,17 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var filtered = _rawTable.Copy();
             var query = filtered.AsEnumerable();
 
-            if (!string.IsNullOrWhiteSpace(_txtSearch.Text))
+            // Enhanced search - search across multiple fields
+            if (!string.IsNullOrWhiteSpace(_searchBox.Text))
             {
-                string searchTerm = _txtSearch.Text.ToLower();
+                string searchTerm = _searchBox.Text.ToLower().Trim();
                 query = query.Where(r =>
                     r["RoomNumber"]?.ToString()?.ToLower()?.Contains(searchTerm) == true ||
                     r["BranchName"]?.ToString()?.ToLower()?.Contains(searchTerm) == true ||
-                    r["TenantName"]?.ToString()?.ToLower()?.Contains(searchTerm) == true
+                    r["TenantName"]?.ToString()?.ToLower()?.Contains(searchTerm) == true ||
+                    r["RoomTypeName"]?.ToString()?.ToLower()?.Contains(searchTerm) == true ||
+                    r["Status"]?.ToString()?.ToLower()?.Contains(searchTerm) == true ||
+                    r["Floor"]?.ToString()?.Contains(searchTerm) == true
                 );
             }
 
@@ -430,7 +475,22 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 query = query.Where(r => r["RoomTypeName"]?.ToString() == type);
             }
 
-            _grid.DataSource = query.CopyToDataTable();
+            if (_cboFloor.SelectedIndex > 0)
+            {
+                string floor = _cboFloor.SelectedItem.ToString();
+                query = query.Where(r => r["Floor"]?.ToString() == floor);
+            }
+
+            var resultRows = query.ToList();
+            if (resultRows.Any())
+            {
+                _grid.DataSource = resultRows.CopyToDataTable();
+            }
+            else
+            {
+                _grid.DataSource = filtered.Clone(); // Empty table with schema
+            }
+            
             UpdateStats();
         }
 

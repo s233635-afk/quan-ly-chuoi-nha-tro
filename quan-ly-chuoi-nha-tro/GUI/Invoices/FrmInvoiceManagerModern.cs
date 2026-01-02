@@ -24,7 +24,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Panel _statsPanel;
         private ModernDataGridView _grid;
 
-        private TextBox _txtSearch;
+        private ModernSearchBox _txtSearch;
         private ComboBox _cboBranch;
         private ComboBox _cboStatus;
         private ComboBox _cboMonth;
@@ -145,10 +145,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Padding = new Padding(ModernTheme.Spacing.MD)
             };
 
-            var lblSearch = new Label { Text = "🔍 Tìm:", AutoSize = true, ForeColor = ModernTheme.Colors.TextPrimary };
-            _txtSearch = new TextBox { Width = 200, Height = 32 };
-            ModernTheme.StyleTextBox(_txtSearch);
-            _txtSearch.TextChanged += (s, e) => ApplyFilter();
+            _txtSearch = new ModernSearchBox
+            {
+                PlaceholderText = "Tìm theo hóa đơn/khách/phòng...",
+                Width = 250,
+                Height = 40,
+                DebounceMs = 300,
+                Margin = new Padding(0, 5, ModernTheme.Spacing.MD, 5)
+            };
+            _txtSearch.SearchTriggered += (s, e) => ApplyFilter();
 
             var lblBranch = new Label { Text = "Chi nhánh:", AutoSize = true, ForeColor = ModernTheme.Colors.TextPrimary };
             _cboBranch = new ComboBox { Width = 150, Height = 32, DropDownStyle = ComboBoxStyle.DropDownList };
@@ -190,7 +195,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 BackColor = ModernTheme.Colors.Surface
             };
 
-            filterFlow.Controls.Add(lblSearch);
             filterFlow.Controls.Add(_txtSearch);
             filterFlow.Controls.Add(new Label { Width = ModernTheme.Spacing.MD, AutoSize = false });
             filterFlow.Controls.Add(lblBranch);

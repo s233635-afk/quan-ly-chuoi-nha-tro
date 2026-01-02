@@ -28,11 +28,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private DataGridView _gridReadings;
         private DataGridView _gridTypes;
 
-        private TextBox _txtSearchReadings;
+        private ModernSearchBox _txtSearchReadings;
         private ComboBox _cboBranch;
         private Label _lblReadingsCount;
 
-        private TextBox _txtSearchTypes;
+        private ModernSearchBox _txtSearchTypes;
         private Label _lblTypesCount;
 
         private Button _btnRAdd;
@@ -98,12 +98,23 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnTDelete.Visible = !_isStaffMode;
             _btnTDelete.Enabled = !_isStaffMode;
 
-            _txtSearchReadings = MakeSearchBox(SearchPlaceholderReadings, () => ApplyReadingsFilter());
+            _txtSearchReadings = new ModernSearchBox
+            {
+                Width = 320,
+                PlaceholderText = SearchPlaceholderReadings
+            };
+            _txtSearchReadings.SearchTriggered += (s, e) => ApplyReadingsFilter();
+            
             _cboBranch = new ComboBox { Width = 220, DropDownStyle = ComboBoxStyle.DropDownList };
             _cboBranch.SelectedIndexChanged += (s, e) => ApplyReadingsFilter();
             _lblReadingsCount = new Label { AutoSize = true, Text = "Tổng: 0", Font = new Font("Segoe UI", 10, FontStyle.Bold) };
 
-            _txtSearchTypes = MakeSearchBox(SearchPlaceholderTypes, () => ApplyTypesFilter());
+            _txtSearchTypes = new ModernSearchBox
+            {
+                Width = 320,
+                PlaceholderText = SearchPlaceholderTypes
+            };
+            _txtSearchTypes.SearchTriggered += (s, e) => ApplyTypesFilter();
             _lblTypesCount = new Label { AutoSize = true, Text = "Tổng: 0", Font = new Font("Segoe UI", 10, FontStyle.Bold) };
 
             tabReadings.Controls.Add(_gridReadings);
@@ -340,9 +351,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (_readingTable == null) return;
 
-            string rawKeyword = (_txtSearchReadings.Text ?? string.Empty).Trim();
-            if (rawKeyword == SearchPlaceholderReadings) rawKeyword = string.Empty;
-            string keyword = rawKeyword.ToLowerInvariant();
+            string keyword = (_txtSearchReadings.Text ?? string.Empty).Trim().ToLowerInvariant();
 
             int branchId = _cboBranch.SelectedValue is int b ? b : 0;
             var rows = _readingTable.AsEnumerable();
@@ -368,9 +377,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (_typeTable == null) return;
 
-            string rawKeyword = (_txtSearchTypes.Text ?? string.Empty).Trim();
-            if (rawKeyword == SearchPlaceholderTypes) rawKeyword = string.Empty;
-            string keyword = rawKeyword.ToLowerInvariant();
+            string keyword = (_txtSearchTypes.Text ?? string.Empty).Trim().ToLowerInvariant();
 
             var rows = _typeTable.AsEnumerable();
             if (!string.IsNullOrWhiteSpace(keyword))
@@ -495,28 +502,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
         }
 
-        private static TextBox MakeSearchBox(string placeholder, Action onChanged)
-        {
-            var tb = new TextBox { Width = 320, ForeColor = Color.Gray, Text = placeholder };
-            tb.GotFocus += (s, e) =>
-            {
-                if (tb.Text == placeholder)
-                {
-                    tb.Text = string.Empty;
-                    tb.ForeColor = Color.Black;
-                }
-            };
-            tb.LostFocus += (s, e) =>
-            {
-                if (string.IsNullOrWhiteSpace(tb.Text))
-                {
-                    tb.Text = placeholder;
-                    tb.ForeColor = Color.Gray;
-                }
-            };
-            tb.TextChanged += (s, e) => onChanged?.Invoke();
-            return tb;
-        }
 
         private static DataGridView MakeGrid()
         {

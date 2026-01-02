@@ -332,7 +332,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var card = new Panel
             {
                 Width = 340,
-                Height = 170,
+                Height = 210, // Increased to 210 to ensure all content is visible
                 BackColor = Color.White,
                 Margin = new Padding(8),
                 Padding = new Padding(1),
@@ -347,7 +347,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 BackColor = isActive ? Color.SeaGreen : Color.DarkGray
             };
 
-            var content = new Panel { Dock = DockStyle.Fill, Padding = new Padding(10, 8, 10, 8) };
+            var content = new Panel { Dock = DockStyle.Fill, Padding = new Padding(10, 8, 10, 12) }; // Increased bottom padding from 8 to 12
 
             var lblTitle = new Label
             {
@@ -355,7 +355,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 79, 159),
                 AutoSize = false,
-                Width = 300,
+                Width = 240, // Reduced to make room for status
                 Height = 22,
                 Location = new Point(0, 0),
                 AutoEllipsis = true
@@ -363,14 +363,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             var lblStatus = new Label
             {
-                Text = isActive ? "Kích hoạt" : "Đã tắt",
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Text = isActive ? "[Kích hoạt]" : "[Đã tắt]",
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
                 ForeColor = isActive ? Color.SeaGreen : Color.DimGray,
-                AutoSize = false,
-                Width = 120,
-                Height = 20,
-                TextAlign = ContentAlignment.MiddleRight,
-                Location = new Point(190, 0)
+                AutoSize = true,
+                Location = new Point(245, 2) // Positioned to the right of title
             };
 
             var lblCategory = new Label
@@ -380,7 +377,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 ForeColor = Color.FromArgb(60, 60, 60),
                 AutoSize = false,
                 Width = 300,
-                Height = 18,
+                Height = 20,
                 Location = new Point(0, 26),
                 AutoEllipsis = true
             };
@@ -392,8 +389,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 ForeColor = Color.FromArgb(60, 60, 60),
                 AutoSize = false,
                 Width = 300,
-                Height = 18,
-                Location = new Point(0, 46),
+                Height = 20,
+                Location = new Point(0, 48),
                 AutoEllipsis = true
             };
 
@@ -404,8 +401,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 ForeColor = Color.DimGray,
                 AutoSize = false,
                 Width = 300,
-                Height = 18,
-                Location = new Point(0, 66)
+                Height = 20,
+                Location = new Point(0, 70)
             };
 
             var lblCondition = new Label
@@ -415,8 +412,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 ForeColor = Color.FromArgb(90, 90, 90),
                 AutoSize = false,
                 Width = 300,
-                Height = 18,
-                Location = new Point(0, 86),
+                Height = 20,
+                Location = new Point(0, 92),
                 AutoEllipsis = true
             };
 
@@ -426,10 +423,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Font = new Font("Segoe UI", 8.5f),
                 ForeColor = Color.FromArgb(90, 90, 90),
                 AutoSize = false,
-                Width = 300,
-                Height = 36,
-                Location = new Point(0, 106),
-                AutoEllipsis = true
+                Width = 310,
+                Height = 50,
+                Location = new Point(0, 114),
+                AutoEllipsis = true,
+                MaximumSize = new Size(310, 50)
             };
 
             content.Controls.Add(lblTitle);

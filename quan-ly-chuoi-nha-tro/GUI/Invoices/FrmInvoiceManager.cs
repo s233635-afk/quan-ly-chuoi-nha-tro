@@ -21,7 +21,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private DataTable _table;
 
         private DataGridView _grid;
-        private TextBox _txtSearch;
+        private ModernSearchBox _txtSearch;
         private ComboBox _cboStatus;
         private Label _lblCount;
         private Label _lblSummary;
@@ -83,8 +83,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
             };
             UiKit.StyleGrid(_grid);
 
-            _txtSearch = new TextBox { Width = 280 };
-            var pnlSearch = UiKit.MakeSearchPanel(_txtSearch, 320, SearchPlaceholder, ApplyFilter);
+            _txtSearch = new ModernSearchBox
+            {
+                PlaceholderText = SearchPlaceholder,
+                Width = 320,
+                Height = 40,
+                DebounceMs = 300,
+                Margin = new Padding(0, 0, 20, 0)
+            };
+            _txtSearch.SearchTriggered += (s, e) => ApplyFilter();
 
             _cboStatus = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 150 };
             _cboStatus.Items.AddRange(new object[] { "Tất cả", "Chưa thanh toán", "Thanh toán một phần", "Đã thanh toán", "Quá hạn" });
@@ -127,20 +134,20 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             var filterHost = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent };
             var lblSearch = new Label { Text = "Tìm:", AutoSize = true, Location = new Point(0, 9), ForeColor = UiKit.MutedText };
-            pnlSearch.Location = new Point(lblSearch.Right + 6, 10);
+            _txtSearch.Location = new Point(lblSearch.Right + 6, 6);
 
             var lblStatus = new Label { Text = "Trạng thái:", AutoSize = true, ForeColor = UiKit.MutedText };
-            lblStatus.Location = new Point(pnlSearch.Right + 14, 9);
+            lblStatus.Location = new Point(_txtSearch.Right + 14, 9);
             _cboStatus.Location = new Point(lblStatus.Right + 6, 6);
 
             filterHost.Controls.Add(lblSearch);
-            filterHost.Controls.Add(pnlSearch);
+            filterHost.Controls.Add(_txtSearch);
             filterHost.Controls.Add(lblStatus);
             filterHost.Controls.Add(_cboStatus);
             filterHost.Resize += (s, e) =>
             {
-                pnlSearch.Location = new Point(lblSearch.Right + 6, 10);
-                lblStatus.Location = new Point(pnlSearch.Right + 14, 9);
+                _txtSearch.Location = new Point(lblSearch.Right + 6, 6);
+                lblStatus.Location = new Point(_txtSearch.Right + 14, 9);
                 _cboStatus.Location = new Point(lblStatus.Right + 6, 6);
             };
 
@@ -293,9 +300,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private void ApplyFilter()
         {
             if (_table == null) return;
-            var raw = (_txtSearch.Text ?? string.Empty).Trim();
-            if (raw == SearchPlaceholder) raw = string.Empty;
-            var keyword = raw.Replace("'", "''");
+            var keyword = (_txtSearch.Text ?? string.Empty).Trim().Replace("'", "''");
             var status = MapStatusFilter(_cboStatus.SelectedItem?.ToString());
 
             var filters = new System.Collections.Generic.List<string>();

@@ -20,7 +20,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private System.Collections.Generic.HashSet<int> _allowedBranchIds;
 
         private ComboBox _cboSource;
-        private TextBox _txtSearch;
+        private ModernSearchBox _txtSearch;
         private DataGridView _grid;
         private FlowLayoutPanel _cards;
         private Label _lblCount;
@@ -68,9 +68,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var pnlHeader = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 40,
+                Height = 50,
                 BackColor = Color.FromArgb(0, 120, 215),
-                Padding = new Padding(20, 8, 20, 8)
+                Padding = new Padding(20, 10, 20, 10)
             };
             var lblTitle = new Label
             {
@@ -95,18 +95,17 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _cboSource.SelectedIndex = 0;
             _cboSource.SelectedIndexChanged += async (s, e) => await LoadDataAsync();
 
-            _txtSearch = new TextBox 
-            { 
+            _txtSearch = new ModernSearchBox
+            {
                 Width = 300,
-                Height = 32,
-                Font = new Font("Segoe UI", 10),
-                BackColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle
+                PlaceholderText = SearchPlaceholder
             };
-            var pnlSearch = UiKit.MakeSearchPanel(_txtSearch, 340, SearchPlaceholder, ApplyFilter);
+            _txtSearch.SearchTriggered += (s, e) => ApplyFilter();
 
             _btnExport = UiKit.MakeButton("📥 Xuất CSV", UiKit.Purple, (s, e) => ExportCsv(), 120);
+            _btnExport.Margin = new Padding(5, 3, 5, 3);
             _btnRefresh = UiKit.MakeButton("🔄 Tải Lại", UiKit.Primary, async (s, e) => await LoadDataAsync(), 120);
+            _btnRefresh.Margin = new Padding(5, 3, 5, 3);
 
             _lblCount = new Label 
             { 
@@ -129,14 +128,23 @@ namespace quan_ly_chuoi_nha_tro.GUI
             };
 
             // ===== TOOLBAR PANEL =====
-            var pnlToolbar = new Panel 
-            { 
-                Dock = DockStyle.Top, 
-                Height = 50, 
-                Padding = new Padding(15, 8, 15, 8), 
+            var pnlToolbar = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 72,
+                Padding = new Padding(15, 18, 15, 18),
                 BackColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle
+                BorderStyle = BorderStyle.None
             };
+            
+            // Add bottom border manually
+            var borderBottom = new Panel
+            {
+                Dock = DockStyle.Bottom,
+                Height = 1,
+                BackColor = Color.FromArgb(220, 225, 230)
+            };
+            pnlToolbar.Controls.Add(borderBottom);
 
             var pnlActions = new FlowLayoutPanel
             {
@@ -180,7 +188,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             pnlFilters.Controls.Add(lblSource);
             pnlFilters.Controls.Add(_cboSource);
             pnlFilters.Controls.Add(lblSearch);
-            pnlFilters.Controls.Add(pnlSearch);
+            pnlFilters.Controls.Add(_txtSearch);
 
             pnlToolbar.Controls.Add(pnlFilters);
             pnlToolbar.Controls.Add(pnlActions);
@@ -1028,9 +1036,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             if (_raw == null)
                 return;
 
-            string raw = (_txtSearch.Text ?? string.Empty).Trim();
-            if (raw == SearchPlaceholder) raw = string.Empty;
-            string keyword = raw.ToLowerInvariant();
+            string keyword = (_txtSearch.Text ?? string.Empty).Trim().ToLowerInvariant();
 
             if (string.IsNullOrWhiteSpace(keyword))
             {

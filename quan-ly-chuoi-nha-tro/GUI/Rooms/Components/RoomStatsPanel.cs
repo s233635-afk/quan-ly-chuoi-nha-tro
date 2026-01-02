@@ -23,34 +23,36 @@ namespace quan_ly_chuoi_nha_tro.GUI.Rooms.Components
         private void InitializePanel()
         {
             Dock = DockStyle.Top;
-            Height = 40;
-            Padding = new Padding(12, 8, 12, 8);
+            Height = 45; // Increased from 40 to 45 to ensure labels are not cut off
+            Padding = new Padding(12, 10, 12, 10);
             BackColor = Color.White;
 
             var statsFlow = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = true,
+                WrapContents = false, // Changed to false to prevent wrapping
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink
             };
 
             _lblOccupancy = new Label
             {
-                Text = "Äang á»Ÿ/Tá»•ng: 0/0 phĂ²ng",
+                Text = "Đang ở/Tổng: 0/0 phòng",
                 AutoSize = true,
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                ForeColor = Color.FromArgb(0, 122, 204)
+                ForeColor = Color.FromArgb(0, 122, 204),
+                MinimumSize = new Size(180, 20) // Ensure minimum width
             };
 
             _lblRoomCount = new Label
             {
-                Text = "PhĂ²ng: 0/0",
+                Text = "Phòng: 0/0",
                 AutoSize = true,
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 122, 204),
-                Margin = new Padding(12, 0, 0, 0)
+                Margin = new Padding(20, 0, 0, 0), // Increased margin from 12 to 20
+                MinimumSize = new Size(120, 20) // Ensure minimum width
             };
 
             statsFlow.Controls.Add(_lblOccupancy);
@@ -63,8 +65,8 @@ namespace quan_ly_chuoi_nha_tro.GUI.Rooms.Components
         {
             if (displayedRooms == null)
             {
-                _lblOccupancy.Text = "Äang á»Ÿ/Tá»•ng: 0/0 phĂ²ng";
-                _lblRoomCount.Text = "PhĂ²ng: 0/0";
+                _lblOccupancy.Text = "Đang ở/Tổng: 0/0 phòng";
+                _lblRoomCount.Text = "Phòng: 0/0";
                 return;
             }
 
@@ -78,10 +80,10 @@ namespace quan_ly_chuoi_nha_tro.GUI.Rooms.Components
                 return occupants > 0;
             });
 
-            string limitText = displayLimit <= 0 ? "âˆ" : displayLimit.ToString();
+            string limitText = displayLimit <= 0 ? "∞" : displayLimit.ToString();
 
-            _lblOccupancy.Text = $"Äang á»Ÿ/Tá»•ng: {occupied}/{totalDisplayed} phĂ²ng";
-            _lblRoomCount.Text = $"PhĂ²ng: {totalDisplayed}/{limitText}";
+            _lblOccupancy.Text = $"Đang ở/Tổng: {occupied}/{totalDisplayed} phòng";
+            _lblRoomCount.Text = $"Phòng: {totalDisplayed}/{limitText}";
         }
     }
 }

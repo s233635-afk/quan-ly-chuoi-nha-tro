@@ -29,7 +29,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Panel _toolbarPanel;
         private Panel _filterPanel;
         private ModernDataGridView _grid;
-        private TextBox _txtSearch;
+        private ModernSearchBox _txtSearch;
         private ComboBox _cboMethod;
         private ComboBox _cboStatus;
         private DateTimePicker _dtFrom;
@@ -152,28 +152,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
             };
 
             // Search box
-            var lblSearch = new Label { Text = "🔍 Tìm:", AutoSize = true, ForeColor = ModernTheme.Colors.TextPrimary };
-            _txtSearch = new TextBox { Width = 250, Height = 32 };
-            ModernTheme.StyleTextBox(_txtSearch);
-            _txtSearch.TextChanged += (s, e) => ApplyFilter();
-            _txtSearch.GotFocus += (s, e) =>
+            _txtSearch = new ModernSearchBox
             {
-                if (_txtSearch.Text == SearchPlaceholder)
-                {
-                    _txtSearch.Text = "";
-                    _txtSearch.ForeColor = ModernTheme.Colors.TextPrimary;
-                }
+                PlaceholderText = SearchPlaceholder,
+                Width = 280,
+                Height = 40,
+                DebounceMs = 300,
+                Margin = new Padding(0, 5, ModernTheme.Spacing.MD, 5)
             };
-            _txtSearch.LostFocus += (s, e) =>
-            {
-                if (string.IsNullOrWhiteSpace(_txtSearch.Text))
-                {
-                    _txtSearch.Text = SearchPlaceholder;
-                    _txtSearch.ForeColor = ModernTheme.Colors.TextTertiary;
-                }
-            };
-            _txtSearch.Text = SearchPlaceholder;
-            _txtSearch.ForeColor = ModernTheme.Colors.TextTertiary;
+            _txtSearch.SearchTriggered += (s, e) => ApplyFilter();
 
             // Method combo
             var lblMethod = new Label { Text = "Hình thức:", AutoSize = true, ForeColor = ModernTheme.Colors.TextPrimary };
@@ -209,7 +196,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 BackColor = ModernTheme.Colors.Surface
             };
 
-            filterFlow.Controls.Add(lblSearch);
             filterFlow.Controls.Add(_txtSearch);
             filterFlow.Controls.Add(new Label { Width = ModernTheme.Spacing.MD, AutoSize = false });
             filterFlow.Controls.Add(lblMethod);
@@ -358,7 +344,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var query = filtered.AsEnumerable();
 
             // Search filter
-            if (!string.IsNullOrWhiteSpace(_txtSearch.Text) && _txtSearch.Text != SearchPlaceholder)
+            if (!string.IsNullOrWhiteSpace(_txtSearch.Text))
             {
                 string searchTerm = _txtSearch.Text.ToLower();
                 query = query.Where(r =>

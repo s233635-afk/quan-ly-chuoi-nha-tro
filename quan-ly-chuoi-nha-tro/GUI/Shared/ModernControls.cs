@@ -338,11 +338,71 @@ namespace quan_ly_chuoi_nha_tro.GUI
     /// </summary>
     public class ModernCard : Panel
     {
+        private int _borderRadius = 18;
+
+        public int BorderRadius
+        {
+            get => _borderRadius;
+            set
+            {
+                _borderRadius = value;
+                UpdateRegion();
+                Invalidate();
+            }
+        }
+
         public ModernCard()
         {
             BackColor = ModernTheme.Colors.Background;
-            BorderStyle = BorderStyle.FixedSingle;
+            BorderStyle = BorderStyle.None;
             Padding = new Padding(ModernTheme.Spacing.LG);
+
+            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
+                     ControlStyles.OptimizedDoubleBuffer | ControlStyles.SupportsTransparentBackColor, true);
+
+            UpdateRegion();
+        }
+
+        private void UpdateRegion()
+        {
+            UiKit.SetRoundedRegion(this, _borderRadius);
+        }
+
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+            UpdateRegion();
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            
+            e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
+            var rect = new Rectangle(0, 0, Width - 1, Height - 1);
+
+            // Draw subtle shadow for depth
+            var shadowRect = new Rectangle(2, 2, Width - 4, Height - 4);
+            using (var shadowPath = UiKit.GetRoundPath(shadowRect, _borderRadius))
+            using (var shadowBrush = new SolidBrush(Color.FromArgb(20, 0, 0, 0)))
+            {
+                e.Graphics.FillPath(shadowBrush, shadowPath);
+            }
+
+            // Draw background with rounded corners
+            using (var path = UiKit.GetRoundPath(rect, _borderRadius))
+            using (var bgBrush = new SolidBrush(BackColor))
+            {
+                e.Graphics.FillPath(bgBrush, path);
+            }
+
+            // Draw enhanced border for better visibility
+            using (var path = UiKit.GetRoundPath(rect, _borderRadius))
+            using (var borderPen = new Pen(Color.FromArgb(160, 170, 180), 2))
+            {
+                e.Graphics.DrawPath(borderPen, path);
+            }
         }
     }
 
@@ -361,8 +421,20 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private decimal? _trendValue = null;
         private TrendDirection? _trend = null;
         private bool _isHovered = false;
+        private int _borderRadius = 18; // Border radius 15-20px
 
         public enum TrendDirection { Up, Down, Neutral }
+
+        public int BorderRadius
+        {
+            get => _borderRadius;
+            set
+            {
+                _borderRadius = value;
+                UpdateRegion();
+                Invalidate();
+            }
+        }
 
         public ModernStatCard(string title, string value, string subtitle, Color accentColor)
         {
@@ -370,20 +442,16 @@ namespace quan_ly_chuoi_nha_tro.GUI
             BackColor = Color.White;
             BorderStyle = BorderStyle.None;
             Width = 200;
-            Height = 120;
-            Padding = new Padding(14, ModernTheme.Spacing.MD, ModernTheme.Spacing.MD, ModernTheme.Spacing.MD);
+            Height = 75;
+            Padding = new Padding(18, 8, 12, 8);
             Cursor = Cursors.Hand;
 
             SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
-                     ControlStyles.OptimizedDoubleBuffer, true);
+                     ControlStyles.OptimizedDoubleBuffer | ControlStyles.SupportsTransparentBackColor, true);
 
-            // Accent bar (left edge)
-            var accentBar = new Panel
-            {
-                BackColor = accentColor,
-                Width = 4,
-                Dock = DockStyle.Left
-            };
+            UpdateRegion();
+
+            // Note: Accent bar will be drawn in OnPaint to follow rounded corners
 
             // Icon label (top-right)
             _iconLabel = new Label
@@ -409,22 +477,23 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _titleLabel = new Label
             {
                 Text = title,
-                Font = ModernTheme.Fonts.Bold(ModernTheme.Fonts.Small),
+                Font = ModernTheme.Fonts.Bold(9f),
                 ForeColor = ModernTheme.Colors.TextSecondary,
                 AutoSize = false,
                 Dock = DockStyle.Top,
-                Height = 20,
+                Height = 16,
                 BackColor = Color.Transparent
             };
 
             // Value label
             _valueLabel = new Label
             {
-                Text = value,  Font = ModernTheme.Fonts.Bold(20),
+                Text = value,
+                Font = ModernTheme.Fonts.Bold(18),
                 ForeColor = accentColor,
                 AutoSize = false,
                 Dock = DockStyle.Top,
-                Height = 40,
+                Height = 28,
                 TextAlign = ContentAlignment.MiddleLeft,
                 BackColor = Color.Transparent
             };
@@ -434,7 +503,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 AutoSize = true,
                 Font = ModernTheme.Fonts.Bold(ModernTheme.Fonts.Small),
-                Location = new Point(14, Height - 25),
+                Location = new Point(18, Height - 18),
                 Anchor = AnchorStyles.Bottom | AnchorStyles.Left,
                 Visible = false,
                 BackColor = Color.Transparent
@@ -444,10 +513,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _subtitleLabel = new Label
             {
                 Text = subtitle,
-                Font = ModernTheme.Fonts.Regular(ModernTheme.Fonts.Tiny),
+                Font = ModernTheme.Fonts.Regular(8.5f),
                 ForeColor = ModernTheme.Colors.TextTertiary,
                 AutoSize = false,
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Top,
+                Height = 15,
                 BackColor = Color.Transparent
             };
 
@@ -456,7 +526,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             Controls.Add(_titleLabel);
             Controls.Add(_iconLabel);
             Controls.Add(_trendLabel);
-            Controls.Add(accentBar);
 
             // Forward mouse events from all child controls to card
             MouseEnter += (s, e) => { _isHovered = true; Invalidate(); };
@@ -567,37 +636,61 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
         }
 
+        private void UpdateRegion()
+        {
+            UiKit.SetRoundedRegion(this, _borderRadius);
+        }
+
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+            UpdateRegion();
+        }
+
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
             
             e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
 
-            // Draw subtle shadow for elevation
-            using (var shadowBrush = new SolidBrush(Color.FromArgb(8, 0, 0, 0)))
+            var rect = new Rectangle(0, 0, Width - 1, Height - 1);
+
+            // Draw enhanced shadow for elevation
+            using (var shadowPath = UiKit.GetRoundPath(new Rectangle(2, 2, Width - 3, Height - 3), _borderRadius))
+            using (var shadowBrush = new SolidBrush(Color.FromArgb(25, 0, 0, 0)))
             {
-                var shadowRect = new Rectangle(2, 2, Width - 2, Height - 2);
-                e.Graphics.FillRectangle(shadowBrush, shadowRect);
+                e.Graphics.FillPath(shadowBrush, shadowPath);
             }
 
-            // Draw white background with subtle border
+            // Draw white background with rounded corners
+            using (var path = UiKit.GetRoundPath(rect, _borderRadius))
             using (var bgBrush = new SolidBrush(Color.White))
-            using (var borderPen = new Pen(Color.FromArgb(224, 231, 240), 1))
             {
-                var rect = new Rectangle(0, 0, Width - 1, Height - 1);
-                e.Graphics.FillRectangle(bgBrush, rect);
-                e.Graphics.DrawRectangle(borderPen, rect);
+                e.Graphics.FillPath(bgBrush, path);
             }
 
-            // Hover effect - blue border
-            if (_isHovered)
+            // Draw accent bar on the left edge (following rounded corners)
+            int accentWidth = 5;
+            var accentRect = new Rectangle(0, 0, accentWidth, Height - 1);
+            
+            using (var accentPath = UiKit.GetRoundPath(new Rectangle(0, 0, _borderRadius * 2, Height - 1), _borderRadius))
             {
-                using (var pen = new Pen(ModernTheme.Colors.Primary, 2))
+                e.Graphics.SetClip(accentRect);
+                using (var accentBrush = new SolidBrush(_accentColor))
                 {
-                    Rectangle borderRect = ClientRectangle;
-                    borderRect.Inflate(-1, -1);
-                    e.Graphics.DrawRectangle(pen, borderRect);
+                    e.Graphics.FillPath(accentBrush, accentPath);
                 }
+                e.Graphics.ResetClip();
+            }
+
+            // Draw enhanced border
+            Color borderColor = _isHovered ? ModernTheme.Colors.Primary : Color.FromArgb(160, 170, 180);
+            int borderWidth = _isHovered ? 2 : 2;
+            
+            using (var path = UiKit.GetRoundPath(rect, _borderRadius))
+            using (var pen = new Pen(borderColor, borderWidth))
+            {
+                e.Graphics.DrawPath(pen, path);
             }
         }
 

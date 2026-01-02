@@ -18,7 +18,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private DataTable _branchTable;
 
         private DataGridView _grid;
-        private TextBox _txtSearch;
+        private ModernSearchBox _txtSearch;
         private ComboBox _cboBranch;
         private ComboBox _cboActive;
         private Label _lblCount;
@@ -68,24 +68,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _grid.DoubleClick += async (s, e) => await EditSelectedAsync();
             _grid.CellFormatting += Grid_CellFormatting;
 
-            _txtSearch = new TextBox { Width = 300 };
-            _txtSearch.TextChanged += (s, e) => ApplyFilter();
-            _txtSearch.GotFocus += (s, e) =>
+            _txtSearch = new ModernSearchBox
             {
-                if (_txtSearch.Text == SearchPlaceholder)
-                {
-                    _txtSearch.Text = string.Empty;
-                    _txtSearch.ForeColor = Color.Black;
-                }
+                Width = 300,
+                PlaceholderText = SearchPlaceholder
             };
-            _txtSearch.LostFocus += (s, e) =>
-            {
-                if (string.IsNullOrWhiteSpace(_txtSearch.Text))
-                {
-                    _txtSearch.Text = SearchPlaceholder;
-                    _txtSearch.ForeColor = Color.Gray;
-                }
-            };
+            _txtSearch.SearchTriggered += (s, e) => ApplyFilter();
 
             _cboBranch = new ComboBox { Width = 240, DropDownStyle = ComboBoxStyle.DropDownList };
             _cboBranch.SelectedIndexChanged += (s, e) => ApplyFilter();
@@ -120,26 +108,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             actions.Controls.Add(_btnRefresh);
 
             var filterHost = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent };
-            var pnlSearch = new Panel
-            {
-                BackColor = Color.FromArgb(245, 247, 250),
-                Height = 34,
-                Width = 320,
-                Padding = new Padding(10, 7, 10, 7)
-            };
-            _txtSearch.BorderStyle = BorderStyle.None;
-            _txtSearch.Parent = pnlSearch;
-            _txtSearch.Location = new Point(2, 6);
-            _txtSearch.Width = pnlSearch.Width - 16;
-            pnlSearch.Resize += (s, e) => _txtSearch.Width = pnlSearch.Width - 16;
-            _txtSearch.Text = SearchPlaceholder;
-            _txtSearch.ForeColor = Color.Gray;
-
+            
             var lblSearch = new Label { Text = "Tìm:", AutoSize = true, Location = new Point(0, 9), ForeColor = Color.FromArgb(70, 70, 70) };
-            pnlSearch.Location = new Point(lblSearch.Right + 6, 10);
+            _txtSearch.Location = new Point(lblSearch.Right + 6, 6);
 
             var lblBranch = new Label { Text = "Chi nhánh:", AutoSize = true, ForeColor = Color.FromArgb(70, 70, 70) };
-            lblBranch.Location = new Point(pnlSearch.Right + 14, 9);
+            lblBranch.Location = new Point(_txtSearch.Right + 14, 9);
             _cboBranch.Location = new Point(lblBranch.Right + 6, 6);
 
             var lblActive = new Label { Text = "Trạng thái:", AutoSize = true, ForeColor = Color.FromArgb(70, 70, 70) };
@@ -147,7 +121,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _cboActive.Location = new Point(lblActive.Right + 6, 6);
 
             filterHost.Controls.Add(lblSearch);
-            filterHost.Controls.Add(pnlSearch);
+            filterHost.Controls.Add(_txtSearch);
             filterHost.Controls.Add(lblBranch);
             filterHost.Controls.Add(_cboBranch);
             filterHost.Controls.Add(lblActive);
@@ -155,8 +129,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             filterHost.Resize += (s, e) =>
             {
-                pnlSearch.Location = new Point(lblSearch.Right + 6, 10);
-                lblBranch.Location = new Point(pnlSearch.Right + 14, 9);
+                _txtSearch.Location = new Point(lblSearch.Right + 6, 6);
+                lblBranch.Location = new Point(_txtSearch.Right + 14, 9);
                 _cboBranch.Location = new Point(lblBranch.Right + 6, 6);
                 lblActive.Location = new Point(_cboBranch.Right + 14, 9);
                 _cboActive.Location = new Point(lblActive.Right + 6, 6);
@@ -271,9 +245,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (_rawTable == null) return;
 
-            string rawKeyword = (_txtSearch.Text ?? string.Empty).Trim();
-            if (rawKeyword == SearchPlaceholder) rawKeyword = string.Empty;
-            string keyword = rawKeyword.ToLowerInvariant();
+            string keyword = (_txtSearch.Text ?? string.Empty).Trim().ToLowerInvariant();
 
             int branchId = _cboBranch.SelectedValue is int b ? b : 0;
             int activeChoice = _cboActive.SelectedIndex; // 0 all, 1 active, 2 inactive

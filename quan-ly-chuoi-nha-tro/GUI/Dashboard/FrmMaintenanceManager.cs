@@ -357,7 +357,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 79, 159),
                 AutoSize = false,
-                Width = 300,
+                Width = 200,
                 Height = 22,
                 Location = new Point(0, 0)
             };
@@ -365,13 +365,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var lblStatus = new Label
             {
                 Text = ToVietnameseStatus(status),
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
                 ForeColor = GetStatusColor(status),
-                AutoSize = false,
-                Width = 120,
-                Height = 20,
-                TextAlign = ContentAlignment.MiddleRight,
-                Location = new Point(190, 0)
+                AutoSize = true,
+                Padding = new Padding(6, 2, 6, 2),
+                BackColor = Color.FromArgb(240, 245, 250),
+                TextAlign = ContentAlignment.MiddleCenter,
+                Location = new Point(210, 0)
             };
 
             var lblPriority = new Label
@@ -441,11 +441,30 @@ namespace quan_ly_chuoi_nha_tro.GUI
             content.Controls.Add(lblAssignee);
 
             var border = new Panel { Dock = DockStyle.Fill };
-            border.Paint += (s, e) =>
+            
+            // Set rounded region for card
+            EventHandler updateRegion = (s, e) => UiKit.SetRoundedRegion(card, 12);
+            card.Resize += updateRegion;
+            updateRegion(null, null);
+            
+            card.Paint += (s, e) =>
             {
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                
+                var rect = new Rectangle(0, 0, card.Width - 1, card.Height - 1);
+                
+                // Draw background with rounded corners
+                using (var path = UiKit.GetRoundPath(rect, 12))
+                using (var bgBrush = new SolidBrush(Color.White))
+                {
+                    e.Graphics.FillPath(bgBrush, path);
+                }
+                
+                // Draw border with rounded corners
+                using (var path = UiKit.GetRoundPath(rect, 12))
                 using (var pen = new Pen(IsSelected(card) ? Color.FromArgb(0, 122, 204) : Color.FromArgb(220, 230, 240), 1.4f))
                 {
-                    e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
+                    e.Graphics.DrawPath(pen, path);
                 }
             };
 
@@ -709,20 +728,23 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private static Button MakeButton(string text, Color backColor, EventHandler onClick)
         {
-            var b = new Button
+            var b = new ModernButton
             {
                 Text = text,
                 Width = 110,
                 Height = 36,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = backColor,
-                ForeColor = Color.White,
+                Parameters = new ModernButton.ButtonParameters
+                {
+                    BaseColor = backColor,
+                    HoverColor = ColorAdjust(backColor, 10),
+                    BorderRadius = 8,
+                    TextFont = new Font("Segoe UI", 10, FontStyle.Regular),
+                    TextColor = Color.White
+                },
+                BackColor = Color.Transparent,
                 Margin = new Padding(0, 0, 6, 0),
-                Font = new Font("Segoe UI", 10, FontStyle.Regular),
                 Cursor = Cursors.Hand
             };
-            b.FlatAppearance.BorderSize = 0;
-            b.FlatAppearance.MouseOverBackColor = ColorAdjust(backColor, 10);
             b.Click += onClick;
             return b;
         }

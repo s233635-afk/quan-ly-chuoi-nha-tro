@@ -403,6 +403,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                 ToastNotification.Success($"Xin chào {fullName}!");
 
+                // Show loading overlay BEFORE hiding the form
+                using (var loading = new SimpleLoadingOverlay(this, "Đang tải..."))
+                {
+                    await System.Threading.Tasks.Task.Delay(800); // Show loading screen
+                }
+
                 Hide();
 
                 if (roleId == 1)

@@ -86,13 +86,22 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private void InitializeNotificationBell()
         {
             _notificationBell = new NotificationBell(_branchId);
-            _notificationBell.Location = new Point(_btnLogout.Left - 55, 10);
-            _notificationBell.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            _notificationBell.Margin = new Padding(0, 12, 15, 0); // Margin để căn giữa và tạo khoảng cách
             _notificationBell.BellClicked += (s, e) => {
                 SetActive(_btnStatus);
                 LoadModule(new FrmNotificationManager(_branchId, true), "Thông báo");
             };
-            _header.Controls.Add(_notificationBell);
+            
+            // Find rightPanel and add notification bell at the beginning
+            foreach (Control ctrl in _header.Controls)
+            {
+                if (ctrl is FlowLayoutPanel flowPanel && flowPanel.Dock == DockStyle.Right)
+                {
+                    flowPanel.Controls.Add(_notificationBell);
+                    flowPanel.Controls.SetChildIndex(_notificationBell, 0); // Move to first position (leftmost)
+                    break;
+                }
+            }
         }
 
         private async Task<bool> CheckStaffPermissionAsync()
@@ -207,12 +216,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Text = "Đăng xuất",
                 Width = 110,
                 Height = 36,
+                Parameters = new ModernButton.ButtonParameters
+                {
+                    BaseColor = Color.FromArgb(231, 76, 60),
+                    HoverColor = ControlPaint.Dark(Color.FromArgb(231, 76, 60), 0.1f),
+                    BorderRadius = 8,
+                    TextFont = new Font("Segoe UI", 10f, FontStyle.Bold),
+                    TextColor = Color.White
+                },
                 FlatStyle = FlatStyle.Flat,
-                BaseColor = Color.FromArgb(231, 76, 60),
                 BackColor = Color.Transparent,
                 ForeColor = Color.White,
                 Cursor = Cursors.Hand,
-                Margin = new Padding(0, 12, 20, 0) // Right margin 20 from edge
+                Margin = new Padding(0, 12, 20, 0)
             };
             _btnLogout.FlatAppearance.BorderSize = 0;
             _btnLogout.Click += (s, e) =>
@@ -228,13 +244,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Width = 400, // Initial, but AutoSize will handle it
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                FlowDirection = FlowDirection.RightToLeft,
+                FlowDirection = FlowDirection.LeftToRight, // Changed to LeftToRight for correct order
                 BackColor = Color.Transparent,
                 WrapContents = false
             };
             
-            rightPanel.Controls.Add(_btnLogout); // Added first, stays rightmost
-            rightPanel.Controls.Add(_lblUser);   // Added second, stays left of button
+            // With LeftToRight flow, add in visual order: NotificationBell, User, Logout
+            // NotificationBell will be added first in InitializeNotificationBell
+            rightPanel.Controls.Add(_lblUser);   // Added first (will be second visually)
+            rightPanel.Controls.Add(_btnLogout); // Added second (will be third visually)
 
             _header.Controls.Add(rightPanel);
             _header.Controls.Add(_lblHeader);
@@ -321,6 +339,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _currentModule = module;
             _host.Controls.Add(module);
             module.Show();
+            
+            // Ensure notification bell stays on top after module is loaded
+            if (_notificationBell != null && !_notificationBell.IsDisposed)
+            {
+                _notificationBell.BringToFront();
+            }
         }
 
         private void ShowOverview()
@@ -348,18 +372,26 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 ColumnCount = 6,
                 RowCount = 1,
-                Location = new Point(10, 50),
-                Width = 1000,
-                Height = 160,
+                Location = new Point(10, 60),
+                Width = _overviewHost.ClientSize.Width - 40,
+                Height = 180,
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
                 BackColor = Color.Transparent
             };
             cardGrid.ColumnStyles.Clear();
-            for (int i = 0; i < 6; i++) 
+            for (int i = 0; i < 6; i++)
                 cardGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f / 6f));
             
-            cardGrid.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+            cardGrid.RowStyles.Add(new RowStyle(SizeType.Absolute, 180f));
             _overviewHost.Controls.Add(cardGrid);
+            
+            // Ensure cardGrid resizes with parent
+            _overviewHost.Resize += (s, e) => {
+                if (cardGrid != null && !cardGrid.IsDisposed)
+                {
+                    cardGrid.Width = _overviewHost.ClientSize.Width - 40;
+                }
+            };
 
             // Recent Activity Section
             var recentLabel = new Label
@@ -368,16 +400,16 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Font = new Font("Segoe UI", 12, FontStyle.Bold),
                 ForeColor = Color.FromArgb(44, 62, 80),
                 AutoSize = true,
-                Location = new Point(20, 230),
+                Location = new Point(20, 260),
                 Margin = new Padding(0, 20, 0, 10)
             };
              _overviewHost.Controls.Add(recentLabel);
 
             var recentGrid = new DataGridView
             {
-                Location = new Point(20, 265),
-                Width = 1000,
-                Height = 200,
+                Location = new Point(20, 295),
+                Width = _overviewHost.ClientSize.Width - 40,
+                Height = 250,
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
                 BackgroundColor = Color.White,
                 BorderStyle = BorderStyle.None,
@@ -396,8 +428,16 @@ namespace quan_ly_chuoi_nha_tro.GUI
             recentGrid.EnableHeadersVisualStyles = false;
             _overviewHost.Controls.Add(recentGrid);
             
-            var loading = new Label { Text = "Đang tải thống kê...", AutoSize = true, ForeColor = Color.Gray, Location = new Point(20, 670) };
+            var loading = new Label { Text = "Đang tải thống kê...", AutoSize = true, ForeColor = Color.Gray, Location = new Point(20, 560) };
             _overviewHost.Controls.Add(loading);
+            
+            // Ensure recentGrid resizes with parent
+            _overviewHost.Resize += (s, e) => {
+                if (recentGrid != null && !recentGrid.IsDisposed)
+                {
+                    recentGrid.Width = _overviewHost.ClientSize.Width - 40;
+                }
+            };
 
             _host.Controls.Add(_overviewHost);
             _ = LoadOverviewAsync(cardGrid, recentGrid, loading);
@@ -405,19 +445,21 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private async Task LoadOverviewAsync(TableLayoutPanel grid, DataGridView recentList, Label loadingLabel)
         {
-            try
+            using (var loading = new SimpleLoadingOverlay(this, "Đang tải thông kê"))
             {
-                var rooms = await _bll.GetRoomsAsync();
-                var invoices = await _bll.GetInvoicesViewAsync();
-                var payments = await _bll.GetPaymentsViewAsync();
-                var contracts = await _bll.GetContractsAsync();
-                var maintenance = await _bll.GetMaintenanceAsync();
+                try
+                {
+                    var rooms = await _bll.GetRoomsAsync();
+                    var invoices = await _bll.GetInvoicesViewAsync();
+                    var payments = await _bll.GetPaymentsViewAsync();
+                    var contracts = await _bll.GetContractsAsync();
+                    var maintenance = await _bll.GetMaintenanceAsync();
 
-                rooms = FilterByBranch(rooms, _branchId);
-                invoices = FilterByBranch(invoices, _branchId);
-                payments = FilterByBranch(payments, _branchId);
-                contracts = FilterByBranch(contracts, _branchId);
-                maintenance = FilterByBranch(maintenance, _branchId);
+                    rooms = FilterByBranch(rooms, _branchId);
+                    invoices = FilterByBranch(invoices, _branchId);
+                    payments = FilterByBranch(payments, _branchId);
+                    contracts = FilterByBranch(contracts, _branchId);
+                    maintenance = FilterByBranch(maintenance, _branchId);
 
                 int totalRooms = rooms?.Rows.Count ?? 0;
                 int occupied = rooms?.AsEnumerable().Count(r => r.Table.Columns.Contains("CurrentStatusId") && int.TryParse(r["CurrentStatusId"]?.ToString(), out var s) && s != 1) ?? 0;
@@ -437,9 +479,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                                                                             && !string.Equals(r["Status"]?.ToString(), "Hoàn tất", StringComparison.OrdinalIgnoreCase)
                                                                             && !string.Equals(r["Status"]?.ToString(), "Hoan tat", StringComparison.OrdinalIgnoreCase)) ?? 0;
 
-                grid.Controls.Clear();
-                // Add margins to panels inside grid
-                grid.Controls.Add(MakeMetricCard("Phòng", $"{occupied}/{totalRooms}", "Đang sử dụng / Tổng", Color.FromArgb(26, 188, 156), (s, e) => _btnRoom.PerformClick()), 0, 0);
+                    grid.Controls.Clear();
+                    grid.Controls.Add(MakeMetricCard("Phòng", $"{occupied}/{totalRooms}", "Đang sử dụng / Tổng", Color.FromArgb(26, 188, 156), (s, e) => _btnRoom.PerformClick()), 0, 0);
                 grid.Controls.Add(MakeMetricCard("Công nợ", $"{debt:N0} đ", "Tổng tiền còn nợ", Color.FromArgb(231, 76, 60), (s, e) => _btnInvoicePayment.PerformClick()), 1, 0);
                 grid.Controls.Add(MakeMetricCard("Thu tháng này", $"{collectedThisMonth:N0} đ", "Đã thu trong tháng", Color.FromArgb(46, 204, 113), (s, e) => _btnInvoicePayment.PerformClick()), 2, 0);
                 grid.Controls.Add(MakeMetricCard("Quá hạn", $"{overdueCount}", "Hóa đơn quá hạn", Color.FromArgb(243, 156, 18), (s, e) => _btnInvoicePayment.PerformClick()), 3, 0);
@@ -478,21 +519,22 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 dv.Sort = "THỜI GIAN DESC";
                 recentList.DataSource = dv.ToTable();
 
-                // Handle empty state
-                if (dtRecent.Rows.Count == 0)
-                {
-                    loadingLabel.Text = "Không có hoạt động gần đây";
-                    loadingLabel.ForeColor = Color.FromArgb(149, 165, 166);
+                    // Handle empty state
+                    if (dtRecent.Rows.Count == 0)
+                    {
+                        loadingLabel.Text = "Không có hoạt động gần đây";
+                        loadingLabel.ForeColor = Color.FromArgb(149, 165, 166);
+                    }
+                    else
+                    {
+                        loadingLabel.Visible = false;
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    loadingLabel.Visible = false;
+                    loadingLabel.Text = "Không thể tải thống kê: " + ex.Message;
+                    loadingLabel.Visible = true;
                 }
-            }
-            catch (Exception ex)
-            {
-                loadingLabel.Text = "Không thể tải thống kê: " + ex.Message;
-                loadingLabel.Visible = true;
             }
         }
 

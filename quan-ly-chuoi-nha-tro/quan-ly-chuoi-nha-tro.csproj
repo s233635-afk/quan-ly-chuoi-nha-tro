@@ -454,6 +454,15 @@
     <Compile Include="GUI\Shared\Components\EmptyStatePanel.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <Compile Include="GUI\Shared\Components\ModernSearchBox.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="GUI\Shared\Components\ProgressOverlay.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="GUI\Shared\Components\SimpleLoadingOverlay.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="GUI\Branches\AdminBranchScope.cs" />
     <Compile Include="GUI\Branches\AdminEvents.cs" />
     <Compile Include="GUI\Shared\TextFixer.cs" />

@@ -67,12 +67,43 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             _notificationBell = new NotificationBell();
             _notificationBell.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            _notificationBell.Location = new Point(btnLogout.Left - 55, 22);
+            
+            // Calculate position: left of lblUser if it exists, otherwise left of btnLogout
+            int xPosition;
+            if (lblUser != null && lblUser.Visible)
+            {
+                xPosition = lblUser.Left - _notificationBell.Width - 15;
+            }
+            else
+            {
+                xPosition = btnLogout.Left - _notificationBell.Width - 15;
+            }
+            
+            _notificationBell.Location = new Point(xPosition, 18);
             _notificationBell.BellClicked += (s, e) => {
                 SetActiveNav(btnNavNotification);
                 btnNotification_Click(s, e);
             };
             pnlHeader.Controls.Add(_notificationBell);
+            _notificationBell.BringToFront();
+            
+            // Update position when panel resizes
+            pnlHeader.Resize += (s, e) => {
+                if (_notificationBell != null && !_notificationBell.IsDisposed)
+                {
+                    int newX;
+                    if (lblUser != null && lblUser.Visible)
+                    {
+                        newX = lblUser.Left - _notificationBell.Width - 15;
+                    }
+                    else
+                    {
+                        newX = btnLogout.Left - _notificationBell.Width - 15;
+                    }
+                    _notificationBell.Location = new Point(newX, 18);
+                    _notificationBell.BringToFront();
+                }
+            };
         }
 
         private void ApplyNavStyling()
@@ -94,6 +125,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             btnLogout.FlatAppearance.BorderSize = 0;
             btnLogout.FlatAppearance.MouseOverBackColor = ControlPaint.Dark(btnLogout.BackColor);
+            
+            // Add rounded corners to logout button
+            UiKit.SetRoundedRegion(btnLogout, 8);
+            btnLogout.Resize += (s, e) => UiKit.SetRoundedRegion(btnLogout, 8);
         }
 
         private void StyleNavButton(Button btn)
@@ -296,36 +331,43 @@ namespace quan_ly_chuoi_nha_tro.GUI
             // Luôn hiển thị tiêu đề của module
             lblWelcome.Text = headerTitle;
             module.Show();
+            
+            // Ensure notification bell stays on top after module is loaded
+            if (_notificationBell != null && !_notificationBell.IsDisposed)
+            {
+                _notificationBell.BringToFront();
+            }
         }
 
         private async System.Threading.Tasks.Task ShowOverviewAsync()
         {
             ClearCurrentModule();
 
-            try
+            using (var loading = new SimpleLoadingOverlay(this, "Đang tải thông kê"))
             {
-                // Có thể hiển thị trạng thái tải nhanh (nếu muốn)
-                lblPlaceholder.Text = "Đang tải thống kê...";
-                lblPlaceholder.Visible = true;
-                tableLayoutPanel1.Visible = false;
-                pnlModuleHost.Visible = false;
+                try
+                {
+                    lblPlaceholder.Visible = true;
+                    tableLayoutPanel1.Visible = false;
+                    pnlModuleHost.Visible = false;
 
-                var summary = await adminDataBLL.GetDashboardSummaryAsync();
-                BuildOverviewStats(summary);
+                    var summary = await adminDataBLL.GetDashboardSummaryAsync();
+                    BuildOverviewStats(summary);
 
-                tableLayoutPanel1.Visible = true;
-                lblPlaceholder.Visible = false;
-                pnlModuleHost.Visible = false;
-                lblWelcome.Text = $"Xin chào Admin: {currentUser}";
-                _overviewDirty = false;
-            }
-            catch (Exception ex)
-            {
-                tableLayoutPanel1.Visible = false;
-                pnlModuleHost.Visible = false;
-                lblPlaceholder.Text = "Không thể tải thống kê tổng quan.\n\n" + ex.Message;
-                lblPlaceholder.Visible = true;
-                lblWelcome.Text = $"Xin chào : {currentUser}";
+                    tableLayoutPanel1.Visible = true;
+                    lblPlaceholder.Visible = false;
+                    pnlModuleHost.Visible = false;
+                    lblWelcome.Text = $"Xin chào Admin: {currentUser}";
+                    _overviewDirty = false;
+                }
+                catch (Exception ex)
+                {
+                    tableLayoutPanel1.Visible = false;
+                    pnlModuleHost.Visible = false;
+                    lblPlaceholder.Text = "Không thể tải thống kê tổng quan.\n\n" + ex.Message;
+                    lblPlaceholder.Visible = true;
+                    lblWelcome.Text = $"Xin chào : {currentUser}";
+                }
             }
         }
 

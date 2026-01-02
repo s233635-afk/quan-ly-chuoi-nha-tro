@@ -730,8 +730,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 90F));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 90F));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 100F));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 100F));
 
             layout.Controls.Add(MakeSummaryCard("Phòng", Color.FromArgb(0, 122, 204), out _lblSummaryRooms), 0, 0);
             layout.Controls.Add(MakeSummaryCard("Khách thuê", Color.FromArgb(76, 175, 80), out _lblSummaryTenants), 1, 0);
@@ -754,8 +754,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 Dock = DockStyle.Fill,
                 Margin = new Padding(6),
-                Padding = new Padding(12, 10, 12, 10),
-                BackColor = Color.FromArgb(249, 252, 255)
+                Padding = new Padding(0),
+                BackColor = Color.FromArgb(249, 252, 255),
+                MinimumSize = new Size(0, 86)
             };
 
             panel.Paint += (s, e) =>
@@ -767,27 +768,59 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 }
             };
 
+            // Sử dụng TableLayoutPanel để căn giữa tự động
+            var layout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                RowCount = 3,
+                ColumnCount = 1,
+                Padding = new Padding(20, 0, 20, 0),
+                BackColor = Color.Transparent
+            };
+            
+            // 3 hàng: spacer trên, nội dung, spacer dưới
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 50F)); // Spacer trên
+            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));     // Nội dung
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 50F)); // Spacer dưới
+
+            // Container cho title và value
+            var contentPanel = new Panel
+            {
+                AutoSize = true,
+                Dock = DockStyle.Fill,
+                BackColor = Color.Transparent,
+                Padding = new Padding(0)
+            };
+
             var lblTitle = new Label
             {
                 AutoSize = true,
                 Text = title,
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Regular),
+                Font = new Font("Segoe UI", 10.5f, FontStyle.Regular),
                 ForeColor = Color.FromArgb(90, 90, 90),
-                Dock = DockStyle.Top
+                Dock = DockStyle.Top,
+                Padding = new Padding(0, 0, 0, 4)
             };
 
-            valueLabel = new Label
+            var lblValue = new Label
             {
                 AutoSize = true,
                 Text = "0",
-                Font = new Font("Segoe UI", 16, FontStyle.Bold),
+                Font = new Font("Segoe UI", 26, FontStyle.Bold),
                 ForeColor = accent,
-                Dock = DockStyle.Top,
-                Margin = new Padding(0, 6, 0, 0)
+                Dock = DockStyle.Top
             };
 
-            panel.Controls.Add(valueLabel);
-            panel.Controls.Add(lblTitle);
+            valueLabel = lblValue;
+
+            contentPanel.Controls.Add(lblValue);
+            contentPanel.Controls.Add(lblTitle);
+
+            layout.Controls.Add(new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent }, 0, 0); // Spacer trên
+            layout.Controls.Add(contentPanel, 0, 1); // Nội dung ở giữa
+            layout.Controls.Add(new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent }, 0, 2); // Spacer dưới
+
+            panel.Controls.Add(layout);
             return panel;
         }
 
@@ -2089,7 +2122,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var card = new Panel
             {
                 Width = 360,
-                Height = 148,
+                Height = 170,
                 BackColor = Color.White,
                 Margin = new Padding(0, 0, 14, 14),
                 Cursor = Cursors.Hand
@@ -2134,12 +2167,29 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var border = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent };
             border.Paint += (s, e) =>
             {
-                using (var pen = new Pen(Color.FromArgb(230, 235, 240), 1.2f))
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                
+                var rect = new Rectangle(0, 0, card.Width - 1, card.Height - 1);
+                
+                // Draw background with rounded corners
+                using (var path = UiKit.GetRoundPath(rect, 18))
+                using (var bgBrush = new SolidBrush(Color.White))
                 {
-                    var rect = new Rectangle(0, 0, card.Width - 1, card.Height - 1);
-                    e.Graphics.DrawRectangle(pen, rect);
+                    e.Graphics.FillPath(bgBrush, path);
+                }
+                
+                // Draw border with rounded corners
+                using (var path = UiKit.GetRoundPath(rect, 18))
+                using (var pen = new Pen(Color.FromArgb(210, 215, 220), 1))
+                {
+                    e.Graphics.DrawPath(pen, path);
                 }
             };
+
+            // Update region for rounded corners
+            EventHandler updateRegion = (s, e) => UiKit.SetRoundedRegion(card, 18);
+            card.Resize += updateRegion;
+            updateRegion(null, null);
 
             border.Controls.Add(sub);
             border.Controls.Add(title);
@@ -2995,7 +3045,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var panel = new Panel
             {
                 Width = 240,
-                Height = 140,
+                Height = 160,
                 BackColor = Color.White,
                 Margin = new Padding(8),
                 Padding = new Padding(12),
@@ -3003,12 +3053,29 @@ namespace quan_ly_chuoi_nha_tro.GUI
             };
             panel.Paint += (s, e) =>
             {
-                using (var pen = new Pen(Color.FromArgb(210, 220, 230)))
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                
+                var rect = new Rectangle(0, 0, panel.Width - 1, panel.Height - 1);
+                
+                // Draw background with rounded corners
+                using (var path = UiKit.GetRoundPath(rect, 18))
+                using (var bgBrush = new SolidBrush(Color.White))
                 {
-                    var rect = new Rectangle(0, 0, panel.Width - 1, panel.Height - 1);
-                    e.Graphics.DrawRectangle(pen, rect);
+                    e.Graphics.FillPath(bgBrush, path);
+                }
+                
+                // Draw border with rounded corners
+                using (var path = UiKit.GetRoundPath(rect, 18))
+                using (var pen = new Pen(Color.FromArgb(210, 220, 230), 1))
+                {
+                    e.Graphics.DrawPath(pen, path);
                 }
             };
+
+            // Update region for rounded corners
+            EventHandler updateRegion = (s, e) => UiKit.SetRoundedRegion(panel, 18);
+            panel.Resize += updateRegion;
+            updateRegion(null, null);
 
             int tenantId = TryReadInt(tenantRow, "TenantId");
             string name = TextFixer.FixUtf8Mojibake(ReadString(tenantRow, "FullName") ?? "");
@@ -3195,17 +3262,29 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             card.Paint += (s, e) =>
             {
-                // Vẽ border chính - xanh dương
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                
+                var rect = new Rectangle(0, 0, card.Width - 1, card.Height - 1);
+                
+                // Draw background with rounded corners
+                using (var path = UiKit.GetRoundPath(rect, 18))
+                using (var bgBrush = new SolidBrush(Color.White))
+                {
+                    e.Graphics.FillPath(bgBrush, path);
+                }
+                
+                // Draw border with rounded corners
+                using (var path = UiKit.GetRoundPath(rect, 18))
                 using (var pen = new Pen(Color.FromArgb(70, 160, 230), 2))
                 {
-                    e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
-                }
-                // Vẽ shadow - gradient từ góc
-                using (var shadowPen = new Pen(Color.FromArgb(200, 220, 245), 1))
-                {
-                    e.Graphics.DrawRectangle(shadowPen, 1, 1, card.Width - 3, card.Height - 3);
+                    e.Graphics.DrawPath(pen, path);
                 }
             };
+
+            // Update region for rounded corners
+            EventHandler updateRegion = (s, e) => UiKit.SetRoundedRegion(card, 18);
+            card.Resize += updateRegion;
+            updateRegion(null, null);
 
             card.MouseEnter += (s, e) =>
             {
@@ -3764,11 +3843,29 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             card.Paint += (s, e) =>
             {
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                
+                var rect = new Rectangle(0, 0, card.Width - 1, card.Height - 1);
+                
+                // Draw background with rounded corners
+                using (var path = UiKit.GetRoundPath(rect, 18))
+                using (var bgBrush = new SolidBrush(Color.White))
+                {
+                    e.Graphics.FillPath(bgBrush, path);
+                }
+                
+                // Draw border with rounded corners
+                using (var path = UiKit.GetRoundPath(rect, 18))
                 using (var pen = new Pen(Color.FromArgb(200, 220, 240), 1.5f))
                 {
-                    e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
+                    e.Graphics.DrawPath(pen, path);
                 }
             };
+
+            // Update region for rounded corners
+            EventHandler updateRegion = (s, e) => UiKit.SetRoundedRegion(card, 18);
+            card.Resize += updateRegion;
+            updateRegion(null, null);
 
             var content = new TableLayoutPanel
             {

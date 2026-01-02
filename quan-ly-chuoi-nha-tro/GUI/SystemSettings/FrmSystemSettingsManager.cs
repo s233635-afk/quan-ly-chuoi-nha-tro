@@ -16,7 +16,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private DataTable _rawTable;
         private DataGridView _grid;
-        private TextBox _txtSearch;
+        private ModernSearchBox _txtSearch;
         private Label _lblCount;
         private Label _lblEmpty;
 
@@ -45,7 +45,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _grid.Dock = DockStyle.Fill;
             _grid.DoubleClick += async (s, e) => await EditSelectedAsync();
 
-            _txtSearch = MakeSearchBox(SearchPlaceholder, () => ApplyFilter());
+            _txtSearch = new ModernSearchBox
+            {
+                Width = 280,
+                PlaceholderText = SearchPlaceholder
+            };
+            _txtSearch.SearchTriggered += (s, e) => ApplyFilter();
             _lblCount = new Label { AutoSize = true, Text = "Tổng: 0", Font = new Font("Segoe UI", 10, FontStyle.Bold), ForeColor = Color.FromArgb(0, 120, 215) };
             _lblEmpty = new Label
             {
@@ -62,10 +67,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnRefresh = MakeButton("⟳ Tải lại", Color.FromArgb(0, 122, 204), async (s, e) => await LoadAsync());
 
             // Toolbar with title
-            var pnlToolbar = new Panel 
-            { 
-                Dock = DockStyle.Top, 
-                Height = 70, 
+            var pnlToolbar = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 100,
                 BackColor = Color.White,
                 BorderStyle = BorderStyle.None,
                 Padding = new Padding(0)
@@ -75,9 +80,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var pnlTitleBar = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 35,
+                Height = 50,
                 BackColor = Color.FromArgb(248, 249, 250),
-                Padding = new Padding(20, 8, 20, 8),
+                Padding = new Padding(20, 12, 20, 12),
                 BorderStyle = BorderStyle.None
             };
             var lblTitle = new Label
@@ -86,19 +91,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Font = new Font("Segoe UI", 14, FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 120, 215),
                 AutoSize = true,
-                Dock = DockStyle.Left
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft
             };
             pnlTitleBar.Controls.Add(lblTitle);
-            pnlToolbar.Controls.Add(pnlTitleBar);
-
+            
             // Actions bar
             var pnlActionBar = new Panel
             {
-                Dock = DockStyle.Bottom,
-                Height = 40,
+                Dock = DockStyle.Fill,
+                Height = 50,
                 BackColor = Color.White,
-                Padding = new Padding(12, 6, 12, 6),
-                BorderStyle = BorderStyle.FixedSingle
+                Padding = new Padding(12, 8, 12, 8),
+                BorderStyle = BorderStyle.None
             };
 
             var actions = new FlowLayoutPanel
@@ -120,29 +125,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 AutoSize = true,
                 WrapContents = false,
                 FlowDirection = FlowDirection.LeftToRight,
-                BackColor = Color.Transparent,
-                Padding = new Padding(0, 2, 0, 0)
+                BackColor = Color.Transparent
             };
-            filters.Controls.Add(new Label { Text = "🔍 Tìm:", AutoSize = true, Margin = new Padding(0, 4, 6, 0), Font = new Font("Segoe UI", 9) });
+            filters.Controls.Add(new Label { Text = "🔍 Tìm:", AutoSize = true, Margin = new Padding(0, 8, 6, 0), Font = new Font("Segoe UI", 9) });
+            _txtSearch.Margin = new Padding(0, 4, 12, 0);
             filters.Controls.Add(_txtSearch);
-            filters.Controls.Add(new Label { Text = "  ", AutoSize = true });
+            _lblCount.Margin = new Padding(0, 8, 0, 0);
             filters.Controls.Add(_lblCount);
 
-            var barLayout = new TableLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                ColumnCount = 2,
-                RowCount = 1
-            };
-            barLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-            barLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-            barLayout.Controls.Add(actions, 0, 0);
-            barLayout.Controls.Add(filters, 1, 0);
-            filters.Anchor = AnchorStyles.Right;
-            barLayout.Padding = new Padding(0);
-
-            pnlActionBar.Controls.Add(barLayout);
+            pnlActionBar.Controls.Add(filters);
+            pnlActionBar.Controls.Add(actions);
+            
             pnlToolbar.Controls.Add(pnlActionBar);
+            pnlToolbar.Controls.Add(pnlTitleBar);
 
             var gridHost = new Panel
             {
@@ -216,9 +211,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (_rawTable == null) return;
 
-            string rawKeyword = (_txtSearch.Text ?? string.Empty).Trim();
-            if (rawKeyword == SearchPlaceholder) rawKeyword = string.Empty;
-            string keyword = rawKeyword.ToLowerInvariant();
+            string keyword = (_txtSearch.Text ?? string.Empty).Trim().ToLowerInvariant();
 
             var rows = _rawTable.AsEnumerable();
             if (!string.IsNullOrWhiteSpace(keyword))
@@ -355,38 +348,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             );
         }
 
-        private static TextBox MakeSearchBox(string placeholder, Action onChanged)
-        {
-            var tb = new TextBox
-            {
-                Width = 280,
-                Height = 32,
-                ForeColor = Color.Gray,
-                Text = placeholder,
-                Font = new Font("Segoe UI", 10),
-                BackColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle,
-                Padding = new Padding(5)
-            };
-            tb.GotFocus += (s, e) =>
-            {
-                if (tb.Text == placeholder)
-                {
-                    tb.Text = string.Empty;
-                    tb.ForeColor = Color.Black;
-                }
-            };
-            tb.LostFocus += (s, e) =>
-            {
-                if (string.IsNullOrWhiteSpace(tb.Text))
-                {
-                    tb.Text = placeholder;
-                    tb.ForeColor = Color.Gray;
-                }
-            };
-            tb.TextChanged += (s, e) => onChanged?.Invoke();
-            return tb;
-        }
 
         private void SetHeader(string columnName, string headerText)
         {

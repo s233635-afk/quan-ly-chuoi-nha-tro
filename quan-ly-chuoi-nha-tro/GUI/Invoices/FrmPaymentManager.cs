@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
 
 namespace quan_ly_chuoi_nha_tro.GUI
 {
@@ -22,7 +23,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private DataTable _rawTable;
 
         private DataGridView _grid;
-        private TextBox _txtSearch;
+        private ModernSearchBox _txtSearch;
         private ComboBox _cboMethod;
         private DateTimePicker _dtFrom;
         private DateTimePicker _dtTo;
@@ -77,24 +78,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _grid.DefaultCellStyle.SelectionForeColor = Color.Black;
             _grid.DoubleClick += async (s, e) => await EditSelectedAsync();
 
-            _txtSearch = new TextBox { Width = 280 };
-            _txtSearch.TextChanged += (s, e) => ApplyFilter();
-            _txtSearch.GotFocus += (s, e) =>
+            _txtSearch = new ModernSearchBox
             {
-                if (_txtSearch.Text == SearchPlaceholder)
-                {
-                    _txtSearch.Text = string.Empty;
-                    _txtSearch.ForeColor = Color.Black;
-                }
+                PlaceholderText = SearchPlaceholder,
+                Width = 320,
+                Height = 40,
+                DebounceMs = 300,
+                Margin = new Padding(0, 0, 14, 0)
             };
-            _txtSearch.LostFocus += (s, e) =>
-            {
-                if (string.IsNullOrWhiteSpace(_txtSearch.Text))
-                {
-                    _txtSearch.Text = SearchPlaceholder;
-                    _txtSearch.ForeColor = Color.Gray;
-                }
-            };
+            _txtSearch.SearchTriggered += (s, e) => ApplyFilter();
 
             _cboMethod = new ComboBox { Width = 150, DropDownStyle = ComboBoxStyle.DropDownList };
             _cboMethod.Items.AddRange(new object[] { "Tất cả", "Cash", "Transfer", "QR", "Check" });
@@ -130,26 +122,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             actions.Controls.Add(_btnRefresh);
 
             var searchHost = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent };
-            var pnlSearch = new Panel
-            {
-                BackColor = Color.FromArgb(245, 247, 250),
-                Height = 34,
-                Width = 320,
-                Padding = new Padding(10, 7, 10, 7)
-            };
-            _txtSearch.BorderStyle = BorderStyle.None;
-            _txtSearch.Parent = pnlSearch;
-            _txtSearch.Location = new Point(2, 6);
-            _txtSearch.Width = pnlSearch.Width - 16;
-            pnlSearch.Resize += (s, e) => _txtSearch.Width = pnlSearch.Width - 16;
-            _txtSearch.Text = SearchPlaceholder;
-            _txtSearch.ForeColor = Color.Gray;
 
             var lblSearch = new Label { Text = "Tìm:", AutoSize = true, Location = new Point(0, 9), ForeColor = Color.FromArgb(70, 70, 70) };
-            pnlSearch.Location = new Point(lblSearch.Right + 6, 10);
+            _txtSearch.Location = new Point(lblSearch.Right + 6, 6);
 
             var lblMethod = new Label { Text = "Hình thức:", AutoSize = true, ForeColor = Color.FromArgb(70, 70, 70) };
-            lblMethod.Location = new Point(pnlSearch.Right + 14, 9);
+            lblMethod.Location = new Point(_txtSearch.Right + 14, 9);
             _cboMethod.Location = new Point(lblMethod.Right + 6, 6);
 
             var lblFrom = new Label { Text = "Từ:", AutoSize = true, ForeColor = Color.FromArgb(70, 70, 70) };
@@ -161,7 +139,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _dtTo.Location = new Point(lblTo.Right + 6, 6);
 
             searchHost.Controls.Add(lblSearch);
-            searchHost.Controls.Add(pnlSearch);
+            searchHost.Controls.Add(_txtSearch);
             searchHost.Controls.Add(lblMethod);
             searchHost.Controls.Add(_cboMethod);
             searchHost.Controls.Add(lblFrom);
@@ -170,8 +148,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             searchHost.Controls.Add(_dtTo);
             searchHost.Resize += (s, e) =>
             {
-                pnlSearch.Location = new Point(lblSearch.Right + 6, 10);
-                lblMethod.Location = new Point(pnlSearch.Right + 14, 9);
+                _txtSearch.Location = new Point(lblSearch.Right + 6, 6);
+                lblMethod.Location = new Point(_txtSearch.Right + 14, 9);
                 _cboMethod.Location = new Point(lblMethod.Right + 6, 6);
                 lblFrom.Location = new Point(_cboMethod.Right + 14, 9);
                 _dtFrom.Location = new Point(lblFrom.Right + 6, 6);
@@ -318,9 +296,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (_rawTable == null) return;
 
-            string rawKeyword = (_txtSearch.Text ?? string.Empty).Trim();
-            if (rawKeyword == SearchPlaceholder) rawKeyword = string.Empty;
-            string keyword = rawKeyword.ToLowerInvariant();
+            string keyword = (_txtSearch.Text ?? string.Empty).Trim().ToLowerInvariant();
 
             string method = _cboMethod.SelectedItem?.ToString();
             bool filterMethod = !string.IsNullOrWhiteSpace(method) && method != "Tất cả";

@@ -25,7 +25,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         // Thay GridView bằng FlowLayoutPanel để hiển thị dạng thẻ
         private FlowLayoutPanel _flowPanel;
-        private TextBox _txtSearch;
+        private ModernSearchBox _txtSearch;
         private ComboBox _cboStatus;
         private DateTimePicker _dtFrom;
         private DateTimePicker _dtTo;
@@ -65,84 +65,83 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var topPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 130,
+                Height = 80, // Reduced from 130 to 80 since we're combining into one row
                 BackColor = Color.White,
                 Padding = new Padding(15)
             };
             topPanel.Controls.Add(new Panel { Dock = DockStyle.Bottom, Height = 1, BackColor = Color.LightGray }); // Đường kẻ dưới
 
-            // 2. TableLayoutPanel để chia Header thành 2 hàng (Actions và Filters)
-            var tableLayout = new TableLayoutPanel
+            // 2. Single FlowLayoutPanel containing both buttons and filters in one row
+            var mainFlow = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                ColumnCount = 1,
-                RowCount = 2,
-                BackColor = Color.Transparent
+                WrapContents = false, // Keep everything on one line
+                FlowDirection = FlowDirection.LeftToRight,
+                BackColor = Color.Transparent,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink
             };
-            tableLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            tableLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
-            // 3. Panel chứa các nút chức năng (Hàng 1)
-            var pnlActions = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false, FlowDirection = FlowDirection.LeftToRight, BackColor = Color.Transparent, AutoSize = true };
+            // 3. Create buttons
             _btnAdd = UiKit.MakeButton("Thêm Hợp đồng", UiKit.Primary, async (s, e) => await AddNewAsync(), 130);
             _btnDelete = UiKit.MakeButton("Xóa Hợp đồng", UiKit.Danger, async (s, e) => await DeleteSelectedAsync(), 120);
             _btnRefresh = UiKit.MakeButton("Tải lại", UiKit.Primary, async (s, e) => await LoadDataAsync(), 92);
             _btnDelete.Visible = !_isStaffMode;
             _btnDelete.Enabled = !_isStaffMode;
-            pnlActions.Controls.AddRange(new Control[] { _btnAdd, _btnDelete, _btnRefresh });
-
-            // 4. Panel chứa các bộ lọc (Hàng 2)
-            var pnlFilters = new TableLayoutPanel 
-            { 
-                Dock = DockStyle.Fill,
-                BackColor = Color.Transparent,
-                ColumnCount = 10,
-                RowCount = 1,
-                AutoSize = true
-            };
-            pnlFilters.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 230F)); // Search
-            pnlFilters.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));      // Label "Trạng thái"
-            pnlFilters.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 140F)); // ComboBox Status
-            pnlFilters.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150F)); // ComboBox Status
-            pnlFilters.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));      // Label "Từ"
-            pnlFilters.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 110F)); // DateTimePicker From
-            pnlFilters.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));      // Label "Đến"
-            pnlFilters.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 110F)); // DateTimePicker To
-            pnlFilters.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));      // Label Count
-            pnlFilters.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F)); // Cột trống để đẩy các control về bên trái
             
-            // Tạo các control cho bộ lọc
-            _txtSearch = new TextBox { Width = 220, Font = new Font("Segoe UI", 10) };
-            var pnlSearch = UiKit.MakeSearchPanel(_txtSearch, 230, SearchPlaceholder, ApplyFilter);
+            // Add buttons to flow
+            mainFlow.Controls.Add(_btnAdd);
+            mainFlow.Controls.Add(_btnDelete);
+            mainFlow.Controls.Add(_btnRefresh);
 
-            _cboStatus = new ComboBox { Width = 150, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 10), FlatStyle = FlatStyle.Flat, Anchor = AnchorStyles.None };
+            // 4. Create a panel for filters that will sit next to buttons
+            var pnlFilters = new FlowLayoutPanel
+            {
+                WrapContents = false,
+                FlowDirection = FlowDirection.LeftToRight,
+                BackColor = Color.Transparent,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Margin = new Padding(20, 0, 0, 0) // Left margin to separate from buttons
+            };
+            
+            // Create filter controls
+            _txtSearch = new ModernSearchBox
+            {
+                Width = 220,
+                PlaceholderText = SearchPlaceholder,
+                Margin = new Padding(0, 0, 10, 0)
+            };
+            _txtSearch.SearchTriggered += (s, e) => ApplyFilter();
+
+            _cboStatus = new ComboBox { Width = 150, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 10), FlatStyle = FlatStyle.Flat, Margin = new Padding(0, 0, 10, 0) };
             _cboStatus.Items.AddRange(new object[] { "Tất cả", "Đang hiệu lực", "Gia hạn", "Đã chấm dứt", "Hết hạn" });
             _cboStatus.SelectedIndex = 0;
-
-            _dtFrom = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true, Checked = false, Width = 110, Font = new Font("Segoe UI", 10), Anchor = AnchorStyles.None };
-            _dtTo = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true, Checked = false, Width = 110, Font = new Font("Segoe UI", 10), Anchor = AnchorStyles.None };
-            
-            _lblCount = new Label { Anchor = AnchorStyles.None, AutoSize = true, Text = "Tổng: 0", Font = new Font("Segoe UI", 10, FontStyle.Bold), Margin = new Padding(10, 0, 0, 0), ForeColor = Color.DimGray, TextAlign = ContentAlignment.MiddleLeft };
-
-            // Gán sự kiện
             _cboStatus.SelectedIndexChanged += (s, e) => ApplyFilter();
+
+            _dtFrom = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true, Checked = false, Width = 110, Font = new Font("Segoe UI", 10), Margin = new Padding(0, 0, 10, 0) };
             _dtFrom.ValueChanged += (s, e) => ApplyFilter();
+            
+            _dtTo = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true, Checked = false, Width = 110, Font = new Font("Segoe UI", 10), Margin = new Padding(0, 0, 10, 0) };
             _dtTo.ValueChanged += (s, e) => ApplyFilter();
+            
+            _lblCount = new Label { AutoSize = true, Text = "Tổng: 0", Font = new Font("Segoe UI", 10, FontStyle.Bold), Margin = new Padding(10, 0, 0, 0), ForeColor = Color.DimGray };
 
-            // Thêm các control vào các cột tương ứng của TableLayoutPanel
-            pnlFilters.Controls.Add(pnlSearch, 0, 0);
-            pnlFilters.Controls.Add(CreateFilterLabel("Trạng thái:"), 1, 0);
-            pnlFilters.Controls.Add(_cboStatus, 2, 0);
-            pnlFilters.Controls.Add(CreateFilterLabel("Từ:"), 3, 0);
-            pnlFilters.Controls.Add(_dtFrom, 4, 0);
-            pnlFilters.Controls.Add(CreateFilterLabel("Đến:"), 5, 0);
-            pnlFilters.Controls.Add(_dtTo, 6, 0);
-            pnlFilters.Controls.Add(_lblCount, 7, 0);
+            // Add filter controls to pnlFilters
+            pnlFilters.Controls.Add(_txtSearch);
+            pnlFilters.Controls.Add(CreateFilterLabel("Trạng thái:"));
+            pnlFilters.Controls.Add(_cboStatus);
+            pnlFilters.Controls.Add(CreateFilterLabel("Từ:"));
+            pnlFilters.Controls.Add(_dtFrom);
+            pnlFilters.Controls.Add(CreateFilterLabel("Đến:"));
+            pnlFilters.Controls.Add(_dtTo);
+            pnlFilters.Controls.Add(_lblCount);
 
-            // 5. Thêm các panel Actions và Filters vào TableLayoutPanel
-            tableLayout.Controls.Add(pnlActions, 0, 0); // Thêm vào hàng 0, cột 0
-            tableLayout.Controls.Add(pnlFilters, 0, 1); // Thêm vào hàng 1, cột 0
-            topPanel.Controls.Add(tableLayout);
+            // Add filters panel to main flow
+            mainFlow.Controls.Add(pnlFilters);
+
+            // Add main flow to top panel
+            topPanel.Controls.Add(mainFlow);
 
             // =========================================================================
             // PHẦN BODY: DANH SÁCH CÁC THẺ HỢP ĐỒNG
@@ -165,12 +164,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
         // Hàm tiện ích để tạo các nhãn trong bộ lọc cho đồng bộ
         private Label CreateFilterLabel(string text)
         {
-            return new Label { 
-                Text = text, 
-                Anchor = AnchorStyles.Left, // Neo vào bên trái cột
-                AutoSize = true, 
-                Margin = new Padding(10, 0, 3, 0), // Căn lề
-                TextAlign = ContentAlignment.MiddleLeft // Căn chữ ở giữa theo chiều dọc
+            return new Label {
+                Text = text,
+                AutoSize = true,
+                Margin = new Padding(5, 0, 5, 0), // Simplified margin
+                TextAlign = ContentAlignment.MiddleLeft
             };
         }
 
@@ -186,8 +184,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 await EnsureAllowedBranchScopeAsync();
                 _rawTable = await _bll.GetContractsAsync();
                 _rawTable = _branchId.HasValue ? FilterByBranch(_rawTable, _branchId) : AdminBranchScope.FilterByBranchIds(_rawTable, _allowedBranchIds);
+                await EnrichContractsAsync(_rawTable); // Enrich FIRST to add TenantName, RoomNumber, BranchName columns
                 TextFixer.FixDataTable(_rawTable, "ContractNumber", "TenantName", "RoomNumber", "BranchName", "Status");
-                await EnrichContractsAsync(_rawTable);
                 
                 ApplyFilter(); // Hàm này sẽ gọi RenderCards
                 _selectedItem = null; // Bỏ chọn khi tải lại
@@ -214,8 +212,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private void ApplyFilter()
         {
             if (_rawTable == null) return;
-            string keyword = _txtSearch.Text.Trim().ToLowerInvariant();
-            if (keyword == SearchPlaceholder.ToLowerInvariant()) keyword = "";
+            string keyword = (_txtSearch.Text ?? string.Empty).Trim().ToLowerInvariant();
             string status = _cboStatus.SelectedItem?.ToString();
             DateTime? from = _dtFrom.Checked ? (DateTime?)_dtFrom.Value.Date : null;
             DateTime? to = _dtTo.Checked ? (DateTime?)_dtTo.Value.Date : null;
