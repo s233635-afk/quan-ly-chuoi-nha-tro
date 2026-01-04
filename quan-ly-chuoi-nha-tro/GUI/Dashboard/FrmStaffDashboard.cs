@@ -70,28 +70,29 @@ namespace quan_ly_chuoi_nha_tro.GUI
             Text = $"Staff Dashboard - {_username}";
             WindowState = FormWindowState.Maximized;
             _lblUser.Text = $"{_fullName}";
-            
+
             // Initialize NotificationBell
             InitializeNotificationBell();
-            
+
             ShowOverview();
-            
+
             // Show unread notification toast
             if (_notificationBell != null && _notificationBell.UnreadCount > 0)
             {
                 ToastNotification.Info($"Bạn có {_notificationBell.UnreadCount} thông báo chưa đọc");
             }
         }
-        
+
         private void InitializeNotificationBell()
         {
             _notificationBell = new NotificationBell(_branchId);
             _notificationBell.Margin = new Padding(0, 12, 15, 0); // Margin để căn giữa và tạo khoảng cách
-            _notificationBell.BellClicked += (s, e) => {
+            _notificationBell.BellClicked += (s, e) =>
+            {
                 SetActive(_btnStatus);
                 LoadModule(new FrmNotificationManager(_branchId, true), "Thông báo");
             };
-            
+
             // Find rightPanel and add notification bell at the beginning
             foreach (Control ctrl in _header.Controls)
             {
@@ -127,19 +128,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 Dock = DockStyle.Left,
                 Width = 240,
-                BackColor = Color.FromArgb(44, 62, 80) // Dark Navy
+                BackColor = ModernTheme.Colors.SidebarBg
             };
 
             var brand = new Label
             {
                 Text = "QUẢN LÝ NHÀ TRỌ",
-                ForeColor = Color.White,
+                ForeColor = ModernTheme.Colors.Primary,
                 Font = new Font("Segoe UI", 14, FontStyle.Bold),
                 AutoSize = false,
                 Height = 70,
                 Dock = DockStyle.Top,
                 TextAlign = ContentAlignment.MiddleCenter,
-                BackColor = Color.FromArgb(34, 49, 63) // Darker header
+                BackColor = Color.Transparent
             };
 
             var nav = new FlowLayoutPanel
@@ -188,7 +189,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Height = 60,
                 BackColor = Color.White
             };
-            _header.Paint += (s, e) => {
+            _header.Paint += (s, e) =>
+            {
                 using (var pen = new Pen(Color.FromArgb(230, 230, 230)))
                     e.Graphics.DrawLine(pen, 0, _header.Height - 1, _header.Width, _header.Height - 1);
             };
@@ -197,7 +199,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 Text = "Tổng quan",
                 Font = new Font("Segoe UI", 16, FontStyle.Bold),
-                ForeColor = Color.FromArgb(44, 62, 80),
+                ForeColor = ModernTheme.Colors.TextPrimary,
                 AutoSize = true,
                 Location = new Point(20, 15)
             };
@@ -206,7 +208,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 AutoSize = true,
                 Font = new Font("Segoe UI", 12, FontStyle.Bold),
-                ForeColor = Color.FromArgb(44, 62, 80),
+                ForeColor = ModernTheme.Colors.TextPrimary,
                 TextAlign = ContentAlignment.MiddleRight,
                 Margin = new Padding(0, 18, 15, 0) // Top margin to center vertically with button (approx)
             };
@@ -248,7 +250,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 BackColor = Color.Transparent,
                 WrapContents = false
             };
-            
+
             // With LeftToRight flow, add in visual order: NotificationBell, User, Logout
             // NotificationBell will be added first in InitializeNotificationBell
             rightPanel.Controls.Add(_lblUser);   // Added first (will be second visually)
@@ -276,7 +278,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Height = 45,
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.Transparent,
-                ForeColor = Color.FromArgb(189, 195, 199),
+                ForeColor = ModernTheme.Colors.SidebarText,
                 TextAlign = ContentAlignment.MiddleLeft,
                 Font = new Font("Segoe UI", 10, FontStyle.Regular),
                 Margin = new Padding(0, 0, 0, 5),
@@ -284,7 +286,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Padding = new Padding(15, 0, 0, 0)
             };
             btn.FlatAppearance.BorderSize = 0;
-            btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(52, 73, 94);
+            btn.FlatAppearance.MouseOverBackColor = ModernTheme.Colors.SidebarHover;
             btn.Click += onClick;
             return btn;
         }
@@ -300,14 +302,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     {
                         if (b == active)
                         {
-                            b.BackColor = Color.FromArgb(52, 152, 219); // Active Blue
+                            b.BackColor = ModernTheme.Colors.SidebarActive;
                             b.ForeColor = Color.White;
                             b.Font = new Font("Segoe UI", 10, FontStyle.Bold);
                         }
                         else
                         {
                             b.BackColor = Color.Transparent;
-                            b.ForeColor = Color.FromArgb(189, 195, 199);
+                            b.ForeColor = ModernTheme.Colors.SidebarText;
                             b.Font = new Font("Segoe UI", 10, FontStyle.Regular);
                         }
                     }
@@ -339,7 +341,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _currentModule = module;
             _host.Controls.Add(module);
             module.Show();
-            
+
             // Ensure notification bell stays on top after module is loaded
             if (_notificationBell != null && !_notificationBell.IsDisposed)
             {
@@ -371,22 +373,24 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var cardGrid = new TableLayoutPanel
             {
                 ColumnCount = 6,
-                RowCount = 1,
+                RowCount = 2, // Add extra row
                 Location = new Point(10, 60),
                 Width = _overviewHost.ClientSize.Width - 40,
-                Height = 180,
+                Height = 130,
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
                 BackColor = Color.Transparent
             };
             cardGrid.ColumnStyles.Clear();
             for (int i = 0; i < 6; i++)
                 cardGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f / 6f));
-            
-            cardGrid.RowStyles.Add(new RowStyle(SizeType.Absolute, 180f));
+
+            cardGrid.RowStyles.Add(new RowStyle(SizeType.Absolute, 130f));
+            cardGrid.RowStyles.Add(new RowStyle(SizeType.Percent, 100f)); // Absorb space
             _overviewHost.Controls.Add(cardGrid);
-            
+
             // Ensure cardGrid resizes with parent
-            _overviewHost.Resize += (s, e) => {
+            _overviewHost.Resize += (s, e) =>
+            {
                 if (cardGrid != null && !cardGrid.IsDisposed)
                 {
                     cardGrid.Width = _overviewHost.ClientSize.Width - 40;
@@ -403,7 +407,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Location = new Point(20, 260),
                 Margin = new Padding(0, 20, 0, 10)
             };
-             _overviewHost.Controls.Add(recentLabel);
+            _overviewHost.Controls.Add(recentLabel);
 
             var recentGrid = new DataGridView
             {
@@ -427,12 +431,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
             recentGrid.DefaultCellStyle.SelectionForeColor = Color.Black;
             recentGrid.EnableHeadersVisualStyles = false;
             _overviewHost.Controls.Add(recentGrid);
-            
+
             var loading = new Label { Text = "Đang tải thống kê...", AutoSize = true, ForeColor = Color.Gray, Location = new Point(20, 560) };
             _overviewHost.Controls.Add(loading);
-            
+
             // Ensure recentGrid resizes with parent
-            _overviewHost.Resize += (s, e) => {
+            _overviewHost.Resize += (s, e) =>
+            {
                 if (recentGrid != null && !recentGrid.IsDisposed)
                 {
                     recentGrid.Width = _overviewHost.ClientSize.Width - 40;
@@ -461,63 +466,63 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     contracts = FilterByBranch(contracts, _branchId);
                     maintenance = FilterByBranch(maintenance, _branchId);
 
-                int totalRooms = rooms?.Rows.Count ?? 0;
-                int occupied = rooms?.AsEnumerable().Count(r => r.Table.Columns.Contains("CurrentStatusId") && int.TryParse(r["CurrentStatusId"]?.ToString(), out var s) && s != 1) ?? 0;
+                    int totalRooms = rooms?.Rows.Count ?? 0;
+                    int occupied = rooms?.AsEnumerable().Count(r => r.Table.Columns.Contains("CurrentStatusId") && int.TryParse(r["CurrentStatusId"]?.ToString(), out var s) && s != 1) ?? 0;
 
-                int overdueCount = invoices?.AsEnumerable().Count(r => string.Equals(r["Status"]?.ToString(), "Overdue", StringComparison.OrdinalIgnoreCase)) ?? 0;
-                decimal debt = invoices?.AsEnumerable()
-                                  .Where(r => r.Table.Columns.Contains("RemainingAmount"))
-                                  .Sum(r => TryDecimal(r["RemainingAmount"])) ?? 0m;
+                    int overdueCount = invoices?.AsEnumerable().Count(r => string.Equals(r["Status"]?.ToString(), "Overdue", StringComparison.OrdinalIgnoreCase)) ?? 0;
+                    decimal debt = invoices?.AsEnumerable()
+                                      .Where(r => r.Table.Columns.Contains("RemainingAmount"))
+                                      .Sum(r => TryDecimal(r["RemainingAmount"])) ?? 0m;
 
-                decimal collectedThisMonth = payments?.AsEnumerable()
-                    .Where(r => r.Table.Columns.Contains("PaymentDate") && DateTime.TryParse(r["PaymentDate"]?.ToString(), out var d) && d.Year == DateTime.Today.Year && d.Month == DateTime.Today.Month)
-                    .Sum(r => TryDecimal(r["PaymentAmount"])) ?? 0m;
+                    decimal collectedThisMonth = payments?.AsEnumerable()
+                        .Where(r => r.Table.Columns.Contains("PaymentDate") && DateTime.TryParse(r["PaymentDate"]?.ToString(), out var d) && d.Year == DateTime.Today.Year && d.Month == DateTime.Today.Month)
+                        .Sum(r => TryDecimal(r["PaymentAmount"])) ?? 0m;
 
-                int endingSoon = contracts?.AsEnumerable().Count(r => r.Table.Columns.Contains("EndDate") && DateTime.TryParse(r["EndDate"]?.ToString(), out var d) && d.Date >= DateTime.Today && d.Date <= DateTime.Today.AddDays(7)) ?? 0;
+                    int endingSoon = contracts?.AsEnumerable().Count(r => r.Table.Columns.Contains("EndDate") && DateTime.TryParse(r["EndDate"]?.ToString(), out var d) && d.Date >= DateTime.Today && d.Date <= DateTime.Today.AddDays(7)) ?? 0;
 
-                int openMaintenance = maintenance?.AsEnumerable().Count(r => !string.Equals(r["Status"]?.ToString(), "Done", StringComparison.OrdinalIgnoreCase)
-                                                                            && !string.Equals(r["Status"]?.ToString(), "Hoàn tất", StringComparison.OrdinalIgnoreCase)
-                                                                            && !string.Equals(r["Status"]?.ToString(), "Hoan tat", StringComparison.OrdinalIgnoreCase)) ?? 0;
+                    int openMaintenance = maintenance?.AsEnumerable().Count(r => !string.Equals(r["Status"]?.ToString(), "Done", StringComparison.OrdinalIgnoreCase)
+                                                                                && !string.Equals(r["Status"]?.ToString(), "Hoàn tất", StringComparison.OrdinalIgnoreCase)
+                                                                                && !string.Equals(r["Status"]?.ToString(), "Hoan tat", StringComparison.OrdinalIgnoreCase)) ?? 0;
 
                     grid.Controls.Clear();
                     grid.Controls.Add(MakeMetricCard("Phòng", $"{occupied}/{totalRooms}", "Đang sử dụng / Tổng", Color.FromArgb(26, 188, 156), (s, e) => _btnRoom.PerformClick()), 0, 0);
-                grid.Controls.Add(MakeMetricCard("Công nợ", $"{debt:N0} đ", "Tổng tiền còn nợ", Color.FromArgb(231, 76, 60), (s, e) => _btnInvoicePayment.PerformClick()), 1, 0);
-                grid.Controls.Add(MakeMetricCard("Thu tháng này", $"{collectedThisMonth:N0} đ", "Đã thu trong tháng", Color.FromArgb(46, 204, 113), (s, e) => _btnInvoicePayment.PerformClick()), 2, 0);
-                grid.Controls.Add(MakeMetricCard("Quá hạn", $"{overdueCount}", "Hóa đơn quá hạn", Color.FromArgb(243, 156, 18), (s, e) => _btnInvoicePayment.PerformClick()), 3, 0);
-                grid.Controls.Add(MakeMetricCard("Sắp hết hạn", $"{endingSoon}", "Hợp đồng (7 ngày)", Color.FromArgb(155, 89, 182), (s, e) => _btnContract.PerformClick()), 4, 0);
-                grid.Controls.Add(MakeMetricCard("Bảo trì", $"{openMaintenance}", "Yêu cầu chưa xử lý", Color.FromArgb(52, 152, 219), (s, e) => _btnMaintenance.PerformClick()), 5, 0);
+                    grid.Controls.Add(MakeMetricCard("Công nợ", $"{debt:N0} đ", "Tổng tiền còn nợ", Color.FromArgb(231, 76, 60), (s, e) => _btnInvoicePayment.PerformClick()), 1, 0);
+                    grid.Controls.Add(MakeMetricCard("Thu tháng này", $"{collectedThisMonth:N0} đ", "Đã thu trong tháng", Color.FromArgb(46, 204, 113), (s, e) => _btnInvoicePayment.PerformClick()), 2, 0);
+                    grid.Controls.Add(MakeMetricCard("Quá hạn", $"{overdueCount}", "Hóa đơn quá hạn", Color.FromArgb(243, 156, 18), (s, e) => _btnInvoicePayment.PerformClick()), 3, 0);
+                    grid.Controls.Add(MakeMetricCard("Sắp hết hạn", $"{endingSoon}", "Hợp đồng (7 ngày)", Color.FromArgb(155, 89, 182), (s, e) => _btnContract.PerformClick()), 4, 0);
+                    grid.Controls.Add(MakeMetricCard("Bảo trì", $"{openMaintenance}", "Yêu cầu chưa xử lý", Color.FromArgb(52, 152, 219), (s, e) => _btnMaintenance.PerformClick()), 5, 0);
 
-                // Populate Recent Activity (Mockup mostly using Invoice data for now as example)
-                var dtRecent = new DataTable();
-                dtRecent.Columns.Add("LOẠI", typeof(string));
-                dtRecent.Columns.Add("MÔ TẢ", typeof(string));
-                dtRecent.Columns.Add("THỜI GIAN", typeof(DateTime));
-                dtRecent.Columns.Add("TRẠNG THÁI", typeof(string));
+                    // Populate Recent Activity (Mockup mostly using Invoice data for now as example)
+                    var dtRecent = new DataTable();
+                    dtRecent.Columns.Add("LOẠI", typeof(string));
+                    dtRecent.Columns.Add("MÔ TẢ", typeof(string));
+                    dtRecent.Columns.Add("THỜI GIAN", typeof(DateTime));
+                    dtRecent.Columns.Add("TRẠNG THÁI", typeof(string));
 
-                if (invoices != null)
-                {
-                    foreach(DataRow row in invoices.AsEnumerable().OrderByDescending(r => r["CreatedDate"]).Take(5))
+                    if (invoices != null)
                     {
-                        string status = TextFixer.ToVietnameseInvoiceStatus(row["Status"]?.ToString());
-                        dtRecent.Rows.Add("Hóa đơn", $"Phòng {row["RoomNumber"]} - {TryDecimal(row["TotalAmount"]):N0} đ", row["CreatedDate"], status);
+                        foreach (DataRow row in invoices.AsEnumerable().OrderByDescending(r => r["CreatedDate"]).Take(5))
+                        {
+                            string status = TextFixer.ToVietnameseInvoiceStatus(row["Status"]?.ToString());
+                            dtRecent.Rows.Add("Hóa đơn", $"Phòng {row["RoomNumber"]} - {TryDecimal(row["TotalAmount"]):N0} đ", row["CreatedDate"], status);
+                        }
                     }
-                }
-                if (maintenance != null)
-                {
-                    foreach (DataRow row in maintenance.AsEnumerable().OrderByDescending(r => r["RequestDate"]).Take(5))
+                    if (maintenance != null)
                     {
-                        var roomNum = row.Table.Columns.Contains("RoomNumber") ? row["RoomNumber"].ToString() : "N/A";
-                        string status = row["Status"]?.ToString();
-                        if (string.Equals(status, "Done", StringComparison.OrdinalIgnoreCase)) status = "Hoàn tất";
-                        else if (string.Equals(status, "Pending", StringComparison.OrdinalIgnoreCase)) status = "Đang xử lý";
-                        
-                        dtRecent.Rows.Add("Bảo trì", $"Phòng {roomNum} - {row["IssueDescription"]}", row["RequestDate"], status);
-                    }
-                }
+                        foreach (DataRow row in maintenance.AsEnumerable().OrderByDescending(r => r["RequestDate"]).Take(5))
+                        {
+                            var roomNum = row.Table.Columns.Contains("RoomNumber") ? row["RoomNumber"].ToString() : "N/A";
+                            string status = row["Status"]?.ToString();
+                            if (string.Equals(status, "Done", StringComparison.OrdinalIgnoreCase)) status = "Hoàn tất";
+                            else if (string.Equals(status, "Pending", StringComparison.OrdinalIgnoreCase)) status = "Đang xử lý";
 
-                DataView dv = dtRecent.DefaultView;
-                dv.Sort = "THỜI GIAN DESC";
-                recentList.DataSource = dv.ToTable();
+                            dtRecent.Rows.Add("Bảo trì", $"Phòng {roomNum} - {row["IssueDescription"]}", row["RequestDate"], status);
+                        }
+                    }
+
+                    DataView dv = dtRecent.DefaultView;
+                    dv.Sort = "THỜI GIAN DESC";
+                    recentList.DataSource = dv.ToTable();
 
                     // Handle empty state
                     if (dtRecent.Rows.Count == 0)
@@ -544,8 +549,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var card = new ModernStatCard(title, value, subtitle, accent)
             {
                 Dock = DockStyle.Fill,
-                Margin = new Padding(16),
-                MinimumSize = new Size(0, 160)
+                Margin = new Padding(12)
             };
 
             // Attach click handler
@@ -591,7 +595,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             var dt = await _bll.GetInvoicesViewAsync();
             var table = FilterByBranch(dt, _branchId);
-            
+
             if (table != null)
             {
                 // Đổi tên cột cho Grid "Báo cáo / Hóa đơn"
@@ -609,8 +613,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             var dt = await _bll.GetUtilitiesAsync();
             var table = FilterByBranch(dt, _branchId);
-            
-             if (table != null)
+
+            if (table != null)
             {
                 // Đổi tên cột cho Grid "Điện/Nước"
                 if (table.Columns.Contains("RoomNumber")) table.Columns["RoomNumber"].ColumnName = "Phòng";
@@ -626,7 +630,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             var dt = await _bll.GetMaintenanceAsync();
             var table = FilterByBranch(dt, _branchId);
-            
+
             if (table != null)
             {
                 // Đổi tên cột cho Grid "Bảo trì"
@@ -643,7 +647,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             var dt = await _bll.GetAssetsAsync();
             var table = FilterByBranch(dt, _branchId);
-            
+
             if (table != null)
             {
                 // Đổi tên cột cho Grid "Tài sản"

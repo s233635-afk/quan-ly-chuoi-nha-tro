@@ -49,7 +49,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.SuspendLayout();
 
             // pnlSidebar
-            this.pnlSidebar.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(44)))), ((int)(((byte)(62)))), ((int)(((byte)(80)))));
+            this.pnlSidebar.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(245)))), ((int)(((byte)(246)))), ((int)(((byte)(248)))));
             this.pnlSidebar.Controls.Add(this.flowSidebar);
             this.pnlSidebar.Controls.Add(this.lblUser);
             this.pnlSidebar.Controls.Add(this.lblBrand);
@@ -340,7 +340,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             // lblUser
             this.lblUser.Dock = System.Windows.Forms.DockStyle.Top;
             this.lblUser.Font = new System.Drawing.Font("Segoe UI", 10F);
-            this.lblUser.ForeColor = System.Drawing.Color.White;
+            this.lblUser.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(51)))), ((int)(((byte)(51)))), ((int)(((byte)(51)))));
             this.lblUser.Height = 44;
             this.lblUser.Name = "lblUser";
             this.lblUser.Padding = new System.Windows.Forms.Padding(0, 4, 0, 8);
@@ -349,10 +349,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.lblUser.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
 
             // lblBrand
-            this.lblBrand.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(34)))), ((int)(((byte)(49)))), ((int)(((byte)(63)))));
+            this.lblBrand.BackColor = System.Drawing.Color.Transparent;
             this.lblBrand.Dock = System.Windows.Forms.DockStyle.Top;
             this.lblBrand.Font = new System.Drawing.Font("Segoe UI", 14F, System.Drawing.FontStyle.Bold);
-            this.lblBrand.ForeColor = System.Drawing.Color.White;
+            this.lblBrand.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(120)))), ((int)(((byte)(215)))));
             this.lblBrand.Height = 70;
             this.lblBrand.Name = "lblBrand";
             this.lblBrand.TabIndex = 0;
@@ -360,7 +360,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.lblBrand.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
 
             // pnlMain
-            this.pnlMain.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(240)))), ((int)(((byte)(247)))), ((int)(((byte)(255)))));
+            this.pnlMain.BackColor = System.Drawing.Color.White;
             this.pnlMain.Controls.Add(this.pnlContent);
             this.pnlMain.Controls.Add(this.pnlHeader);
             this.pnlMain.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -370,7 +370,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.pnlMain.TabIndex = 1;
 
             // pnlContent
-            this.pnlContent.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(240)))), ((int)(((byte)(247)))), ((int)(((byte)(255)))));
+            this.pnlContent.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(245)))), ((int)(((byte)(247)))), ((int)(((byte)(250)))));
             this.pnlContent.Controls.Add(this.pnlModuleHost);
             this.pnlContent.Controls.Add(this.lblPlaceholder);
             this.pnlContent.Controls.Add(this.tableLayoutPanel1);
@@ -432,14 +432,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.pnlHeader.Dock = System.Windows.Forms.DockStyle.Top;
             this.pnlHeader.Name = "pnlHeader";
             this.pnlHeader.Padding = new System.Windows.Forms.Padding(20, 15, 20, 15);
-            this.pnlHeader.Size = new System.Drawing.Size(970, 88);
+            this.pnlHeader.Size = new System.Drawing.Size(970, 60);
             this.pnlHeader.TabIndex = 1;
 
             // lblWelcome
             this.lblWelcome.AutoSize = true;
             this.lblWelcome.Font = new System.Drawing.Font("Segoe UI", 16F, System.Drawing.FontStyle.Bold);
-            this.lblWelcome.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(94)))), ((int)(((byte)(184)))));
-            this.lblWelcome.Location = new System.Drawing.Point(20, 24);
+            this.lblWelcome.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(120)))), ((int)(((byte)(215)))));
+            this.lblWelcome.Location = new System.Drawing.Point(20, 12);
             this.lblWelcome.Name = "lblWelcome";
             this.lblWelcome.Size = new System.Drawing.Size(220, 37);
             this.lblWelcome.TabIndex = 0;

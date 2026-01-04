@@ -77,15 +77,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 BackColor = Color.White,
                 Padding = new Padding(12, 8, 12, 8),
-                BorderStyle = BorderStyle.FixedSingle
+                BorderStyle = BorderStyle.None
+            };
+            pnlActionBar.Paint += (s, e) =>
+            {
+                e.Graphics.DrawLine(new Pen(ModernTheme.Colors.Border, 1), 0, pnlActionBar.Height - 1, pnlActionBar.Width, pnlActionBar.Height - 1);
             };
 
             // Buttons
-            _btnAdd = MakeButton("➕ Thêm", Color.FromArgb(0, 122, 204), async (s, e) => await AddNewAsync());
-            _btnEdit = MakeButton("✎ Sửa", Color.FromArgb(0, 122, 204), async (s, e) => await EditSelectedAsync());
-            _btnDelete = MakeButton("🗑 Xóa", Color.FromArgb(211, 47, 47), async (s, e) => await DeleteSelectedAsync());
+            _btnAdd = MakeButton("➕ Thêm", ModernTheme.Colors.Primary, async (s, e) => await AddNewAsync());
+            _btnEdit = MakeButton("✎ Sửa", ModernTheme.Colors.Primary, async (s, e) => await EditSelectedAsync());
+            _btnDelete = MakeButton("🗑 Xóa", ModernTheme.Colors.Error, async (s, e) => await DeleteSelectedAsync());
             _btnToggleActive = MakeButton("⚙ Bật/Tắt", Color.FromArgb(103, 58, 183), async (s, e) => await ToggleActiveAsync());
-            _btnRefresh = MakeButton("⟳ Tải lại", Color.FromArgb(0, 122, 204), async (s, e) => await LoadAsync());
+            _btnRefresh = MakeButton("⟳ Tải lại", ModernTheme.Colors.Primary, async (s, e) => await LoadAsync());
             _btnEdit.Enabled = false;
             _btnDelete.Enabled = false;
             _btnToggleActive.Enabled = false;

@@ -20,8 +20,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private readonly Random _starRandom = new Random(20251213);
 
         private Panel _focusedInputPanel;
-        private readonly Color _loginPrimary = Color.FromArgb(0, 173, 181);
-        private readonly Color _loginPrimaryHover = Color.FromArgb(0, 153, 160);
+        private readonly Color _loginPrimary = ModernTheme.Colors.Primary;
+        private readonly Color _loginPrimaryHover = ModernTheme.Colors.PrimaryDark;
 
         private Label _userPlaceholderLabel;
         private Label _passPlaceholderLabel;
@@ -42,7 +42,46 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             ApplyModernStyling();
             CenterCard();
-            SetupLogo();
+            SetupRightPanelContent();
+        }
+
+        private void SetupRightPanelContent()
+        {
+            if (pnlRight == null) return;
+            pnlRight.Controls.Clear();
+
+            // 1. Logo nhỏ gọn phía trên
+            _logoBox = new PictureBox
+            {
+                SizeMode = PictureBoxSizeMode.Zoom,
+                BackColor = Color.Transparent,
+                Size = new Size(160, 160),
+                Image = LoadLogoImage() ?? BuildLogoImage(320)
+            };
+            pnlRight.Controls.Add(_logoBox);
+
+            // 2. Tiêu đề phiên bản hệ thống
+            var lblWelcome = new Label
+            {
+                Text = "Hệ thống quản lý\nchuỗi nhà trọ V2.0",
+                Font = ModernTheme.Fonts.Bold(18),
+                ForeColor = Color.White,
+                BackColor = Color.Transparent,
+                AutoSize = true,
+                TextAlign = ContentAlignment.MiddleCenter
+            };
+            pnlRight.Controls.Add(lblWelcome);
+
+            // Căn chỉnh vị trí khi resize
+            pnlRight.Resize += (s, e) =>
+            {
+                _logoBox.Location = new Point((pnlRight.Width - _logoBox.Width) / 2, (pnlRight.Height / 2) - _logoBox.Height + 20);
+                lblWelcome.Location = new Point((pnlRight.Width - lblWelcome.Width) / 2, (pnlRight.Height / 2) + 20);
+            };
+
+            // Kích hoạt resize lần đầu
+            _logoBox.Location = new Point((pnlRight.Width - _logoBox.Width) / 2, (pnlRight.Height / 2) - _logoBox.Height + 20);
+            lblWelcome.Location = new Point((pnlRight.Width - lblWelcome.Width) / 2, (pnlRight.Height / 2) + 20);
         }
 
         private void ApplyModernStyling()
@@ -62,6 +101,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             txtUser.BackColor = Color.White;
             txtPass.BackColor = Color.White;
+
+            // Sync icons and links with ModernTheme
+            lblUserIcon.ForeColor = _loginPrimary;
+            lblPassIcon.ForeColor = _loginPrimary;
+            lnkForgot.LinkColor = ModernTheme.Colors.TextSecondary;
+            lnkForgot.ActiveLinkColor = _loginPrimary;
+            lnkRegister.LinkColor = _loginPrimary;
+            lnkRegister.ActiveLinkColor = ModernTheme.Colors.PrimaryDark;
 
             WireInputFocus(txtUser, pnlUserBox);
             WireInputFocus(txtPass, pnlPassBox);
@@ -84,30 +131,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void SetupLogo()
         {
-            if (pnlRight == null) return;
-
-            if (_logoBox == null)
-            {
-                _logoBox = new PictureBox
-                {
-                    SizeMode = PictureBoxSizeMode.Zoom,
-                    BackColor = Color.Transparent
-                };
-                pnlRight.Controls.Add(_logoBox);
-                _logoBox.BringToFront();
-                pnlRight.Resize += (s, e) => CenterLogo();
-            }
-
-            if (_logoBox.Image != null)
-            {
-                var old = _logoBox.Image;
-                _logoBox.Image = null;
-                old.Dispose();
-            }
-
-            _logoBox.Image = LoadLogoImage() ?? BuildLogoImage(360);
-            if (lblLogo != null) lblLogo.Visible = false;
-            CenterLogo();
+            // Đã được thay thế bởi SetupRightPanelContent
         }
 
         private void CenterLogo()
@@ -554,22 +578,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private void pnlContainer_Paint(object sender, PaintEventArgs e)
         {
             var g = e.Graphics;
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-
             var rect = pnlContainer.ClientRectangle;
             if (rect.Width <= 0 || rect.Height <= 0) return;
 
-            using (var brush = new LinearGradientBrush(rect, Color.FromArgb(0, 60, 150), Color.FromArgb(0, 173, 181), 135f))
+            // Chuyển toàn bộ nền phía sau thành màu trắng theo yêu cầu
+            using (var brush = new SolidBrush(Color.White))
             {
                 g.FillRectangle(brush, rect);
-            }
-
-            DrawBackgroundStreaks(g, rect);
-
-            if (pnlForm != null && pnlForm.Visible)
-            {
-                DrawShadow(g, pnlForm.Bounds, radius: 22);
-                DrawGlow(g, pnlForm.Bounds, radius: 22);
             }
         }
 
@@ -601,15 +616,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private void DrawShadow(Graphics g, Rectangle bounds, int radius)
         {
             var shadowRect = bounds;
-            shadowRect.Inflate(18, 18);
+            shadowRect.Inflate(12, 12); // Giảm độ lan tỏa của shadow
 
-            for (int i = 10; i >= 1; i--)
+            for (int i = 8; i >= 1; i--)
             {
-                int alpha = 6 + (i * 5);
+                int alpha = 4 + (i * 3); // Shadow nhẹ nhàng hơn
                 var r = shadowRect;
                 r.Inflate(-i, -i);
                 using (var path = RoundedRectPath(r, radius + i))
-                using (var brush = new SolidBrush(Color.FromArgb(alpha, 0, 120, 215)))
+                using (var brush = new SolidBrush(Color.FromArgb(alpha, 0, 0, 0))) // Shadow màu đen trung tính
                 {
                     g.FillPath(brush, path);
                 }
@@ -651,15 +666,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
-            var outerRect = new Rectangle(0, 0, pnlForm.Width - 1, pnlForm.Height - 1);
-            var innerRect = new Rectangle(1, 1, pnlForm.Width - 3, pnlForm.Height - 3);
-            using (var outerPen = new Pen(Color.FromArgb(180, 200, 235, 255), 1.2f))
-            using (var innerPen = new Pen(Color.FromArgb(235, 255, 255, 255), 1f))
-            using (var outerPath = RoundedRectPath(outerRect, 22))
-            using (var innerPath = RoundedRectPath(innerRect, 20))
+            var rect = new Rectangle(0, 0, pnlForm.Width - 1, pnlForm.Height - 1);
+            // Thêm viền nhẹ để phân biệt card trắng trên nền trắng
+            using (var pen = new Pen(ModernTheme.Colors.Border, 1f))
+            using (var path = RoundedRectPath(rect, 22))
             {
-                g.DrawPath(outerPen, outerPath);
-                g.DrawPath(innerPen, innerPath);
+                g.DrawPath(pen, path);
             }
         }
 
@@ -671,70 +683,30 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var rect = pnlRight.ClientRectangle;
             if (rect.Width <= 0 || rect.Height <= 0) return;
 
-            // Sử dụng gradient nhẹ hơn để không bị khuất
-            using (var brush = new LinearGradientBrush(rect, Color.FromArgb(0, 100, 200), Color.FromArgb(0, 150, 200), 135f))
+            // Sử dụng Gradient nhẹ từ Primary sang PrimaryDark để tạo chiều sâu cho phần nội dung
+            using (var brush = new LinearGradientBrush(rect, ModernTheme.Colors.Primary, ModernTheme.Colors.PrimaryDark, 135f))
             {
                 g.FillRectangle(brush, rect);
             }
 
-            EnsureStars(rect);
-            // Giảm độ mờ của các ngôi sao để không che khuất
-            using (var starBrush = new SolidBrush(Color.FromArgb(180, 255, 255, 255)))
+            // Vẽ một vài họa tiết trang trí chìm (subtle patterns)
+            using (var pen = new Pen(Color.FromArgb(20, 255, 255, 255), 1f))
             {
-                foreach (var p in _stars)
+                for (int i = 0; i < rect.Width; i += 20)
                 {
-                    g.FillEllipse(starBrush, p.X, p.Y, 2f, 2f);
+                    g.DrawLine(pen, i, 0, i + 100, rect.Height);
                 }
             }
-
-            DrawRightPanelWaves(g, rect);
         }
 
         private void EnsureStars(Rectangle rect)
         {
-            if (_stars.Count > 0) return;
-
-            for (int i = 0; i < 90; i++)
-            {
-                float x = (float)(_starRandom.NextDouble() * rect.Width);
-                float y = (float)(_starRandom.NextDouble() * rect.Height);
-                _stars.Add(new PointF(x, y));
-            }
+            // Đã loại bỏ để tối giản giao diện
         }
 
         private void DrawRightPanelWaves(Graphics g, Rectangle rect)
         {
-            using (var path = new GraphicsPath())
-            {
-                path.StartFigure();
-                path.AddLine(rect.Left, rect.Top, rect.Left, rect.Bottom);
-
-                var p1 = new Point(rect.Left, rect.Bottom);
-                var c1 = new Point(rect.Left + rect.Width / 4, rect.Bottom - rect.Height / 6); // Điều chỉnh đường cong
-                var c2 = new Point(rect.Left + rect.Width / 2, rect.Top + rect.Height / 3);
-                var p2 = new Point(rect.Left + rect.Width / 6, rect.Top);
-                path.AddBezier(p1, c1, c2, p2);
-                path.CloseFigure();
-
-                // Tăng độ trong suốt để không che khuất
-                using (var brush = new SolidBrush(Color.FromArgb(40, 255, 255, 255)))
-                {
-                    g.FillPath(brush, path);
-                }
-            }
-
-            // Giảm độ dày và độ mờ của các đường kẻ
-            using (var pen = new Pen(Color.FromArgb(50, 255, 255, 255), 1.5f))
-            {
-                pen.StartCap = LineCap.Round;
-                pen.EndCap = LineCap.Round;
-                for (int i = 0; i < 10; i++) // Giảm số lượng đường kẻ
-                {
-                    int x1 = rect.Left + (rect.Width * i / 10);
-                    int y1 = rect.Top - 20;
-                    g.DrawLine(pen, x1, y1, x1 + 100, y1 + 90);
-                }
-            }
+            // Đã loại bỏ để tránh hiệu ứng "trồng lớp"
         }
 
         private void inputBox_Paint(object sender, PaintEventArgs e)

@@ -14,20 +14,30 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private DataRow _invoiceRow;
         private DataRow _tenantRow;
         private DataTable _payments;
+        private DataTable _utilityReadings;
+        private DataTable _utilityTypes;
 
         private Panel _previewHost;
-        private Label _lblTitle;
-        private Label _lblMeta;
-        private Label _lblTenant;
-        private Label _lblRoom;
-        private Label _lblPeriod;
-        private Label _lblAmounts;
+        private Panel _pnlContent;
+        private Label _lblBranchInfo;
+        private Label _lblInvoiceTitle;
+        private Label _lblInvoiceMeta;
+        private Label _lblTenantInfo;
+        private TableLayoutPanel _tableCosts;
         private Label _lblSummary;
         private Label _lblPayments;
+        private Label _lblStaffSignature;
+
+        // Bank & QR
+        private Panel _pnlBankInfo;
+        private PictureBox _picQrCode;
+        private Label _lblBankDetails;
 
         private Button _btnExportPdf;
         private Button _btnPrint;
         private Button _btnClose;
+
+        private DataRow _branchRow;
 
         public FrmInvoiceExportForm(AdminDataBLL bll, DataRow invoiceRow)
         {
@@ -41,8 +51,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             Text = "Xuất hóa đơn";
             StartPosition = FormStartPosition.CenterParent;
-            Width = 900;
-            Height = 720;
+            Width = 1000;
+            Height = 850;
             BackColor = Color.FromArgb(240, 242, 245);
             Font = new Font("Segoe UI", 10F);
 
@@ -51,8 +61,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _previewHost = new Panel
             {
                 Dock = DockStyle.Fill,
-                BackColor = Color.White,
-                Padding = new Padding(20),
+                BackColor = Color.FromArgb(224, 224, 224),
                 AutoScroll = true
             };
 
@@ -123,93 +132,187 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void BuildPreviewLayout()
         {
-            var header = new Panel { Dock = DockStyle.Top, Height = 110, BackColor = Color.FromArgb(0, 120, 215), Padding = new Padding(16) };
-            _lblTitle = new Label
-            {
-                Text = "HÓA ĐƠN THANH TOÁN",
-                Font = new Font("Segoe UI", 16, FontStyle.Bold),
-                ForeColor = Color.White,
-                Dock = DockStyle.Top,
-                Height = 40
-            };
-            _lblMeta = new Label
-            {
-                Text = "Số hóa đơn | Trạng thái | Ngày lập",
-                Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                ForeColor = Color.White,
-                Dock = DockStyle.Top,
-                Height = 26
-            };
-            header.Controls.Add(_lblMeta);
-            header.Controls.Add(_lblTitle);
+            _previewHost.Controls.Clear();
 
-            var infoGrid = new TableLayoutPanel
+            _pnlContent = new Panel
+            {
+                Width = 800,
+                MinimumSize = new Size(800, 500),
+                MaximumSize = new Size(800, 10000),
+                BackColor = Color.White,
+                Padding = new Padding(40),
+                Location = new Point(Math.Max(0, (_previewHost.Width - 800) / 2), 20),
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink
+            };
+            _previewHost.Controls.Add(_pnlContent);
+
+            _previewHost.Resize += (s, e) =>
+            {
+                _pnlContent.Location = new Point(Math.Max(0, (_previewHost.Width - 800) / 2), 20);
+            };
+
+            // 1. Header Section (Branch Info & Title)
+            var pnlHeader = new Panel { Dock = DockStyle.Top, Height = 120 };
+
+            _lblBranchInfo = new Label
+            {
+                Text = "HỆ THỐNG NHÀ TRỌ\nĐịa chỉ: ...\nHotline: ...",
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                ForeColor = Color.FromArgb(40, 40, 40),
+                Dock = DockStyle.Left,
+                Width = 400,
+                TextAlign = ContentAlignment.TopLeft
+            };
+
+            var pnlTitleContainer = new Panel { Dock = DockStyle.Fill };
+            _lblInvoiceTitle = new Label
+            {
+                Text = "HÓA ĐƠN DỊCH VỤ",
+                Font = new Font("Segoe UI", 18, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 102, 204),
+                Dock = DockStyle.Top,
+                Height = 40,
+                TextAlign = ContentAlignment.TopRight
+            };
+
+            _lblInvoiceMeta = new Label
+            {
+                Text = "Số: HD-000001\nNgày: 01/01/2024",
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = Color.FromArgb(80, 80, 80),
+                Dock = DockStyle.Top,
+                Height = 50,
+                TextAlign = ContentAlignment.TopRight
+            };
+            pnlTitleContainer.Controls.Add(_lblInvoiceMeta);
+            pnlTitleContainer.Controls.Add(_lblInvoiceTitle);
+
+            pnlHeader.Controls.Add(pnlTitleContainer);
+            pnlHeader.Controls.Add(_lblBranchInfo);
+
+            var line1 = new Panel { Dock = DockStyle.Top, Height = 2, BackColor = Color.FromArgb(0, 102, 204), Margin = new Padding(0, 10, 0, 10) };
+
+            // 2. Tenant Info Section
+            _lblTenantInfo = new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 90,
+                Padding = new Padding(0, 10, 0, 10),
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                Text = "Khách hàng: ...\nPhòng: ...\nKỳ thanh toán: ..."
+            };
+
+            // 3. Table Section
+            var pnlTableContainer = new Panel { Dock = DockStyle.Top, AutoSize = true, Padding = new Padding(0, 10, 0, 10) };
+            _tableCosts = new TableLayoutPanel
             {
                 Dock = DockStyle.Top,
                 AutoSize = true,
-                ColumnCount = 2,
-                Padding = new Padding(0, 12, 0, 0)
+                ColumnCount = 3,
+                CellBorderStyle = TableLayoutPanelCellBorderStyle.Single,
+                BackColor = Color.White
             };
-            infoGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-            infoGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+            _tableCosts.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 60)); // Nội dung
+            _tableCosts.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20)); // Đơn vị
+            _tableCosts.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20)); // Thành tiền
 
-            _lblTenant = MakeInfoBox("Khách thuê", "—");
-            _lblRoom = MakeInfoBox("Phòng", "—");
-            _lblPeriod = MakeInfoBox("Kỳ hóa đơn", "—");
-            _lblAmounts = MakeInfoBox("Chi tiết tiền", "—");
+            pnlTableContainer.Controls.Add(_tableCosts);
 
-            infoGrid.Controls.Add(_lblTenant, 0, 0);
-            infoGrid.Controls.Add(_lblRoom, 1, 0);
-            infoGrid.Controls.Add(_lblPeriod, 0, 1);
-            infoGrid.Controls.Add(_lblAmounts, 1, 1);
-
+            // 4. Summary Section
             _lblSummary = new Label
             {
-                Text = "Tổng cộng",
-                AutoSize = false,
-                Height = 70,
                 Dock = DockStyle.Top,
-                Padding = new Padding(12),
+                Height = 90,
+                Padding = new Padding(10),
                 Font = new Font("Segoe UI", 11, FontStyle.Bold),
-                ForeColor = Color.FromArgb(30, 55, 90),
-                BackColor = Color.FromArgb(245, 249, 255),
-                Margin = new Padding(0, 10, 0, 0)
+                TextAlign = ContentAlignment.TopRight,
+                Text = "TỔNG CỘNG: 0đ\nĐã thu: 0đ\nCÒN LẠI: 0đ",
+                BackColor = Color.FromArgb(245, 249, 255)
             };
 
+            // 5. Payments History
             _lblPayments = new Label
             {
-                Text = "Lịch sử thanh toán",
-                AutoSize = false,
-                Height = 120,
                 Dock = DockStyle.Top,
-                Padding = new Padding(12),
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Regular),
-                ForeColor = Color.FromArgb(70, 70, 70),
-                BackColor = Color.WhiteSmoke,
-                Margin = new Padding(0, 10, 0, 0)
+                Height = 60,
+                Padding = new Padding(5),
+                Font = new Font("Segoe UI", 9, FontStyle.Italic),
+                ForeColor = Color.Gray,
+                Text = "Lịch sử thanh toán: ..."
             };
 
-            _previewHost.Controls.Add(_lblPayments);
-            _previewHost.Controls.Add(_lblSummary);
-            _previewHost.Controls.Add(infoGrid);
-            _previewHost.Controls.Add(header);
+            // 6. Bank & QR Section
+            _pnlBankInfo = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 170,
+                Padding = new Padding(15),
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle
+            };
+
+            _picQrCode = new PictureBox
+            {
+                Size = new Size(140, 140),
+                SizeMode = PictureBoxSizeMode.Zoom,
+                BorderStyle = BorderStyle.None,
+                Dock = DockStyle.Left
+            };
+
+            _lblBankDetails = new Label
+            {
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(20, 0, 0, 0),
+                Text = "Thông tin chuyển khoản..."
+            };
+
+            _pnlBankInfo.Controls.Add(_lblBankDetails);
+            _pnlBankInfo.Controls.Add(_picQrCode);
+
+            // 7. Footer (Signatures)
+            var pnlFooter = new Panel { Dock = DockStyle.Top, Height = 120, Padding = new Padding(0, 20, 0, 0) };
+            var lblSignTenant = new Label { Text = "Khách hàng\n(Ký và ghi rõ họ tên)", Dock = DockStyle.Left, Width = 300, TextAlign = ContentAlignment.TopCenter, Font = new Font("Segoe UI", 9, FontStyle.Italic) };
+
+            _lblStaffSignature = new Label
+            {
+                Text = "Người lập phiếu\n(Ký và ghi rõ họ tên)\n\n\nNHÂN VIÊN QUẢN LÝ",
+                Dock = DockStyle.Right,
+                Width = 300,
+                TextAlign = ContentAlignment.TopCenter,
+                Font = new Font("Segoe UI", 9, FontStyle.Italic)
+            };
+
+            pnlFooter.Controls.Add(lblSignTenant);
+            pnlFooter.Controls.Add(_lblStaffSignature);
+
+            // Add all to content panel (Order matters for Dock.Top: last added is top)
+            _pnlContent.Controls.Add(pnlFooter);
+            _pnlContent.Controls.Add(_pnlBankInfo);
+            _pnlContent.Controls.Add(_lblPayments);
+            _pnlContent.Controls.Add(_lblSummary);
+            _pnlContent.Controls.Add(pnlTableContainer);
+            _pnlContent.Controls.Add(_lblTenantInfo);
+            _pnlContent.Controls.Add(line1);
+            _pnlContent.Controls.Add(pnlHeader);
         }
 
-        private Label MakeInfoBox(string title, string value)
+        private void AddTableRow(string content, string detail, string amount, bool isHeader = false)
         {
-            return new Label
-            {
-                Text = $"{title}:\n{value}",
-                AutoSize = false,
-                Height = 90,
-                Dock = DockStyle.Fill,
-                Padding = new Padding(12),
-                BackColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle,
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Regular),
-                ForeColor = Color.FromArgb(60, 60, 60),
-                Margin = new Padding(0, 0, 8, 8)
-            };
+            var font = isHeader ? new Font("Segoe UI", 10, FontStyle.Bold) : new Font("Segoe UI", 9, FontStyle.Regular);
+            var backColor = isHeader ? Color.FromArgb(230, 235, 245) : Color.White;
+            var foreColor = isHeader ? Color.FromArgb(30, 55, 90) : Color.Black;
+
+            var lblContent = new Label { Text = content, Font = font, ForeColor = foreColor, BackColor = backColor, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft, Padding = new Padding(8, 4, 4, 4), AutoSize = false, Height = 36 };
+            var lblDetail = new Label { Text = detail, Font = font, ForeColor = foreColor, BackColor = backColor, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleCenter, Padding = new Padding(4), AutoSize = false, Height = 36 };
+            var lblAmount = new Label { Text = amount, Font = font, ForeColor = foreColor, BackColor = backColor, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleRight, Padding = new Padding(4, 4, 8, 4), AutoSize = false, Height = 36 };
+
+            int row = _tableCosts.RowCount++;
+            _tableCosts.Controls.Add(lblContent, 0, row);
+            _tableCosts.Controls.Add(lblDetail, 1, row);
+            _tableCosts.Controls.Add(lblAmount, 2, row);
         }
 
         private async System.Threading.Tasks.Task LoadAsync()
@@ -224,62 +327,158 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     _tenantRow = tenants?.AsEnumerable().FirstOrDefault(r => ReadInt(r, "TenantId") == tenantId);
                 }
 
+                int branchId = ReadInt(_invoiceRow, "BranchId");
+                if (branchId > 0)
+                {
+                    var branches = await _bll.GetBranchesAsync();
+                    _branchRow = branches?.AsEnumerable().FirstOrDefault(r => ReadInt(r, "BranchId") == branchId);
+                }
+
                 int invoiceId = ReadInt(_invoiceRow, "InvoiceId");
                 if (invoiceId > 0)
                     _payments = await _bll.GetPaymentsByInvoiceAsync(invoiceId);
+
+                _utilityTypes = await _bll.GetUtilityTypesAsync();
+                _utilityReadings = await _bll.GetUtilityReadingsAsync();
             }
             catch
             {
                 _tenantRow = null;
                 _payments = null;
+                _branchRow = null;
+                _utilityReadings = null;
+                _utilityTypes = null;
             }
 
-            RenderPreview();
+            await RenderPreviewAsync();
         }
 
-        private void RenderPreview()
+        private async System.Threading.Tasks.Task RenderPreviewAsync()
         {
             if (_invoiceRow == null) return;
 
+            // 1. Branch Info
+            string branchName = ReadString(_branchRow, "BranchName") ?? "HỆ THỐNG NHÀ TRỌ";
+            string branchAddr = ReadString(_branchRow, "Address") ?? "...";
+            string branchPhone = ReadString(_branchRow, "Hotline") ?? ReadString(_branchRow, "Phone") ?? "...";
+            _lblBranchInfo.Text = $"{branchName.ToUpper()}\nĐịa chỉ: {branchAddr}\nHotline: {branchPhone}";
+
+            // 2. Invoice Meta
             string invoiceNo = ReadString(_invoiceRow, "InvoiceNumber") ?? $"HD-{ReadInt(_invoiceRow, "InvoiceId")}";
-            string status = ReadString(_invoiceRow, "Status") ?? "Issued";
             string invoiceDate = FormatDate(ReadString(_invoiceRow, "InvoiceDate"));
-            _lblMeta.Text = $"{invoiceNo} | {status} | {invoiceDate}";
+            _lblInvoiceMeta.Text = $"Số: {invoiceNo}\nNgày: {invoiceDate}";
 
+            // 3. Tenant Info
             string tenantName = ReadString(_tenantRow, "FullName") ?? ReadString(_invoiceRow, "TenantName") ?? "—";
-            string phone = ReadString(_tenantRow, "PhoneNumber") ?? ReadString(_tenantRow, "Phone") ?? "—";
-            string email = ReadString(_tenantRow, "Email") ?? "—";
-            _lblTenant.Text = $"Khách thuê:\n{tenantName}\nSĐT: {phone}\nEmail: {email}";
-
-            string roomNumber = ReadString(_invoiceRow, "RoomNumber") ?? ReadString(_invoiceRow, "RoomId");
-            string branchId = ReadString(_invoiceRow, "BranchId") ?? "—";
-            _lblRoom.Text = $"Phòng:\n{roomNumber}\nChi nhánh ID: {branchId}";
-
+            string roomNumber = ReadString(_invoiceRow, "RoomNumber") ?? "—";
             string fromDate = FormatDate(ReadString(_invoiceRow, "FromDate"));
             string toDate = FormatDate(ReadString(_invoiceRow, "ToDate"));
-            string dueDate = FormatDate(ReadString(_invoiceRow, "DueDate"));
-            _lblPeriod.Text = $"Kỳ hóa đơn:\n{fromDate} → {toDate}\nHạn: {dueDate}";
+            _lblTenantInfo.Text = $"Khách hàng: {tenantName}\nPhòng: {roomNumber}\nKỳ thanh toán: {fromDate} đến {toDate}";
+
+            // 4. Table Costs
+            _tableCosts.Controls.Clear();
+            _tableCosts.RowCount = 0;
+            AddTableRow("NỘI DUNG", "CHI TIẾT / ĐƠN GIÁ", "THÀNH TIỀN", true);
 
             decimal rental = ReadDecimal(_invoiceRow, "RentalCost");
-            decimal utility = ReadDecimal(_invoiceRow, "UtilityCost");
+            if (rental > 0) AddTableRow("Tiền thuê phòng", "Tháng", FormatMoney(rental));
+
+            // Detailed Utilities
+            DateTime? fromDateDt = TryGetDate(_invoiceRow, "FromDate");
+            DateTime? toDateDt = TryGetDate(_invoiceRow, "ToDate");
+            int roomId = ReadInt(_invoiceRow, "RoomId");
+
+            if (_utilityReadings != null && fromDateDt.HasValue && toDateDt.HasValue)
+            {
+                var readings = _utilityReadings.AsEnumerable()
+                    .Where(r => ReadInt(r, "RoomId") == roomId &&
+                                TryGetDate(r, "ReadingDate") >= fromDateDt &&
+                                TryGetDate(r, "ReadingDate") <= toDateDt)
+                    .ToList();
+
+                foreach (var r in readings)
+                {
+                    int typeId = ReadInt(r, "UtilityTypeId");
+                    string typeName = _utilityTypes?.AsEnumerable()
+                        .FirstOrDefault(t => ReadInt(t, "UtilityTypeId") == typeId)?["UtilityName"]?.ToString() ?? "Dịch vụ";
+
+                    decimal oldIdx = ReadDecimal(r, "PreviousReading");
+                    decimal newIdx = ReadDecimal(r, "CurrentReading");
+                    decimal usage = ReadDecimal(r, "UsageAmount");
+                    decimal price = ReadDecimal(r, "UnitPrice");
+                    decimal cost = ReadDecimal(r, "TotalCost");
+
+                    string detail = $"{typeName} (Chỉ số: {oldIdx} ➔ {newIdx} = {usage})";
+                    AddTableRow(detail, $"{FormatMoney(price)}", FormatMoney(cost));
+                }
+            }
+            else
+            {
+                decimal utility = ReadDecimal(_invoiceRow, "UtilityCost");
+                if (utility > 0) AddTableRow("Tiền điện & nước (Tổng hợp)", "Gói", FormatMoney(utility));
+            }
+
             decimal other = ReadDecimal(_invoiceRow, "OtherCost");
-            decimal taxRate = ReadDecimal(_invoiceRow, "TaxRate");
+            if (other > 0) AddTableRow("Chi phí khác / Bảo trì", "Lần", FormatMoney(other));
+
             decimal taxAmount = ReadDecimal(_invoiceRow, "TaxAmount");
+            if (taxAmount > 0)
+            {
+                decimal taxRate = ReadDecimal(_invoiceRow, "TaxRate");
+                AddTableRow($"Thuế GTGT ({taxRate}%)", "", FormatMoney(taxAmount));
+            }
+
+            // 5. Summary
             decimal total = ReadDecimal(_invoiceRow, "TotalAmount");
             decimal paid = ReadDecimal(_invoiceRow, "PaidAmount");
             decimal remaining = ReadDecimal(_invoiceRow, "RemainingAmount");
 
-            _lblAmounts.Text = $"Chi tiết tiền:\nTiền phòng: {FormatMoney(rental)}\nDịch vụ: {FormatMoney(utility)}\nKhác: {FormatMoney(other)}";
-            _lblSummary.Text = $"Tổng: {FormatMoney(total)} | Thuế: {taxRate:N2}% ({FormatMoney(taxAmount)})\n" +
-                               $"Đã thu: {FormatMoney(paid)} | Còn nợ: {FormatMoney(remaining)}";
+            _lblSummary.Text = $"TỔNG CỘNG: {FormatMoney(total)}\n" +
+                               $"Đã thanh toán: {FormatMoney(paid)}\n" +
+                               $"CÒN LẠI: {FormatMoney(remaining)}";
 
-            _lblPayments.Text = BuildPaymentsText();
+            string paymentsText = BuildPaymentsText();
+            _lblPayments.Text = paymentsText;
+            _lblPayments.Visible = !string.IsNullOrEmpty(paymentsText);
+
+            // 6. Bank & QR Logic
+            try
+            {
+                string bankId = await _bll.GetSystemSettingValueAsync("BankId") ?? "ICB";
+                string accountNo = await _bll.GetSystemSettingValueAsync("BankAccountNumber") ?? "0000000000";
+                string accountName = await _bll.GetSystemSettingValueAsync("BankAccountName") ?? "CHUA CAU HINH";
+                string template = await _bll.GetSystemSettingValueAsync("BankTemplate") ?? "compact";
+
+                string description = $"THANH TOAN HOA DON {invoiceNo}";
+
+                string qrUrl = $"https://img.vietqr.io/image/{bankId}-{accountNo}-{template}.png" +
+                               $"?amount={remaining:0}" +
+                               $"&addInfo={Uri.EscapeDataString(description)}" +
+                               $"&accountName={Uri.EscapeDataString(accountName)}";
+
+                _lblBankDetails.Text = $"THÔNG TIN CHUYỂN KHOẢN:\n" +
+                                      $"Ngân hàng: {bankId}\n" +
+                                      $"Số tài khoản: {accountNo}\n" +
+                                      $"Chủ tài khoản: {accountName}\n" +
+                                      $"Nội dung: {description}\n" +
+                                      $"Số tiền: {FormatMoney(remaining)}";
+
+                _picQrCode.ImageLocation = qrUrl;
+            }
+            catch (Exception ex)
+            {
+                _lblBankDetails.Text = "Không thể tải thông tin ngân hàng: " + ex.Message;
+            }
+
+            // 7. Staff Info
+            _lblStaffSignature.Text = $"Người lập phiếu\n(Ký và ghi rõ họ tên)\n\n\n\nNHÂN VIÊN QUẢN LÝ";
+
+            _pnlContent.PerformLayout();
         }
 
         private string BuildPaymentsText()
         {
-            if (_payments == null || _payments.Rows.Count == 0)
-                return "Lịch sử thanh toán:\nChưa có thanh toán.";
+            if (_payments == null || _payments.Rows.Count == 0) return "";
 
             var lines = _payments.AsEnumerable()
                 .OrderByDescending(r => TryGetDate(r, "PaymentDate") ?? DateTime.MinValue)
@@ -358,6 +557,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 using (var bmp = RenderPreviewBitmap())
                 {
                     if (bmp == null) return;
+
+                    e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                    e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+                    e.Graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+
                     var page = e.MarginBounds;
                     float scale = Math.Min((float)page.Width / bmp.Width, (float)page.Height / bmp.Height);
                     int w = (int)(bmp.Width * scale);
@@ -372,13 +576,28 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private Bitmap RenderPreviewBitmap()
         {
-            if (_previewHost == null) return null;
-            var size = _previewHost.DisplayRectangle.Size;
-            if (size.Width < 1 || size.Height < 1) return null;
+            if (_pnlContent == null) return null;
 
-            var bmp = new Bitmap(size.Width, size.Height);
-            _previewHost.DrawToBitmap(bmp, new Rectangle(Point.Empty, size));
+            // We capture the _pnlContent which is fixed at 800px width
+            int width = _pnlContent.Width;
+            int height = _pnlContent.Height;
+
+            // Force layout update to ensure everything is sized correctly
+            _pnlContent.PerformLayout();
+
+            Bitmap bmp = new Bitmap(width, height);
+            _pnlContent.DrawToBitmap(bmp, new Rectangle(0, 0, width, height));
+
             return bmp;
+        }
+
+        private static DateTime? TryGetDate(DataRow row, string col)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(col)) return null;
+            var v = row[col];
+            if (v == null || v == DBNull.Value) return null;
+            if (v is DateTime dt) return dt;
+            return DateTime.TryParse(v.ToString(), out var val) ? val : (DateTime?)null;
         }
 
         private static string FormatDate(string dateStr)
@@ -412,12 +631,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             if (v == null || v == DBNull.Value) return 0m;
             if (v is decimal d) return d;
             return decimal.TryParse(v.ToString(), out var val) ? val : 0m;
-        }
-
-        private static DateTime? TryGetDate(DataRow row, string col)
-        {
-            if (row == null || row.Table == null || !row.Table.Columns.Contains(col)) return null;
-            return DateTime.TryParse(row[col]?.ToString(), out var dt) ? dt : (DateTime?)null;
         }
     }
 }

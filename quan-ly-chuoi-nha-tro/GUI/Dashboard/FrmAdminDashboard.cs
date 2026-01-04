@@ -52,22 +52,22 @@ namespace quan_ly_chuoi_nha_tro.GUI
             lblPlaceholder.Text = defaultPlaceholderText;
             SetActiveNav(btnNavOverview);
             await ShowOverviewAsync();
-            
+
             // Initialize NotificationBell
             InitializeNotificationBell();
-            
+
             // Show unread notification toast
             if (_notificationBell != null && _notificationBell.UnreadCount > 0)
             {
                 ToastNotification.Info($"Bạn có {_notificationBell.UnreadCount} thông báo chưa đọc", "Thông báo");
             }
         }
-        
+
         private void InitializeNotificationBell()
         {
             _notificationBell = new NotificationBell();
             _notificationBell.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            
+
             // Calculate position: left of lblUser if it exists, otherwise left of btnLogout
             int xPosition;
             if (lblUser != null && lblUser.Visible)
@@ -78,17 +78,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 xPosition = btnLogout.Left - _notificationBell.Width - 15;
             }
-            
+
             _notificationBell.Location = new Point(xPosition, 18);
-            _notificationBell.BellClicked += (s, e) => {
+            _notificationBell.BellClicked += (s, e) =>
+            {
                 SetActiveNav(btnNavNotification);
                 btnNotification_Click(s, e);
             };
             pnlHeader.Controls.Add(_notificationBell);
             _notificationBell.BringToFront();
-            
+
             // Update position when panel resizes
-            pnlHeader.Resize += (s, e) => {
+            pnlHeader.Resize += (s, e) =>
+            {
                 if (_notificationBell != null && !_notificationBell.IsDisposed)
                 {
                     int newX;
@@ -125,18 +127,28 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             btnLogout.FlatAppearance.BorderSize = 0;
             btnLogout.FlatAppearance.MouseOverBackColor = ControlPaint.Dark(btnLogout.BackColor);
-            
+
             // Add rounded corners to logout button
             UiKit.SetRoundedRegion(btnLogout, 8);
             btnLogout.Resize += (s, e) => UiKit.SetRoundedRegion(btnLogout, 8);
+
+            // Header styling
+            pnlHeader.BackColor = Color.White;
+            pnlHeader.Paint += (s, e) =>
+            {
+                using (var pen = new Pen(Color.FromArgb(230, 230, 230)))
+                    e.Graphics.DrawLine(pen, 0, pnlHeader.Height - 1, pnlHeader.Width, pnlHeader.Height - 1);
+            };
+            lblWelcome.ForeColor = ModernTheme.Colors.Primary;
         }
 
         private void StyleNavButton(Button btn)
         {
             if (btn == null) return;
             btn.FlatAppearance.BorderSize = 0;
-            btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(52, 73, 94);
-            btn.FlatAppearance.MouseDownBackColor = Color.FromArgb(41, 128, 185);
+            btn.FlatAppearance.MouseOverBackColor = ModernTheme.Colors.SidebarHover;
+            btn.FlatAppearance.MouseDownBackColor = ModernTheme.Colors.SidebarActive;
+            btn.ForeColor = ModernTheme.Colors.SidebarText;
             btn.Cursor = Cursors.Hand;
         }
 
@@ -147,12 +159,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             if (_activeNavButton != null && !_activeNavButton.IsDisposed)
             {
                 _activeNavButton.BackColor = Color.Transparent;
-                _activeNavButton.ForeColor = Color.FromArgb(189, 195, 199);
+                _activeNavButton.ForeColor = ModernTheme.Colors.SidebarText;
                 _activeNavButton.Font = new Font("Segoe UI", 10, FontStyle.Regular);
             }
 
             _activeNavButton = btn;
-            _activeNavButton.BackColor = Color.FromArgb(52, 152, 219); // Active Blue
+            _activeNavButton.BackColor = ModernTheme.Colors.SidebarActive;
             _activeNavButton.ForeColor = Color.White;
             _activeNavButton.Font = new Font("Segoe UI", 10, FontStyle.Bold);
         }
@@ -168,7 +180,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 UserBLL userBLL = new UserBLL();
                 int roleId = await userBLL.GetUserRoleAsync(currentUser);
-                
+
                 // RoleId 1 = Admin
                 return roleId == 1;
             }
@@ -191,7 +203,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
             tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
             tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.34F));
-            tableLayoutPanel1.Padding = new Padding(20, 10, 20, 20);
+            tableLayoutPanel1.Padding = new Padding(24);
             tableLayoutPanel1.BackColor = Color.FromArgb(248, 250, 252);
             tableLayoutPanel1.GrowStyle = TableLayoutPanelGrowStyle.FixedSize;
 
@@ -238,12 +250,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             int colCount = tableLayoutPanel1.ColumnCount;
             int rowCount = (int)Math.Ceiling(metrics.Length / (double)colCount);
-            tableLayoutPanel1.RowCount = rowCount;
+            tableLayoutPanel1.RowCount = rowCount + 1; // Add one extra row to absorb space
             tableLayoutPanel1.RowStyles.Clear();
             for (int i = 0; i < rowCount; i++)
             {
-                tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Percent, 100f / rowCount));
+                tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Absolute, 130f)); // Slightly smaller height
             }
+            tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Percent, 100f)); // This row takes all remaining space
 
             for (int i = 0; i < metrics.Length; i++)
             {
@@ -284,8 +297,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             )
             {
                 Dock = DockStyle.Fill,
-                Margin = new Padding(16),
-                MinimumSize = new Size(0, 160),
+                Margin = new Padding(10), // Slightly smaller margin
                 Icon = metric.Icon
             };
 
@@ -331,7 +343,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             // Luôn hiển thị tiêu đề của module
             lblWelcome.Text = headerTitle;
             module.Show();
-            
+
             // Ensure notification bell stays on top after module is loaded
             if (_notificationBell != null && !_notificationBell.IsDisposed)
             {

@@ -112,12 +112,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _lblCount = new Label { AutoSize = true, Text = "Tổng: 0", Font = new Font("Segoe UI", 10, FontStyle.Bold) };
             _lblTotal = new Label { AutoSize = true, Text = "Tổng cọc: 0", ForeColor = Color.FromArgb(70, 70, 70) };
 
-            _btnAdd = MakeButton("➕ Thêm", Color.FromArgb(0, 122, 204), (s, e) => AddNew());
-            _btnEdit = MakeButton("✏️ Sửa", Color.FromArgb(0, 122, 204), (s, e) => EditSelected());
-            _btnDelete = MakeButton("🗑 Xóa", Color.FromArgb(211, 47, 47), async (s, e) => await DeleteSelectedAsync());
-            _btnConfirm = MakeButton("✔ Xác nhận cọc", Color.FromArgb(46, 125, 50), async (s, e) => await MarkStatusAsync("Confirmed"));
+            _btnAdd = MakeButton("➕ Thêm", ModernTheme.Colors.Primary, (s, e) => AddNew());
+            _btnEdit = MakeButton("✏️ Sửa", ModernTheme.Colors.Primary, (s, e) => EditSelected());
+            _btnDelete = MakeButton("🗑 Xóa", ModernTheme.Colors.Error, async (s, e) => await DeleteSelectedAsync());
+            _btnConfirm = MakeButton("✔ Xác nhận cọc", ModernTheme.Colors.Success, async (s, e) => await MarkStatusAsync("Confirmed"));
             _btnReturn = MakeButton("💸 Hoàn cọc", Color.FromArgb(121, 85, 72), async (s, e) => await MarkReturnedAsync());
-            _btnRefresh = MakeButton("🔄 Tải lại", Color.FromArgb(0, 122, 204), async (s, e) => await LoadDataAsync());
+            _btnRefresh = MakeButton("🔄 Tải lại", ModernTheme.Colors.Primary, async (s, e) => await LoadDataAsync());
             _btnDelete.Visible = !_isStaffMode;
             _btnDelete.Enabled = !_isStaffMode;
 
@@ -146,7 +146,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
             header.Controls.Add(summary);
             header.Controls.Add(lblTitle);
 
-            var toolbar = new Panel { Dock = DockStyle.Top, Height = 72, Padding = new Padding(16, 14, 16, 14), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
+            var toolbar = new Panel { Dock = DockStyle.Top, Height = 72, Padding = new Padding(16, 14, 16, 14), BackColor = Color.White, BorderStyle = BorderStyle.None };
+            toolbar.Paint += (s, e) =>
+            {
+                e.Graphics.DrawLine(new Pen(ModernTheme.Colors.Border, 1), 0, toolbar.Height - 1, toolbar.Width, toolbar.Height - 1);
+            };
 
             var actions = new FlowLayoutPanel
             {
@@ -982,17 +986,17 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 string status = e.Value.ToString();
                 if (status == "Pending") e.Value = "Chờ xử lý";
-                else if (status == "Confirmed") 
+                else if (status == "Confirmed")
                 {
                     e.Value = "Đã xác nhận";
                     e.CellStyle.ForeColor = Color.FromArgb(46, 125, 50); // Green
                 }
-                else if (status == "Returned") 
+                else if (status == "Returned")
                 {
                     e.Value = "Hoàn cọc";
                     e.CellStyle.ForeColor = Color.FromArgb(33, 150, 243); // Blue
                 }
-                else if (status == "Cancelled") 
+                else if (status == "Cancelled")
                 {
                     e.Value = "Hủy";
                     e.CellStyle.ForeColor = Color.FromArgb(211, 47, 47); // Red
@@ -1020,7 +1024,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             if (row == null) return;
 
             ContextMenuStrip menu = new ContextMenuStrip();
-            
+
             menu.Items.Add("Xem chi tiết khách", null, (s, e) =>
             {
                 try
@@ -1045,7 +1049,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             menu.Items.Add("Sửa", null, (s, e) => EditSelected());
             if (!_isStaffMode)
                 menu.Items.Add("Xóa", null, async (s, e) => await DeleteSelectedAsync());
-            
+
             _grid.ContextMenuStrip = menu;
             menu.Show(_grid, x, y);
         }

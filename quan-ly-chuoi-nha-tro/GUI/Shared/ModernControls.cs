@@ -10,10 +10,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
     public class ModernButton : Button
     {
         private int _borderRadius = 18;
-        public int BorderRadius 
-        { 
-            get => _borderRadius; 
-            set { _borderRadius = value; UpdateRegion(); Invalidate(); } 
+        public int BorderRadius
+        {
+            get => _borderRadius;
+            set { _borderRadius = value; UpdateRegion(); Invalidate(); }
         }
         private Color _baseColor = UiKit.Primary;
         private bool _isHovered = false;
@@ -117,9 +117,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
             Cursor = Cursors.Hand;
             Height = 36;
             Font = ModernTheme.Fonts.Bold(ModernTheme.Fonts.Normal);
-            
+
             // Enable transparency and smooth redrawing
-            SetStyle(ControlStyles.UserPaint | ControlStyles.DoubleBuffer | ControlStyles.AllPaintingInWmPaint | 
+            SetStyle(ControlStyles.UserPaint | ControlStyles.DoubleBuffer | ControlStyles.AllPaintingInWmPaint |
                      ControlStyles.OptimizedDoubleBuffer | ControlStyles.SupportsTransparentBackColor, true);
 
             // Hover animation timer
@@ -262,24 +262,24 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 if (_iconPosition == IconPosition.Leading)
                 {
                     // Draw icon on left
-                    TextRenderer.DrawText(g, _iconText, new Font("Segoe UI Emoji", 12f), 
+                    TextRenderer.DrawText(g, _iconText, new Font("Segoe UI Emoji", 12f),
                         new Rectangle(startX, iconY, iconSize, iconSize), ForeColor,
                         TextFormatFlags.Left | TextFormatFlags.VerticalCenter);
 
                     // Draw text
-                    TextRenderer.DrawText(g, displayText, Font, 
+                    TextRenderer.DrawText(g, displayText, Font,
                         new Rectangle(startX + iconSize + iconPadding, 0, bounds.Width, bounds.Height),
                         ForeColor, TextFormatFlags.Left | TextFormatFlags.VerticalCenter);
                 }
                 else
                 {
                     // Draw text
-                    TextRenderer.DrawText(g, displayText, Font, 
+                    TextRenderer.DrawText(g, displayText, Font,
                         new Rectangle(startX, 0, (int)textSize.Width, bounds.Height),
                         ForeColor, TextFormatFlags.Left | TextFormatFlags.VerticalCenter);
 
                     // Draw icon on right
-                    TextRenderer.DrawText(g, _iconText, new Font("Segoe UI Emoji", 12f), 
+                    TextRenderer.DrawText(g, _iconText, new Font("Segoe UI Emoji", 12f),
                         new Rectangle(startX + (int)textSize.Width + iconPadding, iconY, iconSize, iconSize),
                         ForeColor, TextFormatFlags.Left | TextFormatFlags.VerticalCenter);
                 }
@@ -287,7 +287,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             else
             {
                 // No icon, center text
-                TextRenderer.DrawText(g, displayText, Font, bounds, ForeColor, 
+                TextRenderer.DrawText(g, displayText, Font, bounds, ForeColor,
                     TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
             }
         }
@@ -377,7 +377,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
-            
+
             e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
 
             var rect = new Rectangle(0, 0, Width - 1, Height - 1);
@@ -442,8 +442,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             BackColor = Color.White;
             BorderStyle = BorderStyle.None;
             Width = 200;
-            Height = 75;
-            Padding = new Padding(18, 8, 12, 8);
+            Height = 120; // Increased default height for better spacing
+            Padding = new Padding(20, 15, 20, 15);
             Cursor = Cursors.Hand;
 
             SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
@@ -451,37 +451,38 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             UpdateRegion();
 
-            // Note: Accent bar will be drawn in OnPaint to follow rounded corners
-
             // Icon label (top-right)
             _iconLabel = new Label
             {
-                AutoSize = true,
-                Font = new Font("Segoe UI Emoji", 24f),
-                ForeColor = ModernTheme.Gradient.WithOpacity(accentColor, 0.3f),
-                BackColor = Color.Transparent,
+                AutoSize = false,
+                Size = new Size(42, 42),
+                Font = new Font("Segoe UI Emoji", 16f),
+                ForeColor = accentColor,
+                BackColor = Color.FromArgb(30, accentColor.R, accentColor.G, accentColor.B),
+                TextAlign = ContentAlignment.MiddleCenter,
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
                 Visible = false
             };
-            
+
             // Position will be set after card resize
             Resize += (s, e) =>
             {
                 if (_iconLabel != null && !string.IsNullOrEmpty(_iconLabel.Text))
                 {
-                    _iconLabel.Location = new Point(Width - _iconLabel.Width - 15, 10);
+                    _iconLabel.Location = new Point(Width - _iconLabel.Width - 15, 15);
+                    UiKit.SetRoundedRegion(_iconLabel, 10);
                 }
             };
 
             // Title label
             _titleLabel = new Label
             {
-                Text = title,
-                Font = ModernTheme.Fonts.Bold(9f),
-                ForeColor = ModernTheme.Colors.TextSecondary,
+                Text = title.ToUpper(),
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(100, 116, 139),
                 AutoSize = false,
                 Dock = DockStyle.Top,
-                Height = 16,
+                Height = 22,
                 BackColor = Color.Transparent
             };
 
@@ -489,23 +490,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _valueLabel = new Label
             {
                 Text = value,
-                Font = ModernTheme.Fonts.Bold(18),
-                ForeColor = accentColor,
+                Font = new Font("Segoe UI", 20f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(15, 23, 42), // Darker Slate
                 AutoSize = false,
                 Dock = DockStyle.Top,
-                Height = 28,
+                Height = 40,
                 TextAlign = ContentAlignment.MiddleLeft,
-                BackColor = Color.Transparent
-            };
-
-            // Trend label (inline with subtitle)
-            _trendLabel = new Label
-            {
-                AutoSize = true,
-                Font = ModernTheme.Fonts.Bold(ModernTheme.Fonts.Small),
-                Location = new Point(18, Height - 18),
-                Anchor = AnchorStyles.Bottom | AnchorStyles.Left,
-                Visible = false,
                 BackColor = Color.Transparent
             };
 
@@ -513,11 +503,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _subtitleLabel = new Label
             {
                 Text = subtitle,
-                Font = ModernTheme.Fonts.Regular(8.5f),
-                ForeColor = ModernTheme.Colors.TextTertiary,
+                Font = new Font("Segoe UI", 9f, FontStyle.Regular),
+                ForeColor = Color.FromArgb(100, 116, 139),
                 AutoSize = false,
                 Dock = DockStyle.Top,
-                Height = 15,
+                Height = 20,
                 BackColor = Color.Transparent
             };
 
@@ -530,7 +520,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             // Forward mouse events from all child controls to card
             MouseEnter += (s, e) => { _isHovered = true; Invalidate(); };
             MouseLeave += (s, e) => { _isHovered = false; Invalidate(); };
-            
+
             // Attach same events to all children
             foreach (Control child in Controls)
             {
@@ -650,7 +640,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
-            
+
             e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
 
             var rect = new Rectangle(0, 0, Width - 1, Height - 1);
@@ -669,11 +659,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 e.Graphics.FillPath(bgBrush, path);
             }
 
-            // Draw accent bar on the left edge (following rounded corners)
-            int accentWidth = 5;
-            var accentRect = new Rectangle(0, 0, accentWidth, Height - 1);
-            
-            using (var accentPath = UiKit.GetRoundPath(new Rectangle(0, 0, _borderRadius * 2, Height - 1), _borderRadius))
+            // Draw accent bar on the left edge (Full height, thin)
+            int accentWidth = 4;
+            var accentRect = new Rectangle(0, 0, accentWidth, Height);
+
+            using (var accentPath = UiKit.GetRoundPath(new Rectangle(0, 0, _borderRadius * 2, Height), _borderRadius))
             {
                 e.Graphics.SetClip(accentRect);
                 using (var accentBrush = new SolidBrush(_accentColor))
@@ -683,10 +673,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 e.Graphics.ResetClip();
             }
 
-            // Draw enhanced border
-            Color borderColor = _isHovered ? ModernTheme.Colors.Primary : Color.FromArgb(160, 170, 180);
-            int borderWidth = _isHovered ? 2 : 2;
-            
+            // Draw refined border
+            Color borderColor = _isHovered ? _accentColor : Color.FromArgb(226, 232, 240);
+            int borderWidth = _isHovered ? 1 : 1;
+
             using (var path = UiKit.GetRoundPath(rect, _borderRadius))
             using (var pen = new Pen(borderColor, borderWidth))
             {

@@ -84,9 +84,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var toolbar = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 110,
-                Padding = new Padding(12, 15, 12, 15),
+                Height = 120,
+                Padding = new Padding(12, 15, 12, 10),
                 BackColor = Color.White
+            };
+            toolbar.Paint += (s, e) =>
+            {
+                e.Graphics.DrawLine(new Pen(ModernTheme.Colors.Border, 1), 0, toolbar.Height - 1, toolbar.Width, toolbar.Height - 1);
             };
 
             var toolbarLayout = new TableLayoutPanel
@@ -183,7 +187,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Text = "Tìm",
                 Width = 80,
                 Height = 32,
-                BaseColor = Color.FromArgb(0, 122, 204),
+                BaseColor = ModernTheme.Colors.Primary,
                 BackColor = Color.Transparent,
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -295,21 +299,21 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 WrapContents = true,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                Padding = new Padding(0, 6, 0, 0)
+                Padding = new Padding(0, 10, 0, 0)
             };
             _lblSummary = new Label
             {
                 Text = $"Đang ở/Tổng: 0/{GetLimitText()} phòng",
                 AutoSize = true,
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                ForeColor = Color.FromArgb(0, 122, 204)
+                ForeColor = ModernTheme.Colors.Primary
             };
             _lblRoomCount = new Label
             {
                 Text = $"Phòng: 0/{GetLimitText()}",
                 AutoSize = true,
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                ForeColor = Color.FromArgb(0, 122, 204),
+                ForeColor = ModernTheme.Colors.Primary,
                 Margin = new Padding(12, 0, 0, 0)
             };
             stats.Controls.Add(_lblSummary);
@@ -929,7 +933,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     var rect = new Rectangle(card.Width - 26, card.Height - 26, 20, 20);
                     using (var fill = new SolidBrush(Color.FromArgb(225, 238, 255)))
                         e.Graphics.FillRectangle(fill, rect);
-                    using (var pen = new Pen(Color.FromArgb(0, 122, 204), 2))
+                    using (var pen = new Pen(ModernTheme.Colors.Primary, 2))
                         e.Graphics.DrawRectangle(pen, rect);
                 }
             };
@@ -1000,7 +1004,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 Text = $"{price:N0}đ",
                 Font = new Font("Segoe UI", 16, FontStyle.Bold),
-                ForeColor = Color.FromArgb(0, 122, 204),
+                ForeColor = ModernTheme.Colors.Primary,
                 Dock = DockStyle.Top,
                 Height = 28,
                 AutoSize = false,
@@ -1009,9 +1013,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
             };
 
             // Info: Loại, Trạng thái, Số người
-            var infoPanel = new Panel { Dock = DockStyle.Top,
+            var infoPanel = new Panel
+            {
+                Dock = DockStyle.Top,
                 AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink, Padding = new Padding(0) };
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Padding = new Padding(0)
+            };
             var infoLayout = new TableLayoutPanel
             {
                 Dock = DockStyle.Top,
@@ -1026,7 +1034,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 Text = $"Loại: {GetTypeIcon(typeName)} {typeName}",
                 Font = new Font("Segoe UI", 11.5f, FontStyle.Regular),
-                ForeColor = Color.FromArgb(0, 122, 204),
+                ForeColor = ModernTheme.Colors.Primary,
                 Dock = DockStyle.Top,
                 Height = 24,
                 AutoSize = false,
@@ -1793,7 +1801,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     DialogResult = DialogResult.OK,
                     Width = 110,
                     Height = 32,
-                    BackColor = Color.FromArgb(0, 122, 204),
+                    BackColor = ModernTheme.Colors.Primary,
                     ForeColor = Color.White,
                     FlatStyle = FlatStyle.Flat,
                     Location = new Point(170, 100)
@@ -1900,7 +1908,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     ApplyFilter();
                     BuildRoomDetailsPanel();
                     _inspectingRoomId = roomId;
- 
+
                 }
                 catch (Exception ex)
                 {
@@ -2004,7 +2012,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             if (isMaintenance) return Color.FromArgb(255, 220, 220); // do nhat
             if (isDeposit) return Color.FromArgb(255, 241, 188);    // vang nhat
-            if (isOccupied) return Color.FromArgb(0, 122, 204);     // xanh duong
+            if (isOccupied) return ModernTheme.Colors.Primary;     // xanh duong
             return Color.White;                                     // trong
         }
 
@@ -2416,7 +2424,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     Width = 120,
                     Height = 34,
                     Location = new Point(190, 248),
-                    BackColor = Color.FromArgb(0, 122, 204),
+                    BackColor = ModernTheme.Colors.Primary,
                     ForeColor = Color.White,
                     Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
                     FlatStyle = FlatStyle.Flat,

@@ -92,15 +92,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 BackColor = Color.White,
                 Padding = new Padding(12, 8, 12, 8),
-                BorderStyle = BorderStyle.FixedSingle
+                BorderStyle = BorderStyle.None
+            };
+            pnlActionBar.Paint += (s, e) =>
+            {
+                e.Graphics.DrawLine(new Pen(ModernTheme.Colors.Border, 1), 0, pnlActionBar.Height - 1, pnlActionBar.Width, pnlActionBar.Height - 1);
             };
 
             // Buttons
-            _btnAdd = MakeButton("➕ Thêm", Color.FromArgb(0, 122, 204), async (s, e) => await AddNewAsync());
-            _btnEdit = MakeButton("✎ Sửa", Color.FromArgb(0, 122, 204), async (s, e) => await EditSelectedAsync());
-            _btnDelete = MakeButton("🗑 Xóa", Color.FromArgb(211, 47, 47), async (s, e) => await DeleteSelectedAsync());
-            _btnDone = MakeButton("✓ Hoàn tất", Color.FromArgb(46, 125, 50), async (s, e) => await MarkDoneAsync());
-            _btnRefresh = MakeButton("⟳ Tải lại", Color.FromArgb(0, 122, 204), async (s, e) => await LoadAsync());
+            _btnAdd = MakeButton("➕ Thêm", ModernTheme.Colors.Primary, async (s, e) => await AddNewAsync());
+            _btnEdit = MakeButton("✎ Sửa", ModernTheme.Colors.Primary, async (s, e) => await EditSelectedAsync());
+            _btnDelete = MakeButton("🗑 Xóa", ModernTheme.Colors.Error, async (s, e) => await DeleteSelectedAsync());
+            _btnDone = MakeButton("✓ Hoàn tất", ModernTheme.Colors.Success, async (s, e) => await MarkDoneAsync());
+            _btnRefresh = MakeButton("⟳ Tải lại", ModernTheme.Colors.Primary, async (s, e) => await LoadAsync());
             _btnEdit.Enabled = false;
             _btnDelete.Enabled = false;
             _btnDone.Enabled = false;
@@ -441,25 +445,25 @@ namespace quan_ly_chuoi_nha_tro.GUI
             content.Controls.Add(lblAssignee);
 
             var border = new Panel { Dock = DockStyle.Fill };
-            
+
             // Set rounded region for card
             EventHandler updateRegion = (s, e) => UiKit.SetRoundedRegion(card, 12);
             card.Resize += updateRegion;
             updateRegion(null, null);
-            
+
             card.Paint += (s, e) =>
             {
                 e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                
+
                 var rect = new Rectangle(0, 0, card.Width - 1, card.Height - 1);
-                
+
                 // Draw background with rounded corners
                 using (var path = UiKit.GetRoundPath(rect, 12))
                 using (var bgBrush = new SolidBrush(Color.White))
                 {
                     e.Graphics.FillPath(bgBrush, path);
                 }
-                
+
                 // Draw border with rounded corners
                 using (var path = UiKit.GetRoundPath(rect, 12))
                 using (var pen = new Pen(IsSelected(card) ? Color.FromArgb(0, 122, 204) : Color.FromArgb(220, 230, 240), 1.4f))

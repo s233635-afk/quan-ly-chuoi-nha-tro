@@ -42,6 +42,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Button btnExportInvoice;
         private bool _exportAllowed;
 
+        // Bank & QR Controls
+        private Panel pnlBankInfo;
+        private PictureBox picQrCode;
+        private Label lblBankDetails;
+
         public FrmPaymentWithTenantInfo(AdminDataBLL bll, DataRow invoiceRow, DataRow existingPayment = null)
         {
             _bll = bll;
@@ -238,27 +243,53 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 AutoSize = true
             };
             pnlBody.Controls.Add(lblPaymentSection);
-            top += 30;
+            top += 35;
+
+            // Use a FlowLayoutPanel for payment fields to handle dynamic visibility of Bank Info
+            var flowPayment = new FlowLayoutPanel
+            {
+                Location = new Point(left, top),
+                Width = 620,
+                Height = 500, // Will be adjusted or scrollable
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink
+            };
+            pnlBody.Controls.Add(flowPayment);
+
+            // Helper to create row panel for FlowLayoutPanel
+            Panel CreateRow(Control lbl, Control input, Control extra = null)
+            {
+                var p = new Panel { Width = 600, Height = 35 };
+                lbl.Location = new Point(0, 5);
+                input.Location = new Point(labelWidth, 2);
+                p.Controls.Add(lbl);
+                p.Controls.Add(input);
+                if (extra != null)
+                {
+                    extra.Location = new Point(labelWidth + input.Width + 10, 2);
+                    p.Controls.Add(extra);
+                }
+                return p;
+            }
 
             // Payment Date
-            var lblDate = new Label { Text = "Ngày thanh toán:", Location = new Point(left, top), Width = labelWidth, TextAlign = ContentAlignment.MiddleLeft };
-            dtPaymentDate = new DateTimePicker { Format = DateTimePickerFormat.Short, Value = DateTime.Today, Location = new Point(left + labelWidth, top), Width = 200 };
-            pnlBody.Controls.Add(lblDate);
-            pnlBody.Controls.Add(dtPaymentDate);
-            top += line;
+            var lblDate = new Label { Text = "Ngày thanh toán:", Width = labelWidth, TextAlign = ContentAlignment.MiddleLeft };
+            dtPaymentDate = new DateTimePicker { Format = DateTimePickerFormat.Short, Value = DateTime.Today, Width = 200 };
+            flowPayment.Controls.Add(CreateRow(lblDate, dtPaymentDate));
 
             // Amount
-            var lblAmount = new Label { Text = "Số tiền:", Location = new Point(left, top), Width = labelWidth, TextAlign = ContentAlignment.MiddleLeft };
+            var lblAmount = new Label { Text = "Số tiền:", Width = labelWidth, TextAlign = ContentAlignment.MiddleLeft };
             numAmount = new NumericUpDown
             {
                 Minimum = 0,
                 Maximum = 100000000000,
                 DecimalPlaces = 0,
                 ThousandsSeparator = true,
-                Location = new Point(left + labelWidth, top),
                 Width = 200
             };
-            btnPayFull = new ModernButton { Text = "Thu đủ", Width = 90, Height = 28, Location = new Point(left + labelWidth + 210, top), BaseColor = Color.FromArgb(240, 240, 240), BackColor = Color.Transparent, ForeColor = Color.Black };
+            btnPayFull = new ModernButton { Text = "Thu đủ", Width = 90, Height = 28, BaseColor = Color.FromArgb(240, 240, 240), BackColor = Color.Transparent, ForeColor = Color.Black };
             btnPayFull.Click += (s, e) =>
             {
                 if (numAmount.Maximum > 0)
@@ -266,38 +297,87 @@ namespace quan_ly_chuoi_nha_tro.GUI
             };
             btnPayFull.FlatStyle = FlatStyle.Flat;
             btnPayFull.FlatAppearance.BorderSize = 1;
-            pnlBody.Controls.Add(lblAmount);
-            pnlBody.Controls.Add(numAmount);
-            pnlBody.Controls.Add(btnPayFull);
-            top += line;
+            flowPayment.Controls.Add(CreateRow(lblAmount, numAmount, btnPayFull));
 
             // Payment Method
-            var lblMethod = new Label { Text = "Hình thức:", Location = new Point(left, top), Width = labelWidth, TextAlign = ContentAlignment.MiddleLeft };
-            cboMethod = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(left + labelWidth, top), Width = 200 };
-            cboMethod.Items.AddRange(new object[] { "Tiền mặt", "Chuyển khoản","Thẻ" });
+            var lblMethod = new Label { Text = "Hình thức:", Width = labelWidth, TextAlign = ContentAlignment.MiddleLeft };
+            cboMethod = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 200 };
+            cboMethod.Items.AddRange(new object[] { "Tiền mặt", "Chuyển khoản", "Thẻ" });
             cboMethod.SelectedIndex = 0;
-            pnlBody.Controls.Add(lblMethod);
-            pnlBody.Controls.Add(cboMethod);
-            top += line;
+            cboMethod.SelectedIndexChanged += (s, e) => UpdateBankInfoVisibility();
+            flowPayment.Controls.Add(CreateRow(lblMethod, cboMethod));
+
+            // Bank & QR Panel
+            pnlBankInfo = new Panel
+            {
+                Width = 600,
+                Height = 220,
+                Visible = false,
+                BackColor = Color.FromArgb(250, 250, 250),
+                BorderStyle = BorderStyle.FixedSingle,
+                Margin = new Padding(labelWidth, 5, 0, 10)
+            };
+
+            picQrCode = new PictureBox
+            {
+                Location = new Point(10, 10),
+                Size = new Size(200, 200),
+                SizeMode = PictureBoxSizeMode.Zoom,
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle
+            };
+            pnlBankInfo.Controls.Add(picQrCode);
+
+            lblBankDetails = new Label
+            {
+                Location = new Point(220, 10),
+                Size = new Size(360, 160),
+                Font = new Font("Segoe UI", 10F),
+                Text = "Đang tải thông tin ngân hàng..."
+            };
+            pnlBankInfo.Controls.Add(lblBankDetails);
+
+            var btnCopyBank = new ModernButton
+            {
+                Text = "📋 Sao chép STK",
+                Location = new Point(220, 175),
+                Width = 140,
+                Height = 30,
+                BaseColor = Color.FromArgb(240, 240, 240),
+                ForeColor = Color.Black
+            };
+            btnCopyBank.Click += (s, e) =>
+            {
+                var stk = lblBankDetails.Text.Split('\n').FirstOrDefault(l => l.Contains("SỐ TÀI KHOẢN:"))?.Replace("SỐ TÀI KHOẢN:", "").Trim();
+                if (!string.IsNullOrEmpty(stk))
+                {
+                    Clipboard.SetText(stk);
+                    ToastNotification.Success("Đã sao chép số tài khoản");
+                }
+            };
+            pnlBankInfo.Controls.Add(btnCopyBank);
+
+            flowPayment.Controls.Add(pnlBankInfo);
 
             // Reference
-            var lblRef = new Label { Text = "Tham chiếu:", Location = new Point(left, top), Width = labelWidth, TextAlign = ContentAlignment.MiddleLeft };
-            txtReference = new TextBox { Location = new Point(left + labelWidth, top), Width = 300 };
-            pnlBody.Controls.Add(lblRef);
-            pnlBody.Controls.Add(txtReference);
-            top += line;
+            var lblRef = new Label { Text = "Tham chiếu:", Width = labelWidth, TextAlign = ContentAlignment.MiddleLeft };
+            txtReference = new TextBox { Width = 300 };
+            flowPayment.Controls.Add(CreateRow(lblRef, txtReference));
 
             // Notes
-            var lblNotes = new Label { Text = "Ghi chú:", Location = new Point(left, top), Width = labelWidth, TextAlign = ContentAlignment.TopLeft };
+            var lblNotes = new Label { Text = "Ghi chú:", Width = labelWidth, TextAlign = ContentAlignment.TopLeft };
             txtNotes = new TextBox
             {
                 Multiline = true,
-                Location = new Point(left + labelWidth, top),
-                Width = inputWidth,
+                Width = 400,
                 Height = 80
             };
-            pnlBody.Controls.Add(lblNotes);
-            pnlBody.Controls.Add(txtNotes);
+            var pnlNotes = new Panel { Width = 600, Height = 90 };
+            lblNotes.Location = new Point(0, 5);
+            txtNotes.Location = new Point(labelWidth, 2);
+            pnlNotes.Controls.Add(lblNotes);
+            pnlNotes.Controls.Add(txtNotes);
+            flowPayment.Controls.Add(pnlNotes);
 
             Controls.Add(pnlBody);
             Controls.Add(pnlBottom);
@@ -409,7 +489,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             numAmount.Maximum = (decimal)remainingAmount;
             numAmount.Value = (decimal)remainingAmount;
-            SetExportAllowed(remainingAmount <= 0);
+            SetExportAllowed(true); // Luôn cho phép xuất hóa đơn để gửi khách
         }
 
         private decimal ReadDecimal(DataRow row, string col)
@@ -476,7 +556,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 DataSyncManager.NotifyPaymentsChanged();
                 DataSyncManager.NotifyRoomsChanged();
 
-                if (_exportAllowed && ModernConfirmDialog.Confirm(
+                if (_exportAllowed && remaining <= 0 && ModernConfirmDialog.Confirm(
                     "Đã thanh toán đủ.\nBạn có muốn xuất/in hóa đơn ngay?",
                     "Hoàn tất"))
                 {
@@ -494,8 +574,52 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void SetExportAllowed(bool allowed)
         {
-            _exportAllowed = allowed;
-            btnExportInvoice.Enabled = allowed;
+            _exportAllowed = true; // Luôn cho phép xuất hóa đơn
+            btnExportInvoice.Enabled = true;
+        }
+
+        private async void UpdateBankInfoVisibility()
+        {
+            bool isTransfer = cboMethod.SelectedItem?.ToString() == "Chuyển khoản";
+            pnlBankInfo.Visible = isTransfer;
+
+            if (isTransfer)
+            {
+                await LoadAndGenerateQrAsync();
+            }
+        }
+
+        private async Task LoadAndGenerateQrAsync()
+        {
+            try
+            {
+                string bankId = await _bll.GetSystemSettingValueAsync("BankId") ?? "ICB"; // Default VietinBank
+                string accountNo = await _bll.GetSystemSettingValueAsync("BankAccountNumber") ?? "0000000000";
+                string accountName = await _bll.GetSystemSettingValueAsync("BankAccountName") ?? "CHUA CAU HINH";
+                string template = await _bll.GetSystemSettingValueAsync("BankTemplate") ?? "compact";
+
+                decimal amount = numAmount.Value;
+                string description = $"THANH TOAN HOA DON {ReadInvoiceValue("InvoiceNumber")}";
+
+                // VietQR API URL
+                // https://img.vietqr.io/image/<BANK_ID>-<ACCOUNT_NO>-<TEMPLATE>.png?amount=<AMOUNT>&addInfo=<CONTENT>&accountName=<NAME>
+                string qrUrl = $"https://img.vietqr.io/image/{bankId}-{accountNo}-{template}.png" +
+                               $"?amount={amount:0}" +
+                               $"&addInfo={Uri.EscapeDataString(description)}" +
+                               $"&accountName={Uri.EscapeDataString(accountName)}";
+
+                lblBankDetails.Text = $"NGÂN HÀNG: {bankId}\n" +
+                                     $"SỐ TÀI KHOẢN: {accountNo}\n" +
+                                     $"CHỦ TÀI KHOẢN: {accountName}\n\n" +
+                                     $"NỘI DUNG: {description}\n" +
+                                     $"SỐ TIỀN: {amount:N0} VNĐ";
+
+                picQrCode.ImageLocation = qrUrl;
+            }
+            catch (Exception ex)
+            {
+                lblBankDetails.Text = "Lỗi tải thông tin ngân hàng: " + ex.Message;
+            }
         }
 
         private static string MapPaymentMethodToStored(string displayValue)
@@ -566,12 +690,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private async void HandleInvoiceExport()
         {
-            if (!_exportAllowed)
-            {
-                ToastNotification.Warning("Hóa đơn chỉ có thể xuất sau khi thanh toán xong");
-                return;
-            }
-
+            // Đã bỏ chặn xuất hóa đơn trước khi thanh toán
             await ReloadInvoiceRowAsync();
             DisplayInvoiceInfo();
             OpenExportForm();

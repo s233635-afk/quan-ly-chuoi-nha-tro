@@ -35,6 +35,19 @@ namespace QuanLyNhaTro.BLL
         public Task<DataTable> GetAssetsAsync() => dbHelper.GetAssetsAsync();
         public Task<DataTable> GetNotificationsAsync() => dbHelper.GetNotificationsAsync();
         public Task<DataTable> GetSystemSettingsAsync() => dbHelper.GetSystemSettingsAsync();
+        public async Task<string> GetSystemSettingValueAsync(string key)
+        {
+            DataTable dt = await dbHelper.GetSystemSettingsAsync();
+            if (dt != null)
+            {
+                foreach (DataRow row in dt.Rows)
+                {
+                    if (row["SettingKey"]?.ToString() == key)
+                        return row["SettingValue"]?.ToString();
+                }
+            }
+            return null;
+        }
         public Task<DataTable> GetDashboardSummaryAsync() => dbHelper.GetDashboardSummaryAsync();
 
         // --- STAFF CRUD ---
@@ -88,7 +101,7 @@ namespace QuanLyNhaTro.BLL
             => dbHelper.DeleteTenantHistoryAsync(historyId);
 
         // --- CONTRACT CRUD ---
-        
+
         // 🔥 ĐÂY LÀ HÀM CÒN THIẾU MÀ MÌNH ĐÃ THÊM VÀO 🔥
         public async Task<DataRow> GetContractByIdAsync(int contractId)
         {
