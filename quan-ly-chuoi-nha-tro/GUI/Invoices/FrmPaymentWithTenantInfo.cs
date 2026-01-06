@@ -593,9 +593,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             try
             {
-                string bankId = await _bll.GetSystemSettingValueAsync("BankId") ?? "ICB"; // Default VietinBank
-                string accountNo = await _bll.GetSystemSettingValueAsync("BankAccountNumber") ?? "0000000000";
-                string accountName = await _bll.GetSystemSettingValueAsync("BankAccountName") ?? "CHUA CAU HINH";
+                string bankId = await _bll.GetSystemSettingValueAsync("BankId") ?? "VietinBank"; // Default VietinBank
+                string accountNo = await _bll.GetSystemSettingValueAsync("BankAccountNumber") ?? "0338352423";
+                string accountName = await _bll.GetSystemSettingValueAsync("BankAccountName") ?? "NGUYEN TRUNG KIEN";
                 string template = await _bll.GetSystemSettingValueAsync("BankTemplate") ?? "compact";
 
                 decimal amount = numAmount.Value;
@@ -630,8 +630,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     return "Cash";
                 case "Chuyển khoản":
                     return "Transfer";
-                case "Séc":
-                    return "Check";
                 case "Thẻ":
                     return "Card";
                 default:

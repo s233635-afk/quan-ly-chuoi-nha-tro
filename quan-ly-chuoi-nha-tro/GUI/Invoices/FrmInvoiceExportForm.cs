@@ -444,9 +444,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
             // 6. Bank & QR Logic
             try
             {
-                string bankId = await _bll.GetSystemSettingValueAsync("BankId") ?? "ICB";
-                string accountNo = await _bll.GetSystemSettingValueAsync("BankAccountNumber") ?? "0000000000";
-                string accountName = await _bll.GetSystemSettingValueAsync("BankAccountName") ?? "CHUA CAU HINH";
+                string bankId = await _bll.GetSystemSettingValueAsync("BankId") ?? "VietinBank";
+                string accountNo = await _bll.GetSystemSettingValueAsync("BankAccountNumber") ?? "0338352423";
+                string accountName = await _bll.GetSystemSettingValueAsync("BankAccountName") ?? "NGUYEN TRUNG KIEN";
                 string template = await _bll.GetSystemSettingValueAsync("BankTemplate") ?? "compact";
 
                 string description = $"THANH TOAN HOA DON {invoiceNo}";
@@ -456,12 +456,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
                                $"&addInfo={Uri.EscapeDataString(description)}" +
                                $"&accountName={Uri.EscapeDataString(accountName)}";
 
-                _lblBankDetails.Text = $"THÔNG TIN CHUYỂN KHOẢN:\n" +
-                                      $"Ngân hàng: {bankId}\n" +
-                                      $"Số tài khoản: {accountNo}\n" +
-                                      $"Chủ tài khoản: {accountName}\n" +
-                                      $"Nội dung: {description}\n" +
-                                      $"Số tiền: {FormatMoney(remaining)}";
+                _lblBankDetails.Text = $"NGÂN HÀNG: {bankId}\n" +
+                                      $"SỐ TÀI KHOẢN: {accountNo}\n" +
+                                      $"CHỦ TÀI KHOẢN: {accountName}\n\n" +
+                                      $"NỘI DUNG: {description}\n" +
+                                      $"SỐ TIỀN: {remaining:N0} VNĐ";
 
                 _picQrCode.ImageLocation = qrUrl;
             }

@@ -250,7 +250,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _txtSearchPayment.Text = SearchPlaceholder;
 
             _cboPaymentMethod = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 140 };
-            _cboPaymentMethod.Items.AddRange(new object[] { "Tất cả", "Tiền mặt", "Chuyển khoản", "Séc", "Thẻ" });
+            _cboPaymentMethod.Items.AddRange(new object[] { "Tất cả", "Tiền mặt", "Chuyển khoản", "Thẻ" });
             _cboPaymentMethod.SelectedIndex = 0;
             _cboPaymentMethod.SelectedIndexChanged += (s, e) => ApplyPaymentFilter();
             _gridPayments.CellFormatting += (s, e) =>
