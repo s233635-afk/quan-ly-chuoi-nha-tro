@@ -55,8 +55,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 SizeMode = PictureBoxSizeMode.Zoom,
                 BackColor = Color.Transparent,
-                Size = new Size(160, 160),
-                Image = LoadLogoImage() ?? BuildLogoImage(320)
+                Size = new Size(190, 190),
+                Image = LoadLogoImage() ?? BuildLogoImage(380)
             };
             pnlRight.Controls.Add(_logoBox);
 
@@ -75,12 +75,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             // Căn chỉnh vị trí khi resize
             pnlRight.Resize += (s, e) =>
             {
-                _logoBox.Location = new Point((pnlRight.Width - _logoBox.Width) / 2, (pnlRight.Height / 2) - _logoBox.Height + 20);
+                _logoBox.Location = new Point((pnlRight.Width - _logoBox.Width) / 2, (pnlRight.Height / 2) - _logoBox.Height + 10);
                 lblWelcome.Location = new Point((pnlRight.Width - lblWelcome.Width) / 2, (pnlRight.Height / 2) + 20);
             };
 
             // Kích hoạt resize lần đầu
-            _logoBox.Location = new Point((pnlRight.Width - _logoBox.Width) / 2, (pnlRight.Height / 2) - _logoBox.Height + 20);
+            _logoBox.Location = new Point((pnlRight.Width - _logoBox.Width) / 2, (pnlRight.Height / 2) - _logoBox.Height + 10);
             lblWelcome.Location = new Point((pnlRight.Width - lblWelcome.Width) / 2, (pnlRight.Height / 2) + 20);
         }
 

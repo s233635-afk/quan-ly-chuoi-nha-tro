@@ -80,12 +80,14 @@ namespace QuanLyNhaTro.BLL
             => _dbHelper.GetContractByIdAsync(contractId);
 
         public Task<int> AddContractAsync(string contractNumber, int tenantId, int roomId, DateTime? signDate,
-            DateTime startDate, DateTime endDate, decimal? rentalPrice, decimal? depositRequired, string terms, string contractPdfPath)
-            => _dbHelper.AddContractAsync(contractNumber, tenantId, roomId, signDate, startDate, endDate, rentalPrice, depositRequired, terms, contractPdfPath);
+            DateTime startDate, DateTime endDate, decimal? rentalPrice, decimal? depositRequired, string terms,
+            string contractPdfPath, string status = "Active")
+            => _dbHelper.AddContractAsync(contractNumber, tenantId, roomId, signDate, startDate, endDate, rentalPrice, depositRequired, terms, contractPdfPath, status);
 
-        public Task<bool> UpdateContractAsync(int contractId, DateTime? signDate, DateTime startDate, DateTime endDate,
-            decimal? rentalPrice, decimal? depositRequired, string terms, string contractPdfPath, string status)
-            => _dbHelper.UpdateContractAsync(contractId, signDate, startDate, endDate, rentalPrice, depositRequired, terms, contractPdfPath, status);
+        public Task<bool> UpdateContractAsync(int contractId, string contractNumber, int tenantId, int roomId,
+            DateTime? signDate, DateTime startDate, DateTime endDate, decimal? rentalPrice, decimal? depositRequired,
+            string terms, string contractPdfPath, string status)
+            => _dbHelper.UpdateContractAsync(contractId, contractNumber, tenantId, roomId, signDate, startDate, endDate, rentalPrice, depositRequired, terms, contractPdfPath, status);
 
         public Task<bool> DeleteContractAsync(int contractId)
             => _dbHelper.DeleteContractAsync(contractId);
@@ -100,12 +102,13 @@ namespace QuanLyNhaTro.BLL
         public Task<DataTable> GetDepositsByBranchAsync(int? branchId = null)
             => _dbHelper.GetDepositsByBranchAsync(branchId);
 
-        public Task<int> AddDepositAsync(int tenantId, int roomId, decimal depositAmount, DateTime depositDate,
-            string depositType, string status)
-            => _dbHelper.AddDepositAsync(tenantId, roomId, depositAmount, depositDate, depositType, status);
+        public Task<int> AddDepositAsync(int tenantId, int roomId, decimal depositAmount, DateTime? depositDate,
+            string depositType, string status, decimal? returnedAmount = null, DateTime? returnedDate = null, string notes = null)
+            => _dbHelper.AddDepositAsync(tenantId, roomId, depositAmount, depositDate, depositType, status, returnedAmount, returnedDate, notes);
 
-        public Task<bool> UpdateDepositAsync(int depositId, decimal? returnedAmount, DateTime? returnedDate, string status, string notes)
-            => _dbHelper.UpdateDepositAsync(depositId, returnedAmount, returnedDate, status, notes);
+        public Task<bool> UpdateDepositAsync(int depositId, int tenantId, int roomId, decimal depositAmount, DateTime? depositDate,
+            string depositType, string status, decimal? returnedAmount, DateTime? returnedDate, string notes)
+            => _dbHelper.UpdateDepositAsync(depositId, tenantId, roomId, depositAmount, depositDate, depositType, status, returnedAmount, returnedDate, notes);
 
         public Task<bool> DeleteDepositAsync(int depositId)
             => _dbHelper.DeleteDepositAsync(depositId);
@@ -125,15 +128,16 @@ namespace QuanLyNhaTro.BLL
 
         public Task<int> AddInvoiceAsync(string invoiceNumber, int tenantId, int roomId, DateTime invoiceDate,
             DateTime? fromDate, DateTime? toDate, decimal rentalCost, decimal utilityCost, decimal otherCost,
-            decimal totalAmount, DateTime dueDate, string status)
-            => _dbHelper.AddInvoiceAsync(invoiceNumber, tenantId, roomId, invoiceDate, fromDate, toDate, rentalCost, utilityCost, otherCost, totalAmount, dueDate, status);
+            DateTime? dueDate, decimal? taxRate = null)
+            => _dbHelper.AddInvoiceAsync(invoiceNumber, tenantId, roomId, invoiceDate, fromDate, toDate, rentalCost, utilityCost, otherCost, dueDate, taxRate);
 
-        public Task<bool> UpdateInvoiceAsync(int invoiceId, DateTime? fromDate, DateTime? toDate, decimal rentalCost,
-            decimal utilityCost, decimal otherCost, decimal totalAmount, DateTime dueDate, string status)
-            => _dbHelper.UpdateInvoiceAsync(invoiceId, fromDate, toDate, rentalCost, utilityCost, otherCost, totalAmount, dueDate, status);
+        public Task<bool> UpdateInvoiceAsync(int invoiceId, string invoiceNumber, int tenantId, int roomId, DateTime invoiceDate,
+            DateTime? fromDate, DateTime? toDate, decimal rentalCost, decimal utilityCost, decimal otherCost,
+            DateTime? dueDate, decimal? taxRate = null)
+            => _dbHelper.UpdateInvoiceAsync(invoiceId, invoiceNumber, tenantId, roomId, invoiceDate, fromDate, toDate, rentalCost, utilityCost, otherCost, dueDate, taxRate);
 
-        public Task<bool> DeleteInvoiceAsync(int invoiceId)
-            => _dbHelper.DeleteInvoiceAsync(invoiceId);
+        public Task<bool> DeleteInvoiceAsync(int invoiceId, bool deletePaymentsFirst = false)
+            => _dbHelper.DeleteInvoiceAsync(invoiceId, deletePaymentsFirst);
 
         public Task<DataTable> GetOutstandingInvoicesAsync(int? branchId = null)
             => _dbHelper.GetOutstandingInvoicesAsync(branchId);
@@ -175,9 +179,9 @@ namespace QuanLyNhaTro.BLL
             decimal previousReading, decimal currentReading, decimal usageAmount, decimal unitPrice, decimal totalCost, string notes)
             => _dbHelper.AddUtilityReadingAsync(roomId, utilityTypeId, readingDate, previousReading, currentReading, usageAmount, unitPrice, totalCost, notes);
 
-        public Task<bool> UpdateUtilityReadingAsync(int readingId, decimal previousReading, decimal currentReading,
-            decimal usageAmount, decimal unitPrice, decimal totalCost, string notes)
-            => _dbHelper.UpdateUtilityReadingAsync(readingId, previousReading, currentReading, usageAmount, unitPrice, totalCost, notes);
+        public Task<bool> UpdateUtilityReadingAsync(int readingId, int roomId, int utilityTypeId, DateTime? readingDate,
+            decimal? previousReading, decimal? currentReading, decimal? usageAmount, decimal? unitPrice, decimal? totalCost, string notes)
+            => _dbHelper.UpdateUtilityReadingAsync(readingId, roomId, utilityTypeId, readingDate, previousReading, currentReading, usageAmount, unitPrice, totalCost, notes);
 
         public Task<bool> DeleteUtilityReadingAsync(int readingId)
             => _dbHelper.DeleteUtilityReadingAsync(readingId);
@@ -187,18 +191,19 @@ namespace QuanLyNhaTro.BLL
         #region Maintenance Management (Quản Lý Bảo Trì)
 
         public Task<DataTable> GetMaintenanceTicketsAsync()
-            => _dbHelper.GetMaintenanceTicketsAsync();
+            => _dbHelper.GetMaintenanceAsync();
 
         public Task<DataTable> GetMaintenanceByBranchAsync(int? branchId = null)
             => _dbHelper.GetMaintenanceByBranchAsync(branchId);
 
         public Task<int> AddMaintenanceTicketAsync(string ticketNumber, int roomId, string requestorType,
-            int? requestorId, string issueDescription, string priority, int? assignedToUserId, string status)
-            => _dbHelper.AddMaintenanceTicketAsync(ticketNumber, roomId, requestorType, requestorId, issueDescription, priority, assignedToUserId, status);
+            int? requestorId, string issueDescription, string priority, int? assignedToUserId, string status,
+            DateTime? completedDate = null, string notes = null)
+            => _dbHelper.AddMaintenanceTicketAsync(ticketNumber, roomId, requestorType, requestorId, issueDescription, priority, assignedToUserId, status, completedDate, notes);
 
-        public Task<bool> UpdateMaintenanceTicketAsync(int ticketId, string issueDescription, string priority,
-            int? assignedToUserId, string status, DateTime? completedDate, string notes)
-            => _dbHelper.UpdateMaintenanceTicketAsync(ticketId, issueDescription, priority, assignedToUserId, status, completedDate, notes);
+        public Task<bool> UpdateMaintenanceTicketAsync(int ticketId, int roomId, string requestorType, int? requestorId,
+            string issueDescription, string priority, int? assignedToUserId, string status, DateTime? completedDate, string notes)
+            => _dbHelper.UpdateMaintenanceTicketAsync(ticketId, roomId, requestorType, requestorId, issueDescription, priority, assignedToUserId, status, completedDate, notes);
 
         public Task<bool> DeleteMaintenanceTicketAsync(int ticketId)
             => _dbHelper.DeleteMaintenanceTicketAsync(ticketId);
@@ -214,12 +219,12 @@ namespace QuanLyNhaTro.BLL
             => _dbHelper.GetAssetsByBranchAsync(branchId);
 
         public Task<int> AddAssetAsync(string assetCode, string assetName, string category, int? roomId,
-            int quantity, string condition, DateTime? purchaseDate, decimal? purchasePrice, string description)
-            => _dbHelper.AddAssetAsync(assetCode, assetName, category, roomId, quantity, condition, purchaseDate, purchasePrice, description);
+            int quantity, string condition, DateTime? purchaseDate, decimal? purchasePrice, string description, bool isActive = true)
+            => _dbHelper.AddAssetAsync(assetCode, assetName, category, roomId, quantity, condition, purchaseDate, purchasePrice, description, isActive);
 
-        public Task<bool> UpdateAssetAsync(int assetId, string assetName, string category, int? roomId,
-            int quantity, string condition, DateTime? purchaseDate, decimal? purchasePrice, string description)
-            => _dbHelper.UpdateAssetAsync(assetId, assetName, category, roomId, quantity, condition, purchaseDate, purchasePrice, description);
+        public Task<bool> UpdateAssetAsync(int assetId, string assetCode, string assetName, string category, int? roomId,
+            int quantity, string condition, DateTime? purchaseDate, decimal? purchasePrice, string description, bool isActive = true)
+            => _dbHelper.UpdateAssetAsync(assetId, assetCode, assetName, category, roomId, quantity, condition, purchaseDate, purchasePrice, description, isActive);
 
         public Task<bool> DeleteAssetAsync(int assetId)
             => _dbHelper.DeleteAssetAsync(assetId);
@@ -245,7 +250,7 @@ namespace QuanLyNhaTro.BLL
         #region Tenant Room History (Lịch Sử Phòng)
 
         public Task<DataTable> GetTenantRoomHistoryAsync()
-            => _dbHelper.GetTenantRoomHistoryAsync();
+            => _dbHelper.GetTenantHistoryAsync();
 
         public Task<int> AddTenantRoomHistoryAsync(int tenantId, int roomId, DateTime checkInDate,
             DateTime? checkOutDate, string status, string notes)

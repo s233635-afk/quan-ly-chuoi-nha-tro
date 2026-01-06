@@ -258,7 +258,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 };
 
                 // Hiệu ứng viền trái thể hiện trạng thái (Xanh = Active, Đỏ = Expired)
-                string status = row["Status"]?.ToString();
+                string status = SafeReadString(row, "Status");
                 Color statusColor = status == "Active" ? Color.SeaGreen : (status == "Expired" ? Color.Firebrick : Color.Gray);
                 
                 var statusStrip = new Panel { Dock = DockStyle.Left, Width = 6, BackColor = statusColor };
@@ -269,7 +269,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 // Header: Số Hợp Đồng + Trạng thái
                 var lblContractNo = new Label 
                 { 
-                    Text = row["ContractNumber"]?.ToString(), 
+                    Text = SafeReadString(row, "ContractNumber"), 
                     Font = new Font("Segoe UI", 12, FontStyle.Bold), 
                     ForeColor = Color.FromArgb(0, 100, 200),
                     AutoSize = true, 
@@ -288,7 +288,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 // Body: Tên khách, Phòng, Giá
                 var lblTenant = new Label 
                 { 
-                    Text = "Khách: " + row["TenantName"]?.ToString(), 
+                    Text = "Khách: " + (SafeReadString(row, "TenantName") ?? "—"), 
                     Font = new Font("Segoe UI", 10, FontStyle.Regular), 
                     Location = new Point(10, 45), 
                     AutoSize = true 
@@ -296,7 +296,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                 var lblRoom = new Label 
                 { 
-                    Text = "Phòng: " + row["RoomNumber"]?.ToString(), 
+                    Text = "Phòng: " + (SafeReadString(row, "RoomNumber") ?? "—"), 
                     Font = new Font("Segoe UI", 10, FontStyle.Regular), 
                     Location = new Point(10, 70), 
                     AutoSize = true 
@@ -327,7 +327,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 
                 var lblBranch = new Label
                 {
-                    Text = row["BranchName"]?.ToString(),
+                    Text = SafeReadString(row, "BranchName") ?? "—",
                     Font = new Font("Segoe UI", 8),
                     ForeColor = Color.DimGray,
                     Location = new Point(10, 142),
@@ -368,10 +368,240 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 if (frm.ShowDialog(this) == DialogResult.OK)
                 {
+                    if (_isStaffMode)
+                        await SyncStaffRoomAfterContractAsync(frm);
+                    else
+                        await SyncAdminRoomAfterContractAsync(frm);
                     await LoadDataAsync();
                     AdminEvents.NotifyDataChanged();
                 }
             }
+        }
+
+        private async System.Threading.Tasks.Task SyncAdminRoomAfterContractAsync(FrmContractEditor frm)
+        {
+            if (frm == null) return;
+
+            int roomId = frm.RoomId;
+            int tenantId = frm.TenantId;
+            if (roomId <= 0 || tenantId <= 0) return;
+
+            try
+            {
+                await EnsureTenantHistoryAdminAsync(tenantId, roomId, frm.StartDate);
+                await EnsureRoomOccupiedStatusAdminAsync(roomId);
+
+                DataSyncManager.NotifyRoomsChanged();
+                DataSyncManager.NotifyTenantsChanged();
+                AdminEvents.NotifyDataChanged();
+            }
+            catch (Exception ex)
+            {
+                ErrorLogger.HandleException(ex, "SyncAdminRoomAfterContract", "Không thể cập nhật trạng thái phòng và khách thuê");
+            }
+        }
+
+        private async System.Threading.Tasks.Task EnsureTenantHistoryAdminAsync(int tenantId, int roomId, DateTime checkInDate)
+        {
+            var history = await _bll.GetTenantHistoryAsync();
+            if (history == null || !history.Columns.Contains("RoomId"))
+            {
+                await _bll.AddTenantHistoryAsync(tenantId, roomId, checkInDate, null, "Active", "Tạo từ hợp đồng");
+                return;
+            }
+
+            var activeRows = history.AsEnumerable()
+                .Where(r => TryGetInt(r, "RoomId") == roomId)
+                .Where(IsHistoryActive)
+                .ToList();
+
+            bool hasActiveForTenant = activeRows.Any(r => TryGetInt(r, "TenantId") == tenantId);
+
+            foreach (var row in activeRows)
+            {
+                int existingTenantId = TryGetInt(row, "TenantId");
+                if (existingTenantId == tenantId) continue;
+
+                int historyId = TryGetInt(row, "HistoryId");
+                if (historyId <= 0) continue;
+
+                DateTime existingCheckIn = TryGetDate(row, "CheckInDate") ?? checkInDate;
+                DateTime checkOut = checkInDate < existingCheckIn ? existingCheckIn : checkInDate;
+                string notes = row.Table.Columns.Contains("Notes") ? row["Notes"]?.ToString() : null;
+
+                await _bll.UpdateTenantHistoryAsync(historyId, roomId, existingCheckIn, checkOut, "Inactive", notes);
+            }
+
+            if (!hasActiveForTenant)
+            {
+                await _bll.AddTenantHistoryAsync(tenantId, roomId, checkInDate, null, "Active", "Tạo từ hợp đồng");
+            }
+        }
+
+        private async System.Threading.Tasks.Task EnsureRoomOccupiedStatusAdminAsync(int roomId)
+        {
+            var statuses = await _bll.GetRoomStatusesAsync();
+            if (statuses == null || !statuses.Columns.Contains("StatusId")) return;
+
+            int occupiedStatusId = 0;
+            foreach (DataRow row in statuses.Rows)
+            {
+                var name = row.Table.Columns.Contains("StatusName") ? row["StatusName"]?.ToString() : null;
+                var canonical = RoomStatusCatalog.Canonicalize(name);
+                var key = NormalizeStatusKey(name);
+                if (string.Equals(canonical, RoomStatusCatalog.TrangThaiDangO, StringComparison.OrdinalIgnoreCase)
+                    || key.Contains("dang o")
+                    || key.Contains("dang thue")
+                    || key.Contains("occupied")
+                    || key.Contains("rent")
+                    || key.Contains("in use")
+                    || key.Contains("inuse"))
+                {
+                    occupiedStatusId = TryGetInt(row, "StatusId");
+                    break;
+                }
+            }
+
+            if (occupiedStatusId > 0)
+                await _bll.UpdateRoomOccupancyStatusAsync(roomId, occupiedStatusId);
+        }
+
+        private async System.Threading.Tasks.Task SyncStaffRoomAfterContractAsync(FrmContractEditor frm)
+        {
+            if (frm == null) return;
+
+            int roomId = frm.RoomId;
+            int tenantId = frm.TenantId;
+            if (roomId <= 0 || tenantId <= 0) return;
+
+            try
+            {
+                await EnsureTenantHistoryAsync(tenantId, roomId, frm.StartDate);
+                await EnsureRoomOccupiedStatusAsync(roomId);
+
+                DataSyncManager.NotifyRoomsChanged();
+                DataSyncManager.NotifyTenantsChanged();
+                AdminEvents.NotifyDataChanged();
+            }
+            catch (Exception ex)
+            {
+                ErrorLogger.HandleException(ex, "SyncStaffRoomAfterContract", "Không thể cập nhật trạng thái phòng và khách thuê");
+            }
+        }
+
+        private async System.Threading.Tasks.Task EnsureTenantHistoryAsync(int tenantId, int roomId, DateTime checkInDate)
+        {
+            var history = await _staffBll.GetTenantHistoryAsync();
+            if (history == null || !history.Columns.Contains("RoomId"))
+            {
+                await _staffBll.AddTenantRoomHistoryAsync(tenantId, roomId, checkInDate, null, "Active", "Tạo từ hợp đồng");
+                return;
+            }
+
+            var activeRows = history.AsEnumerable()
+                .Where(r => TryGetInt(r, "RoomId") == roomId)
+                .Where(IsHistoryActive)
+                .ToList();
+
+            bool hasActiveForTenant = activeRows.Any(r => TryGetInt(r, "TenantId") == tenantId);
+
+            foreach (var row in activeRows)
+            {
+                int existingTenantId = TryGetInt(row, "TenantId");
+                if (existingTenantId == tenantId) continue;
+
+                int historyId = TryGetInt(row, "HistoryId");
+                if (historyId <= 0) continue;
+
+                DateTime existingCheckIn = TryGetDate(row, "CheckInDate") ?? checkInDate;
+                DateTime checkOut = checkInDate < existingCheckIn ? existingCheckIn : checkInDate;
+                string notes = row.Table.Columns.Contains("Notes") ? row["Notes"]?.ToString() : null;
+
+                await _staffBll.UpdateTenantRoomHistoryAsync(historyId, roomId, existingCheckIn, checkOut, "Inactive", notes);
+            }
+
+            if (!hasActiveForTenant)
+            {
+                await _staffBll.AddTenantRoomHistoryAsync(tenantId, roomId, checkInDate, null, "Active", "Tạo từ hợp đồng");
+            }
+        }
+
+        private async System.Threading.Tasks.Task EnsureRoomOccupiedStatusAsync(int roomId)
+        {
+            var statuses = await _staffBll.GetRoomStatusesAsync();
+            if (statuses == null || !statuses.Columns.Contains("StatusId")) return;
+
+            int occupiedStatusId = 0;
+            foreach (DataRow row in statuses.Rows)
+            {
+                var name = row.Table.Columns.Contains("StatusName") ? row["StatusName"]?.ToString() : null;
+                var canonical = RoomStatusCatalog.Canonicalize(name);
+                var key = NormalizeStatusKey(name);
+                if (string.Equals(canonical, RoomStatusCatalog.TrangThaiDangO, StringComparison.OrdinalIgnoreCase)
+                    || key.Contains("dang o")
+                    || key.Contains("dang thue")
+                    || key.Contains("occupied")
+                    || key.Contains("rent")
+                    || key.Contains("in use")
+                    || key.Contains("inuse"))
+                {
+                    occupiedStatusId = TryGetInt(row, "StatusId");
+                    break;
+                }
+            }
+
+            if (occupiedStatusId > 0)
+                await _staffBll.UpdateRoomStatusAsync(roomId, occupiedStatusId);
+        }
+
+        private static bool IsHistoryActive(DataRow history)
+        {
+            if (history == null || history.Table == null) return false;
+
+            var checkout = history.Table.Columns.Contains("CheckOutDate") ? history["CheckOutDate"] : null;
+            bool hasCheckout = checkout != null && checkout != DBNull.Value;
+            if (!hasCheckout) return true;
+
+            if (history.Table.Columns.Contains("Status"))
+            {
+                var statusText = history["Status"]?.ToString() ?? string.Empty;
+                return statusText.IndexOf("active", StringComparison.OrdinalIgnoreCase) >= 0
+                    || statusText.IndexOf("đang", StringComparison.OrdinalIgnoreCase) >= 0;
+            }
+
+            return false;
+        }
+
+        private static int TryGetInt(DataRow row, string column)
+        {
+            if (row?.Table == null || !row.Table.Columns.Contains(column)) return 0;
+            return int.TryParse(row[column]?.ToString(), out var value) ? value : 0;
+        }
+
+        private static DateTime? TryGetDate(DataRow row, string column)
+        {
+            if (row?.Table == null || !row.Table.Columns.Contains(column)) return null;
+            return DateTime.TryParse(row[column]?.ToString(), out var value) ? value : (DateTime?)null;
+        }
+
+        private static string NormalizeStatusKey(string statusName)
+        {
+            var fixedName = TextFixer.ForceFixUtf8Mojibake(statusName ?? string.Empty) ?? string.Empty;
+            return RemoveDiacritics(fixedName).ToLowerInvariant();
+        }
+
+        private static string RemoveDiacritics(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return text;
+            var normalized = text.Normalize(System.Text.NormalizationForm.FormD);
+            var sb = new System.Text.StringBuilder(normalized.Length);
+            foreach (var ch in normalized)
+            {
+                var unicodeCategory = System.Globalization.CharUnicodeInfo.GetUnicodeCategory(ch);
+                if (unicodeCategory != System.Globalization.UnicodeCategory.NonSpacingMark)
+                    sb.Append(ch);
+            }
+            return sb.ToString().Normalize(System.Text.NormalizationForm.FormC);
         }
 
         private async System.Threading.Tasks.Task DeleteSelectedAsync()
@@ -415,6 +645,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private async System.Threading.Tasks.Task EnrichContractsAsync(DataTable contracts)
         {
             if (contracts == null) return;
+            if (!contracts.Columns.Contains("TenantName")) contracts.Columns.Add("TenantName");
+            if (!contracts.Columns.Contains("RoomNumber")) contracts.Columns.Add("RoomNumber");
+            if (!contracts.Columns.Contains("BranchName")) contracts.Columns.Add("BranchName");
             try
             {
                 var tenants = await _bll.GetTenantsAsync();
@@ -430,10 +663,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 var branchMap = new Dictionary<int, string>();
                 foreach (DataRow r in branches.Rows) if (int.TryParse(r["BranchId"]?.ToString(), out int id)) branchMap[id] = r["BranchName"]?.ToString();
 
-                if (!contracts.Columns.Contains("TenantName")) contracts.Columns.Add("TenantName");
-                if (!contracts.Columns.Contains("RoomNumber")) contracts.Columns.Add("RoomNumber");
-                if (!contracts.Columns.Contains("BranchName")) contracts.Columns.Add("BranchName");
-
                 foreach (DataRow r in contracts.Rows)
                 {
                     if (int.TryParse(r["TenantId"]?.ToString(), out int tid) && tenantMap.TryGetValue(tid, out var tname)) r["TenantName"] = tname;
@@ -442,6 +671,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 }
             }
             catch { }
+        }
+        private static string SafeReadString(DataRow row, string col)
+        {
+            if (row?.Table == null || !row.Table.Columns.Contains(col)) return null;
+            var value = row[col];
+            return value == null || value == DBNull.Value ? null : value.ToString();
         }
         private async System.Threading.Tasks.Task EnsureAllowedBranchScopeAsync()
         {

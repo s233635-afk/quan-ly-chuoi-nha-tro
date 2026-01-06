@@ -193,6 +193,7 @@
   <ItemGroup>
     <Compile Include="BLL\AdminDataBLL.cs" />
     <Compile Include="BLL\BranchBLL.cs" />
+    <Compile Include="BLL\StaffBLL.cs" />
     <Compile Include="BLL\UserBLL.cs" />
     <Compile Include="BLL\Rooms\RoomBLL.cs" />
     <Compile Include="BLL\Rooms\RoomStatusBLL.cs" />
@@ -223,7 +224,8 @@
     <Compile Include="DAL\BranchDAL.cs" />
     <Compile Include="DAL\AdminDataDAL.cs" />
     <Compile Include="DAL\InvoicePaymentDAL.cs" />
-    <Compile Include="DAL\StaffDAL.cs" />    <Compile Include="GUI\Branches\Admin.cs">
+    <Compile Include="DAL\StaffDAL.cs" />
+    <Compile Include="GUI\Branches\Admin.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="GUI\Branches\AdminScopeConfig.cs" />
@@ -404,7 +406,9 @@
     </Compile>
     -->
     <Compile Include="GUI\Shared\DataSyncManager.cs" />
-    <Compile Include="GUI\Shared\ModernControls.cs" />
+    <Compile Include="GUI\Shared\ModernControls.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="GUI\Shared\ModernTheme.cs" />
     <Compile Include="GUI\Shared\UIHelper.cs" />
     <Compile Include="GUI\Shared\UiKit.cs" />
@@ -412,7 +416,7 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="GUI\Shared\Components\LoadingOverlay.cs">
-      <SubType>UserControl</SubType>
+      <SubType>Component</SubType>
     </Compile>
     <Compile Include="GUI\Shared\Components\KeyboardShortcutManager.cs" />
     <Compile Include="GUI\Shared\Components\ValidationHelper.cs" />
@@ -422,7 +426,7 @@
     <Compile Include="GUI\Shared\Components\TooltipManager.cs" />
     <Compile Include="GUI\Shared\Components\PaginationHelper.cs" />
     <Compile Include="GUI\Shared\Components\PaginationControl.cs">
-      <SubType>UserControl</SubType>
+      <SubType>Component</SubType>
     </Compile>
     <Compile Include="GUI\Shared\Components\DataCache.cs" />
     <Compile Include="GUI\Shared\Components\AsyncHelper.cs" />
@@ -430,35 +434,35 @@
     <Compile Include="GUI\Shared\Components\ThemeManager.cs" />
     <Compile Include="GUI\Shared\Components\ErrorLogger.cs" />
     <Compile Include="GUI\Shared\Components\GlobalSearchBox.cs">
-      <SubType>UserControl</SubType>
+      <SubType>Component</SubType>
     </Compile>
     <Compile Include="GUI\Shared\Components\NotificationBell.cs">
-      <SubType>UserControl</SubType>
+      <SubType>Component</SubType>
     </Compile>
     <Compile Include="GUI\Shared\Components\ModernDialog.cs" />
     <Compile Include="GUI\Shared\Components\ModernInputField.cs">
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="GUI\Shared\Components\ModernCard.cs">
-      <SubType>UserControl</SubType>
+      <SubType>Component</SubType>
     </Compile>
     <Compile Include="GUI\Shared\Components\ModernCheckbox.cs">
-      <SubType>UserControl</SubType>
+      <SubType>Component</SubType>
     </Compile>
     <Compile Include="GUI\Shared\Components\ModernDatePicker.cs">
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="GUI\Shared\Components\SkeletonLoader.cs">
-      <SubType>UserControl</SubType>
+      <SubType>Component</SubType>
     </Compile>
     <Compile Include="GUI\Shared\Components\EmptyStatePanel.cs">
-      <SubType>UserControl</SubType>
+      <SubType>Component</SubType>
     </Compile>
     <Compile Include="GUI\Shared\Components\ModernSearchBox.cs">
-      <SubType>UserControl</SubType>
+      <SubType>Component</SubType>
     </Compile>
     <Compile Include="GUI\Shared\Components\ProgressOverlay.cs">
-      <SubType>UserControl</SubType>
+      <SubType>Form</SubType>
     </Compile>
     <Compile Include="GUI\Shared\Components\SimpleLoadingOverlay.cs">
       <SubType>Form</SubType>
