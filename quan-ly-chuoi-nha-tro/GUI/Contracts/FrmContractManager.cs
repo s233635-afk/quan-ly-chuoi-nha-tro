@@ -18,6 +18,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private const string SearchPlaceholder = "Tìm theo số HĐ/khách/phòng...";
 
         private readonly AdminDataBLL _bll = new AdminDataBLL();
+        private readonly StaffBLL _staffBll = new StaffBLL();
         private readonly int? _branchId;
         private readonly bool _isStaffMode;
         private HashSet<int> _allowedBranchIds;
