@@ -19,7 +19,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.pnlForm = new System.Windows.Forms.Panel();
             this.tblCard = new System.Windows.Forms.TableLayoutPanel();
             this.pnlLeft = new System.Windows.Forms.Panel();
-            this.lnkRegister = new System.Windows.Forms.LinkLabel();
             this.lnkForgot = new System.Windows.Forms.LinkLabel();
             this.chkShowPassword = new System.Windows.Forms.CheckBox();
             this.btnLogin = new System.Windows.Forms.Button();
@@ -82,7 +81,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             // pnlLeft
             // 
             this.pnlLeft.BackColor = System.Drawing.Color.White;
-            this.pnlLeft.Controls.Add(this.lnkRegister);
             this.pnlLeft.Controls.Add(this.lnkForgot);
             this.pnlLeft.Controls.Add(this.chkShowPassword);
             this.pnlLeft.Controls.Add(this.btnLogin);
@@ -98,19 +96,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             this.pnlLeft.Padding = new System.Windows.Forms.Padding(44, 44, 30, 44);
             this.pnlLeft.Size = new System.Drawing.Size(473, 440);
             this.pnlLeft.TabIndex = 0;
-            // 
-            // lnkRegister
-            // 
-            this.lnkRegister.ActiveLinkColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(173)))), ((int)(((byte)(181)))));
-            this.lnkRegister.AutoSize = true;
-            this.lnkRegister.LinkColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(120)))), ((int)(((byte)(212)))));
-            this.lnkRegister.Location = new System.Drawing.Point(44, 376);
-            this.lnkRegister.Name = "lnkRegister";
-            this.lnkRegister.Size = new System.Drawing.Size(98, 17);
-            this.lnkRegister.TabIndex = 8;
-            this.lnkRegister.TabStop = true;
-            this.lnkRegister.Text = "Tạo tài khoản";
-            this.lnkRegister.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.lnkRegister_LinkClicked);
             // 
             // lnkForgot
             // 
@@ -314,7 +299,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private System.Windows.Forms.TextBox txtPass;
         private System.Windows.Forms.CheckBox chkShowPassword;
         private System.Windows.Forms.LinkLabel lnkForgot;
-        private System.Windows.Forms.LinkLabel lnkRegister;
         private System.Windows.Forms.Button btnLogin;
         private System.Windows.Forms.Label lblLogo;
     }

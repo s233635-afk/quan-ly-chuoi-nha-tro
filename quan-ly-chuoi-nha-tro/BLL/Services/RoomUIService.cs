@@ -249,7 +249,7 @@ namespace QuanLyNhaTro.BLL.Services
             var value = row[columnName]?.ToString();
             if (string.IsNullOrWhiteSpace(value)) return null;
             var fixed = TextFixer.ForceFixUtf8Mojibake(value) ?? value;
-            return fixed.Trim();ó
+            return fixed.Trim();
         }
 
         private static int TryGetInt(DataRow row, string columnName)
