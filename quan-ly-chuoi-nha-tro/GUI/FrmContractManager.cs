@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
+using System.Globalization;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
@@ -25,6 +27,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private FlowLayoutPanel _flowPanel;
         private TextBox _txtSearch;
         private ComboBox _cboStatus;
+        private ComboBox _cboSort;
         private DateTimePicker _dtFrom;
         private DateTimePicker _dtTo;
         private Label _lblCount;
@@ -73,37 +76,40 @@ namespace quan_ly_chuoi_nha_tro.GUI
             // 3. Panel chứa các nút chức năng (Hàng 1)
             var pnlActions = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false, FlowDirection = FlowDirection.LeftToRight, BackColor = Color.Transparent };
             var btnAdd = UiKit.MakeButton("Thêm Hợp đồng", UiKit.Primary, async (s, e) => await AddNewAsync());
-            var btnDelete = UiKit.MakeButton("Xóa Hợp đồng", Color.IndianRed, async (s, e) => await DeleteSelectedAsync());
             var btnRefresh = UiKit.MakeButton("Tải lại", Color.Gray, async (s, e) => await LoadDataAsync());
-            pnlActions.Controls.AddRange(new Control[] { btnAdd, btnDelete, btnRefresh });
+            pnlActions.Controls.AddRange(new Control[] { btnAdd, btnRefresh });
 
             // 4. Panel chứa các bộ lọc (Hàng 2)
             var pnlFilters = new TableLayoutPanel 
             { 
                 Dock = DockStyle.Fill, 
                 BackColor = Color.Transparent,
-                ColumnCount = 9, // 1 search, 6 filter controls, 1 label count, 1 spacer
+                ColumnCount = 11, // 1 search, 6 filter controls, 1 label count, 1 spacer
                 RowCount = 1
             };
             pnlFilters.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 230F)); // Search
-            pnlFilters.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));      // Label "Trạng thái"
-            pnlFilters.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 140F)); // ComboBox Status
-            pnlFilters.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150F)); // ComboBox Status
-            pnlFilters.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));      // Label "Từ"
-            pnlFilters.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 110F)); // DateTimePicker From
-            pnlFilters.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));      // Label "Đến"
-            pnlFilters.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 110F)); // DateTimePicker To
-            pnlFilters.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));      // Label Count
-            pnlFilters.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F)); // Cột trống để đẩy các control về bên trái
+            pnlFilters.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize)); // Status label
+            pnlFilters.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150F)); // Status
+            pnlFilters.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize)); // Sort label
+            pnlFilters.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 170F)); // Sort
+            pnlFilters.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize)); // From label
+            pnlFilters.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 110F)); // From
+            pnlFilters.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize)); // To label
+            pnlFilters.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 110F)); // To
+            pnlFilters.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize)); // Count
+            pnlFilters.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F)); // Spacer
             
             // Tạo các control cho bộ lọc
             _txtSearch = new TextBox { Width = 220, Font = new Font("Segoe UI", 10) };
             var pnlSearch = UiKit.MakeSearchPanel(_txtSearch, 230, SearchPlaceholder, ApplyFilter);
 
-            _cboStatus = new ComboBox { Width = 140, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 10), FlatStyle = FlatStyle.Flat, Anchor = AnchorStyles.None };
             _cboStatus = new ComboBox { Width = 150, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 10), FlatStyle = FlatStyle.Flat, Anchor = AnchorStyles.None };
             _cboStatus.Items.AddRange(new object[] { "Tất cả", "Active", "Extended", "Terminated", "Expired" });
             _cboStatus.SelectedIndex = 0;
+
+            _cboSort = new ComboBox { Width = 170, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 10), FlatStyle = FlatStyle.Flat, Anchor = AnchorStyles.None };
+            _cboSort.Items.AddRange(new object[] { "H\u1ee3p \u0111\u1ed3ng m\u1edbi nh\u1ea5t", "H\u1ee3p \u0111\u1ed3ng c\u0169 nh\u1ea5t" });
+            _cboSort.SelectedIndex = 0;
 
             _dtFrom = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true, Checked = false, Width = 110, Font = new Font("Segoe UI", 10), Anchor = AnchorStyles.None };
             _dtTo = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true, Checked = false, Width = 110, Font = new Font("Segoe UI", 10), Anchor = AnchorStyles.None };
@@ -112,18 +118,21 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             // Gán sự kiện
             _cboStatus.SelectedIndexChanged += (s, e) => ApplyFilter();
+            _cboSort.SelectedIndexChanged += (s, e) => ApplyFilter();
             _dtFrom.ValueChanged += (s, e) => ApplyFilter();
             _dtTo.ValueChanged += (s, e) => ApplyFilter();
 
             // Thêm các control vào các cột tương ứng của TableLayoutPanel
             pnlFilters.Controls.Add(pnlSearch, 0, 0);
-            pnlFilters.Controls.Add(CreateFilterLabel("Trạng thái:"), 1, 0);
+            pnlFilters.Controls.Add(CreateFilterLabel("Tr\u1ea1ng th\u00e1i:"), 1, 0);
             pnlFilters.Controls.Add(_cboStatus, 2, 0);
-            pnlFilters.Controls.Add(CreateFilterLabel("Từ:"), 3, 0);
-            pnlFilters.Controls.Add(_dtFrom, 4, 0);
-            pnlFilters.Controls.Add(CreateFilterLabel("Đến:"), 5, 0);
-            pnlFilters.Controls.Add(_dtTo, 6, 0);
-            pnlFilters.Controls.Add(_lblCount, 7, 0);
+            pnlFilters.Controls.Add(CreateFilterLabel("S\u1eafp x\u1ebfp:"), 3, 0);
+            pnlFilters.Controls.Add(_cboSort, 4, 0);
+            pnlFilters.Controls.Add(CreateFilterLabel("T\u1eeb:"), 5, 0);
+            pnlFilters.Controls.Add(_dtFrom, 6, 0);
+            pnlFilters.Controls.Add(CreateFilterLabel("\u0110\u1ebfn:"), 7, 0);
+            pnlFilters.Controls.Add(_dtTo, 8, 0);
+            pnlFilters.Controls.Add(_lblCount, 9, 0);
 
             // 5. Thêm các panel Actions và Filters vào TableLayoutPanel
             tableLayout.Controls.Add(pnlActions, 0, 0); // Thêm vào hàng 0, cột 0
@@ -172,7 +181,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 await EnsureAllowedBranchScopeAsync();
                 _rawTable = await _bll.GetContractsAsync();
                 _rawTable = _branchId.HasValue ? FilterByBranch(_rawTable, _branchId) : AdminBranchScope.FilterByBranchIds(_rawTable, _allowedBranchIds);
-                TextFixer.FixDataTable(_rawTable, "ContractNumber", "TenantName", "RoomNumber", "BranchName", "Status");
+                _rawTable = await FilterContractsByRentedRoomsAsync(_rawTable);
+                TextFixer.FixDataTable(_rawTable, "ContractNumber", "TenantName", "TenantPhone", "RoomNumber", "BranchName", "Status");
                 await EnrichContractsAsync(_rawTable);
                 
                 ApplyFilter(); // Hàm này sẽ gọi RenderCards
@@ -212,7 +222,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             if (from.HasValue) query = query.Where(r => DateTime.TryParse(r["StartDate"]?.ToString(), out var d) && d.Date >= from.Value);
             if (to.HasValue) query = query.Where(r => DateTime.TryParse(r["EndDate"]?.ToString(), out var d) && d.Date <= to.Value);
             if (!string.IsNullOrEmpty(keyword))
-                query = query.Where(r => Contains(r, "ContractNumber", keyword) || Contains(r, "TenantName", keyword) || Contains(r, "RoomNumber", keyword));
+                query = query.Where(r => Contains(r, "ContractNumber", keyword) || Contains(r, "TenantName", keyword) || Contains(r, "RoomNumber", keyword) || Contains(r, "TenantPhone", keyword));
+
+            if (_cboSort != null && _cboSort.SelectedIndex == 1)
+                query = query.OrderBy(r => GetSortDate(r)).ThenBy(r => GetSortId(r));
+            else
+                query = query.OrderByDescending(r => GetSortDate(r)).ThenByDescending(r => GetSortId(r));
 
             var resultTable = query.Any() ? query.CopyToDataTable() : null;
             _lblCount.Text = resultTable != null ? $"Tổng: {resultTable.Rows.Count}" : "Tổng: 0";
@@ -270,57 +285,52 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     Location = new Point(280, 12)
                 };
 
-                // Body: Tên khách, Phòng, Giá
-                var lblTenant = new Label 
-                { 
-                    Text = "Khách: " + row["TenantName"]?.ToString(), 
-                    Font = new Font("Segoe UI", 10, FontStyle.Regular), 
-                    Location = new Point(10, 45), 
-                    AutoSize = true 
+                // Body: tenant, room, phone, price
+                var tenantName = row["TenantName"]?.ToString() ?? string.Empty;
+                var roomNumber = row["RoomNumber"]?.ToString() ?? string.Empty;
+                var tenantPhone = string.Empty;
+                if (row.Table.Columns.Contains("TenantPhone"))
+                    tenantPhone = row["TenantPhone"]?.ToString();
+                else if (row.Table.Columns.Contains("PhoneNumber"))
+                    tenantPhone = row["PhoneNumber"]?.ToString();
+
+                var lblTenant = new Label
+                {
+                    Text = "Kh\u00e1ch: " + tenantName,
+                    Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                    Location = new Point(10, 45),
+                    AutoSize = true
                 };
 
-                var lblRoom = new Label 
-                { 
-                    Text = "Phòng: " + row["RoomNumber"]?.ToString(), 
-                    Font = new Font("Segoe UI", 10, FontStyle.Regular), 
-                    Location = new Point(10, 70), 
-                    AutoSize = true 
+                var lblRoom = new Label
+                {
+                    Text = "Ph\u00f2ng: " + roomNumber,
+                    Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                    Location = new Point(10, 70),
+                    AutoSize = true
                 };
-                
+
+                var lblPhone = new Label
+                {
+                    Text = "S\u0110T: " + tenantPhone,
+                    Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                    Location = new Point(10, 95),
+                    AutoSize = true
+                };
+
                 decimal price = 0;
                 decimal.TryParse(row["RentalPrice"]?.ToString(), out price);
-                var lblPrice = new Label 
-                { 
-                    Text = "Giá: " + price.ToString("N0") + " đ", 
-                    Font = new Font("Segoe UI", 10, FontStyle.Bold), 
+                var lblPrice = new Label
+                {
+                    Text = "Gi\u00e1: " + price.ToString("N0") + " \u0111",
+                    Font = new Font("Segoe UI", 10, FontStyle.Bold),
                     ForeColor = Color.DarkSlateGray,
-                    Location = new Point(200, 70), 
-                    AutoSize = true 
-                };
-
-                // Footer: Thời gian
-                var lblDate = new Label
-                {
-                    Text = $"Thời hạn: {Convert.ToDateTime(row["StartDate"]):dd/MM/yyyy} - {Convert.ToDateTime(row["EndDate"]):dd/MM/yyyy}",
-                    Font = new Font("Segoe UI", 9, FontStyle.Italic),
-                    ForeColor = Color.Gray,
-                    Location = new Point(10, 110),
-                    AutoSize = true
-                };
-                
-                var line = new Panel { Height = 1, BackColor = Color.LightGray, Width = 340, Location = new Point(10, 135) };
-                
-                var lblBranch = new Label
-                {
-                    Text = row["BranchName"]?.ToString(),
-                    Font = new Font("Segoe UI", 8),
-                    ForeColor = Color.DimGray,
-                    Location = new Point(10, 142),
+                    Location = new Point(200, 70),
                     AutoSize = true
                 };
 
-                // Thêm controls vào card
-                content.Controls.AddRange(new Control[] { lblContractNo, lblStatus, lblTenant, lblRoom, lblPrice, lblDate, line, lblBranch });
+                // ThA?m controls vA?o card
+                content.Controls.AddRange(new Control[] { lblContractNo, lblStatus, lblTenant, lblRoom, lblPhone, lblPrice });
                 card.Controls.Add(content);
                 card.Controls.Add(statusStrip);
 
@@ -405,6 +415,18 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 var tenantMap = new Dictionary<int, string>();
                 foreach (DataRow r in tenants.Rows) if (int.TryParse(r["TenantId"]?.ToString(), out int id)) tenantMap[id] = r["FullName"]?.ToString();
 
+                var phoneMap = new Dictionary<int, string>();
+                bool hasPhoneNumber = tenants.Columns.Contains("PhoneNumber");
+                bool hasPhone = tenants.Columns.Contains("Phone");
+                foreach (DataRow r in tenants.Rows)
+                {
+                    if (!int.TryParse(r["TenantId"]?.ToString(), out int id)) continue;
+                    string phone = null;
+                    if (hasPhoneNumber) phone = r["PhoneNumber"]?.ToString();
+                    else if (hasPhone) phone = r["Phone"]?.ToString();
+                    if (!string.IsNullOrWhiteSpace(phone)) phoneMap[id] = phone;
+                }
+
                 var roomMap = new Dictionary<int, string>();
                 foreach (DataRow r in rooms.Rows) if (int.TryParse(r["RoomId"]?.ToString(), out int id)) roomMap[id] = r["RoomNumber"]?.ToString();
 
@@ -412,17 +434,130 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 foreach (DataRow r in branches.Rows) if (int.TryParse(r["BranchId"]?.ToString(), out int id)) branchMap[id] = r["BranchName"]?.ToString();
 
                 if (!contracts.Columns.Contains("TenantName")) contracts.Columns.Add("TenantName");
+                if (!contracts.Columns.Contains("TenantPhone")) contracts.Columns.Add("TenantPhone");
                 if (!contracts.Columns.Contains("RoomNumber")) contracts.Columns.Add("RoomNumber");
                 if (!contracts.Columns.Contains("BranchName")) contracts.Columns.Add("BranchName");
 
                 foreach (DataRow r in contracts.Rows)
                 {
                     if (int.TryParse(r["TenantId"]?.ToString(), out int tid) && tenantMap.TryGetValue(tid, out var tname)) r["TenantName"] = tname;
+                    if (int.TryParse(r["TenantId"]?.ToString(), out int tpid) && phoneMap.TryGetValue(tpid, out var phone)) r["TenantPhone"] = phone;
                     if (int.TryParse(r["RoomId"]?.ToString(), out int rid) && roomMap.TryGetValue(rid, out var rnum)) r["RoomNumber"] = rnum;
                     if (int.TryParse(r["BranchId"]?.ToString(), out int bid) && branchMap.TryGetValue(bid, out var bname)) r["BranchName"] = bname;
                 }
             }
             catch { }
+        }
+        private async System.Threading.Tasks.Task<DataTable> FilterContractsByRentedRoomsAsync(DataTable contracts)
+        {
+            if (contracts == null) return contracts;
+
+            var roomIds = new HashSet<int>();
+            foreach (DataRow row in contracts.Rows)
+            {
+                if (int.TryParse(row["RoomId"]?.ToString(), out var rid))
+                    roomIds.Add(rid);
+            }
+
+            if (roomIds.Count == 0) return contracts;
+
+            DataTable rooms = null;
+            try
+            {
+                rooms = await _bll.GetRoomsAsync();
+            }
+            catch
+            {
+                return contracts;
+            }
+
+            if (rooms == null || rooms.Rows.Count == 0) return contracts;
+
+            var rentedRoomIds = new HashSet<int>();
+            foreach (DataRow row in rooms.Rows)
+            {
+                if (!int.TryParse(row["RoomId"]?.ToString(), out var rid)) continue;
+                if (!roomIds.Contains(rid)) continue;
+
+                string status = row.Table.Columns.Contains("StatusName")
+                    ? row["StatusName"]?.ToString()
+                    : row.Table.Columns.Contains("Status") ? row["Status"]?.ToString() : null;
+
+                if (IsRentedRoomStatus(status))
+                    rentedRoomIds.Add(rid);
+            }
+
+            return SelectLatestContractsByRoom(contracts, rentedRoomIds);
+        }
+
+        private static DataTable SelectLatestContractsByRoom(DataTable contracts, HashSet<int> rentedRoomIds)
+        {
+            var result = contracts.Clone();
+            if (rentedRoomIds == null || rentedRoomIds.Count == 0) return result;
+
+            var latestByRoom = new Dictionary<int, DataRow>();
+            foreach (DataRow row in contracts.Rows)
+            {
+                if (!int.TryParse(row["RoomId"]?.ToString(), out var rid)) continue;
+                if (!rentedRoomIds.Contains(rid)) continue;
+
+                if (!latestByRoom.TryGetValue(rid, out var existing) || CompareContractRow(row, existing) > 0)
+                    latestByRoom[rid] = row;
+            }
+
+            foreach (var row in latestByRoom.Values)
+                result.ImportRow(row);
+
+            return result;
+        }
+
+        private static int CompareContractRow(DataRow left, DataRow right)
+        {
+            var leftDate = GetSortDate(left);
+            var rightDate = GetSortDate(right);
+            int cmp = leftDate.CompareTo(rightDate);
+            if (cmp != 0) return cmp;
+            return GetSortId(left).CompareTo(GetSortId(right));
+        }
+
+        private static DateTime GetSortDate(DataRow row)
+        {
+            if (TryReadDate(row, "StartDate", out var dt)) return dt;
+            if (TryReadDate(row, "SignDate", out dt)) return dt;
+            if (TryReadDate(row, "CreatedDate", out dt)) return dt;
+            return DateTime.MinValue;
+        }
+
+        private static int GetSortId(DataRow row)
+        {
+            return int.TryParse(row["ContractId"]?.ToString(), out var id) ? id : 0;
+        }
+
+        private static bool TryReadDate(DataRow row, string col, out DateTime value)
+        {
+            value = DateTime.MinValue;
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(col)) return false;
+            return DateTime.TryParse(row[col]?.ToString(), out value);
+        }
+
+        private static bool IsRentedRoomStatus(string statusName)
+        {
+            var key = NormalizeStatusKey(statusName);
+            return key.Contains("dang o") || key.Contains("dang thue") || key.Contains("da thue");
+        }
+
+        private static string NormalizeStatusKey(string statusName)
+        {
+            if (string.IsNullOrWhiteSpace(statusName)) return string.Empty;
+            var fixedName = TextFixer.FixUtf8Mojibake(statusName) ?? statusName;
+            var normalized = fixedName.Normalize(NormalizationForm.FormD);
+            var sb = new StringBuilder(normalized.Length);
+            foreach (char ch in normalized)
+            {
+                if (CharUnicodeInfo.GetUnicodeCategory(ch) != UnicodeCategory.NonSpacingMark)
+                    sb.Append(ch);
+            }
+            return sb.ToString().Normalize(NormalizationForm.FormC).ToLowerInvariant();
         }
         private async System.Threading.Tasks.Task EnsureAllowedBranchScopeAsync()
         {

@@ -42,6 +42,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             // Chế độ Admin-only: ẩn module quản lý nhân viên & các màn Staff
             if (btnNavStaff != null)
                 btnNavStaff.Visible = false;
+            if (btnNavTenant != null)
+            {
+                btnNavTenant.Visible = false;
+                btnNavTenant.Enabled = false;
+                btnNavTenant.TabStop = false;
+            }
 
             this.Text = $"Bảng điều khiển Admin - {currentUser}";
             this.WindowState = FormWindowState.Maximized;
@@ -58,7 +64,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             StyleNavButton(btnNavBranch);
             StyleNavButton(btnNavRoom);
             StyleNavButton(btnNavStaff);
-            StyleNavButton(btnNavTenant);
             StyleNavButton(btnNavContract);
             StyleNavButton(btnNavDeposit);
             StyleNavButton(btnNavUtility);
@@ -153,7 +158,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             int totalBranches = GetInt("TotalBranches");
             int totalRooms = GetInt("TotalRooms");
-            int totalTenants = GetInt("TotalTenants");
             int totalContracts = GetInt("TotalContracts");
             int totalInvoices = GetInt("TotalInvoices");
             int outstandingCount = GetInt("OutstandingInvoiceCount");
@@ -167,7 +171,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 new StatMetric("Chi nhánh", totalBranches.ToString("N0"), "Tổng số chi nhánh", Color.FromArgb(0, 122, 204), (EventHandler)btnBranch_Click),
                 new StatMetric("Phòng", totalRooms.ToString("N0"), "Tổng số phòng", Color.FromArgb(0, 150, 136), (EventHandler)btnRoom_Click),
-                new StatMetric("Khách thuê", totalTenants.ToString("N0"), "Tổng khách thuê", Color.FromArgb(63, 81, 181), (EventHandler)btnTenant_Click),
                 new StatMetric("Hợp đồng", totalContracts.ToString("N0"), "Tổng hợp đồng", Color.FromArgb(103, 58, 183), (EventHandler)btnContract_Click),
                 new StatMetric("Hóa đơn", totalInvoices.ToString("N0"), $"Còn nợ: {outstandingCount:N0}", Color.FromArgb(255, 152, 0), (EventHandler)btnInvoice_Click),
                 new StatMetric("Công nợ", outstandingAmount.ToString("N0"), "Tổng tiền còn nợ", Color.FromArgb(244, 67, 54), (EventHandler)btnInvoice_Click),
