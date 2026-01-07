@@ -623,7 +623,7 @@ namespace QuanLyNhaTro.DAL
             }
         }
 
-        public async Task<int> GenerateMonthlyInvoicesAsync(int year, int month, DateTime? invoiceDate = null, int? dueDay = null)
+        public async Task<int> GenerateMonthlyInvoicesAsync(int year, int month, DateTime? invoiceDate = null, int? dueDay = null, decimal? taxRateOverride = null)
         {
             if (!await TableExistsAsync("Contracts"))
                 throw new Exception("Bảng Contracts không tồn tại.");
@@ -702,7 +702,9 @@ namespace QuanLyNhaTro.DAL
 
                                     decimal utilityCost = utilityByRoom.TryGetValue(roomId, out var u) ? u : 0m;
                                     decimal otherCost = 0m;
-                                    decimal appliedTaxRate = await GetDefaultTaxRatePercentAsync(conn, tx);
+                                    decimal appliedTaxRate = taxRateOverride.HasValue && taxRateOverride.Value > 0m
+                                        ? taxRateOverride.Value
+                                        : await GetDefaultTaxRatePercentAsync(conn, tx);
                                     decimal baseAmount = rentalCost + utilityCost + otherCost;
                                     decimal taxAmount = Math.Round(baseAmount * appliedTaxRate / 100m, 2, MidpointRounding.AwayFromZero);
                                     decimal total = baseAmount + taxAmount;

@@ -284,5 +284,20 @@ namespace QuanLyNhaTro.DAL
         }
 
         #endregion
+
+        #region Tenant Room History Wrappers
+
+        public Task<int> AddTenantRoomHistoryAsync(int tenantId, int roomId, DateTime checkInDate,
+            DateTime? checkOutDate, string status, string notes)
+            => AddTenantHistoryAsync(tenantId, roomId, checkInDate, checkOutDate, status, notes);
+
+        public Task<bool> UpdateTenantRoomHistoryAsync(int historyId, int roomId, DateTime checkInDate,
+            DateTime? checkOutDate, string status, string notes)
+            => UpdateTenantHistoryAsync(historyId, roomId, checkInDate, checkOutDate, status, notes);
+
+        public Task<bool> DeleteTenantRoomHistoryAsync(int historyId)
+            => DeleteTenantHistoryAsync(historyId);
+
+        #endregion
     }
 }

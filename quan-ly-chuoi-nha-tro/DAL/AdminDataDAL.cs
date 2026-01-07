@@ -1793,16 +1793,38 @@ namespace QuanLyNhaTro.DAL
                 "UtilityTypes",
                 null,
                 @"SELECT UtilityTypeId,
-                         UtilityName,
-                         UtilityCode,
-                         Unit,
-                         IsRecurring,
-                         DefaultPrice,
-                         Description,
-                         IsActive,
-                         CreatedDate
+                 UtilityName,
+                 UtilityCode,
+                 Unit,
+                 IsRecurring,
+                 DefaultPrice,
+                 Description,
+                 IsActive,
+                 CreatedDate
                   FROM UtilityTypes",
                 "SELECT * FROM UtilityTypes"
+            );
+        }
+
+        public Task<DataTable> GetUtilityReadingsAsync()
+        {
+            return GetTableSafeAsync(
+                "UtilityReadings",
+                null,
+                @"SELECT ReadingId,
+                         RoomId,
+                         UtilityTypeId,
+                         ReadingDate,
+                         PreviousReading,
+                         CurrentReading,
+                         UsageAmount,
+                         UnitPrice,
+                         TotalCost,
+                         Notes,
+                         CreatedDate
+                  FROM UtilityReadings
+                  ORDER BY ReadingDate DESC",
+                "SELECT * FROM UtilityReadings ORDER BY ReadingDate DESC"
             );
         }
 

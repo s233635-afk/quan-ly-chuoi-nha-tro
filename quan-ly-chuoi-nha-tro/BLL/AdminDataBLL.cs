@@ -35,6 +35,19 @@ namespace QuanLyNhaTro.BLL
         public Task<DataTable> GetAssetsAsync() => dbHelper.GetAssetsAsync();
         public Task<DataTable> GetNotificationsAsync() => dbHelper.GetNotificationsAsync();
         public Task<DataTable> GetSystemSettingsAsync() => dbHelper.GetSystemSettingsAsync();
+        public async Task<string> GetSystemSettingValueAsync(string key)
+        {
+            DataTable dt = await dbHelper.GetSystemSettingsAsync();
+            if (dt != null)
+            {
+                foreach (DataRow row in dt.Rows)
+                {
+                    if (row["SettingKey"]?.ToString() == key)
+                        return row["SettingValue"]?.ToString();
+                }
+            }
+            return null;
+        }
         public Task<DataTable> GetDashboardSummaryAsync() => dbHelper.GetDashboardSummaryAsync();
 
         // --- STAFF CRUD ---
@@ -88,7 +101,7 @@ namespace QuanLyNhaTro.BLL
             => dbHelper.DeleteTenantHistoryAsync(historyId);
 
         // --- CONTRACT CRUD ---
-        
+
         // 🔥 ĐÂY LÀ HÀM CÒN THIẾU MÀ MÌNH ĐÃ THÊM VÀO 🔥
         public async Task<DataRow> GetContractByIdAsync(int contractId)
         {
@@ -175,8 +188,8 @@ namespace QuanLyNhaTro.BLL
         public Task<bool> DeleteInvoiceAsync(int invoiceId, bool deletePaymentsFirst)
             => dbHelper.DeleteInvoiceAsync(invoiceId, deletePaymentsFirst);
 
-        public Task<int> GenerateMonthlyInvoicesAsync(int year, int month, DateTime? invoiceDate = null, int? dueDay = null)
-            => dbHelper.GenerateMonthlyInvoicesAsync(year, month, invoiceDate, dueDay);
+        public Task<int> GenerateMonthlyInvoicesAsync(int year, int month, DateTime? invoiceDate = null, int? dueDay = null, decimal? taxRateOverride = null)
+            => dbHelper.GenerateMonthlyInvoicesAsync(year, month, invoiceDate, dueDay, taxRateOverride);
 
         // --- PAYMENT CRUD ---
         public Task<int> AddPaymentAsync(int invoiceId, DateTime paymentDate, decimal paymentAmount, string paymentMethod, string transactionReference, string notes)
@@ -197,13 +210,17 @@ namespace QuanLyNhaTro.BLL
             decimal amount,
             DateTime actionDate,
             string actionType,
+            string paymentMethod,
             string notes)
         {
             if (amount <= 0)
                 return Tuple.Create(0, 0);
 
-            string prefix = string.Equals(actionType, "Refund", StringComparison.OrdinalIgnoreCase) ? "REF" : "COK";
+            bool isRefund = string.Equals(actionType, "Refund", StringComparison.OrdinalIgnoreCase);
+            string prefix = isRefund ? "REF" : "COK";
             string invoiceNumber = $"{prefix}-{actionDate:yyyyMMdd}-{DateTime.Now:HHmmss}";
+            decimal signedAmount = isRefund ? -Math.Abs(amount) : Math.Abs(amount);
+            string method = string.IsNullOrWhiteSpace(paymentMethod) ? "Cash" : paymentMethod.Trim();
 
             int invoiceId = await AddInvoiceAsync(
                 invoiceNumber,
@@ -214,15 +231,15 @@ namespace QuanLyNhaTro.BLL
                 null,
                 0m,
                 0m,
-                amount,
+                signedAmount,
                 actionDate.Date,
                 0m);
 
             int paymentId = await AddPaymentAsync(
                 invoiceId,
                 actionDate.Date,
-                amount,
-                actionType,
+                signedAmount,
+                method,
                 null,
                 notes);
 
@@ -300,6 +317,9 @@ namespace QuanLyNhaTro.BLL
 
         public Task<bool> DeleteUtilityTypeAsync(int utilityTypeId)
             => dbHelper.DeleteUtilityTypeAsync(utilityTypeId);
+
+        public Task<DataTable> GetUtilityReadingsAsync()
+            => dbHelper.GetUtilityReadingsAsync();
 
         // --- UTILITY READING CRUD ---
         public Task<int> AddUtilityReadingAsync(int roomId, int utilityTypeId, DateTime? readingDate, decimal? previousReading, decimal? currentReading, decimal? usageAmount, decimal? unitPrice, decimal? totalCost, string notes)
