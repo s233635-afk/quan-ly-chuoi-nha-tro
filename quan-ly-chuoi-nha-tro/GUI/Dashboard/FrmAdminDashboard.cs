@@ -484,13 +484,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             SetActiveNav(btnNavInvoice);
             // MERGED: Mở FrmInvoicePaymentUnified (2 tabs: Hóa Đơn + Thanh Toán)
-            LoadModuleSafe(() => new FrmInvoicePaymentUnified(), "💳 Hóa Đơn & Thanh Toán");
+            LoadModuleSafe(() => new FrmInvoicePaymentUnified(null, false, false, currentUserId), "💳 Hóa Đơn & Thanh Toán");
         }
 
         private void btnPayment_Click(object sender, EventArgs e)
         {
             SetActiveNav(btnNavInvoice);
-            LoadModuleSafe(() => new FrmInvoicePaymentUnified(), "💳 Hóa Đơn & Thanh Toán");
+            LoadModuleSafe(() => new FrmInvoicePaymentUnified(null, false, false, currentUserId), "💳 Hóa Đơn & Thanh Toán");
         }
 
         private void btnMaintenance_Click(object sender, EventArgs e)

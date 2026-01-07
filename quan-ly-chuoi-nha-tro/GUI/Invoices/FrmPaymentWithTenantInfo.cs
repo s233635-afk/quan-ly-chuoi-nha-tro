@@ -18,6 +18,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private DataRow _invoiceRow;
         private DataRow _tenantRow;
         private DataRow _existingPayment;
+        private readonly int? _currentUserId;
 
         // Tenant Info Controls
         private Label lblTenantInfo;
@@ -46,12 +47,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Panel pnlBankInfo;
         private PictureBox picQrCode;
         private Label lblBankDetails;
+        private Button btnEditBank;
 
-        public FrmPaymentWithTenantInfo(AdminDataBLL bll, DataRow invoiceRow, DataRow existingPayment = null)
+        public FrmPaymentWithTenantInfo(AdminDataBLL bll, DataRow invoiceRow, DataRow existingPayment = null, int? currentUserId = null)
         {
             _bll = bll;
             _invoiceRow = invoiceRow;
             _existingPayment = existingPayment;
+            _currentUserId = currentUserId;
             InitializeComponent();
             Load += async (s, e) => await LoadTenantInfoAsync();
         }
@@ -357,6 +360,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
             };
             pnlBankInfo.Controls.Add(btnCopyBank);
 
+            btnEditBank = new ModernButton
+            {
+                Text = "⚙️ Tùy chỉnh",
+                Location = new Point(370, 175),
+                Width = 150,
+                Height = 30,
+                BaseColor = Color.FromArgb(240, 240, 240),
+                ForeColor = Color.Black
+            };
+            btnEditBank.Click += async (s, e) => await EditBankSettingsAsync();
+            btnEditBank.Enabled = _currentUserId.HasValue;
+            pnlBankInfo.Controls.Add(btnEditBank);
+
             flowPayment.Controls.Add(pnlBankInfo);
 
             // Reference
@@ -589,28 +605,55 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
         }
 
+        private async Task<(string BankId, string AccountNumber, string AccountName, string Template)> ResolveBankSettingsAsync()
+        {
+            string bankId = null;
+            string accountNo = null;
+            string accountName = null;
+            string template = null;
+
+            if (_currentUserId.HasValue)
+            {
+                var userSetting = await _bll.GetUserBankSettingsAsync(_currentUserId.Value);
+                if (userSetting.HasValue)
+                {
+                    bankId = userSetting.Value.BankId;
+                    accountNo = userSetting.Value.AccountNumber;
+                    accountName = userSetting.Value.AccountName;
+                    template = userSetting.Value.Template;
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(bankId))
+                bankId = await _bll.GetSystemSettingValueAsync("BankId") ?? "VietinBank";
+            if (string.IsNullOrWhiteSpace(accountNo))
+                accountNo = await _bll.GetSystemSettingValueAsync("BankAccountNumber") ?? "0338352423";
+            if (string.IsNullOrWhiteSpace(accountName))
+                accountName = await _bll.GetSystemSettingValueAsync("BankAccountName") ?? "NGUYEN TRUNG KIEN";
+            if (string.IsNullOrWhiteSpace(template))
+                template = await _bll.GetSystemSettingValueAsync("BankTemplate") ?? "compact";
+
+            return (bankId, accountNo, accountName, template);
+        }
+
         private async Task LoadAndGenerateQrAsync()
         {
             try
             {
-                string bankId = await _bll.GetSystemSettingValueAsync("BankId") ?? "VietinBank"; // Default VietinBank
-                string accountNo = await _bll.GetSystemSettingValueAsync("BankAccountNumber") ?? "0338352423";
-                string accountName = await _bll.GetSystemSettingValueAsync("BankAccountName") ?? "NGUYEN TRUNG KIEN";
-                string template = await _bll.GetSystemSettingValueAsync("BankTemplate") ?? "compact";
-
+                var bank = await ResolveBankSettingsAsync();
                 decimal amount = numAmount.Value;
                 string description = $"THANH TOAN HOA DON {ReadInvoiceValue("InvoiceNumber")}";
 
                 // VietQR API URL
                 // https://img.vietqr.io/image/<BANK_ID>-<ACCOUNT_NO>-<TEMPLATE>.png?amount=<AMOUNT>&addInfo=<CONTENT>&accountName=<NAME>
-                string qrUrl = $"https://img.vietqr.io/image/{bankId}-{accountNo}-{template}.png" +
+                string qrUrl = $"https://img.vietqr.io/image/{bank.BankId}-{bank.AccountNumber}-{bank.Template}.png" +
                                $"?amount={amount:0}" +
                                $"&addInfo={Uri.EscapeDataString(description)}" +
-                               $"&accountName={Uri.EscapeDataString(accountName)}";
+                               $"&accountName={Uri.EscapeDataString(bank.AccountName)}";
 
-                lblBankDetails.Text = $"NGÂN HÀNG: {bankId}\n" +
-                                     $"SỐ TÀI KHOẢN: {accountNo}\n" +
-                                     $"CHỦ TÀI KHOẢN: {accountName}\n\n" +
+                lblBankDetails.Text = $"NGÂN HÀNG: {bank.BankId}\n" +
+                                     $"SỐ TÀI KHOẢN: {bank.AccountNumber}\n" +
+                                     $"CHỦ TÀI KHOẢN: {bank.AccountName}\n\n" +
                                      $"NỘI DUNG: {description}\n" +
                                      $"SỐ TIỀN: {amount:N0} VNĐ";
 
@@ -619,6 +662,37 @@ namespace quan_ly_chuoi_nha_tro.GUI
             catch (Exception ex)
             {
                 lblBankDetails.Text = "Lỗi tải thông tin ngân hàng: " + ex.Message;
+            }
+        }
+
+        private async Task EditBankSettingsAsync()
+        {
+            if (!_currentUserId.HasValue)
+            {
+                ModernDialog.Error("Không xác định được tài khoản đăng nhập.");
+                return;
+            }
+
+            var current = await ResolveBankSettingsAsync();
+            using (var frm = new FrmBankSettingsEditor(current.BankId, current.AccountNumber, current.AccountName, current.Template))
+            {
+                if (frm.ShowDialog(this) != DialogResult.OK)
+                    return;
+
+                bool saved = await _bll.UpsertUserBankSettingsAsync(
+                    _currentUserId.Value,
+                    frm.BankId,
+                    frm.AccountNumber,
+                    frm.AccountName,
+                    frm.Template);
+
+                if (!saved)
+                {
+                    ModernDialog.Error("Không thể lưu cấu hình ngân hàng.");
+                    return;
+                }
+
+                await LoadAndGenerateQrAsync();
             }
         }
 
@@ -717,6 +791,129 @@ namespace quan_ly_chuoi_nha_tro.GUI
             using (var frm = new FrmInvoiceExportForm(_bll, _invoiceRow))
             {
                 frm.ShowDialog(this);
+            }
+        }
+
+        private class FrmBankSettingsEditor : Form
+        {
+            private readonly TextBox _txtBankId;
+            private readonly TextBox _txtAccountNumber;
+            private readonly TextBox _txtAccountName;
+            private readonly TextBox _txtTemplate;
+
+            public string BankId => (_txtBankId.Text ?? string.Empty).Trim();
+            public string AccountNumber => (_txtAccountNumber.Text ?? string.Empty).Trim();
+            public string AccountName => (_txtAccountName.Text ?? string.Empty).Trim();
+            public string Template => string.IsNullOrWhiteSpace(_txtTemplate.Text) ? "compact" : _txtTemplate.Text.Trim();
+
+            public FrmBankSettingsEditor(string bankId, string accountNumber, string accountName, string template)
+            {
+                Text = "Tùy chỉnh ngân hàng";
+                StartPosition = FormStartPosition.CenterParent;
+                FormBorderStyle = FormBorderStyle.FixedDialog;
+                MaximizeBox = false;
+                MinimizeBox = false;
+                ClientSize = new Size(460, 260);
+                BackColor = Color.White;
+                Font = new Font("Segoe UI", 10F);
+
+                int left = 16;
+                int labelWidth = 130;
+                int inputWidth = 280;
+                int top = 20;
+                int line = 36;
+
+                Controls.Add(MakeLabel("Ngân hàng (BankId):", left, top, labelWidth));
+                _txtBankId = MakeInput(bankId, left + labelWidth + 8, top, inputWidth);
+                Controls.Add(_txtBankId);
+                top += line;
+
+                Controls.Add(MakeLabel("Số tài khoản:", left, top, labelWidth));
+                _txtAccountNumber = MakeInput(accountNumber, left + labelWidth + 8, top, inputWidth);
+                Controls.Add(_txtAccountNumber);
+                top += line;
+
+                Controls.Add(MakeLabel("Chủ tài khoản:", left, top, labelWidth));
+                _txtAccountName = MakeInput(accountName, left + labelWidth + 8, top, inputWidth);
+                Controls.Add(_txtAccountName);
+                top += line;
+
+                Controls.Add(MakeLabel("Template QR:", left, top, labelWidth));
+                _txtTemplate = MakeInput(string.IsNullOrWhiteSpace(template) ? "compact" : template, left + labelWidth + 8, top, inputWidth);
+                Controls.Add(_txtTemplate);
+
+                var pnlBottom = new Panel
+                {
+                    Dock = DockStyle.Bottom,
+                    Height = 56,
+                    Padding = new Padding(12),
+                    BackColor = Color.FromArgb(245, 246, 248)
+                };
+
+                var btnSave = new ModernButton
+                {
+                    Text = "Lưu",
+                    Width = 100,
+                    Height = 32,
+                    BaseColor = Color.FromArgb(0, 120, 215),
+                    ForeColor = Color.White
+                };
+                btnSave.Click += (s, e) =>
+                {
+                    if (string.IsNullOrWhiteSpace(BankId) || string.IsNullOrWhiteSpace(AccountNumber) || string.IsNullOrWhiteSpace(AccountName))
+                    {
+                        ModernDialog.Error("Vui lòng nhập ngân hàng, số tài khoản và chủ tài khoản.");
+                        return;
+                    }
+
+                    DialogResult = DialogResult.OK;
+                    Close();
+                };
+
+                var btnCancel = new ModernButton
+                {
+                    Text = "Hủy",
+                    Width = 100,
+                    Height = 32,
+                    BaseColor = Color.FromArgb(200, 200, 200),
+                    ForeColor = Color.Black,
+                    DialogResult = DialogResult.Cancel
+                };
+
+                pnlBottom.Controls.Add(btnSave);
+                pnlBottom.Controls.Add(btnCancel);
+                btnSave.Location = new Point(pnlBottom.Width - 220, 12);
+                btnCancel.Location = new Point(pnlBottom.Width - 110, 12);
+                pnlBottom.Resize += (s, e) =>
+                {
+                    btnSave.Location = new Point(pnlBottom.Width - 220, 12);
+                    btnCancel.Location = new Point(pnlBottom.Width - 110, 12);
+                };
+
+                Controls.Add(pnlBottom);
+                AcceptButton = btnSave;
+                CancelButton = btnCancel;
+            }
+
+            private static Label MakeLabel(string text, int x, int y, int width)
+            {
+                return new Label
+                {
+                    Text = text,
+                    Location = new Point(x, y + 4),
+                    Width = width,
+                    TextAlign = ContentAlignment.MiddleLeft
+                };
+            }
+
+            private static TextBox MakeInput(string value, int x, int y, int width)
+            {
+                return new TextBox
+                {
+                    Location = new Point(x, y),
+                    Width = width,
+                    Text = value ?? string.Empty
+                };
             }
         }
     }

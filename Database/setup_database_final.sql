@@ -330,6 +330,17 @@ CREATE TABLE SystemSettings (
     Description NVARCHAR(500)
 );
 
+CREATE TABLE UserBankSettings (
+    UserId INT PRIMARY KEY,
+    BankId NVARCHAR(100) NOT NULL,
+    BankAccountNumber NVARCHAR(50) NOT NULL,
+    BankAccountName NVARCHAR(255) NOT NULL,
+    BankTemplate NVARCHAR(50),
+    UpdatedDate DATETIME DEFAULT GETDATE(),
+    FOREIGN KEY (UserId) REFERENCES Users(UserId)
+);
+
+
 -- =====================================================
 -- INSERT DỮ LIỆU MẪU
 -- =====================================================

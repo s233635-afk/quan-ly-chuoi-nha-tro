@@ -11,15 +11,17 @@ namespace quan_ly_chuoi_nha_tro.GUI
     public class FrmBulkPaymentRunner : Form
     {
         private readonly AdminDataBLL _bll;
+        private readonly int? _userId;
         private DataTable _invoices;
 
         private DataGridView _grid;
         private Button _btnProcess;
         private Button _btnClose;
 
-        public FrmBulkPaymentRunner(AdminDataBLL bll)
+        public FrmBulkPaymentRunner(AdminDataBLL bll, int? userId = null)
         {
             _bll = bll;
+            _userId = userId;
             InitializeComponent();
             Load += async (s, e) => await LoadInvoicesAsync();
         }
@@ -141,7 +143,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 decimal remaining = ReadDecimal(row, "RemainingAmount");
                 if (remaining <= 0) continue;
 
-                using (var frm = new FrmPaymentWithTenantInfo(_bll, row))
+                using (var frm = new FrmPaymentWithTenantInfo(_bll, row, null, _userId))
                 {
                     var result = frm.ShowDialog(this);
                     if (result != DialogResult.OK)
