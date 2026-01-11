@@ -444,10 +444,32 @@ namespace quan_ly_chuoi_nha_tro.GUI
             // 6. Bank & QR Logic
             try
             {
-                string bankId = await _bll.GetSystemSettingValueAsync("BankId") ?? "VietinBank";
-                string accountNo = await _bll.GetSystemSettingValueAsync("BankAccountNumber") ?? "0338352423";
-                string accountName = await _bll.GetSystemSettingValueAsync("BankAccountName") ?? "NGUYEN TRUNG KIEN";
-                string template = await _bll.GetSystemSettingValueAsync("BankTemplate") ?? "compact";
+                string bankId = null;
+                string accountNo = null;
+                string accountName = null;
+                string template = null;
+
+                int branchId = ReadInt(_branchRow, "BranchId");
+                if (branchId > 0)
+                {
+                    var branchSetting = await _bll.GetBranchBankSettingsAsync(branchId);
+                    if (branchSetting.HasValue)
+                    {
+                        bankId = branchSetting.Value.BankId;
+                        accountNo = branchSetting.Value.AccountNumber;
+                        accountName = branchSetting.Value.AccountName;
+                        template = branchSetting.Value.Template;
+                    }
+                }
+
+                if (string.IsNullOrWhiteSpace(bankId))
+                    bankId = await _bll.GetSystemSettingValueAsync("BankId") ?? "VietinBank";
+                if (string.IsNullOrWhiteSpace(accountNo))
+                    accountNo = await _bll.GetSystemSettingValueAsync("BankAccountNumber") ?? "0338352423";
+                if (string.IsNullOrWhiteSpace(accountName))
+                    accountName = await _bll.GetSystemSettingValueAsync("BankAccountName") ?? "NGUYEN TRUNG KIEN";
+                if (string.IsNullOrWhiteSpace(template))
+                    template = await _bll.GetSystemSettingValueAsync("BankTemplate") ?? "compact";
 
                 string description = $"THANH TOAN HOA DON {invoiceNo}";
 

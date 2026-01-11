@@ -28,7 +28,8 @@ namespace QuanLyNhaTro.DAL
                 var builder = new SqlConnectionStringBuilder(connectionString);
                 if (DatabaseInitializer.IsLocalDatabaseSource(builder.DataSource))
                 {
-                    DatabaseInitializer.EnsureInitializedAsync(connectionString, DefaultDbCommandTimeoutSeconds).GetAwaiter().GetResult();
+                    bool loadSampleData = ReadBoolAppSetting("LoadSampleData", false);
+                    DatabaseInitializer.EnsureInitializedAsync(connectionString, DefaultDbCommandTimeoutSeconds, loadSampleData).GetAwaiter().GetResult();
                 }
             }
 
@@ -90,6 +91,11 @@ namespace QuanLyNhaTro.DAL
             try
             {
                 var builder = new SqlConnectionStringBuilder(raw);
+                bool useLocalDb = ReadBoolAppSetting("UseLocalDb", false);
+                if (useLocalDb && !DatabaseInitializer.IsLocalDatabaseSource(builder.DataSource))
+                {
+                    builder = new SqlConnectionStringBuilder(FallbackConnectionString);
+                }
                 if (!HasExplicitTimeout(raw))
                     builder.ConnectTimeout = DefaultDbConnectTimeoutSeconds;
                 return builder.ConnectionString;

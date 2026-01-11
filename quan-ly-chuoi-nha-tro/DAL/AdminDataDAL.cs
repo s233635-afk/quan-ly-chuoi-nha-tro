@@ -2360,6 +2360,33 @@ namespace QuanLyNhaTro.DAL
             return table;
         }
 
+        public async Task<DataTable> GetBranchBankSettingsAsync(int branchId)
+        {
+            var table = new DataTable();
+            if (!await TableExistsAsync("BranchBankSettings"))
+                return table;
+
+            const string sql = @"
+                SELECT BranchId, BankId, BankAccountNumber, BankAccountName, BankTemplate
+                FROM BranchBankSettings
+                WHERE BranchId = @BranchId";
+
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@BranchId", branchId);
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        table.Load(reader);
+                    }
+                }
+            }
+
+            return table;
+        }
+
         #region CRUD SystemSettings
 
         public async Task<bool> AddSystemSettingAsync(string key, string value, string description)
@@ -2454,6 +2481,41 @@ namespace QuanLyNhaTro.DAL
                 }
             }
         }
+
+        public async Task<bool> UpsertBranchBankSettingsAsync(int branchId, string bankId, string accountNumber, string accountName, string template)
+        {
+            if (!await TableExistsAsync("BranchBankSettings"))
+                return false;
+
+            const string sql = @"
+                IF EXISTS (SELECT 1 FROM BranchBankSettings WHERE BranchId = @BranchId)
+                    UPDATE BranchBankSettings
+                    SET BankId = @BankId,
+                        BankAccountNumber = @BankAccountNumber,
+                        BankAccountName = @BankAccountName,
+                        BankTemplate = @BankTemplate,
+                        UpdatedDate = GETDATE()
+                    WHERE BranchId = @BranchId
+                ELSE
+                    INSERT INTO BranchBankSettings (BranchId, BankId, BankAccountNumber, BankAccountName, BankTemplate, UpdatedDate)
+                    VALUES (@BranchId, @BankId, @BankAccountNumber, @BankAccountName, @BankTemplate, GETDATE());";
+
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@BranchId", branchId);
+                    cmd.Parameters.AddWithValue("@BankId", bankId);
+                    cmd.Parameters.AddWithValue("@BankAccountNumber", accountNumber);
+                    cmd.Parameters.AddWithValue("@BankAccountName", accountName);
+                    cmd.Parameters.AddWithValue("@BankTemplate", string.IsNullOrWhiteSpace(template) ? (object)DBNull.Value : template);
+                    int affected = await cmd.ExecuteNonQueryAsync();
+                    return affected > 0;
+                }
+            }
+        }
+
 
         #region CRUD Tenants
 

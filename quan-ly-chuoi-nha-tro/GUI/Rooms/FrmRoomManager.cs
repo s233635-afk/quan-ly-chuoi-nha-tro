@@ -61,10 +61,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             InitializeComponent();
             AdminEvents.DataChanged += HandleAdminDataChanged;
             DataSyncManager.RoomsDataChanged += HandleRoomsDataSync;
+            DataSyncManager.TenantsDataChanged += HandleTenantsDataSync;
             FormClosing += (s, e) =>
             {
                 AdminEvents.DataChanged -= HandleAdminDataChanged;
                 DataSyncManager.RoomsDataChanged -= HandleRoomsDataSync;
+                DataSyncManager.TenantsDataChanged -= HandleTenantsDataSync;
             };
         }
 
@@ -559,6 +561,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
         }
 
         private async void HandleRoomsDataSync(object sender, EventArgs e)
+        {
+            if (IsDisposed || !IsHandleCreated) return;
+            try
+            {
+                await LoadRoomsAsync();
+            }
+            catch
+            {
+                // ignore refresh errors
+            }
+        }
+
+        private async void HandleTenantsDataSync(object sender, EventArgs e)
         {
             if (IsDisposed || !IsHandleCreated) return;
             try

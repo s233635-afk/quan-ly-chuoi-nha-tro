@@ -612,6 +612,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
             string accountName = null;
             string template = null;
 
+            int branchId = await ResolveBranchIdAsync();
+            if (branchId > 0)
+            {
+                var branchSetting = await _bll.GetBranchBankSettingsAsync(branchId);
+                if (branchSetting.HasValue)
+                {
+                    bankId = branchSetting.Value.BankId;
+                    accountNo = branchSetting.Value.AccountNumber;
+                    accountName = branchSetting.Value.AccountName;
+                    template = branchSetting.Value.Template;
+                }
+            }
+
             if (_currentUserId.HasValue)
             {
                 var userSetting = await _bll.GetUserBankSettingsAsync(_currentUserId.Value);
@@ -634,6 +647,32 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 template = await _bll.GetSystemSettingValueAsync("BankTemplate") ?? "compact";
 
             return (bankId, accountNo, accountName, template);
+        }
+
+        private async Task<int> ResolveBranchIdAsync()
+        {
+            int branchId = ReadInt(_invoiceRow, "BranchId");
+            if (branchId > 0) return branchId;
+
+            int roomId = ReadInt(_invoiceRow, "RoomId");
+            if (roomId <= 0) return 0;
+
+            var rooms = await _bll.GetRoomsAsync();
+            var roomRow = rooms?.AsEnumerable().FirstOrDefault(r => ReadInt(r, "RoomId") == roomId);
+            branchId = roomRow != null ? ReadInt(roomRow, "BranchId") : 0;
+            if (branchId > 0) return branchId;
+
+            int tenantId = ReadInt(_invoiceRow, "TenantId");
+            if (tenantId <= 0) return 0;
+            var history = await _bll.GetTenantHistoryAsync();
+            var active = history?.AsEnumerable()
+                .FirstOrDefault(r => ReadInt(r, "TenantId") == tenantId && IsActiveHistory(r));
+            if (active == null) return 0;
+
+            roomId = ReadInt(active, "RoomId");
+            if (roomId <= 0) return 0;
+            roomRow = rooms?.AsEnumerable().FirstOrDefault(r => ReadInt(r, "RoomId") == roomId);
+            return roomRow != null ? ReadInt(roomRow, "BranchId") : 0;
         }
 
         private async Task LoadAndGenerateQrAsync()
@@ -667,9 +706,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private async Task EditBankSettingsAsync()
         {
-            if (!_currentUserId.HasValue)
+            int branchId = await ResolveBranchIdAsync();
+            if (branchId <= 0 && !_currentUserId.HasValue)
             {
-                ModernDialog.Error("Không xác định được tài khoản đăng nhập.");
+                ModernDialog.Error("Không xác định được chi nhánh hoặc tài khoản đăng nhập.");
                 return;
             }
 
@@ -679,12 +719,25 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 if (frm.ShowDialog(this) != DialogResult.OK)
                     return;
 
-                bool saved = await _bll.UpsertUserBankSettingsAsync(
-                    _currentUserId.Value,
-                    frm.BankId,
-                    frm.AccountNumber,
-                    frm.AccountName,
-                    frm.Template);
+                bool saved;
+                if (branchId > 0)
+                {
+                    saved = await _bll.UpsertBranchBankSettingsAsync(
+                        branchId,
+                        frm.BankId,
+                        frm.AccountNumber,
+                        frm.AccountName,
+                        frm.Template);
+                }
+                else
+                {
+                    saved = await _bll.UpsertUserBankSettingsAsync(
+                        _currentUserId.Value,
+                        frm.BankId,
+                        frm.AccountNumber,
+                        frm.AccountName,
+                        frm.Template);
+                }
 
                 if (!saved)
                 {
@@ -751,6 +804,26 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 }
             }
             return null;
+        }
+
+        private static int ReadInt(DataRow row, string col)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(col)) return 0;
+            return int.TryParse(row[col]?.ToString(), out var val) ? val : 0;
+        }
+
+        private static bool IsActiveHistory(DataRow row)
+        {
+            if (row == null) return false;
+            string checkout = row.Table.Columns.Contains("CheckOutDate") ? row["CheckOutDate"]?.ToString() : null;
+            if (string.IsNullOrWhiteSpace(checkout)) return true;
+            if (row.Table.Columns.Contains("Status"))
+            {
+                var status = row["Status"]?.ToString() ?? string.Empty;
+                if (status.IndexOf("active", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+                if (status.IndexOf("đang", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            }
+            return false;
         }
 
         private string ReadInvoiceValue(string col)
