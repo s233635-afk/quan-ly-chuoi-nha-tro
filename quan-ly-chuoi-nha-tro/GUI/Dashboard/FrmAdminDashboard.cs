@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Data;
 using System.Drawing;
 using System.Globalization;
@@ -256,7 +256,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             var metrics = new[]
             {
-<<<<<<< HEAD:quan-ly-chuoi-nha-tro/GUI/FrmAdminDashboard.cs
                 new StatMetric("Chi nhánh", totalBranches.ToString("N0"), "Tổng số chi nhánh", Color.FromArgb(0, 122, 204), (EventHandler)btnBranch_Click),
                 new StatMetric("Phòng", totalRooms.ToString("N0"), "Tổng số phòng", Color.FromArgb(0, 150, 136), (EventHandler)btnRoom_Click),
                 new StatMetric("Hợp đồng", totalContracts.ToString("N0"), "Tổng hợp đồng", Color.FromArgb(103, 58, 183), (EventHandler)btnContract_Click),
@@ -265,7 +264,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 new StatMetric("Đặt cọc", depositAmount.ToString("N0"), $"Phiếu cọc: {totalDeposits:N0}", Color.FromArgb(33, 150, 243), (EventHandler)btnDeposit_Click),
                 new StatMetric("Thu tháng này", paymentsThisMonth.ToString("N0"), "Tổng tiền đã thu", Color.FromArgb(76, 175, 80), (EventHandler)btnPayment_Click),
                 new StatMetric("Bảo trì", openMaintenance.ToString("N0"), "Yêu cầu đang mở", Color.FromArgb(156, 39, 176), (EventHandler)btnMaintenance_Click),
-=======
                 new StatMetric("Chi nhánh", totalBranches.ToString("N0"), "Tổng số chi nhánh", Color.FromArgb(0, 122, 204), "🏢", (EventHandler)btnBranch_Click),
                 new StatMetric("Phòng", totalRooms.ToString("N0"), "Tổng số phòng", Color.FromArgb(0, 150, 136), "🏠", (EventHandler)btnRoom_Click),
                 new StatMetric("Khách thuê", totalTenants.ToString("N0"), "Tổng khách thuê", Color.FromArgb(63, 81, 181), "👥", (EventHandler)btnTenant_Click),
@@ -275,7 +273,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 new StatMetric("Đặt cọc", depositAmount.ToString("N0"), $"Phiếu cọc: {totalDeposits:N0}", Color.FromArgb(33, 150, 243), "💵", (EventHandler)btnDeposit_Click),
                 new StatMetric("Thu tháng này", paymentsThisMonth.ToString("N0"), "Tổng tiền đã thu", Color.FromArgb(76, 175, 80), "📈", (EventHandler)btnPayment_Click),
                 new StatMetric("Bảo trì", openMaintenance.ToString("N0"), "Yêu cầu đang mở", Color.FromArgb(156, 39, 176), "🔧", (EventHandler)btnMaintenance_Click),
->>>>>>> 12f00b2ebf1219006addf91c63b69b64eb8559ed:quan-ly-chuoi-nha-tro/GUI/Dashboard/FrmAdminDashboard.cs
             };
 
             int colCount = tableLayoutPanel1.ColumnCount;

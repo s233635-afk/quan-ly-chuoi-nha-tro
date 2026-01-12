@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Data;
 using System.Drawing;
 using System.Globalization;
@@ -340,8 +340,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     var emptyId = GetEmptyStatusId(statuses);
                     if (emptyId.HasValue)
                         statusId = emptyId.Value;
-<<<<<<< HEAD:quan-ly-chuoi-nha-tro/GUI/FrmRoomTenantQuickView.cs
-=======
                         ToastNotification.Info("Phòng chưa có người, tự động chuyển trạng thái về Trống");
                     }
                     else
@@ -349,7 +347,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
                         ToastNotification.Warning("Trạng thái Đang ở yêu cầu ít nhất 1 người");
                         return;
                     }
->>>>>>> 12f00b2ebf1219006addf91c63b69b64eb8559ed:quan-ly-chuoi-nha-tro/GUI/Rooms/FrmRoomTenantQuickView.cs
                 }
 
                 await _bll.UpdateRoomAsync(roomId, roomNumber, branchId, sectionId, roomTypeId, price, statusId, floor, area, isActive, occupants);

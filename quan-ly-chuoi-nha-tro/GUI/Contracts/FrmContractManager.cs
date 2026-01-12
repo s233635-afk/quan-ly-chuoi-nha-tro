@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
@@ -79,7 +79,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var mainFlow = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
-<<<<<<< HEAD:quan-ly-chuoi-nha-tro/GUI/FrmContractManager.cs
                 ColumnCount = 1,
                 RowCount = 2,
                 BackColor = Color.Transparent
@@ -133,7 +132,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             // Gán sự kiện
             _cboStatus.SelectedIndexChanged += (s, e) => ApplyFilter();
             _cboSort.SelectedIndexChanged += (s, e) => ApplyFilter();
-=======
                 WrapContents = false, // Keep everything on one line
                 FlowDirection = FlowDirection.LeftToRight,
                 BackColor = Color.Transparent,
@@ -179,7 +177,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _cboStatus.SelectedIndexChanged += (s, e) => ApplyFilter();
 
             _dtFrom = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true, Checked = false, Width = 110, Font = new Font("Segoe UI", 10), Margin = new Padding(0, 0, 10, 0) };
->>>>>>> 12f00b2ebf1219006addf91c63b69b64eb8559ed:quan-ly-chuoi-nha-tro/GUI/Contracts/FrmContractManager.cs
             _dtFrom.ValueChanged += (s, e) => ApplyFilter();
             
             _dtTo = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true, Checked = false, Width = 110, Font = new Font("Segoe UI", 10), Margin = new Padding(0, 0, 10, 0) };
@@ -187,7 +184,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             
             _lblCount = new Label { AutoSize = true, Text = "Tổng: 0", Font = new Font("Segoe UI", 10, FontStyle.Bold), Margin = new Padding(10, 0, 0, 0), ForeColor = Color.DimGray };
 
-<<<<<<< HEAD:quan-ly-chuoi-nha-tro/GUI/FrmContractManager.cs
             // Thêm các control vào các cột tương ứng của TableLayoutPanel
             pnlFilters.Controls.Add(pnlSearch, 0, 0);
             pnlFilters.Controls.Add(CreateFilterLabel("Tr\u1ea1ng th\u00e1i:"), 1, 0);
@@ -199,7 +195,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             pnlFilters.Controls.Add(CreateFilterLabel("\u0110\u1ebfn:"), 7, 0);
             pnlFilters.Controls.Add(_dtTo, 8, 0);
             pnlFilters.Controls.Add(_lblCount, 9, 0);
-=======
             // Add filter controls to pnlFilters
             pnlFilters.Controls.Add(_txtSearch);
             pnlFilters.Controls.Add(CreateFilterLabel("Trạng thái:"));
@@ -209,7 +204,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             pnlFilters.Controls.Add(CreateFilterLabel("Đến:"));
             pnlFilters.Controls.Add(_dtTo);
             pnlFilters.Controls.Add(_lblCount);
->>>>>>> 12f00b2ebf1219006addf91c63b69b64eb8559ed:quan-ly-chuoi-nha-tro/GUI/Contracts/FrmContractManager.cs
 
             // Add filters panel to main flow
             mainFlow.Controls.Add(pnlFilters);
@@ -258,14 +252,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 await EnsureAllowedBranchScopeAsync();
                 _rawTable = await _bll.GetContractsAsync();
                 _rawTable = _branchId.HasValue ? FilterByBranch(_rawTable, _branchId) : AdminBranchScope.FilterByBranchIds(_rawTable, _allowedBranchIds);
-<<<<<<< HEAD:quan-ly-chuoi-nha-tro/GUI/FrmContractManager.cs
                 _rawTable = await FilterContractsByRentedRoomsAsync(_rawTable);
                 TextFixer.FixDataTable(_rawTable, "ContractNumber", "TenantName", "TenantPhone", "RoomNumber", "BranchName", "Status");
                 await EnrichContractsAsync(_rawTable);
-=======
                 await EnrichContractsAsync(_rawTable); // Enrich FIRST to add TenantName, RoomNumber, BranchName columns
                 TextFixer.FixDataTable(_rawTable, "ContractNumber", "TenantName", "RoomNumber", "BranchName", "Status");
->>>>>>> 12f00b2ebf1219006addf91c63b69b64eb8559ed:quan-ly-chuoi-nha-tro/GUI/Contracts/FrmContractManager.cs
                 
                 ApplyFilter(); // Hàm này sẽ gọi RenderCards
                 _selectedItem = null; // Bỏ chọn khi tải lại
@@ -369,7 +360,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     Location = new Point(280, 12)
                 };
 
-<<<<<<< HEAD:quan-ly-chuoi-nha-tro/GUI/FrmContractManager.cs
                 // Body: tenant, room, phone, price
                 var tenantName = row["TenantName"]?.ToString() ?? string.Empty;
                 var roomNumber = row["RoomNumber"]?.ToString() ?? string.Empty;
@@ -393,7 +383,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     Font = new Font("Segoe UI", 10, FontStyle.Regular),
                     Location = new Point(10, 70),
                     AutoSize = true
-=======
                 // Body: Tên khách, Phòng, Giá
                 var lblTenant = new Label 
                 { 
@@ -409,7 +398,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     Font = new Font("Segoe UI", 10, FontStyle.Regular), 
                     Location = new Point(10, 70), 
                     AutoSize = true 
->>>>>>> 12f00b2ebf1219006addf91c63b69b64eb8559ed:quan-ly-chuoi-nha-tro/GUI/Contracts/FrmContractManager.cs
                 };
 
                 var lblPhone = new Label
@@ -427,9 +415,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     Text = "Gi\u00e1: " + price.ToString("N0") + " \u0111",
                     Font = new Font("Segoe UI", 10, FontStyle.Bold),
                     ForeColor = Color.DarkSlateGray,
-<<<<<<< HEAD:quan-ly-chuoi-nha-tro/GUI/FrmContractManager.cs
                     Location = new Point(200, 70),
-=======
                     Location = new Point(200, 70), 
                     AutoSize = true 
                 };
@@ -452,7 +438,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     Font = new Font("Segoe UI", 8),
                     ForeColor = Color.DimGray,
                     Location = new Point(10, 142),
->>>>>>> 12f00b2ebf1219006addf91c63b69b64eb8559ed:quan-ly-chuoi-nha-tro/GUI/Contracts/FrmContractManager.cs
                     AutoSize = true
                 };
 
@@ -797,14 +782,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 var branchMap = new Dictionary<int, string>();
                 foreach (DataRow r in branches.Rows) if (int.TryParse(r["BranchId"]?.ToString(), out int id)) branchMap[id] = r["BranchName"]?.ToString();
 
-<<<<<<< HEAD:quan-ly-chuoi-nha-tro/GUI/FrmContractManager.cs
                 if (!contracts.Columns.Contains("TenantName")) contracts.Columns.Add("TenantName");
                 if (!contracts.Columns.Contains("TenantPhone")) contracts.Columns.Add("TenantPhone");
                 if (!contracts.Columns.Contains("RoomNumber")) contracts.Columns.Add("RoomNumber");
                 if (!contracts.Columns.Contains("BranchName")) contracts.Columns.Add("BranchName");
 
-=======
->>>>>>> 12f00b2ebf1219006addf91c63b69b64eb8559ed:quan-ly-chuoi-nha-tro/GUI/Contracts/FrmContractManager.cs
                 foreach (DataRow r in contracts.Rows)
                 {
                     if (int.TryParse(r["TenantId"]?.ToString(), out int tid) && tenantMap.TryGetValue(tid, out var tname)) r["TenantName"] = tname;
@@ -815,7 +797,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             catch { }
         }
-<<<<<<< HEAD:quan-ly-chuoi-nha-tro/GUI/FrmContractManager.cs
         private async System.Threading.Tasks.Task<DataTable> FilterContractsByRentedRoomsAsync(DataTable contracts)
         {
             if (contracts == null) return contracts;
@@ -926,13 +907,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     sb.Append(ch);
             }
             return sb.ToString().Normalize(NormalizationForm.FormC).ToLowerInvariant();
-=======
         private static string SafeReadString(DataRow row, string col)
         {
             if (row?.Table == null || !row.Table.Columns.Contains(col)) return null;
             var value = row[col];
             return value == null || value == DBNull.Value ? null : value.ToString();
->>>>>>> 12f00b2ebf1219006addf91c63b69b64eb8559ed:quan-ly-chuoi-nha-tro/GUI/Contracts/FrmContractManager.cs
         }
         private async System.Threading.Tasks.Task EnsureAllowedBranchScopeAsync()
         {

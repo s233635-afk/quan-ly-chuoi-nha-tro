@@ -274,13 +274,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Margin = new Padding(0, 4, 0, 0),
-<<<<<<< HEAD:quan-ly-chuoi-nha-tro/GUI/FrmRoomManager.cs
                 Visible = false,
                 Enabled = true
-=======
                 Visible = !_isStaffMode,
                 Enabled = !_isStaffMode
->>>>>>> 12f00b2ebf1219006addf91c63b69b64eb8559ed:quan-ly-chuoi-nha-tro/GUI/Rooms/FrmRoomManager.cs
             };
             _btnDelete.FlatAppearance.BorderSize = 0;
             _btnDelete.Click += async (s, e) => await DeleteCurrentRoomAsync();
@@ -329,16 +326,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
             stats.Controls.Add(_lblSummary);
             stats.Controls.Add(_lblRoomCount);
 
-<<<<<<< HEAD:quan-ly-chuoi-nha-tro/GUI/FrmRoomManager.cs
             toolbar.Controls.Add(actions);
             toolbar.Controls.Add(filters);
-=======
             toolbarLayout.Controls.Add(filters, 0, 0);
             toolbarLayout.Controls.Add(actions, 1, 0);
             toolbarLayout.Controls.Add(stats, 0, 1);
             toolbarLayout.SetColumnSpan(stats, 2); // Span across both columns
             toolbar.Controls.Add(toolbarLayout);
->>>>>>> 12f00b2ebf1219006addf91c63b69b64eb8559ed:quan-ly-chuoi-nha-tro/GUI/Rooms/FrmRoomManager.cs
 
             _splitContainer = new SplitContainer
             {
@@ -428,7 +422,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
                     ApplyFilter();
                 }
-<<<<<<< HEAD:quan-ly-chuoi-nha-tro/GUI/FrmRoomManager.cs
 
                 _rooms = await _bll.GetRoomsAsync() ?? new DataTable();
                 _statuses = await _bll.GetRoomStatusesAsync() ?? new DataTable();
@@ -446,9 +439,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 }
 
                 if (_branchId.HasValue && _rooms.Columns.Contains("BranchId"))
-=======
                 catch (Exception ex)
->>>>>>> 12f00b2ebf1219006addf91c63b69b64eb8559ed:quan-ly-chuoi-nha-tro/GUI/Rooms/FrmRoomManager.cs
                 {
                     ErrorLogger.HandleException(ex, "LoadRooms", "Không thể tải danh sách phòng");
                 }
@@ -1067,29 +1058,23 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var hoverColor = Color.FromArgb(245, 249, 255);
             decimal price = TryGetDecimal(row, "RoomPrice") ?? 0m;
             int occupants = TryGetInt(row, "Occupants");
-<<<<<<< HEAD:quan-ly-chuoi-nha-tro/GUI/FrmRoomManager.cs
             bool isPlaceholder = IsPlaceholderRow(row);
-=======
             string assetSummary = BuildAssetInlineSummary(roomId);
->>>>>>> 12f00b2ebf1219006addf91c63b69b64eb8559ed:quan-ly-chuoi-nha-tro/GUI/Rooms/FrmRoomManager.cs
             bool isSelected = _selectedRoomId == roomId;
             int cardWidth = CalculateCardWidth(GetRoomCardsAvailableWidth());
             var baseBackColor = isPlaceholder ? Color.FromArgb(248, 249, 251) : Color.White;
 
             var card = new Panel
             {
-<<<<<<< HEAD:quan-ly-chuoi-nha-tro/GUI/FrmRoomManager.cs
                 Width = cardWidth,
                 Height = 180,
                 BackColor = isSelected ? Color.FromArgb(236, 242, 255) : baseBackColor,
-=======
                 Width = 320,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 MinimumSize = new Size(320, 0),
                 MaximumSize = new Size(320, 0),
                 BackColor = isSelected ? Color.FromArgb(236, 242, 255) : Color.White,
->>>>>>> 12f00b2ebf1219006addf91c63b69b64eb8559ed:quan-ly-chuoi-nha-tro/GUI/Rooms/FrmRoomManager.cs
                 BorderStyle = BorderStyle.None,
                 Margin = new Padding(12, 12, 12, 12),
                 Cursor = Cursors.Hand,
@@ -1151,18 +1136,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             var lblRoom = new Label
             {
-<<<<<<< HEAD:quan-ly-chuoi-nha-tro/GUI/FrmRoomManager.cs
                 Text = $"Ph\u00f2ng {roomNumber}",
                 Font = new Font("Segoe UI", 12.5f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 79, 159),
                 Dock = DockStyle.Left,
-=======
                 Text = $"Phòng {roomNumber}",
                 Font = new Font("Segoe UI", 18, FontStyle.Bold),
                 ForeColor = Color.FromArgb(20, 50, 90),
                 Dock = DockStyle.Top,
                 Height = 30,
->>>>>>> 12f00b2ebf1219006addf91c63b69b64eb8559ed:quan-ly-chuoi-nha-tro/GUI/Rooms/FrmRoomManager.cs
                 AutoSize = false,
                 Height = 24,
                 TextAlign = ContentAlignment.MiddleLeft,
@@ -1190,15 +1172,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             var lblPrice = new Label
             {
-<<<<<<< HEAD:quan-ly-chuoi-nha-tro/GUI/FrmRoomManager.cs
                 Text = $"{price:N0}d",
                 Font = new Font("Segoe UI", 14, FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 122, 204),
-=======
                 Text = $"{price:N0}đ",
                 Font = new Font("Segoe UI", 16, FontStyle.Bold),
                 ForeColor = ModernTheme.Colors.Primary,
->>>>>>> 12f00b2ebf1219006addf91c63b69b64eb8559ed:quan-ly-chuoi-nha-tro/GUI/Rooms/FrmRoomManager.cs
                 Dock = DockStyle.Top,
                 Height = 28,
                 AutoSize = false,
@@ -1206,9 +1185,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Margin = new Padding(0, 0, 0, 6)
             };
 
-<<<<<<< HEAD:quan-ly-chuoi-nha-tro/GUI/FrmRoomManager.cs
             var infoPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0) };
-=======
             // Info: Loại, Trạng thái, Số người
             var infoPanel = new Panel
             {
@@ -1217,7 +1194,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 Padding = new Padding(0)
             };
->>>>>>> 12f00b2ebf1219006addf91c63b69b64eb8559ed:quan-ly-chuoi-nha-tro/GUI/Rooms/FrmRoomManager.cs
             var infoLayout = new TableLayoutPanel
             {
                 Dock = DockStyle.Top,
@@ -1230,15 +1206,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             var lblTypeInfo = new Label
             {
-<<<<<<< HEAD:quan-ly-chuoi-nha-tro/GUI/FrmRoomManager.cs
                 Text = $"Lo\u1ea1i: {GetTypeIcon(typeName)} {typeName}",
                 Font = new Font("Segoe UI", 11f, FontStyle.Regular),
                 ForeColor = Color.FromArgb(0, 122, 204),
-=======
                 Text = $"Loại: {GetTypeIcon(typeName)} {typeName}",
                 Font = new Font("Segoe UI", 11.5f, FontStyle.Regular),
                 ForeColor = ModernTheme.Colors.Primary,
->>>>>>> 12f00b2ebf1219006addf91c63b69b64eb8559ed:quan-ly-chuoi-nha-tro/GUI/Rooms/FrmRoomManager.cs
                 Dock = DockStyle.Top,
                 Height = 24,
                 AutoSize = false,
@@ -1248,13 +1221,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             var lblStatusInfo = new Label
             {
-<<<<<<< HEAD:quan-ly-chuoi-nha-tro/GUI/FrmRoomManager.cs
                 Text = $"Tr\u1ea1ng th\u00e1i: {statusName}",
                 Font = new Font("Segoe UI Semibold", 11.5f, FontStyle.Bold),
-=======
                 Text = $"Trạng thái: {statusName}",
                 Font = new Font("Segoe UI Semibold", 12f, FontStyle.Bold),
->>>>>>> 12f00b2ebf1219006addf91c63b69b64eb8559ed:quan-ly-chuoi-nha-tro/GUI/Rooms/FrmRoomManager.cs
                 ForeColor = Color.FromArgb(25, 55, 110),
                 Dock = DockStyle.Top,
                 Height = 24,
@@ -1266,11 +1236,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var lblOccupantsInfo = new Label
             {
                 Text = $"S\u1ed1 ng\u01b0\u1eddi: {occupants}",
-<<<<<<< HEAD:quan-ly-chuoi-nha-tro/GUI/FrmRoomManager.cs
                 Font = new Font("Segoe UI", 11f, FontStyle.Regular),
-=======
                 Font = new Font("Segoe UI", 11.5f, FontStyle.Regular),
->>>>>>> 12f00b2ebf1219006addf91c63b69b64eb8559ed:quan-ly-chuoi-nha-tro/GUI/Rooms/FrmRoomManager.cs
                 ForeColor = Color.FromArgb(40, 40, 40),
                 Dock = DockStyle.Top,
                 Height = 24,
@@ -1965,10 +1932,8 @@ private DataRow CreatePlaceholderRow(DataTable table, string roomNumber, char pr
             };
             panel.Controls.Add(lblTitle);
 
-<<<<<<< HEAD:quan-ly-chuoi-nha-tro/GUI/FrmRoomManager.cs
             var summary = BuildTenantSummary(_selectedRoomId);
             var lbl = new Label
-=======
             var grid = new DataGridView
             {
                 Dock = DockStyle.Fill,
@@ -2025,7 +1990,6 @@ private DataRow CreatePlaceholderRow(DataTable table, string roomNumber, char pr
             panel.Controls.Add(lblTitle);
 
             var container = new FlowLayoutPanel
->>>>>>> 12f00b2ebf1219006addf91c63b69b64eb8559ed:quan-ly-chuoi-nha-tro/GUI/Rooms/FrmRoomManager.cs
             {
                 Text = string.IsNullOrWhiteSpace(summary) ? "Ph\u00f2ng hi\u1ec7n ch\u01b0a c\u00f3 ng\u01b0\u1eddi s\u1eed d\u1ee5ng." : summary,
                 Dock = DockStyle.Top,
@@ -2034,8 +1998,6 @@ private DataRow CreatePlaceholderRow(DataTable table, string roomNumber, char pr
             };
             panel.Controls.Add(lbl);
 
-<<<<<<< HEAD:quan-ly-chuoi-nha-tro/GUI/FrmRoomManager.cs
-=======
             var activeTenants = new List<(DataRow tenant, DataRow history)>();
             if (_tenantHistory != null && _tenantHistory.Columns.Contains("RoomId"))
             {
@@ -2163,7 +2125,6 @@ private DataRow CreatePlaceholderRow(DataTable table, string roomNumber, char pr
             }
 
             panel.Controls.Add(container);
->>>>>>> 12f00b2ebf1219006addf91c63b69b64eb8559ed:quan-ly-chuoi-nha-tro/GUI/Rooms/FrmRoomManager.cs
             return panel;
         }
 
@@ -2211,11 +2172,8 @@ private DataRow CreatePlaceholderRow(DataTable table, string roomNumber, char pr
         {
             if (_selectedRoomId <= 0)
             {
-<<<<<<< HEAD:quan-ly-chuoi-nha-tro/GUI/FrmRoomManager.cs
                 MessageBox.Show("Ch\u1ecdn m\u1ed9t ph\u00f2ng tr\u01b0\u1edbc.", "Th\u00f4ng b\u00e1o", MessageBoxButtons.OK, MessageBoxIcon.Information);
-=======
                 ToastNotification.Warning("Chọn một phòng trước");
->>>>>>> 12f00b2ebf1219006addf91c63b69b64eb8559ed:quan-ly-chuoi-nha-tro/GUI/Rooms/FrmRoomManager.cs
                 return;
             }
 
@@ -2243,11 +2201,8 @@ private DataRow CreatePlaceholderRow(DataTable table, string roomNumber, char pr
 
                 var btnOk = new Button
                 {
-<<<<<<< HEAD:quan-ly-chuoi-nha-tro/GUI/FrmRoomManager.cs
                     Text = "C\u1eadp nh\u1eadt",
-=======
                     Text = "Cập nhật",
->>>>>>> 12f00b2ebf1219006addf91c63b69b64eb8559ed:quan-ly-chuoi-nha-tro/GUI/Rooms/FrmRoomManager.cs
                     DialogResult = DialogResult.OK,
                     Width = 110,
                     Height = 32,
@@ -2260,11 +2215,8 @@ private DataRow CreatePlaceholderRow(DataTable table, string roomNumber, char pr
 
                 var btnCancel = new Button
                 {
-<<<<<<< HEAD:quan-ly-chuoi-nha-tro/GUI/FrmRoomManager.cs
                     Text = "H\u1ee7y",
-=======
                     Text = "Hủy",
->>>>>>> 12f00b2ebf1219006addf91c63b69b64eb8559ed:quan-ly-chuoi-nha-tro/GUI/Rooms/FrmRoomManager.cs
                     DialogResult = DialogResult.Cancel,
                     Width = 90,
                     Height = 32,
@@ -2286,12 +2238,9 @@ private DataRow CreatePlaceholderRow(DataTable table, string roomNumber, char pr
                         int currentOccupants = TryGetInt(_selectedRoomRow, "Occupants");
                         if (IsOccupiedStatusId(newStatusId) && currentOccupants < 1)
                         {
-<<<<<<< HEAD:quan-ly-chuoi-nha-tro/GUI/FrmRoomManager.cs
                             MessageBox.Show("Ph\u00f2ng ch\u01b0a c\u00f3 ng\u01b0\u1eddi, kh\u00f4ng th\u1ec3 chuy\u1ec3n sang \u0110ang \u1edf.", "C\u1ea3nh b\u00e1o",
                                 MessageBoxButtons.OK, MessageBoxIcon.Warning);
-=======
                             ToastNotification.Warning("Phòng chưa có người, không thể chuyển sang Đang ở");
->>>>>>> 12f00b2ebf1219006addf91c63b69b64eb8559ed:quan-ly-chuoi-nha-tro/GUI/Rooms/FrmRoomManager.cs
                             return;
                         }
 
@@ -2300,11 +2249,8 @@ private DataRow CreatePlaceholderRow(DataTable table, string roomNumber, char pr
                     }
                     catch (Exception ex)
                     {
-<<<<<<< HEAD:quan-ly-chuoi-nha-tro/GUI/FrmRoomManager.cs
                         MessageBox.Show($"L\u1ed7i c\u1eadp nh\u1eadt: {ex.Message}", "L\u1ed7i", MessageBoxButtons.OK, MessageBoxIcon.Error);
-=======
                         ErrorLogger.HandleException(ex, "ChangeStatus", "Lỗi cập nhật trạng thái");
->>>>>>> 12f00b2ebf1219006addf91c63b69b64eb8559ed:quan-ly-chuoi-nha-tro/GUI/Rooms/FrmRoomManager.cs
                     }
                 }
             }
@@ -2314,7 +2260,6 @@ private DataRow CreatePlaceholderRow(DataTable table, string roomNumber, char pr
         {
             if (_selectedRoomRow == null)
             {
-<<<<<<< HEAD:quan-ly-chuoi-nha-tro/GUI/FrmRoomManager.cs
                 MessageBox.Show("Ch\u1ecdn m\u1ed9t ph\u00f2ng tr\u01b0\u1edbc.", "Th\u00f4ng b\u00e1o", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -2322,9 +2267,7 @@ private DataRow CreatePlaceholderRow(DataTable table, string roomNumber, char pr
             if (IsPlaceholderRow(_selectedRoomRow) || TryGetInt(_selectedRoomRow, "RoomId") <= 0)
             {
                 MessageBox.Show("Ph\u00f2ng ch\u01b0a c\u00f3 d\u1eef li\u1ec7u. Vui l\u00f2ng ch\u1ea1y seed database.", "Th\u00f4ng b\u00e1o", MessageBoxButtons.OK, MessageBoxIcon.Information);
-=======
                 ToastNotification.Warning("Chọn một phòng trước");
->>>>>>> 12f00b2ebf1219006addf91c63b69b64eb8559ed:quan-ly-chuoi-nha-tro/GUI/Rooms/FrmRoomManager.cs
                 return;
             }
 
@@ -2350,11 +2293,8 @@ private DataRow CreatePlaceholderRow(DataTable table, string roomNumber, char pr
 
                     if (occupants > 5)
                     {
-<<<<<<< HEAD:quan-ly-chuoi-nha-tro/GUI/FrmRoomManager.cs
                         MessageBox.Show("M\u1ed7i ph\u00f2ng t\u1ed1i \u0111a 5 ng\u01b0\u1eddi.", "C\u1ea3nh b\u00e1o", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-=======
                         ToastNotification.Warning("Mỗi phòng tối đa 5 người");
->>>>>>> 12f00b2ebf1219006addf91c63b69b64eb8559ed:quan-ly-chuoi-nha-tro/GUI/Rooms/FrmRoomManager.cs
                         return;
                     }
 
@@ -2373,20 +2313,17 @@ private DataRow CreatePlaceholderRow(DataTable table, string roomNumber, char pr
                         if (emptyId.HasValue)
                         {
                             statusId = emptyId.Value;
-<<<<<<< HEAD:quan-ly-chuoi-nha-tro/GUI/FrmRoomManager.cs
                             MessageBox.Show("Ph\u00f2ng ch\u01b0a c\u00f3 ng\u01b0\u1eddi, t\u1ef1 chuy\u1ec3n tr\u1ea1ng th\u00e1i v\u1ec1 Tr\u1ed1ng.", "Th\u00f4ng b\u00e1o",
                                 MessageBoxButtons.OK, MessageBoxIcon.Information);
                         }
                         else
                         {
                             MessageBox.Show("Tr\u1ea1ng th\u00e1i \u0110ang \u1edf y\u00eau c\u1ea7u \u00edt nh\u1ea5t 1 ng\u01b0\u1eddi.", "C\u1ea3nh b\u00e1o", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-=======
                             ToastNotification.Info("Phòng chưa có người, tự chuyển trạng thái về Trống");
                         }
                         else
                         {
                             ToastNotification.Warning("Trạng thái Đang ở yêu cầu ít nhất 1 người");
->>>>>>> 12f00b2ebf1219006addf91c63b69b64eb8559ed:quan-ly-chuoi-nha-tro/GUI/Rooms/FrmRoomManager.cs
                             return;
                         }
                     }
@@ -2411,11 +2348,8 @@ private DataRow CreatePlaceholderRow(DataTable table, string roomNumber, char pr
                 }
                 catch (Exception ex)
                 {
-<<<<<<< HEAD:quan-ly-chuoi-nha-tro/GUI/FrmRoomManager.cs
                     MessageBox.Show("L\u1ed7i c\u1eadp nh\u1eadt ph\u00f2ng: " + ex.Message, "L\u1ed7i", MessageBoxButtons.OK, MessageBoxIcon.Error);
-=======
                     ErrorLogger.HandleException(ex, "EditRoom", "Lỗi cập nhật phòng");
->>>>>>> 12f00b2ebf1219006addf91c63b69b64eb8559ed:quan-ly-chuoi-nha-tro/GUI/Rooms/FrmRoomManager.cs
                 }
             }
         }
@@ -2954,13 +2888,10 @@ private void UpdateRowValues(DataRow row, string roomNumber, int? roomTypeId, de
                     Text = "Cập nhật",
                     Width = 120,
                     Height = 34,
-<<<<<<< HEAD:quan-ly-chuoi-nha-tro/GUI/FrmRoomManager.cs
                     Location = new Point(okX, buttonY),
                     BackColor = Color.FromArgb(0, 122, 204),
-=======
                     Location = new Point(190, 248),
                     BackColor = ModernTheme.Colors.Primary,
->>>>>>> 12f00b2ebf1219006addf91c63b69b64eb8559ed:quan-ly-chuoi-nha-tro/GUI/Rooms/FrmRoomManager.cs
                     ForeColor = Color.White,
                     Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
                     FlatStyle = FlatStyle.Flat,
@@ -3116,11 +3047,8 @@ private void UpdateRowValues(DataRow row, string roomNumber, int? roomTypeId, de
                     _numOccupants.Value = Math.Max(_numOccupants.Minimum, Math.Min(_numOccupants.Maximum, occupants));
 
                     decimal? price = TryReadDecimal(_row, "RoomPrice");
-<<<<<<< HEAD:quan-ly-chuoi-nha-tro/GUI/FrmRoomManager.cs
                     _lblPrice.Text = price.HasValue ? price.Value.ToString("N0") : "Kh\u00f4ng x\u00e1c \u0111\u1ecbnh";
-=======
                     _lblPrice.Text = price.HasValue ? price.Value.ToString("N0") : "Không xác định";
->>>>>>> 12f00b2ebf1219006addf91c63b69b64eb8559ed:quan-ly-chuoi-nha-tro/GUI/Rooms/FrmRoomManager.cs
 
                     decimal? area = TryReadDecimal(_row, "Area");
                     if (area.HasValue) _txtArea.Text = area.Value.ToString("0.##");
