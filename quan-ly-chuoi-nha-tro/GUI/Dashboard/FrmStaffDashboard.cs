@@ -70,6 +70,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             Text = $"Staff Dashboard - {_username}";
             WindowState = FormWindowState.Maximized;
             _lblUser.Text = $"{_fullName}";
+            AdminEvents.SetActor(string.IsNullOrWhiteSpace(_fullName) ? _username : _fullName, "Staff", _userId);
+            AdminEvents.SetActivityScope("Tổng quan");
 
             // Initialize NotificationBell
             InitializeNotificationBell();
@@ -331,6 +333,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private void LoadModule(Form module, string headerTitle)
         {
             _lblHeader.Text = headerTitle;
+            AdminEvents.SetActivityScope(headerTitle);
 
             ClearCurrentModule();
 
@@ -353,6 +356,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             SetActive(_btnOverview);
             _lblHeader.Text = "Tổng quan";
+            AdminEvents.SetActivityScope("Tổng quan");
             ClearCurrentModule();
 
             _overviewHost = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent, Padding = new Padding(20) };

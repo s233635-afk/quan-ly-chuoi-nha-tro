@@ -26,6 +26,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private ComboBox _cboStatus;
         private Label _lblCount;
         private Button _btnAdd, _btnEdit, _btnDelete, _btnMarkRead, _btnRefresh;
+        private readonly Color _panelBorder = Color.FromArgb(225, 230, 236);
 
         // Tab 2: Nhắc Lịch Tự Động
         private Label _lblOverdueCount, _lblExpiredCount, _lblIncompleteCount;
@@ -82,6 +83,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _grid = MakeGrid();
             _grid.Dock = DockStyle.Fill;
             _grid.DoubleClick += async (s, e) => await EditSelectedAsync();
+            _grid.CellFormatting += Grid_CellFormatting;
 
             _txtSearch = new ModernSearchBox
             {
@@ -90,8 +92,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Margin = new Padding(0, 0, 12, 0) // Add right margin
             };
             _txtSearch.SearchTriggered += (s, e) => ApplyFilter();
-            _cboStatus = new ComboBox { Width = 160, DropDownStyle = ComboBoxStyle.DropDownList };
-            _cboStatus.Items.AddRange(new object[] { "Tất cả", "Unread", "Read", "Sent" });
+            _cboStatus = new ComboBox { Width = 180, DropDownStyle = ComboBoxStyle.DropDownList };
+            _cboStatus.Items.AddRange(new object[]
+            {
+                new StatusOption("Tất cả", null),
+                new StatusOption("Chưa đọc", "Unread"),
+                new StatusOption("Đã đọc", "Read"),
+                new StatusOption("Đã gửi", "Sent")
+            });
             _cboStatus.SelectedIndex = 0;
             _cboStatus.SelectedIndexChanged += (s, e) => ApplyFilter();
 
@@ -109,7 +117,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnDelete.Visible = !_isStaffMode;
             _btnDelete.Enabled = !_isStaffMode;
 
-            var top = new Panel { Dock = DockStyle.Top, Height = 100, Padding = new Padding(12, 10, 12, 10), BackColor = Color.White };
+            var top = new Panel { Dock = DockStyle.Top, Height = 104, Padding = new Padding(16, 10, 16, 10), BackColor = Color.White };
+            top.Paint += (s, e) =>
+            {
+                using (var pen = new Pen(_panelBorder))
+                    e.Graphics.DrawLine(pen, 0, top.Height - 1, top.Width, top.Height - 1);
+            };
             
             // Use TableLayoutPanel with 2 rows
             var tableLayout = new TableLayoutPanel
@@ -153,6 +166,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _cboStatus.Margin = new Padding(0, 0, 12, 0);
             filters.Controls.Add(_cboStatus);
             filters.Controls.Add(new Label { Text = "  " });
+            _lblCount.Margin = new Padding(8, 8, 0, 0);
             filters.Controls.Add(_lblCount);
 
             tableLayout.Controls.Add(actions, 0, 0);
@@ -322,7 +336,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (_rawTable == null) return;
             string keyword = (_txtSearch.Text ?? string.Empty).Trim().ToLowerInvariant();
-            string status = _cboStatus.SelectedIndex > 0 ? _cboStatus.Text : null;
+            string status = (_cboStatus.SelectedItem as StatusOption)?.Value;
             var rows = _rawTable.AsEnumerable();
             if (!string.IsNullOrWhiteSpace(status) && _rawTable.Columns.Contains("Status"))
                 rows = rows.Where(r => string.Equals(r["Status"]?.ToString(), status, StringComparison.OrdinalIgnoreCase));
@@ -451,14 +465,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private static DataGridView MakeGrid()
         {
             var g = new DataGridView { ReadOnly = true, SelectionMode = DataGridViewSelectionMode.FullRowSelect, MultiSelect = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, AllowUserToAddRows = false, AllowUserToDeleteRows = false, RowHeadersVisible = false, BackgroundColor = Color.White, BorderStyle = BorderStyle.None };
-            g.EnableHeadersVisualStyles = false;
-            g.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(0, 120, 215);
-            g.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            g.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
-            g.DefaultCellStyle.Font = new Font("Segoe UI", 10, FontStyle.Regular);
-            g.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 249, 255);
-            g.DefaultCellStyle.SelectionBackColor = Color.FromArgb(232, 244, 252);
-            g.DefaultCellStyle.SelectionForeColor = Color.Black;
+            UiKit.StyleGrid(g);
+            g.ColumnHeadersHeight = 34;
             return g;
         }
 
@@ -468,6 +476,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
             b.FlatAppearance.BorderSize = 0;
             b.Click += onClick;
             return b;
+        }
+
+        private void Grid_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
+        {
+            if (_grid.Columns[e.ColumnIndex].Name != "Status") return;
+            if (e.Value == null) return;
+            e.Value = ToVietnameseStatus(e.Value.ToString());
+            e.FormattingApplied = true;
         }
 
 
@@ -541,6 +557,36 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             int i = ReadInt(row, cols);
             return i > 0 ? (int?)i : null;
+        }
+
+        private static string ToVietnameseStatus(string status)
+        {
+            if (string.IsNullOrWhiteSpace(status)) return "Chưa xác định";
+            switch (status.Trim().ToLowerInvariant())
+            {
+                case "unread":
+                    return "Chưa đọc";
+                case "read":
+                    return "Đã đọc";
+                case "sent":
+                    return "Đã gửi";
+                default:
+                    return status;
+            }
+        }
+
+        private sealed class StatusOption
+        {
+            public StatusOption(string text, string value)
+            {
+                Text = text;
+                Value = value;
+            }
+
+            public string Text { get; }
+            public string Value { get; }
+
+            public override string ToString() => Text;
         }
         #endregion
     }

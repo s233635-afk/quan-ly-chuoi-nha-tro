@@ -414,12 +414,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private static decimal ReadDecimal(DataRow row, string col)
         {
             if (row == null || row.Table == null || !row.Table.Columns.Contains(col)) return 0m;
-            var v = row[col];
-            if (v == null || v == DBNull.Value) return 0m;
-            if (v is decimal d) return d;
-            if (decimal.TryParse(v.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed)) return parsed;
-            if (decimal.TryParse(v.ToString(), NumberStyles.Any, CultureInfo.CurrentCulture, out parsed)) return parsed;
-            return 0m;
+            return TextFixer.ReadDecimal(row, col);
         }
 
         private decimal ClampMoney(decimal value)
@@ -639,8 +634,30 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private static decimal? TryGetDecimal(DataRow row, string column)
         {
             if (row == null || row.Table == null || !row.Table.Columns.Contains(column)) return null;
-            return decimal.TryParse(row[column]?.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var value)
-                ? value
+            var value = row[column];
+            if (value == null || value == DBNull.Value) return null;
+
+            switch (value)
+            {
+                case decimal d:
+                    return d;
+                case double db:
+                    return Convert.ToDecimal(db);
+                case float f:
+                    return Convert.ToDecimal(f);
+                case int i:
+                    return i;
+                case long l:
+                    return l;
+                case short s:
+                    return s;
+            }
+
+            var parsed = TextFixer.ParseCurrency(value.ToString());
+            if (parsed.HasValue) return parsed.Value;
+
+            return decimal.TryParse(value.ToString(), NumberStyles.Any, CultureInfo.CurrentCulture, out var current)
+                ? current
                 : (decimal?)null;
         }
 
