@@ -9,12 +9,11 @@ namespace QuanLyNhaTro.DAL
 {
     public partial class DatabaseHelper
     {
-        private const string ConnectionStringName = "QuanLyNhaTro";
-        private const int DefaultDbConnectTimeoutSeconds = 10;
+        private const int DefaultDbConnectTimeoutSeconds = 30; // Increased timeout
         private const int DefaultDbCommandTimeoutSeconds = 10;
 
-        private const string FallbackConnectionString =
-            "Data Source=(LocalDB)\\MSSQLLocalDB;Initial Catalog=db_ac1f11_quanlynhatro;Integrated Security=True";
+        private const string FallbackLocalConnectionString =
+            "Data Source=(LocalDB)\\MSSQLLocalDB;Initial Catalog=db_ac1f11_quanlynhatro;Integrated Security=True;Connect Timeout=30;";
 
         private readonly string connectionString;
         private readonly int commandTimeoutSeconds;
@@ -75,37 +74,31 @@ namespace QuanLyNhaTro.DAL
 
         private static string ResolveConnectionString()
         {
+            bool useLocalDb = ReadBoolAppSetting("UseLocalDb", false);
+            string connectionStringName = useLocalDb ? "QuanLyNhaTro_Local" : "QuanLyNhaTro_Remote";
+
             string raw = null;
             try
             {
-                raw = ConfigurationManager.ConnectionStrings[ConnectionStringName]?.ConnectionString;
+                raw = ConfigurationManager.ConnectionStrings[connectionStringName]?.ConnectionString;
             }
             catch
             {
-                // ignore
+                // In case of config system errors, ignore and proceed to fallback.
             }
 
             if (string.IsNullOrWhiteSpace(raw))
-                raw = FallbackConnectionString;
-
-            try
             {
-                var builder = new SqlConnectionStringBuilder(raw);
-                bool useLocalDb = ReadBoolAppSetting("UseLocalDb", false);
-                if (useLocalDb && !DatabaseInitializer.IsLocalDatabaseSource(builder.DataSource))
+                if (useLocalDb)
                 {
-                    builder = new SqlConnectionStringBuilder(FallbackConnectionString);
+                    // If local is intended but not found in App.config, use the hardcoded fallback.
+                    return FallbackLocalConnectionString;
                 }
-                if (!HasExplicitTimeout(raw))
-                    builder.ConnectTimeout = DefaultDbConnectTimeoutSeconds;
-                return builder.ConnectionString;
+                // If remote is intended but not found, we cannot continue.
+                throw new ConfigurationErrorsException($"Connection string '{connectionStringName}' was not found in App.config and no fallback is available for a remote connection.");
             }
-            catch
-            {
-                if (!HasExplicitTimeout(raw))
-                    raw = raw.TrimEnd(';') + ";Connect Timeout=" + DefaultDbConnectTimeoutSeconds;
-                return raw;
-            }
+
+            return raw;
         }
 
         private static int GetConnectTimeoutSeconds(string cs)

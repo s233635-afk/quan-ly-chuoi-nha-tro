@@ -183,7 +183,7 @@ namespace quan_ly_chuoi_nha_tro.GUI.Rooms.Components
             // Price
             var lblPrice = new Label
             {
-                Text = $"{price:N0}Ä‘",
+                Text = $"{price:N0}đ",
                 Font = new Font("Segoe UI", 16, FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 122, 204),
                 Dock = DockStyle.Top,
@@ -209,7 +209,7 @@ namespace quan_ly_chuoi_nha_tro.GUI.Rooms.Components
         {
             var lblRoom = new Label
             {
-                Text = $"PhĂ²ng {roomNumber}",
+                Text = $"Phòng {roomNumber}",
                 Font = new Font("Segoe UI", 18, FontStyle.Bold),
                 ForeColor = Color.FromArgb(20, 50, 90),
                 Dock = DockStyle.Top,
@@ -257,7 +257,7 @@ namespace quan_ly_chuoi_nha_tro.GUI.Rooms.Components
 
             var lblTypeInfo = new Label
             {
-                Text = $"Loáº¡i: {GetTypeIcon(typeName)} {typeName}",
+                Text = $"Loại: {GetTypeIcon(typeName)} {typeName}",
                 Font = new Font("Segoe UI", 11.5f, FontStyle.Regular),
                 ForeColor = Color.FromArgb(0, 122, 204),
                 Dock = DockStyle.Top,
@@ -270,7 +270,7 @@ namespace quan_ly_chuoi_nha_tro.GUI.Rooms.Components
 
             var lblStatusInfo = new Label
             {
-                Text = $"Tráº¡ng thĂ¡i: {statusName}",
+                Text = $"Trạng thái: {statusName}",
                 Font = new Font("Segoe UI Semibold", 12f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(25, 55, 110),
                 Dock = DockStyle.Top,
@@ -283,7 +283,7 @@ namespace quan_ly_chuoi_nha_tro.GUI.Rooms.Components
 
             var lblOccupantsInfo = new Label
             {
-                Text = $"Sá»‘ ngÆ°á»i: {occupants}",
+                Text = $"Số người: {occupants}",
                 Font = new Font("Segoe UI", 11.5f, FontStyle.Regular),
                 ForeColor = Color.FromArgb(40, 40, 40),
                 Dock = DockStyle.Top,
@@ -302,7 +302,7 @@ namespace quan_ly_chuoi_nha_tro.GUI.Rooms.Components
                 assetSummary = TextFixer.FixUtf8Mojibake(assetSummary) ?? assetSummary;
                 var lblAssetsInfo = new Label
                 {
-                    Text = $"TĂ i sáº£n: {assetSummary}",
+                                        Text = $"Tài sản: {assetSummary}",
                     Font = new Font("Segoe UI", 10.5f),
                     ForeColor = Color.FromArgb(60, 60, 60),
                     Dock = DockStyle.Top,
@@ -356,21 +356,21 @@ namespace quan_ly_chuoi_nha_tro.GUI.Rooms.Components
 
         private string GetTypeIcon(string typeName)
         {
-            if (string.IsNullOrWhiteSpace(typeName)) return "đŸ ";
+            if (string.IsNullOrWhiteSpace(typeName)) return "🏠";
             var normalized = typeName.ToLowerInvariant();
-            if (normalized.Contains("Ä‘Æ¡n") || normalized.Contains("single")) return "đŸ›ï¸";
-            if (normalized.Contains("Ä‘Ă´i") || normalized.Contains("double")) return "đŸ›ï¸đŸ›ï¸";
-            if (normalized.Contains("vip") || normalized.Contains("premium")) return "â­";
-            return "đŸ ";
+            if (normalized.Contains("đơn") || normalized.Contains("single")) return "🛌️";
+            if (normalized.Contains("đôi") || normalized.Contains("double")) return "🛌️🛌️";
+            if (normalized.Contains("vip") || normalized.Contains("premium")) return "⭐";
+            return "🏠";
         }
 
         private string GetOccupancyIcon(int occupants, string typeName)
         {
-            if (occupants > 0) return "đŸ‘¥";
-            if (string.IsNullOrWhiteSpace(typeName)) return "đŸ”‘";
+            if (occupants > 0) return "👥";
+            if (string.IsNullOrWhiteSpace(typeName)) return "🔒";
             var normalized = typeName.ToLowerInvariant();
-            if (normalized.Contains("vip") || normalized.Contains("premium")) return "â­";
-            return "đŸ”‘";
+            if (normalized.Contains("vip") || normalized.Contains("premium")) return "⭐";
+            return "🔒";
         }
     }
 }

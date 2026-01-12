@@ -363,6 +363,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     await _bll.UpdateContractAsync(id, ContractNumber, TenantId, RoomId, SignDate, StartDate, EndDate, RentalPrice, DepositRequired, Terms, ContractPdfPath, Status);
                 }
 
+                await SyncDepositFromContractAsync();
+
                 AdminEvents.NotifyDataChanged();
                 DataSyncManager.NotifyContractsChanged();
                 DataSyncManager.NotifyTenantsChanged();
@@ -375,6 +377,89 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 ErrorLogger.HandleException(ex, "SaveContract", "Lỗi lưu hợp đồng");
             }
+        }
+
+        private async System.Threading.Tasks.Task SyncDepositFromContractAsync()
+        {
+            if (!DepositRequired.HasValue || DepositRequired.Value <= 0) return;
+
+            try
+            {
+                var deposits = await _bll.GetDepositsAsync();
+                if (deposits == null || !deposits.Columns.Contains("TenantId") || !deposits.Columns.Contains("RoomId")) return;
+
+                var existing = deposits.AsEnumerable()
+                    .Where(r => r["TenantId"]?.ToString() == TenantId.ToString()
+                             && r["RoomId"]?.ToString() == RoomId.ToString())
+                    .OrderByDescending(r => TryReadDate(r, "DepositDate") ?? TryReadDate(r, "CreatedDate") ?? DateTime.MinValue)
+                    .FirstOrDefault();
+
+                var depositDate = SignDate ?? StartDate;
+                if (existing == null)
+                {
+                    await _bll.AddDepositAsync(
+                        TenantId,
+                        RoomId,
+                        DepositRequired.Value,
+                        depositDate,
+                        "Official",
+                        "Pending",
+                        null,
+                        null,
+                        $"[Hợp đồng] Tạo cọc từ {ContractNumber}");
+                }
+                else
+                {
+                    int depositId = Convert.ToInt32(existing["DepositId"]);
+                    string type = existing.Table.Columns.Contains("DepositType") ? existing["DepositType"]?.ToString() : "Official";
+                    string status = existing.Table.Columns.Contains("Status") ? existing["Status"]?.ToString() : "Pending";
+                    decimal amount = DepositRequired.Value;
+                    decimal? returned = TryReadDecimal(existing, "ReturnedAmount");
+                    DateTime? returnedDate = TryReadDate(existing, "ReturnedDate");
+                    string notes = existing.Table.Columns.Contains("Notes") ? existing["Notes"]?.ToString() : null;
+                    notes = AppendNote(notes, $"[Hợp đồng] Đồng bộ cọc từ {ContractNumber}");
+
+                    await _bll.UpdateDepositAsync(
+                        depositId,
+                        TenantId,
+                        RoomId,
+                        amount,
+                        depositDate,
+                        type,
+                        status,
+                        returned,
+                        returnedDate,
+                        notes);
+                }
+            }
+            catch
+            {
+                // ignore sync errors
+            }
+        }
+
+        private static DateTime? TryReadDate(DataRow row, string col)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(col)) return null;
+            var value = row[col];
+            if (value == null || value == DBNull.Value) return null;
+            if (value is DateTime dt) return dt.Date;
+            return DateTime.TryParse(value.ToString(), out var parsed) ? parsed.Date : (DateTime?)null;
+        }
+
+        private static decimal? TryReadDecimal(DataRow row, string col)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(col)) return null;
+            if (decimal.TryParse(row[col]?.ToString(), out var val)) return val;
+            return null;
+        }
+
+        private static string AppendNote(string notes, string extra)
+        {
+            if (string.IsNullOrWhiteSpace(extra)) return notes;
+            if (string.IsNullOrWhiteSpace(notes)) return extra;
+            if (notes.Contains(extra)) return notes;
+            return notes.TrimEnd() + " " + extra;
         }
     }
 }

@@ -5,7 +5,7 @@ namespace QuanLyNhaTro.BLL.Models
     /// <summary>
     /// Result of a validation operation
     /// </summary>
-    public class ValidationResult
+    public class RoomValidationResult
     {
         public bool IsValid => Errors.Count == 0;
         public List<string> Errors { get; } = new List<string>();

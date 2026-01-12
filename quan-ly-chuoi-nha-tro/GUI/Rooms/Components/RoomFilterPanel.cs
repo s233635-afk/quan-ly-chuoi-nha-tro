@@ -13,7 +13,7 @@ namespace quan_ly_chuoi_nha_tro.GUI.Rooms.Components
     {
         public event EventHandler FilterChanged;
 
-        private const string SearchPlaceholder = "TĂ¬m theo sá»‘ phĂ²ng/loáº¡i...";
+        private const string SearchPlaceholder = "Tìm theo số phòng/loại...";
         
         private TextBox _txtSearch;
         private ComboBox _cboStatus;
@@ -87,7 +87,7 @@ namespace quan_ly_chuoi_nha_tro.GUI.Rooms.Components
 
             var lblSearch = new Label
             {
-                Text = "TĂ¬m kiáº¿m:",
+                Text = "Tìm kiếm:",
                 AutoSize = true,
                 Margin = new Padding(0, 8, 6, 0)
             };
@@ -105,7 +105,7 @@ namespace quan_ly_chuoi_nha_tro.GUI.Rooms.Components
 
             var lblStatus = new Label
             {
-                Text = "Tráº¡ng thĂ¡i:",
+                Text = "Trạng thái:",
                 AutoSize = true,
                 Margin = new Padding(0, 8, 6, 0)
             };
@@ -120,7 +120,7 @@ namespace quan_ly_chuoi_nha_tro.GUI.Rooms.Components
 
             var lblLimit = new Label
             {
-                Text = "Hiá»ƒn thá»‹:",
+                Text = "Hiển thị:",
                 AutoSize = true,
                 Margin = new Padding(0, 8, 6, 0)
             };
@@ -160,7 +160,7 @@ namespace quan_ly_chuoi_nha_tro.GUI.Rooms.Components
 
             _btnSearch = new ModernButton
             {
-                Text = "TĂ¬m",
+                Text = "Tìm",
                 Width = 80,
                 Height = 32,
                 BaseColor = Color.FromArgb(0, 122, 204),
@@ -174,7 +174,7 @@ namespace quan_ly_chuoi_nha_tro.GUI.Rooms.Components
 
             _btnRefresh = new ModernButton
             {
-                Text = "LĂ m má»›i",
+                                Text = "Làm mới",
                 Width = 88,
                 Height = 32,
                 BaseColor = Color.FromArgb(40, 167, 69),
@@ -196,7 +196,7 @@ namespace quan_ly_chuoi_nha_tro.GUI.Rooms.Components
             var dt = new DataTable();
             dt.Columns.Add("StatusId", typeof(int));
             dt.Columns.Add("StatusName", typeof(string));
-            dt.Rows.Add(0, "Táº¥t cáº£");
+            dt.Rows.Add(0, "Tất cả");
 
             if (statuses != null && statuses.Columns.Contains("StatusId"))
             {

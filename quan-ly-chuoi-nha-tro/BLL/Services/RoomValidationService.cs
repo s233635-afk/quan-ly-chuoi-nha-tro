@@ -10,23 +10,23 @@ namespace QuanLyNhaTro.BLL.Services
         /// <summary>
         /// Validate room data before creating or updating
         /// </summary>
-        public ValidationResult ValidateRoomData(string roomNumber, int? roomTypeId, decimal? roomPrice,  decimal? area)
+        public RoomValidationResult ValidateRoomData(string roomNumber, int? roomTypeId, decimal? roomPrice,  decimal? area)
         {
-            var result = new ValidationResult();
-
-            if (string.IsNullOrWhiteSpace(roomNumber))
-                result.AddError("Sá»‘ phĂ²ng khĂ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng");
-            else if (roomNumber.Length > 20)
-                result.AddError("Sá»‘ phĂ²ng khĂ´ng Ä‘Æ°á»£c dĂ i quĂ¡ 20 kĂ½ tá»±");
-
-            if (!roomTypeId.HasValue || roomTypeId.Value <= 0)
-                result.AddError("Loáº¡i phĂ²ng khĂ´ng há»£p lá»‡");
-
-            if (roomPrice.HasValue && roomPrice.Value < 0)
-                result.AddError("GiĂ¡ phĂ²ng khĂ´ng Ä‘Æ°á»£c Ă¢m");
-
-            if (area.HasValue && area.Value <= 0)
-                result.AddError("Diá»‡n tĂ­ch phĂ²ng pháº£i lá»›n hÆ¡n 0");
+                        var result = new RoomValidationResult();
+            
+                        if (string.IsNullOrWhiteSpace(roomNumber))
+                            result.AddError("Số phòng không được để trống");
+                        else if (roomNumber.Length > 20)
+                            result.AddError("Số phòng không được dài quá 20 ký tự");
+            
+                        if (!roomTypeId.HasValue || roomTypeId.Value <= 0)
+                            result.AddError("Loại phòng không hợp lệ");
+            
+                        if (roomPrice.HasValue && roomPrice.Value < 0)
+                            result.AddError("Giá phòng không được âm");
+            
+                        if (area.HasValue && area.Value <= 0)
+                            result.AddError("Diện tích phòng phải lớn hơn 0");
 
             return result;
         }
@@ -34,22 +34,22 @@ namespace QuanLyNhaTro.BLL.Services
         /// <summary>
         /// Validate room status change
         /// </summary>
-        public ValidationResult ValidateStatusChange(string currentStatus, string newStatus, int occupants)
+        public RoomValidationResult ValidateStatusChange(string currentStatus, string newStatus, int occupants)
         {
-            var result = new ValidationResult();
+            var result = new RoomValidationResult();
 
             if (string.IsNullOrWhiteSpace(newStatus))
             {
-                result.AddError("Tráº¡ng thĂ¡i má»›i khĂ´ng há»£p lá»‡");
+                result.AddError("Trạng thái mới không hợp lệ");
                 return result;
             }
 
             // Cannot change to "empty" if room has occupants
-            var isChangingToEmpty = newStatus.ToLowerInvariant().Contains("trá»‘ng") || 
+            var isChangingToEmpty = newStatus.ToLowerInvariant().Contains("trống") || 
                                    newStatus.ToLowerInvariant().Contains("empty");
             if (isChangingToEmpty && occupants > 0)
             {
-                result.AddError($"KhĂ´ng thá»ƒ Ä‘á»•i sang tráº¡ng thĂ¡i trá»‘ng khi phĂ²ng cĂ²n {occupants} ngÆ°á»i á»Ÿ");
+                result.AddError($"Không thể đổi sang trạng thái trống khi phòng còn {occupants} người ở");
             }
 
             return result;

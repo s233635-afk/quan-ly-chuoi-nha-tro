@@ -211,14 +211,12 @@
     <Compile Include="BLL\Assets\AssetBLL.cs" />
     <Compile Include="BLL\Notifications\NotificationBLL.cs" />
     <Compile Include="BLL\SystemSettings\SystemSettingBLL.cs" />
-    <!-- Temporarily disabled due to encoding issues from previous session
     <Compile Include="BLL\Models\RoomDataContext.cs" />
     <Compile Include="BLL\Models\RoomFilter.cs" />
     <Compile Include="BLL\Models\RoomValidationResult.cs" />
     <Compile Include="BLL\Services\RoomDataService.cs" />
     <Compile Include="BLL\Services\RoomUIService.cs" />
     <Compile Include="BLL\Services\RoomValidationService.cs" />
-    -->
     <Compile Include="DAL\DatabaseHelper.cs" />
     <Compile Include="DAL\DatabaseInitializer.cs" />
     <Compile Include="DAL\BranchDAL.cs" />
@@ -397,17 +395,15 @@
     <Compile Include="GUI\Rooms\FrmRoomDetailForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <!-- Temporarily disabled - Room components depend on RoomUIService which has encoding issues
     <Compile Include="GUI\Rooms\Components\RoomCard.cs">
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="GUI\Rooms\Components\RoomFilterPanel.cs">
-      <SubType>UserControl</SubType>
+      <SubType>Component</SubType>
     </Compile>
     <Compile Include="GUI\Rooms\Components\RoomStatsPanel.cs">
-      <SubType>UserControl</SubType>
+      <SubType>Component</SubType>
     </Compile>
-    -->
     <Compile Include="GUI\Shared\DataSyncManager.cs" />
     <Compile Include="GUI\Shared\ModernControls.cs">
       <SubType>Component</SubType>

@@ -36,12 +36,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private NumericUpDown numAmount;
         private Button btnPayFull;
         private ComboBox cboMethod;
+        private Label lblReference;
         private TextBox txtReference;
+        private Button btnCopyReference;
         private TextBox txtNotes;
         private Button btnSave;
         private Button btnCancel;
         private Button btnExportInvoice;
         private bool _exportAllowed;
+        private string _autoTransferCode;
 
         // Bank & QR Controls
         private Panel pnlBankInfo;
@@ -292,6 +295,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 ThousandsSeparator = true,
                 Width = 200
             };
+            numAmount.ValueChanged += async (s, e) =>
+            {
+                if (cboMethod.SelectedItem?.ToString() == "Chuyển khoản")
+                    await LoadAndGenerateQrAsync();
+            };
             btnPayFull = new ModernButton { Text = "Thu đủ", Width = 90, Height = 28, BaseColor = Color.FromArgb(240, 240, 240), BackColor = Color.Transparent, ForeColor = Color.Black };
             btnPayFull.Click += (s, e) =>
             {
@@ -376,9 +384,27 @@ namespace quan_ly_chuoi_nha_tro.GUI
             flowPayment.Controls.Add(pnlBankInfo);
 
             // Reference
-            var lblRef = new Label { Text = "Tham chiếu:", Width = labelWidth, TextAlign = ContentAlignment.MiddleLeft };
+            lblReference = new Label { Text = "Tham chiếu:", Width = labelWidth, TextAlign = ContentAlignment.MiddleLeft };
             txtReference = new TextBox { Width = 300 };
-            flowPayment.Controls.Add(CreateRow(lblRef, txtReference));
+            btnCopyReference = new ModernButton
+            {
+                Text = "📋 Copy mã",
+                Width = 110,
+                Height = 28,
+                BaseColor = Color.FromArgb(240, 240, 240),
+                BackColor = Color.Transparent,
+                ForeColor = Color.Black,
+                Visible = false
+            };
+            btnCopyReference.Click += (s, e) =>
+            {
+                if (!string.IsNullOrWhiteSpace(txtReference.Text))
+                {
+                    Clipboard.SetText(txtReference.Text.Trim());
+                    ToastNotification.Success("Đã sao chép mã chuyển khoản");
+                }
+            };
+            flowPayment.Controls.Add(CreateRow(lblReference, txtReference, btnCopyReference));
 
             // Notes
             var lblNotes = new Label { Text = "Ghi chú:", Width = labelWidth, TextAlign = ContentAlignment.TopLeft };
@@ -446,6 +472,29 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     var method = _existingPayment["PaymentMethod"]?.ToString();
                     cboMethod.SelectedItem = MapPaymentMethodToDisplay(method);
                 }
+
+                if (_existingPayment != null)
+                {
+                    if (_existingPayment.Table.Columns.Contains("PaymentDate") &&
+                        DateTime.TryParse(_existingPayment["PaymentDate"]?.ToString(), out var payDate))
+                        dtPaymentDate.Value = payDate;
+
+                    if (_existingPayment.Table.Columns.Contains("PaymentAmount") &&
+                        decimal.TryParse(_existingPayment["PaymentAmount"]?.ToString(), out var payAmount))
+                    {
+                        if (payAmount < numAmount.Minimum) payAmount = numAmount.Minimum;
+                        if (payAmount > numAmount.Maximum) payAmount = numAmount.Maximum;
+                        numAmount.Value = payAmount;
+                    }
+
+                    if (_existingPayment.Table.Columns.Contains("TransactionReference"))
+                        txtReference.Text = _existingPayment["TransactionReference"]?.ToString();
+
+                    if (_existingPayment.Table.Columns.Contains("Notes"))
+                        txtNotes.Text = _existingPayment["Notes"]?.ToString();
+                }
+
+                UpdateBankInfoVisibility();
             }
         }
 
@@ -598,11 +647,45 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             bool isTransfer = cboMethod.SelectedItem?.ToString() == "Chuyển khoản";
             pnlBankInfo.Visible = isTransfer;
+            UpdateReferenceDisplay(isTransfer);
 
             if (isTransfer)
             {
                 await LoadAndGenerateQrAsync();
             }
+        }
+
+        private void UpdateReferenceDisplay(bool isTransfer)
+        {
+            if (isTransfer)
+            {
+                lblReference.Text = "Mã chuyển khoản:";
+                btnCopyReference.Visible = true;
+                if (string.IsNullOrWhiteSpace(_autoTransferCode))
+                    _autoTransferCode = BuildTransferCode();
+                if (!string.IsNullOrWhiteSpace(txtReference.Text))
+                    _autoTransferCode = txtReference.Text.Trim();
+                if (string.IsNullOrWhiteSpace(txtReference.Text) || txtReference.Text == _autoTransferCode)
+                    txtReference.Text = _autoTransferCode;
+                txtReference.ReadOnly = true;
+            }
+            else
+            {
+                lblReference.Text = "Tham chiếu:";
+                btnCopyReference.Visible = false;
+                txtReference.ReadOnly = false;
+            }
+        }
+
+        private string BuildTransferCode()
+        {
+            string invoiceNumber = ReadInvoiceValue("InvoiceNumber");
+            int invoiceId = ReadInt(_invoiceRow, "InvoiceId");
+            if (!string.IsNullOrWhiteSpace(invoiceNumber))
+                return $"TT-{invoiceNumber.Trim()}";
+            if (invoiceId > 0)
+                return $"TT-INV{invoiceId}";
+            return $"TT-{DateTime.Now:yyyyMMddHHmmss}";
         }
 
         private async Task<(string BankId, string AccountNumber, string AccountName, string Template)> ResolveBankSettingsAsync()
@@ -681,7 +764,16 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 var bank = await ResolveBankSettingsAsync();
                 decimal amount = numAmount.Value;
-                string description = $"THANH TOAN HOA DON {ReadInvoiceValue("InvoiceNumber")}";
+                if (string.IsNullOrWhiteSpace(_autoTransferCode))
+                    _autoTransferCode = BuildTransferCode();
+                string transferCode = string.IsNullOrWhiteSpace(txtReference.Text)
+                    ? _autoTransferCode
+                    : txtReference.Text.Trim();
+                _autoTransferCode = transferCode;
+                string invoiceNumber = ReadInvoiceValue("InvoiceNumber");
+                string description = string.IsNullOrWhiteSpace(invoiceNumber)
+                    ? _autoTransferCode
+                    : $"{_autoTransferCode} {invoiceNumber}";
 
                 // VietQR API URL
                 // https://img.vietqr.io/image/<BANK_ID>-<ACCOUNT_NO>-<TEMPLATE>.png?amount=<AMOUNT>&addInfo=<CONTENT>&accountName=<NAME>
@@ -693,6 +785,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 lblBankDetails.Text = $"NGÂN HÀNG: {bank.BankId}\n" +
                                      $"SỐ TÀI KHOẢN: {bank.AccountNumber}\n" +
                                      $"CHỦ TÀI KHOẢN: {bank.AccountName}\n\n" +
+                                     $"MÃ CHUYỂN KHOẢN: {_autoTransferCode}\n" +
                                      $"NỘI DUNG: {description}\n" +
                                      $"SỐ TIỀN: {amount:N0} VNĐ";
 

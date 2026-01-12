@@ -26,7 +26,7 @@ namespace QuanLyNhaTro.BLL.Services
                 {
                     var rawName = SafeReadString(r, "AssetName");
                     var fixedName = NormalizeAssetText(rawName);
-                    return fixedName ?? $"TĂ i sáº£n #{SafeToString(r, "AssetId") ?? "?"}";
+                    return fixedName ?? $"Tài sản #{SafeToString(r, "AssetId") ?? "?"}";
                 })
                 .Select(g => new
                 {
@@ -40,14 +40,14 @@ namespace QuanLyNhaTro.BLL.Services
             if (grouped.Count == 0) return null;
 
             var top = grouped.Take(2)
-                .Select(g => $"{g.Name}Ă—{g.Quantity}")
+                .Select(g => $"{g.Name}×{g.Quantity}")
                 .ToList();
 
             var summary = string.Join(", ", top);
             int remaining = grouped.Count - top.Count;
             if (remaining > 0)
             {
-                summary = string.IsNullOrEmpty(summary) ? $"(+{remaining} má»¥c)" : $"{summary} +{remaining}";
+                summary = string.IsNullOrEmpty(summary) ? $"(+{remaining} mục)" : $"{summary} +{remaining}";
             }
 
             return summary;
@@ -205,8 +205,8 @@ namespace QuanLyNhaTro.BLL.Services
         {
             if (string.IsNullOrWhiteSpace(typeName)) return "other";
             var normalized = (typeName ?? "").ToLowerInvariant().Trim();
-            if (normalized.Contains("Ä‘Æ¡n") || normalized.Contains("single")) return "single";
-            if (normalized.Contains("Ä‘Ă´i") || normalized.Contains("double")) return "double";
+            if (normalized.Contains("đơn") || normalized.Contains("single")) return "single";
+            if (normalized.Contains("đôi") || normalized.Contains("double")) return "double";
             if (normalized.Contains("vip") || normalized.Contains("premium")) return "premium";
             return "other";
         }
@@ -248,8 +248,8 @@ namespace QuanLyNhaTro.BLL.Services
             if (row == null || !row.Table.Columns.Contains(columnName)) return null;
             var value = row[columnName]?.ToString();
             if (string.IsNullOrWhiteSpace(value)) return null;
-            var fixed = TextFixer.ForceFixUtf8Mojibake(value) ?? value;
-            return fixed.Trim();
+            var fixedValue = TextFixer.ForceFixUtf8Mojibake(value) ?? value;
+            return fixedValue.Trim();
         }
 
         private static int TryGetInt(DataRow row, string columnName)

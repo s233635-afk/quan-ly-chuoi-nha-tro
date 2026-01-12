@@ -135,7 +135,7 @@ namespace QuanLyNhaTro.BLL.Services
                     {
                         var statusText = r["Status"]?.ToString() ?? string.Empty;
                         isActive = statusText.IndexOf("active", StringComparison.OrdinalIgnoreCase) >= 0
-                                   || statusText.IndexOf("Ä‘ang", StringComparison.OrdinalIgnoreCase) >= 0;
+                                   || statusText.IndexOf("đang", StringComparison.OrdinalIgnoreCase) >= 0;
                     }
 
                     if (!isActive) continue;
@@ -228,7 +228,7 @@ namespace QuanLyNhaTro.BLL.Services
         {
             if (statuses == null || !statuses.Columns.Contains("StatusId")) return null;
             var emptyRow = statuses.AsEnumerable()
-                .FirstOrDefault(r => (SafeToString(r, "StatusName") ?? "").IndexOf("trá»‘ng", StringComparison.OrdinalIgnoreCase) >= 0
+                .FirstOrDefault(r => (SafeToString(r, "StatusName") ?? "").IndexOf("trống", StringComparison.OrdinalIgnoreCase) >= 0
                                   || (SafeToString(r, "StatusName") ?? "").IndexOf("empty", StringComparison.OrdinalIgnoreCase) >= 0);
             return emptyRow != null && int.TryParse(emptyRow["StatusId"]?.ToString(), out var id) ? (int?)id : null;
         }
@@ -237,7 +237,7 @@ namespace QuanLyNhaTro.BLL.Services
         {
             if (statuses == null) return null;
             var emptyRow = statuses.AsEnumerable()
-                .FirstOrDefault(r => (SafeToString(r, "StatusName") ?? "").IndexOf("trá»‘ng", StringComparison.OrdinalIgnoreCase) >= 0
+                .FirstOrDefault(r => (SafeToString(r, "StatusName") ?? "").IndexOf("trống", StringComparison.OrdinalIgnoreCase) >= 0
                                   || (SafeToString(r, "StatusName") ?? "").IndexOf("empty", StringComparison.OrdinalIgnoreCase) >= 0);
             return SafeToString(emptyRow, "StatusName");
         }
@@ -246,7 +246,7 @@ namespace QuanLyNhaTro.BLL.Services
         {
             if (string.IsNullOrWhiteSpace(statusName)) return false;
             var lower = statusName.ToLowerInvariant();
-            return lower.Contains("Ä‘ang") || lower.Contains("occupied") || lower.Contains("thuĂª");
+            return lower.Contains("đang") || lower.Contains("occupied") || lower.Contains("thuê");
         }
     }
 }
