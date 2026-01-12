@@ -11,15 +11,17 @@ namespace quan_ly_chuoi_nha_tro.GUI
     public class FrmRoomPaymentSelector : Form
     {
         private readonly AdminDataBLL _bll;
+        private readonly int? _userId;
         private DataTable _invoices;
 
         private DataGridView _grid;
         private Button _btnPay;
         private Button _btnClose;
 
-        public FrmRoomPaymentSelector(AdminDataBLL bll)
+        public FrmRoomPaymentSelector(AdminDataBLL bll, int? userId = null)
         {
             _bll = bll;
+            _userId = userId;
             InitializeComponent();
             Load += async (s, e) => await LoadInvoicesAsync();
         }
@@ -142,7 +144,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 return;
             }
 
-            using (var frm = new FrmPaymentWithTenantInfo(_bll, row))
+            using (var frm = new FrmPaymentWithTenantInfo(_bll, row, null, _userId))
             {
                 if (frm.ShowDialog(this) == DialogResult.OK)
                 {

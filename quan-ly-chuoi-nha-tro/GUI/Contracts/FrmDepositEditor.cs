@@ -86,7 +86,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             cboType.Items.AddRange(new object[] { "Đặt chỗ", "Chính thức" });
             cboStatus.Items.AddRange(new object[] { "Chờ xử lý", "Đã xác nhận", "Hoàn cọc", "Hủy" });
-            cboPaymentMethod.Items.AddRange(new object[] { "Tiền mặt", "Thẻ" });
+            cboPaymentMethod.Items.AddRange(new object[] { "Tiền mặt", "Chuyển khoản", "Thẻ" });
             cboPaymentMethod.SelectedIndex = 0;
 
             this.Controls.Add(MakeLabel("Khách thuê (*)", top));
@@ -291,7 +291,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             DateTime? returnedDate = dtReturned.Checked ? (DateTime?)dtReturned.Value.Date : null;
             string type = cboType.Text;
             string status = cboStatus.Text;
-            string paymentMethod = cboPaymentMethod.SelectedItem?.ToString() == "Thẻ" ? "Card" : "Cash";
+            string selectedMethod = cboPaymentMethod.SelectedItem?.ToString();
+            string paymentMethod = selectedMethod == "Thẻ"
+                ? "Card"
+                : (selectedMethod == "Chuyển khoản" ? "Transfer" : "Cash");
             string notes = txtNotes.Text.Trim();
 
             try
@@ -359,7 +362,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     await _bll.UpdateDepositAsync(depositId, tenantId, roomId, amount, depositDate, type, status, returned, returnedDate, notes);
 
                     string actionTitle = isRefund ? "Hoàn cọc" : "Xác nhận cọc";
-                    string methodLabel = paymentMethod == "Card" ? "Thẻ" : "Tiền mặt";
+                    string methodLabel = paymentMethod == "Card"
+                        ? "Thẻ"
+                        : (paymentMethod == "Transfer" ? "Chuyển khoản" : "Tiền mặt");
                     string title = actionTitle;
                     string message = $"{actionTitle}: {cboTenant.Text} | Phòng: {cboRoom.Text} | Số tiền: {linkAmount:N0} | Hình thức: {methodLabel}";
                     if (_isStaffMode && _branchId.HasValue)
@@ -370,6 +375,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     }
                     await _bll.AddNotificationAsync(null, title, message, "Unread");
                 }
+
+                await SyncContractDepositRequiredAsync(tenantId, roomId, amount, status);
 
                 AdminEvents.NotifyDataChanged();
                 DataSyncManager.NotifyInvoicesChanged();
@@ -383,6 +390,71 @@ namespace quan_ly_chuoi_nha_tro.GUI
             {
                 ErrorLogger.HandleException(ex, "SaveDeposit", "Lỗi lưu đặt phòng/cọc");
             }
+        }
+
+        private async System.Threading.Tasks.Task SyncContractDepositRequiredAsync(int tenantId, int roomId, decimal amount, string status)
+        {
+            try
+            {
+                var contracts = await _bll.GetContractsAsync();
+                if (contracts == null || !contracts.Columns.Contains("ContractId")) return;
+
+                var contract = contracts.AsEnumerable()
+                    .Where(r => r["TenantId"]?.ToString() == tenantId.ToString()
+                             && r["RoomId"]?.ToString() == roomId.ToString())
+                    .OrderByDescending(r => TryReadDate(r, "StartDate") ?? DateTime.MinValue)
+                    .FirstOrDefault();
+                if (contract == null) return;
+
+                decimal? newDeposit = (status == "Hoàn cọc" || status == "Hủy") ? 0m : amount;
+                if (decimal.TryParse(contract["DepositRequired"]?.ToString(), out var current) && current == (newDeposit ?? 0m))
+                    return;
+
+                int contractId = Convert.ToInt32(contract["ContractId"]);
+                string contractNumber = contract["ContractNumber"]?.ToString();
+                int tenant = Convert.ToInt32(contract["TenantId"]);
+                int room = Convert.ToInt32(contract["RoomId"]);
+                DateTime? signDate = TryReadDate(contract, "SignDate");
+                DateTime startDate = TryReadDate(contract, "StartDate") ?? DateTime.Today;
+                DateTime endDate = TryReadDate(contract, "EndDate") ?? DateTime.Today;
+                decimal? rental = TryReadDecimal(contract, "RentalPrice");
+                string terms = contract["Terms"]?.ToString();
+                string pdf = contract["ContractPdfPath"]?.ToString();
+                string contractStatus = contract["Status"]?.ToString();
+
+                await _bll.UpdateContractAsync(
+                    contractId,
+                    contractNumber,
+                    tenant,
+                    room,
+                    signDate,
+                    startDate,
+                    endDate,
+                    rental,
+                    newDeposit,
+                    terms,
+                    pdf,
+                    contractStatus);
+            }
+            catch
+            {
+                // ignore sync errors
+            }
+        }
+
+        private static DateTime? TryReadDate(DataRow row, string col)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(col)) return null;
+            var value = row[col];
+            if (value == null || value == DBNull.Value) return null;
+            if (value is DateTime dt) return dt.Date;
+            return DateTime.TryParse(value.ToString(), out var parsed) ? parsed.Date : (DateTime?)null;
+        }
+
+        private static decimal? TryReadDecimal(DataRow row, string col)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(col)) return null;
+            return decimal.TryParse(row[col]?.ToString(), out var val) ? val : (decimal?)null;
         }
 
         private static bool HasLinkedPayment(string notes)

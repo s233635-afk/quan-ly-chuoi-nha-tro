@@ -48,6 +48,38 @@ namespace QuanLyNhaTro.BLL
             }
             return null;
         }
+        public async Task<(string BankId, string AccountNumber, string AccountName, string Template)?> GetUserBankSettingsAsync(int userId)
+        {
+            DataTable dt = await dbHelper.GetUserBankSettingsAsync(userId);
+            if (dt != null && dt.Rows.Count > 0)
+            {
+                var row = dt.Rows[0];
+                string bankId = row["BankId"]?.ToString();
+                string accountNumber = row["BankAccountNumber"]?.ToString();
+                string accountName = row["BankAccountName"]?.ToString();
+                string template = row["BankTemplate"]?.ToString();
+                return (bankId, accountNumber, accountName, template);
+            }
+            return null;
+        }
+        public Task<bool> UpsertUserBankSettingsAsync(int userId, string bankId, string accountNumber, string accountName, string template)
+            => dbHelper.UpsertUserBankSettingsAsync(userId, bankId, accountNumber, accountName, template);
+        public async Task<(string BankId, string AccountNumber, string AccountName, string Template)?> GetBranchBankSettingsAsync(int branchId)
+        {
+            DataTable dt = await dbHelper.GetBranchBankSettingsAsync(branchId);
+            if (dt != null && dt.Rows.Count > 0)
+            {
+                var row = dt.Rows[0];
+                string bankId = row["BankId"]?.ToString();
+                string accountNumber = row["BankAccountNumber"]?.ToString();
+                string accountName = row["BankAccountName"]?.ToString();
+                string template = row["BankTemplate"]?.ToString();
+                return (bankId, accountNumber, accountName, template);
+            }
+            return null;
+        }
+        public Task<bool> UpsertBranchBankSettingsAsync(int branchId, string bankId, string accountNumber, string accountName, string template)
+            => dbHelper.UpsertBranchBankSettingsAsync(branchId, bankId, accountNumber, accountName, template);
         public Task<DataTable> GetDashboardSummaryAsync() => dbHelper.GetDashboardSummaryAsync();
 
         // --- STAFF CRUD ---

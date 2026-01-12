@@ -25,6 +25,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Label _lblTotal;
         private Button _btnAdd, _btnEdit, _btnDelete, _btnRefresh;
         private Button _btnConfirm, _btnReturn;
+        private FlowLayoutPanel _cardHost;
+        private Label _emptyState;
+        private DataRow _selectedRow;
+        private int _selectedDepositId;
 
         public FrmDepositManager() : this(null, false)
         {
@@ -220,7 +224,27 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     e.Graphics.DrawRectangle(pen, rect);
                 }
             };
-            gridCard.Controls.Add(_grid);
+            _cardHost = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                AutoScroll = true,
+                WrapContents = true,
+                FlowDirection = FlowDirection.LeftToRight,
+                BackColor = Color.White,
+                Padding = new Padding(6)
+            };
+
+            _emptyState = new Label
+            {
+                Text = "Chưa có dữ liệu đặt cọc",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 10, FontStyle.Italic),
+                ForeColor = Color.FromArgb(150, 150, 150),
+                Visible = false
+            };
+            gridCard.Controls.Add(_emptyState);
+            gridCard.Controls.Add(_cardHost);
+            _emptyState.BringToFront();
 
             gridHost.Controls.Add(gridCard);
 
@@ -239,7 +263,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 _table = _branchId.HasValue ? FilterByBranch(_table, _branchId) : AdminBranchScope.FilterByBranchIds(_table, _allowedBranchIds);
                 await EnrichDepositsAsync(_table);
                 _grid.DataSource = _table;
-                ApplyGridPresentation();
                 ApplyFilter();
             }
             catch (Exception ex)
@@ -415,13 +438,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
             var net = total - returned;
             _lblTotal.Text = $"Tổng cọc: {net:N0} (Hoàn: {returned:N0})";
+
+            RenderCards();
         }
 
         private DataRow GetCurrentRow()
         {
-            if (_grid.CurrentRow == null || _grid.CurrentRow.DataBoundItem == null) return null;
-            var drv = _grid.CurrentRow.DataBoundItem as DataRowView;
-            return drv?.Row;
+            return _selectedRow;
         }
 
         private void AddNew()
@@ -515,7 +538,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                         roomNumber,
                         amount,
                         depositDate,
-                        notes))
+                        notes,
+                        id))
                     {
                         if (dlg.ShowDialog(this) != DialogResult.OK) return;
                         depositDate = dlg.DepositDate ?? DateTime.Today;
@@ -539,6 +563,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 }
 
                 await _bll.UpdateDepositAsync(id, tenantId, roomId, amount, depositDate, type, newStatus, returnedAmount, returnedDate, notes);
+                await SyncContractDepositRequiredAsync(tenantId, roomId, amount, newStatus);
                 await AddDepositNotificationAsync("Xác nhận cọc", tenantName, roomNumber, amount, paymentMethod);
                 await LoadDataAsync();
                 AdminEvents.NotifyDataChanged();
@@ -583,7 +608,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     amount,
                     returnedAmount,
                     returnedDate,
-                    notes))
+                    notes,
+                    id))
                 {
                     if (dlg.ShowDialog(this) != DialogResult.OK) return;
                     returnedAmount = dlg.ReturnedAmount ?? amount;
@@ -608,6 +634,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 }
 
                 await _bll.UpdateDepositAsync(id, tenantId, roomId, amount, depositDate, type, "Returned", returnedAmount, returnedDate, notes);
+                await SyncContractDepositRequiredAsync(tenantId, roomId, amount, "Returned");
                 await AddDepositNotificationAsync("Hoàn cọc", tenantName, roomNumber, returnedAmount ?? amount, paymentMethod);
                 await LoadDataAsync();
                 AdminEvents.NotifyDataChanged();
@@ -640,7 +667,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             try
             {
-                string methodText = paymentMethod == "Card" ? "Thẻ" : "Tiền mặt";
+                string methodText = paymentMethod == "Card"
+                    ? "Thẻ"
+                    : (paymentMethod == "Transfer" ? "Chuyển khoản" : "Tiền mặt");
                 string title = actionTitle;
                 string message = $"{actionTitle}: {tenantName ?? "—"} | Phòng: {roomNumber ?? "—"} | Số tiền: {amount:N0} | Hình thức: {methodText}";
                 if (_isStaffMode && _branchId.HasValue)
@@ -760,12 +789,22 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private sealed class DepositActionDialog : Form
         {
             private readonly DepositActionKind _kind;
+            private readonly int _depositId;
+            private readonly string _roomNumber;
             private readonly decimal _depositAmount;
+            private readonly AdminDataBLL _bll = new AdminDataBLL();
             private readonly DateTimePicker _dtDeposit;
             private readonly NumericUpDown _numReturn;
             private readonly DateTimePicker _dtReturn;
             private readonly ComboBox _cboMethod;
             private readonly TextBox _txtNotes;
+            private Panel _pnlTransfer;
+            private PictureBox _picQr;
+            private Label _lblBankDetails;
+            private Label _lblTransferCode;
+            private Button _btnCopyCode;
+            private Button _btnCopyBank;
+            private string _transferCode;
 
             public DateTime? DepositDate { get; private set; }
             public decimal? ReturnedAmount { get; private set; }
@@ -779,8 +818,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 string roomNumber,
                 decimal depositAmount,
                 DateTime? depositDate,
-                string notes)
-                : this(kind, tenantName, roomNumber, depositAmount, notes)
+                string notes,
+                int depositId = 0)
+                : this(kind, tenantName, roomNumber, depositAmount, notes, depositId)
             {
                 _dtDeposit.Value = depositDate ?? DateTime.Today;
             }
@@ -792,8 +832,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 decimal depositAmount,
                 decimal? returnedAmount,
                 DateTime? returnedDate,
-                string notes)
-                : this(kind, tenantName, roomNumber, depositAmount, notes)
+                string notes,
+                int depositId = 0)
+                : this(kind, tenantName, roomNumber, depositAmount, notes, depositId)
             {
                 _numReturn.Value = returnedAmount.HasValue && returnedAmount.Value > 0 ? returnedAmount.Value : depositAmount;
                 _dtReturn.Value = returnedDate ?? DateTime.Today;
@@ -804,9 +845,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 string tenantName,
                 string roomNumber,
                 decimal depositAmount,
-                string notes)
+                string notes,
+                int depositId)
             {
                 _kind = kind;
+                _depositId = depositId;
+                _roomNumber = roomNumber;
                 _depositAmount = depositAmount;
 
                 Text = kind == DepositActionKind.Confirm ? "Xác nhận cọc" : "Hoàn cọc";
@@ -814,7 +858,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 FormBorderStyle = FormBorderStyle.FixedDialog;
                 MaximizeBox = false;
                 MinimizeBox = false;
-                ClientSize = new Size(520, 350);
+                ClientSize = new Size(520, 520);
                 BackColor = Color.White;
                 Font = new Font("Segoe UI", 10F);
 
@@ -858,10 +902,16 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     ThousandsSeparator = true,
                     Width = 160
                 };
+                _numReturn.ValueChanged += async (s, e) =>
+                {
+                    if (_cboMethod.SelectedItem?.ToString() == "Chuyển khoản")
+                        await UpdateTransferPanelAsync();
+                };
                 _dtReturn = new DateTimePicker { Format = DateTimePickerFormat.Short, Width = 140 };
-                _cboMethod = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 180 };
-                _cboMethod.Items.AddRange(new object[] { "Tiền mặt", "Thẻ" });
-                _cboMethod.SelectedIndex = 0;
+            _cboMethod = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 180 };
+            _cboMethod.Items.AddRange(new object[] { "Tiền mặt", "Chuyển khoản", "Thẻ" });
+            _cboMethod.SelectedIndex = 0;
+            _cboMethod.SelectedIndexChanged += async (s, e) => await UpdateTransferPanelAsync();
                 _txtNotes = new TextBox { Width = 320, Height = 52, Multiline = true, ScrollBars = ScrollBars.Vertical };
 
                 if (kind == DepositActionKind.Confirm)
@@ -899,6 +949,85 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 panel.Controls.Add(lblNotes);
                 panel.Controls.Add(_txtNotes);
 
+                _pnlTransfer = new Panel
+                {
+                    Location = new Point(16, 260),
+                    Size = new Size(488, 185),
+                    BackColor = Color.FromArgb(250, 250, 250),
+                    BorderStyle = BorderStyle.FixedSingle,
+                    Visible = false
+                };
+
+                _picQr = new PictureBox
+                {
+                    Location = new Point(10, 10),
+                    Size = new Size(160, 160),
+                    SizeMode = PictureBoxSizeMode.Zoom,
+                    BackColor = Color.White,
+                    BorderStyle = BorderStyle.FixedSingle
+                };
+                _pnlTransfer.Controls.Add(_picQr);
+
+                _lblTransferCode = new Label
+                {
+                    Location = new Point(180, 10),
+                    Size = new Size(290, 24),
+                    Font = new Font("Segoe UI", 9.75f, FontStyle.Bold),
+                    Text = "Mã chuyển khoản: —"
+                };
+                _pnlTransfer.Controls.Add(_lblTransferCode);
+
+                _lblBankDetails = new Label
+                {
+                    Location = new Point(180, 40),
+                    Size = new Size(290, 90),
+                    Font = new Font("Segoe UI", 9.5f),
+                    Text = "Đang tải thông tin ngân hàng..."
+                };
+                _pnlTransfer.Controls.Add(_lblBankDetails);
+
+                _btnCopyCode = new ModernButton
+                {
+                    Text = "📋 Copy mã",
+                    Location = new Point(180, 135),
+                    Width = 110,
+                    Height = 28,
+                    BaseColor = Color.FromArgb(240, 240, 240),
+                    ForeColor = Color.Black
+                };
+                _btnCopyCode.Click += (s, e) =>
+                {
+                    if (!string.IsNullOrWhiteSpace(_transferCode))
+                    {
+                        Clipboard.SetText(_transferCode);
+                        ToastNotification.Success("Đã sao chép mã chuyển khoản");
+                    }
+                };
+                _pnlTransfer.Controls.Add(_btnCopyCode);
+
+                _btnCopyBank = new ModernButton
+                {
+                    Text = "📋 Sao chép STK",
+                    Location = new Point(300, 135),
+                    Width = 140,
+                    Height = 28,
+                    BaseColor = Color.FromArgb(240, 240, 240),
+                    ForeColor = Color.Black
+                };
+                _btnCopyBank.Click += (s, e) =>
+                {
+                    var stk = _lblBankDetails.Text.Split('\n')
+                        .FirstOrDefault(l => l.Contains("SỐ TÀI KHOẢN:"))
+                        ?.Replace("SỐ TÀI KHOẢN:", string.Empty)
+                        .Trim();
+                    if (!string.IsNullOrEmpty(stk))
+                    {
+                        Clipboard.SetText(stk);
+                        ToastNotification.Success("Đã sao chép số tài khoản");
+                    }
+                };
+                _pnlTransfer.Controls.Add(_btnCopyBank);
+
                 var btnOk = new ModernButton
                 {
                     Text = "Xác nhận",
@@ -908,7 +1037,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     BackColor = Color.Transparent,
                     ForeColor = Color.White,
                     FlatStyle = FlatStyle.Flat,
-                    Location = new Point(274, 292)
+                    Location = new Point(274, 468)
                 };
                 btnOk.FlatAppearance.BorderSize = 0;
                 btnOk.Click += (s, e) => HandleSave();
@@ -922,7 +1051,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     BackColor = Color.Transparent,
                     ForeColor = Color.Black,
                     FlatStyle = FlatStyle.Flat,
-                    Location = new Point(394, 292),
+                    Location = new Point(394, 468),
                     DialogResult = DialogResult.Cancel
                 };
                 btnCancel.FlatAppearance.BorderSize = 0;
@@ -930,11 +1059,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Controls.Add(lblTitle);
                 Controls.Add(lblInfo);
                 Controls.Add(panel);
+                Controls.Add(_pnlTransfer);
                 Controls.Add(btnOk);
                 Controls.Add(btnCancel);
 
                 AcceptButton = btnOk;
                 CancelButton = btnCancel;
+
+                _ = UpdateTransferPanelAsync();
             }
 
             private void HandleSave()
@@ -966,10 +1098,88 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     DepositDate = _dtDeposit.Value.Date;
                 }
 
-                PaymentMethod = _cboMethod.SelectedItem?.ToString() == "Thẻ" ? "Card" : "Cash";
+                if (_cboMethod.SelectedItem?.ToString() == "Chuyển khoản")
+                {
+                    if (string.IsNullOrWhiteSpace(_transferCode))
+                        _transferCode = BuildTransferCode();
+                    if (string.IsNullOrWhiteSpace(_txtNotes.Text))
+                        _txtNotes.Text = $"Mã chuyển khoản: {_transferCode}";
+                    else if (!_txtNotes.Text.Contains(_transferCode))
+                        _txtNotes.Text = _txtNotes.Text.TrimEnd() + $" | Mã chuyển khoản: {_transferCode}";
+                }
+
+                PaymentMethod = MapPaymentMethod(_cboMethod.SelectedItem?.ToString());
                 Notes = _txtNotes.Text?.Trim();
                 DialogResult = DialogResult.OK;
                 Close();
+            }
+
+            private static string MapPaymentMethod(string display)
+            {
+                if (display == "Thẻ")
+                    return "Card";
+                if (display == "Chuyển khoản")
+                    return "Transfer";
+                return "Cash";
+            }
+
+            private async System.Threading.Tasks.Task UpdateTransferPanelAsync()
+            {
+                bool isTransfer = _cboMethod.SelectedItem?.ToString() == "Chuyển khoản";
+                _pnlTransfer.Visible = isTransfer;
+                if (!isTransfer) return;
+
+                if (string.IsNullOrWhiteSpace(_transferCode))
+                    _transferCode = BuildTransferCode();
+
+                _lblTransferCode.Text = $"Mã chuyển khoản: {_transferCode}";
+                await LoadTransferQrAsync();
+            }
+
+            private string BuildTransferCode()
+            {
+                string prefix = _kind == DepositActionKind.Return ? "HC" : "DC";
+                if (_depositId > 0)
+                    return $"{prefix}-{_depositId}";
+                if (!string.IsNullOrWhiteSpace(_roomNumber))
+                    return $"{prefix}-{_roomNumber}-{DateTime.Today:yyyyMMdd}";
+                return $"{prefix}-{DateTime.Now:yyyyMMddHHmmss}";
+            }
+
+            private async System.Threading.Tasks.Task LoadTransferQrAsync()
+            {
+                try
+                {
+                    var bank = await ResolveBankSettingsAsync();
+                    decimal amount = _kind == DepositActionKind.Return ? _numReturn.Value : _depositAmount;
+                    string description = $"{_transferCode} {(_kind == DepositActionKind.Return ? "HOAN COC" : "DAT COC")}";
+                    string qrUrl = $"https://img.vietqr.io/image/{bank.BankId}-{bank.AccountNumber}-{bank.Template}.png" +
+                                   $"?amount={amount:0}" +
+                                   $"&addInfo={Uri.EscapeDataString(description)}" +
+                                   $"&accountName={Uri.EscapeDataString(bank.AccountName)}";
+
+                    _lblBankDetails.Text = $"NGÂN HÀNG: {bank.BankId}\n" +
+                                           $"SỐ TÀI KHOẢN: {bank.AccountNumber}\n" +
+                                           $"CHỦ TÀI KHOẢN: {bank.AccountName}\n" +
+                                           $"NỘI DUNG: {description}\n" +
+                                           $"SỐ TIỀN: {amount:N0} VNĐ";
+
+                    _picQr.ImageLocation = qrUrl;
+                }
+                catch (Exception ex)
+                {
+                    _lblBankDetails.Text = "Lỗi tải QR: " + ex.Message;
+                }
+            }
+
+            private async System.Threading.Tasks.Task<(string BankId, string AccountNumber, string AccountName, string Template)> ResolveBankSettingsAsync()
+            {
+                string bankId = await _bll.GetSystemSettingValueAsync("BankId") ?? "VietinBank";
+                string accountNo = await _bll.GetSystemSettingValueAsync("BankAccountNumber") ?? "0338352423";
+                string accountName = await _bll.GetSystemSettingValueAsync("BankAccountName") ?? "NGUYEN TRUNG KIEN";
+                string template = await _bll.GetSystemSettingValueAsync("BankTemplate") ?? "compact";
+
+                return (bankId, accountNo, accountName, template);
             }
         }
 
@@ -1054,6 +1264,268 @@ namespace quan_ly_chuoi_nha_tro.GUI
             menu.Show(_grid, x, y);
         }
 
+        private void RenderCards()
+        {
+            if (_cardHost == null) return;
+            _cardHost.SuspendLayout();
+            _cardHost.Controls.Clear();
+
+            var view = _table?.DefaultView;
+            var rows = view?.Cast<DataRowView>().ToList() ?? new System.Collections.Generic.List<DataRowView>();
+            _emptyState.Visible = rows.Count == 0;
+            if (_emptyState.Visible)
+            {
+                _emptyState.Location = new Point(Math.Max(16, (_cardHost.Width - _emptyState.Width) / 2), 20);
+                _emptyState.BringToFront();
+                _cardHost.ResumeLayout();
+                return;
+            }
+
+            DataRow selected = null;
+            foreach (var drv in rows)
+            {
+                var row = drv.Row;
+                var card = BuildDepositCard(row);
+                _cardHost.Controls.Add(card);
+
+                int id = TryReadInt(row, "DepositId");
+                if (_selectedDepositId > 0 && id == _selectedDepositId)
+                    selected = row;
+            }
+
+            if (selected == null && rows.Count > 0)
+                selected = rows[0].Row;
+
+            if (selected != null)
+                SelectRow(selected);
+
+            _cardHost.ResumeLayout();
+        }
+
+        private Panel BuildDepositCard(DataRow row)
+        {
+            var card = new Panel
+            {
+                Width = 330,
+                Height = 150,
+                BackColor = Color.White,
+                Margin = new Padding(8),
+                Tag = row
+            };
+
+            card.Paint += (s, e) =>
+            {
+                var isSelected = ReferenceEquals(row, _selectedRow);
+                var borderColor = isSelected ? Color.FromArgb(0, 122, 204) : Color.FromArgb(230, 235, 240);
+                var borderWidth = isSelected ? 2 : 1;
+                using (var pen = new Pen(borderColor, borderWidth))
+                {
+                    e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
+                }
+            };
+
+            string tenant = ReadString(row, "TenantName") ?? "—";
+            string room = ReadString(row, "RoomNumber") ?? "—";
+            string statusRaw = ReadString(row, "Status") ?? string.Empty;
+            string status = ToVietnameseStatus(statusRaw);
+            Color statusColor = StatusColor(statusRaw);
+            string type = ToVietnameseType(ReadString(row, "DepositType"));
+            decimal amount = TryReadDecimal(row, "DepositAmount") ?? 0m;
+            DateTime? depositDate = TryReadDate(row, "DepositDate");
+            DateTime? returnedDate = TryReadDate(row, "ReturnedDate");
+
+            var title = new Label
+            {
+                Text = $"{room} • {tenant}",
+                AutoSize = false,
+                Height = 24,
+                Dock = DockStyle.Top,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                ForeColor = Color.FromArgb(34, 40, 60),
+                Padding = new Padding(10, 6, 10, 0)
+            };
+
+            var badge = new Label
+            {
+                Text = status,
+                AutoSize = true,
+                BackColor = statusColor,
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                Padding = new Padding(6, 2, 6, 2),
+                Location = new Point(10, 34)
+            };
+
+            var amountLabel = new Label
+            {
+                Text = $"{amount:N0} đ",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 79, 159),
+                Location = new Point(10, 62)
+            };
+
+            var meta = new Label
+            {
+                Text = $"Loại: {type}   |   Ngày cọc: {(depositDate.HasValue ? depositDate.Value.ToString("dd/MM/yyyy") : "—")}",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 9),
+                ForeColor = Color.FromArgb(90, 90, 90),
+                Location = new Point(10, 90)
+            };
+
+            var meta2 = new Label
+            {
+                Text = $"Ngày hoàn: {(returnedDate.HasValue ? returnedDate.Value.ToString("dd/MM/yyyy") : "—")}",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 9),
+                ForeColor = Color.FromArgb(110, 110, 110),
+                Location = new Point(10, 112)
+            };
+
+            card.Controls.Add(meta2);
+            card.Controls.Add(meta);
+            card.Controls.Add(amountLabel);
+            card.Controls.Add(badge);
+            card.Controls.Add(title);
+
+            void SelectAction()
+            {
+                SelectRow(row);
+                card.Invalidate();
+            }
+
+            card.Click += (s, e) => SelectAction();
+            foreach (Control ctl in card.Controls)
+                ctl.Click += (s, e) => SelectAction();
+
+            card.DoubleClick += (s, e) => EditSelected();
+
+            return card;
+        }
+
+        private void SelectRow(DataRow row)
+        {
+            _selectedRow = row;
+            _selectedDepositId = TryReadInt(row, "DepositId");
+            foreach (Control ctl in _cardHost.Controls)
+                ctl.Invalidate();
+        }
+
+        private static string ReadString(DataRow row, string col)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(col)) return null;
+            var v = row[col];
+            return v == null || v == DBNull.Value ? null : v.ToString();
+        }
+
+        private static int TryReadInt(DataRow row, string col)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(col)) return 0;
+            return int.TryParse(row[col]?.ToString(), out var val) ? val : 0;
+        }
+
+        private static decimal? TryReadDecimal(DataRow row, string col)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(col)) return null;
+            return decimal.TryParse(row[col]?.ToString(), out var val) ? val : (decimal?)null;
+        }
+
+        private static DateTime? TryReadDate(DataRow row, string col)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(col)) return null;
+            var v = row[col];
+            if (v == null || v == DBNull.Value) return null;
+            if (v is DateTime dt) return dt.Date;
+            return DateTime.TryParse(v.ToString(), out var parsed) ? parsed.Date : (DateTime?)null;
+        }
+
+        private static string ToVietnameseStatus(string status)
+        {
+            if (string.IsNullOrWhiteSpace(status)) return "Chưa xác định";
+            switch (status.Trim())
+            {
+                case "Pending": return "Chờ xử lý";
+                case "Confirmed": return "Đã xác nhận";
+                case "Returned": return "Hoàn cọc";
+                case "Cancelled": return "Hủy";
+                default: return status;
+            }
+        }
+
+        private static string ToVietnameseType(string type)
+        {
+            if (string.IsNullOrWhiteSpace(type)) return "—";
+            if (type == "Booking") return "Đặt chỗ";
+            if (type == "Official") return "Chính thức";
+            return type;
+        }
+
+        private static Color StatusColor(string status)
+        {
+            switch (status)
+            {
+                case "Pending":
+                    return Color.FromArgb(255, 152, 0);
+                case "Confirmed":
+                    return Color.FromArgb(46, 125, 50);
+                case "Returned":
+                    return Color.FromArgb(33, 150, 243);
+                case "Cancelled":
+                    return Color.FromArgb(211, 47, 47);
+                default:
+                    return Color.FromArgb(120, 120, 120);
+            }
+        }
+
+        private async System.Threading.Tasks.Task SyncContractDepositRequiredAsync(int tenantId, int roomId, decimal amount, string status)
+        {
+            try
+            {
+                var contracts = await _bll.GetContractsAsync();
+                if (contracts == null || !contracts.Columns.Contains("ContractId")) return;
+
+                var contract = contracts.AsEnumerable()
+                    .Where(r => r["TenantId"]?.ToString() == tenantId.ToString()
+                             && r["RoomId"]?.ToString() == roomId.ToString())
+                    .OrderByDescending(r => TryReadDate(r, "StartDate") ?? DateTime.MinValue)
+                    .FirstOrDefault();
+                if (contract == null) return;
+
+                decimal? newDeposit = (status == "Returned" || status == "Cancelled") ? 0m : amount;
+                if (decimal.TryParse(contract["DepositRequired"]?.ToString(), out var current) && current == (newDeposit ?? 0m))
+                    return;
+
+                int contractId = Convert.ToInt32(contract["ContractId"]);
+                string contractNumber = contract["ContractNumber"]?.ToString();
+                int tenant = Convert.ToInt32(contract["TenantId"]);
+                int room = Convert.ToInt32(contract["RoomId"]);
+                DateTime? signDate = TryReadDate(contract, "SignDate");
+                DateTime startDate = TryReadDate(contract, "StartDate") ?? DateTime.Today;
+                DateTime endDate = TryReadDate(contract, "EndDate") ?? DateTime.Today;
+                decimal? rental = TryReadDecimal(contract, "RentalPrice");
+                string terms = contract["Terms"]?.ToString();
+                string pdf = contract["ContractPdfPath"]?.ToString();
+                string contractStatus = contract["Status"]?.ToString();
+
+                await _bll.UpdateContractAsync(
+                    contractId,
+                    contractNumber,
+                    tenant,
+                    room,
+                    signDate,
+                    startDate,
+                    endDate,
+                    rental,
+                    newDeposit,
+                    terms,
+                    pdf,
+                    contractStatus);
+            }
+            catch
+            {
+                // ignore sync errors
+            }
+        }
     }
 }
-

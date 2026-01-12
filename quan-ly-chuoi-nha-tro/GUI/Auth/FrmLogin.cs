@@ -26,6 +26,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Label _userPlaceholderLabel;
         private Label _passPlaceholderLabel;
         private PictureBox _logoBox;
+        private Panel _rightContentPanel;
+        private Panel _leftFrame;
 
         public FrmLogin()
         {
@@ -50,38 +52,62 @@ namespace quan_ly_chuoi_nha_tro.GUI
             if (pnlRight == null) return;
             pnlRight.Controls.Clear();
 
+            _rightContentPanel = new Panel
+            {
+                BackColor = Color.Transparent
+            };
+            pnlRight.Controls.Add(_rightContentPanel);
+
             // 1. Logo nhỏ gọn phía trên
             _logoBox = new PictureBox
             {
                 SizeMode = PictureBoxSizeMode.Zoom,
                 BackColor = Color.Transparent,
-                Size = new Size(190, 190),
+                Size = new Size(180, 180),
                 Image = LoadLogoImage() ?? BuildLogoImage(380)
             };
-            pnlRight.Controls.Add(_logoBox);
+            _rightContentPanel.Controls.Add(_logoBox);
 
             // 2. Tiêu đề phiên bản hệ thống
             var lblWelcome = new Label
             {
                 Text = "Hệ thống quản lý\nchuỗi nhà trọ V2.0",
-                Font = ModernTheme.Fonts.Bold(18),
+                Font = ModernTheme.Fonts.Bold(16),
                 ForeColor = Color.White,
                 BackColor = Color.Transparent,
-                AutoSize = true,
+                AutoSize = false,
                 TextAlign = ContentAlignment.MiddleCenter
             };
-            pnlRight.Controls.Add(lblWelcome);
+            _rightContentPanel.Controls.Add(lblWelcome);
 
-            // Căn chỉnh vị trí khi resize
-            pnlRight.Resize += (s, e) =>
+            void LayoutRightPanelContent()
             {
-                _logoBox.Location = new Point((pnlRight.Width - _logoBox.Width) / 2, (pnlRight.Height / 2) - _logoBox.Height + 10);
-                lblWelcome.Location = new Point((pnlRight.Width - lblWelcome.Width) / 2, (pnlRight.Height / 2) + 20);
-            };
+                const int spacing = 2;
+                int target = (int)Math.Round(Math.Min(pnlRight.Width * 0.58f, pnlRight.Height * 0.46f));
+                target = Math.Max(140, Math.Min(220, target));
+                _logoBox.Size = new Size(target, target);
 
-            // Kích hoạt resize lần đầu
-            _logoBox.Location = new Point((pnlRight.Width - _logoBox.Width) / 2, (pnlRight.Height / 2) - _logoBox.Height + 10);
-            lblWelcome.Location = new Point((pnlRight.Width - lblWelcome.Width) / 2, (pnlRight.Height / 2) + 20);
+                int contentWidth = Math.Min(pnlRight.Width - 36, target + 44);
+                if (contentWidth < target) contentWidth = target;
+
+                lblWelcome.MaximumSize = new Size(contentWidth, 0);
+                var preferred = lblWelcome.GetPreferredSize(new Size(contentWidth, 0));
+                lblWelcome.Size = new Size(contentWidth, preferred.Height);
+
+                _logoBox.Location = new Point((contentWidth - target) / 2, 0);
+                lblWelcome.Location = new Point(0, _logoBox.Bottom + spacing);
+
+                _rightContentPanel.Size = new Size(contentWidth, lblWelcome.Bottom);
+
+                int x = (pnlRight.Width - _rightContentPanel.Width) / 2;
+                int y = (pnlRight.Height - _rightContentPanel.Height) / 2;
+                x = Math.Max(0, x);
+                y = Math.Max(0, y);
+                _rightContentPanel.Location = new Point(x, y);
+            }
+
+            pnlRight.Resize += (s, e) => LayoutRightPanelContent();
+            LayoutRightPanelContent();
         }
 
         private void ApplyModernStyling()
@@ -90,6 +116,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             ApplyRoundedRegion(pnlForm, 22);
             pnlForm.Resize += (s, e) => ApplyRoundedRegion(pnlForm, 22);
+
+            ApplyRoundedRegion(pnlRight, 22);
+            pnlRight.Resize += (s, e) => ApplyRoundedRegion(pnlRight, 22);
 
             btnLogin.BackColor = _loginPrimary;
             btnLogin.FlatAppearance.BorderSize = 0;
@@ -107,15 +136,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
             lblPassIcon.ForeColor = _loginPrimary;
             lnkForgot.LinkColor = ModernTheme.Colors.TextSecondary;
             lnkForgot.ActiveLinkColor = _loginPrimary;
-            lnkRegister.LinkColor = _loginPrimary;
-            lnkRegister.ActiveLinkColor = ModernTheme.Colors.PrimaryDark;
-
             WireInputFocus(txtUser, pnlUserBox);
             WireInputFocus(txtPass, pnlPassBox);
 
             _userPlaceholderLabel = SetupOverlayPlaceholder(txtUser, pnlUserBox, UserPlaceholder, isPassword: false);
             _passPlaceholderLabel = SetupOverlayPlaceholder(txtPass, pnlPassBox, PassPlaceholder, isPassword: true);
 
+            SetupLeftFrame();
             if (chkShowPassword != null)
             {
                 chkShowPassword.Checked = false;
@@ -126,7 +153,134 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 };
             }
 
+            ApplyLeftTheme();
+            LayoutLeftPanelContent();
+            if (pnlLeft != null)
+            {
+                pnlLeft.Resize += (s, e) => LayoutLeftPanelContent();
+            }
+
             txtUser.Focus();
+        }
+
+        private void LayoutLeftPanelContent()
+        {
+            if (pnlLeft == null) return;
+
+            int left = pnlLeft.Padding.Left;
+            int right = pnlLeft.Padding.Right;
+            int contentWidth = Math.Max(240, pnlLeft.Width - left - right);
+            int top = 16;
+
+            lblWelcome1.Location = new Point(left, top);
+            lblWelcome1.MaximumSize = new Size(contentWidth, 0);
+            lblWelcome1.AutoSize = true;
+            top += lblWelcome1.Height + 4;
+
+            lblWelcome2.Location = new Point(left, top);
+            lblWelcome2.MaximumSize = new Size(contentWidth, 0);
+            lblWelcome2.AutoSize = true;
+            top += lblWelcome2.Height + 6;
+
+            lblSubtitle.Location = new Point(left, top);
+            lblSubtitle.MaximumSize = new Size(contentWidth, 0);
+            lblSubtitle.AutoSize = true;
+            top += lblSubtitle.Height + 28;
+
+            int fieldWidth = Math.Min(contentWidth, 400);
+            pnlUserBox.Location = new Point(left, top);
+            pnlUserBox.Width = fieldWidth;
+            top += pnlUserBox.Height + 14;
+
+            pnlPassBox.Location = new Point(left, top);
+            pnlPassBox.Width = fieldWidth;
+            top += pnlPassBox.Height + 14;
+
+            chkShowPassword.Location = new Point(left, top + 2);
+            lnkForgot.Location = new Point(left + fieldWidth - lnkForgot.Width, top + 2);
+            top += chkShowPassword.Height + 22;
+
+            btnLogin.Location = new Point(left, top);
+            btnLogin.Width = fieldWidth;
+
+            if (_leftFrame != null)
+            {
+                int frameTop = pnlUserBox.Top - 12;
+                int frameBottom = btnLogin.Bottom + 14;
+                int frameLeft = left - 6;
+                int frameWidth = fieldWidth + 12;
+                if (frameTop < 0) frameTop = 0;
+                if (frameBottom < frameTop) frameBottom = frameTop + 10;
+                _leftFrame.Location = new Point(frameLeft, frameTop);
+                _leftFrame.Size = new Size(frameWidth, frameBottom - frameTop);
+                _leftFrame.BringToFront();
+                _leftFrame.SendToBack();
+                _leftFrame.Invalidate();
+            }
+        }
+
+        private void SetupLeftFrame()
+        {
+            if (pnlLeft == null) return;
+            if (_leftFrame != null) return;
+
+            _leftFrame = new Panel
+            {
+                BackColor = Color.Transparent
+            };
+            _leftFrame.Paint += LeftFrame_Paint;
+            pnlLeft.Controls.Add(_leftFrame);
+            _leftFrame.SendToBack();
+        }
+
+        private void LeftFrame_Paint(object sender, PaintEventArgs e)
+        {
+            if (!(sender is Panel panel)) return;
+            if (panel.Width <= 0 || panel.Height <= 0) return;
+
+            var g = e.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            var rect = new Rectangle(0, 0, panel.Width - 1, panel.Height - 1);
+
+            using (var path = RoundedRectPath(rect, 16))
+            using (var fill = new SolidBrush(Color.FromArgb(18, 90, 170, 255)))
+            using (var pen = new Pen(Color.FromArgb(95, 255, 255, 255), 1.2f))
+            using (var glow = new Pen(Color.FromArgb(28, 120, 200, 255), 2f))
+            {
+                g.FillPath(fill, path);
+                g.DrawPath(glow, path);
+                g.DrawPath(pen, path);
+            }
+        }
+
+        private void ApplyLeftTheme()
+        {
+            if (pnlLeft == null) return;
+
+            lblWelcome1.Font = ModernTheme.Fonts.Bold(17);
+            lblWelcome2.Font = ModernTheme.Fonts.Bold(22);
+            lblSubtitle.Font = ModernTheme.Fonts.Regular(10.5f);
+
+            lblWelcome1.ForeColor = Color.FromArgb(36, 40, 44);
+            lblWelcome2.ForeColor = _loginPrimary;
+            lblSubtitle.ForeColor = Color.FromArgb(120, 126, 135);
+
+            btnLogin.Font = ModernTheme.Fonts.Bold(12);
+            btnLogin.Height = 54;
+
+            var inputBack = Color.FromArgb(246, 249, 255);
+            pnlUserBox.BackColor = inputBack;
+            pnlPassBox.BackColor = inputBack;
+            pnlUserBox.Height = 48;
+            pnlPassBox.Height = 48;
+            txtUser.BackColor = inputBack;
+            txtPass.BackColor = inputBack;
+
+            lblUserIcon.ForeColor = _loginPrimary;
+            lblPassIcon.ForeColor = _loginPrimary;
+
+            lnkForgot.LinkColor = ModernTheme.Colors.TextSecondary;
+            lnkForgot.ActiveLinkColor = _loginPrimary;
         }
 
         private void SetupLogo()
@@ -667,6 +821,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
             var rect = new Rectangle(0, 0, pnlForm.Width - 1, pnlForm.Height - 1);
+            DrawGlow(g, rect, 22);
             // Thêm viền nhẹ để phân biệt card trắng trên nền trắng
             using (var pen = new Pen(ModernTheme.Colors.Border, 1f))
             using (var path = RoundedRectPath(rect, 22))
@@ -684,18 +839,22 @@ namespace quan_ly_chuoi_nha_tro.GUI
             if (rect.Width <= 0 || rect.Height <= 0) return;
 
             // Sử dụng Gradient nhẹ từ Primary sang PrimaryDark để tạo chiều sâu cho phần nội dung
+            using (var path = RoundedRectPath(rect, 22))
             using (var brush = new LinearGradientBrush(rect, ModernTheme.Colors.Primary, ModernTheme.Colors.PrimaryDark, 135f))
             {
-                g.FillRectangle(brush, rect);
-            }
+                g.FillPath(brush, path);
 
-            // Vẽ một vài họa tiết trang trí chìm (subtle patterns)
-            using (var pen = new Pen(Color.FromArgb(20, 255, 255, 255), 1f))
-            {
-                for (int i = 0; i < rect.Width; i += 20)
+                // Vẽ một vài họa tiết trang trí chìm (subtle patterns)
+                var oldClip = g.Clip;
+                g.SetClip(path);
+                using (var pen = new Pen(Color.FromArgb(20, 255, 255, 255), 1f))
                 {
-                    g.DrawLine(pen, i, 0, i + 100, rect.Height);
+                    for (int i = 0; i < rect.Width; i += 20)
+                    {
+                        g.DrawLine(pen, i, 0, i + 100, rect.Height);
+                    }
                 }
+                g.Clip = oldClip;
             }
         }
 
@@ -719,10 +878,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var rect = new Rectangle(0, 0, panel.Width - 1, panel.Height - 1);
             var borderColor = panel == _focusedInputPanel
                 ? _loginPrimary
-                : Color.FromArgb(215, 215, 215);
+                : Color.FromArgb(206, 226, 242);
 
             using (var path = RoundedRectPath(rect, 12))
-            using (var pen = new Pen(borderColor, 1.6f))
+            using (var pen = new Pen(borderColor, 1.5f))
             {
                 g.DrawPath(pen, path);
             }
@@ -736,9 +895,5 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
         }
 
-        private void lnkRegister_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
-        {
-            ToastNotification.Info("Hệ thống chỉ sử dụng tài khoản Admin. Vui lòng liên hệ quản trị viên để cấp tài khoản.");
-        }
     }
 }

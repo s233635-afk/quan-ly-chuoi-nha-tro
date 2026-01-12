@@ -51,6 +51,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private CheckBox chkActive;
         private Button btnSave;
         private Button btnCancel;
+        private bool _isSaving;
+        private int? _originalRoomId;
 
         public int? SavedTenantId { get; private set; }
 
@@ -62,7 +64,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             Load += async (s, e) =>
             {
                 await LoadRoomsAsync();
-                LoadExisting();
+                await LoadExistingAsync();
             };
         }
 
@@ -372,7 +374,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
         }
 
-        private void LoadExisting()
+        private async System.Threading.Tasks.Task LoadExistingAsync()
         {
             if (_existingRow == null) 
             {
@@ -396,6 +398,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             SetDatePicker(dtTempRegTo, _existingRow["TemporaryRegistrationExpiry"]?.ToString());
             
             chkActive.Checked = _existingRow.Table.Columns.Contains("IsActive") && bool.TryParse(_existingRow["IsActive"]?.ToString(), out var active) && active;
+
+            int tenantId = TryReadInt(_existingRow, "TenantId");
+            if (tenantId > 0)
+            {
+                await LoadActiveRoomAsync(tenantId);
+            }
         }
 
         private void SetDatePicker(DateTimePicker picker, string rawValue)
@@ -429,6 +437,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private async System.Threading.Tasks.Task SaveAsync()
         {
+            if (_isSaving) return;
             if (string.IsNullOrWhiteSpace(txtFullName.Text))
             {
                 ToastNotification.Warning("Họ và tên không được trống");
@@ -456,6 +465,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 }
             }
 
+            _isSaving = true;
+            SetSavingState(true);
             try
             {
                 if (_existingRow == null)
@@ -475,6 +486,11 @@ namespace quan_ly_chuoi_nha_tro.GUI
                         txtFrontIdPhoto.Text.Trim(),
                         txtBackIdPhoto.Text.Trim()
                     );
+                    if (newId <= 0)
+                    {
+                        ToastNotification.Warning("Không thể lưu khách thuê.");
+                        return;
+                    }
                     SavedTenantId = newId;
 
                     int roomId = Convert.ToInt32(cboRoom.SelectedValue);
@@ -514,7 +530,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 {
                     // Update existing
                     int tenantId = int.TryParse(_existingRow["TenantId"]?.ToString(), out var id) ? id : 0;
-                    await _bll.UpdateTenantAsync(
+                    if (tenantId <= 0)
+                    {
+                        ToastNotification.Warning("Không tìm thấy ID khách thuê.");
+                        return;
+                    }
+                    var ok = await _bll.UpdateTenantAsync(
                         tenantId,
                         txtFullName.Text.Trim(),
                         txtIdentity.Text.Trim(),
@@ -529,6 +550,13 @@ namespace quan_ly_chuoi_nha_tro.GUI
                         txtFrontIdPhoto.Text.Trim(),
                         txtBackIdPhoto.Text.Trim()
                     );
+                    if (!ok)
+                    {
+                        ToastNotification.Warning("Không thể lưu khách thuê.");
+                        return;
+                    }
+
+                    await SyncTenantRoomAssignmentAsync(tenantId);
                 }
 
                 AdminEvents.NotifyDataChanged();
@@ -543,6 +571,174 @@ namespace quan_ly_chuoi_nha_tro.GUI
             catch (Exception ex)
             {
                 ErrorLogger.HandleException(ex, "SaveTenant", "Lỗi lưu khách thuê");
+            }
+            finally
+            {
+                SetSavingState(false);
+                _isSaving = false;
+            }
+        }
+
+        private async System.Threading.Tasks.Task LoadActiveRoomAsync(int tenantId)
+        {
+            _originalRoomId = null;
+            var history = await _bll.GetTenantHistoryAsync();
+            if (history != null)
+            {
+                var active = history.AsEnumerable()
+                    .FirstOrDefault(r => TryReadInt(r, "TenantId") == tenantId && IsActiveHistory(r));
+                if (active != null)
+                {
+                    _originalRoomId = TryReadInt(active, "RoomId");
+                }
+            }
+
+            if (_originalRoomId.HasValue && _rooms != null)
+            {
+                cboRoom.SelectedValue = _originalRoomId.Value;
+                UpdateRentalPrice();
+            }
+            else
+            {
+                cboRoom.SelectedIndex = -1;
+                txtRentalPrice.Text = "";
+                txtDeposit.Text = "";
+            }
+        }
+
+        private async System.Threading.Tasks.Task SyncTenantRoomAssignmentAsync(int tenantId)
+        {
+            if (!(cboRoom.SelectedValue is int selectedRoomId) || selectedRoomId <= 0)
+                return;
+
+            var history = await _bll.GetTenantHistoryAsync();
+            DataRow activeHistory = history?.AsEnumerable()
+                .FirstOrDefault(r => TryReadInt(r, "TenantId") == tenantId && IsActiveHistory(r));
+
+            int activeRoomId = activeHistory != null ? TryReadInt(activeHistory, "RoomId") : 0;
+            int activeHistoryId = activeHistory != null ? TryReadInt(activeHistory, "HistoryId") : 0;
+
+            await EnsureContractAsync(tenantId, selectedRoomId);
+
+            if (activeRoomId == selectedRoomId)
+            {
+                await _bll.UpdateRoomOccupancyStatusAsync(selectedRoomId, 2);
+                return;
+            }
+
+            if (activeHistoryId > 0 && activeRoomId > 0)
+            {
+                DateTime checkIn = TryReadDate(activeHistory, "CheckInDate") ?? DateTime.Today;
+                await _bll.UpdateTenantHistoryAsync(activeHistoryId, activeRoomId, checkIn, DateTime.Today, "Completed", "Chuyển phòng từ form khách thuê");
+
+                if (!HasOtherActiveTenants(history, activeRoomId, tenantId))
+                {
+                    await _bll.UpdateRoomOccupancyStatusAsync(activeRoomId, 1);
+                }
+            }
+
+            DateTime startDate = dtStartDate.Checked ? dtStartDate.Value.Date : DateTime.Today;
+            await _bll.AddTenantHistoryAsync(tenantId, selectedRoomId, startDate, null, "Active", "Cập nhật từ form khách thuê");
+            await _bll.UpdateRoomOccupancyStatusAsync(selectedRoomId, 2);
+        }
+
+        private async System.Threading.Tasks.Task EnsureContractAsync(int tenantId, int roomId)
+        {
+            var contracts = await _bll.GetContractsAsync();
+            bool hasActive = contracts?.AsEnumerable().Any(r =>
+            {
+                if (TryReadInt(r, "TenantId") != tenantId) return false;
+                if (TryReadInt(r, "RoomId") != roomId) return false;
+                return IsActiveContract(r);
+            }) == true;
+
+            if (hasActive) return;
+
+            DateTime startDate = dtStartDate.Checked ? dtStartDate.Value.Date : DateTime.Today;
+            DateTime endDate = dtEndDate.Value.Date;
+            if (endDate < startDate)
+                endDate = startDate;
+            DateTime? signDate = dtContractDate.Checked ? (DateTime?)dtContractDate.Value.Date : null;
+
+            if (string.IsNullOrWhiteSpace(txtContractId.Text))
+                txtContractId.Text = GenerateContractId();
+
+            decimal rentalPrice = ReadMoney(txtRentalPrice.Text);
+            decimal depositAmount = ReadMoney(txtDeposit.Text);
+
+            await _bll.AddContractAsync(
+                txtContractId.Text.Trim(),
+                tenantId,
+                roomId,
+                signDate,
+                startDate,
+                endDate,
+                rentalPrice,
+                depositAmount,
+                "Tạo từ form khách thuê (cập nhật)",
+                null,
+                "Active");
+        }
+
+        private static bool IsActiveHistory(DataRow row)
+        {
+            if (row == null) return false;
+            string checkout = row.Table.Columns.Contains("CheckOutDate") ? row["CheckOutDate"]?.ToString() : null;
+            if (string.IsNullOrWhiteSpace(checkout)) return true;
+            if (row.Table.Columns.Contains("Status"))
+            {
+                var status = row["Status"]?.ToString() ?? string.Empty;
+                if (status.IndexOf("active", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+                if (status.IndexOf("đang", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            }
+            return false;
+        }
+
+        private static bool IsActiveContract(DataRow row)
+        {
+            if (row == null) return false;
+            if (!row.Table.Columns.Contains("Status")) return true;
+            var status = row["Status"]?.ToString() ?? string.Empty;
+            return status.IndexOf("active", StringComparison.OrdinalIgnoreCase) >= 0
+                || status.IndexOf("đang", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static bool HasOtherActiveTenants(DataTable history, int roomId, int tenantId)
+        {
+            if (history == null) return false;
+            foreach (DataRow r in history.Rows)
+            {
+                if (TryReadInt(r, "RoomId") != roomId) continue;
+                if (TryReadInt(r, "TenantId") == tenantId) continue;
+                if (IsActiveHistory(r)) return true;
+            }
+            return false;
+        }
+
+        private static int TryReadInt(DataRow row, string col)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(col)) return 0;
+            return int.TryParse(row[col]?.ToString(), out var v) ? v : 0;
+        }
+
+        private static DateTime? TryReadDate(DataRow row, string col)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(col)) return null;
+            return DateTime.TryParse(row[col]?.ToString(), out var v) ? (DateTime?)v : null;
+        }
+
+        private void SetSavingState(bool isSaving)
+        {
+            UseWaitCursor = isSaving;
+            Cursor = isSaving ? Cursors.WaitCursor : Cursors.Default;
+            if (btnSave != null)
+            {
+                btnSave.Enabled = !isSaving;
+                btnSave.Text = isSaving ? "Đang lưu..." : "Lưu";
+            }
+            if (btnCancel != null)
+            {
+                btnCancel.Enabled = !isSaving;
             }
         }
 

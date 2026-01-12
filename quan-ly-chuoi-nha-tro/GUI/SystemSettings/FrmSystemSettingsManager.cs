@@ -24,6 +24,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Button _btnEdit;
         private Button _btnDelete;
         private Button _btnRefresh;
+        private Button _btnBranchQr;
 
         public FrmSystemSettingsManager()
         {
@@ -65,6 +66,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnEdit = MakeButton("✎ Sửa", Color.FromArgb(0, 122, 204), async (s, e) => await EditSelectedAsync());
             _btnDelete = MakeButton("🗑 Xóa", Color.FromArgb(211, 47, 47), async (s, e) => await DeleteSelectedAsync());
             _btnRefresh = MakeButton("⟳ Tải lại", Color.FromArgb(0, 122, 204), async (s, e) => await LoadAsync());
+            _btnBranchQr = MakeButton("🏦 QR chi nhánh", Color.FromArgb(0, 122, 204), (s, e) => OpenBranchQrEditor());
 
             // Toolbar with title
             var pnlToolbar = new Panel
@@ -118,6 +120,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             actions.Controls.Add(_btnEdit);
             actions.Controls.Add(_btnDelete);
             actions.Controls.Add(_btnRefresh);
+            actions.Controls.Add(_btnBranchQr);
 
             var filters = new FlowLayoutPanel
             {
@@ -381,6 +384,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
             if (row == null || row.Table == null || !row.Table.Columns.Contains(col)) return null;
             var v = row[col];
             return v == null || v == DBNull.Value ? null : v.ToString();
+        }
+
+        private void OpenBranchQrEditor()
+        {
+            using (var frm = new FrmBranchBankSettingsEditor(_bll))
+            {
+                frm.ShowDialog(this);
+            }
         }
     }
 }

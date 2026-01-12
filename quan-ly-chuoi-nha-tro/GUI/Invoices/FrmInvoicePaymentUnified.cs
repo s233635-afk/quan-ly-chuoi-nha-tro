@@ -25,6 +25,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private readonly int? _branchId;
         private readonly bool _showPayments;
         private readonly bool _isStaffMode;
+        private readonly int? _userId;
         private HashSet<int> _allowedBranchIds;
         private DataTable _invoiceTable;
         private DataTable _paymentTable;
@@ -55,15 +56,16 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Button _btnRoomPayment;
         private Button _btnBulkPayment;
 
-        public FrmInvoicePaymentUnified() : this(null, false, false)
+        public FrmInvoicePaymentUnified() : this(null, false, false, null)
         {
         }
 
-        public FrmInvoicePaymentUnified(int? branchId, bool showPayments = false, bool isStaffMode = false)
+        public FrmInvoicePaymentUnified(int? branchId, bool showPayments = false, bool isStaffMode = false, int? userId = null)
         {
             _branchId = branchId;
             _showPayments = showPayments;
             _isStaffMode = isStaffMode;
+            _userId = userId;
             InitializeComponent();
             AdminEvents.DataChanged += HandleAdminDataChanged;
             FormClosing += (s, e) => AdminEvents.DataChanged -= HandleAdminDataChanged;
@@ -999,7 +1001,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             int invoiceId = Convert.ToInt32(row["InvoiceId"]);
             // Show tenant info and payment form
-            using (var frm = new FrmPaymentWithTenantInfo(_bll, row))
+            using (var frm = new FrmPaymentWithTenantInfo(_bll, row, null, _userId))
             {
                 if (frm.ShowDialog(this) == DialogResult.OK)
                 {
@@ -1120,7 +1122,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private void OpenRoomPaymentSelector()
         {
-            using (var frm = new FrmRoomPaymentSelector(_bll))
+            using (var frm = new FrmRoomPaymentSelector(_bll, _userId))
             {
                 if (frm.ShowDialog(this) == DialogResult.OK)
                 {
@@ -1131,7 +1133,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private async Task OpenBulkPaymentRunnerAsync()
         {
-            using (var frm = new FrmBulkPaymentRunner(_bll))
+            using (var frm = new FrmBulkPaymentRunner(_bll, _userId))
             {
                 frm.ShowDialog(this);
             }

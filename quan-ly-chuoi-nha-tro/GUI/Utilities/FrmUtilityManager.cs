@@ -31,9 +31,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private ModernSearchBox _txtSearchReadings;
         private ComboBox _cboBranch;
         private Label _lblReadingsCount;
+        private Label _lblReadingsTotal;
+        private Label _lblReadingsUsage;
 
         private ModernSearchBox _txtSearchTypes;
         private Label _lblTypesCount;
+        private Label _lblTypesSummary;
 
         private Button _btnRAdd;
         private Button _btnREdit;
@@ -108,6 +111,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _cboBranch = new ComboBox { Width = 220, DropDownStyle = ComboBoxStyle.DropDownList };
             _cboBranch.SelectedIndexChanged += (s, e) => ApplyReadingsFilter();
             _lblReadingsCount = new Label { AutoSize = true, Text = "Tổng: 0", Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+            _lblReadingsTotal = new Label { AutoSize = true, Text = "Thành tiền: 0", ForeColor = Color.FromArgb(70, 70, 70) };
+            _lblReadingsUsage = new Label { AutoSize = true, Text = "Tiêu thụ: 0", ForeColor = Color.FromArgb(70, 70, 70) };
 
             _txtSearchTypes = new ModernSearchBox
             {
@@ -116,6 +121,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             };
             _txtSearchTypes.SearchTriggered += (s, e) => ApplyTypesFilter();
             _lblTypesCount = new Label { AutoSize = true, Text = "Tổng: 0", Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+            _lblTypesSummary = new Label { AutoSize = true, Text = "Đang hoạt động: 0", ForeColor = Color.FromArgb(70, 70, 70) };
 
             tabReadings.Controls.Add(_gridReadings);
             tabReadings.Controls.Add(MakeTopBarReadings());
@@ -129,7 +135,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private Panel MakeTopBarReadings()
         {
-            var top = new Panel { Dock = DockStyle.Top, Height = 64, Padding = new Padding(12, 10, 12, 10), BackColor = Color.White };
+            var top = new Panel { Dock = DockStyle.Top, Height = 72, Padding = new Padding(14, 12, 14, 12), BackColor = Color.White };
+            top.Paint += (s, e) =>
+            {
+                using (var pen = new Pen(Color.FromArgb(230, 235, 240)))
+                {
+                    e.Graphics.DrawLine(pen, 0, top.Height - 1, top.Width, top.Height - 1);
+                }
+            };
+
             var actions = new FlowLayoutPanel
             {
                 Dock = DockStyle.Left,
@@ -143,30 +157,51 @@ namespace quan_ly_chuoi_nha_tro.GUI
             actions.Controls.Add(_btnRDelete);
             actions.Controls.Add(_btnRRefresh);
 
-            var filters = new FlowLayoutPanel
+            var summary = new FlowLayoutPanel
             {
                 Dock = DockStyle.Right,
+                AutoSize = true,
+                WrapContents = false,
+                FlowDirection = FlowDirection.TopDown,
+                BackColor = Color.Transparent
+            };
+            _lblReadingsCount.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+            _lblReadingsTotal.Font = new Font("Segoe UI", 9.5f);
+            _lblReadingsUsage.Font = new Font("Segoe UI", 9.5f);
+            summary.Controls.Add(_lblReadingsCount);
+            summary.Controls.Add(_lblReadingsTotal);
+            summary.Controls.Add(_lblReadingsUsage);
+
+            var filters = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
                 AutoSize = true,
                 WrapContents = false,
                 FlowDirection = FlowDirection.LeftToRight,
                 BackColor = Color.Transparent,
                 Padding = new Padding(0, 6, 0, 0)
             };
-            filters.Controls.Add(new Label { Text = "Tìm:", AutoSize = true, Margin = new Padding(0, 6, 6, 0) });
+            filters.Controls.Add(new Label { Text = "Tìm:", AutoSize = true, Margin = new Padding(0, 6, 6, 0), ForeColor = Color.FromArgb(70, 70, 70) });
             filters.Controls.Add(_txtSearchReadings);
-            filters.Controls.Add(new Label { Text = "Chi nhánh:", AutoSize = true, Margin = new Padding(12, 6, 6, 0) });
+            filters.Controls.Add(new Label { Text = "Chi nhánh:", AutoSize = true, Margin = new Padding(12, 6, 6, 0), ForeColor = Color.FromArgb(70, 70, 70) });
             filters.Controls.Add(_cboBranch);
-            filters.Controls.Add(new Label { Text = "  ", AutoSize = true });
-            filters.Controls.Add(_lblReadingsCount);
 
             top.Controls.Add(actions);
             top.Controls.Add(filters);
+            top.Controls.Add(summary);
             return top;
         }
 
         private Panel MakeTopBarTypes()
         {
-            var top = new Panel { Dock = DockStyle.Top, Height = 64, Padding = new Padding(12, 10, 12, 10), BackColor = Color.White };
+            var top = new Panel { Dock = DockStyle.Top, Height = 72, Padding = new Padding(14, 12, 14, 12), BackColor = Color.White };
+            top.Paint += (s, e) =>
+            {
+                using (var pen = new Pen(Color.FromArgb(230, 235, 240)))
+                {
+                    e.Graphics.DrawLine(pen, 0, top.Height - 1, top.Width, top.Height - 1);
+                }
+            };
             var actions = new FlowLayoutPanel
             {
                 Dock = DockStyle.Left,
@@ -180,22 +215,34 @@ namespace quan_ly_chuoi_nha_tro.GUI
             actions.Controls.Add(_btnTDelete);
             actions.Controls.Add(_btnTRefresh);
 
-            var filters = new FlowLayoutPanel
+            var summary = new FlowLayoutPanel
             {
                 Dock = DockStyle.Right,
+                AutoSize = true,
+                WrapContents = false,
+                FlowDirection = FlowDirection.TopDown,
+                BackColor = Color.Transparent
+            };
+            _lblTypesCount.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+            _lblTypesSummary.Font = new Font("Segoe UI", 9.5f);
+            summary.Controls.Add(_lblTypesCount);
+            summary.Controls.Add(_lblTypesSummary);
+
+            var filters = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
                 AutoSize = true,
                 WrapContents = false,
                 FlowDirection = FlowDirection.LeftToRight,
                 BackColor = Color.Transparent,
                 Padding = new Padding(0, 6, 0, 0)
             };
-            filters.Controls.Add(new Label { Text = "Tìm:", AutoSize = true, Margin = new Padding(0, 6, 6, 0) });
+            filters.Controls.Add(new Label { Text = "Tìm:", AutoSize = true, Margin = new Padding(0, 6, 6, 0), ForeColor = Color.FromArgb(70, 70, 70) });
             filters.Controls.Add(_txtSearchTypes);
-            filters.Controls.Add(new Label { Text = "  ", AutoSize = true });
-            filters.Controls.Add(_lblTypesCount);
 
             top.Controls.Add(actions);
             top.Controls.Add(filters);
+            top.Controls.Add(summary);
             return top;
         }
 
@@ -371,6 +418,16 @@ namespace quan_ly_chuoi_nha_tro.GUI
             TextFixer.ForceFixDataTable(filtered, "RoomNumber", "UtilityName", "UtilityCode", "Notes");
             _gridReadings.DataSource = filtered;
             _lblReadingsCount.Text = $"Tổng: {filtered.Rows.Count}";
+
+            decimal total = 0m;
+            decimal usage = 0m;
+            foreach (DataRow r in filtered.Rows)
+            {
+                if (decimal.TryParse(r["TotalCost"]?.ToString(), out var cost)) total += cost;
+                if (decimal.TryParse(r["UsageAmount"]?.ToString(), out var use)) usage += use;
+            }
+            _lblReadingsTotal.Text = $"Thành tiền: {total:N0}";
+            _lblReadingsUsage.Text = $"Tiêu thụ: {usage:N0}";
         }
 
         private void ApplyTypesFilter()
@@ -391,6 +448,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
             var filtered = rows.Any() ? rows.CopyToDataTable() : _typeTable.Clone();
             _gridTypes.DataSource = filtered;
             _lblTypesCount.Text = $"Tổng: {filtered.Rows.Count}";
+
+            int active = 0;
+            foreach (DataRow r in filtered.Rows)
+            {
+                if (r.Table.Columns.Contains("IsActive") && bool.TryParse(r["IsActive"]?.ToString(), out var isActive) && isActive)
+                    active++;
+            }
+            _lblTypesSummary.Text = $"Đang hoạt động: {active}";
         }
 
         private async System.Threading.Tasks.Task AddReadingAsync()
@@ -517,14 +582,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 BackgroundColor = Color.White,
                 BorderStyle = BorderStyle.None
             };
-            g.EnableHeadersVisualStyles = false;
-            g.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(0, 120, 215);
-            g.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            g.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
-            g.DefaultCellStyle.Font = new Font("Segoe UI", 10, FontStyle.Regular);
-            g.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 249, 255);
-            g.DefaultCellStyle.SelectionBackColor = Color.FromArgb(232, 244, 252);
-            g.DefaultCellStyle.SelectionForeColor = Color.Black;
+            UiKit.StyleGrid(g);
+            g.ColumnHeadersHeight = 36;
+            g.RowTemplate.Height = 34;
             return g;
         }
 

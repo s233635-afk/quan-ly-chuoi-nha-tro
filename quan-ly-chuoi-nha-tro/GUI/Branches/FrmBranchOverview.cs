@@ -3537,6 +3537,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 await LoadAllAsync();
                 var refreshed = FindById(_tenantsBranch, "TenantId", _selectedTenantId);
                 if (refreshed != null) ShowTenantDetails(refreshed, _selectedTenantCard);
+                AdminEvents.NotifyDataChanged();
+                DataSyncManager.NotifyTenantsChanged();
+                DataSyncManager.NotifyRoomsChanged();
+                DataSyncManager.NotifyContractsChanged();
+                DataSyncManager.NotifyInvoicesChanged();
+                DataSyncManager.NotifyPaymentsChanged();
                 MessageBox.Show("Đã lưu thông tin khách thuê.", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)

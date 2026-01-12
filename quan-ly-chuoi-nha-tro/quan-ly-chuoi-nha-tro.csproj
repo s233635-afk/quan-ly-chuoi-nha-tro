@@ -292,6 +292,9 @@
     <Compile Include="GUI\SystemSettings\FrmSystemSettingEditor.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="GUI\SystemSettings\FrmBranchBankSettingsEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="GUI\Dashboard\FrmStaffDashboard.cs">
       <SubType>Form</SubType>
     </Compile>

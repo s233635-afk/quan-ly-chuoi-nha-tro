@@ -70,6 +70,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             Text = $"Staff Dashboard - {_username}";
             WindowState = FormWindowState.Maximized;
             _lblUser.Text = $"{_fullName}";
+            AdminEvents.SetActor(string.IsNullOrWhiteSpace(_fullName) ? _username : _fullName, "Staff", _userId);
+            AdminEvents.SetActivityScope("Tổng quan");
 
             // Initialize NotificationBell
             InitializeNotificationBell();
@@ -172,7 +174,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _btnContract = MakeNavButton("📄  Hợp đồng", (s, e) => { SetActive(_btnContract); LoadModule(new FrmContractManager(_branchId, true), "Hợp đồng"); });
             _btnDeposit = MakeNavButton("💰  Đặt cọc", (s, e) => { SetActive(_btnDeposit); LoadModule(new FrmDepositManager(_branchId, true), "Đặt cọc"); });
             _btnUtility = MakeNavButton("⚡  Điện/Nước/DV", (s, e) => { SetActive(_btnUtility); LoadModule(new FrmUtilityManager(_branchId, true), "Điện/Nước/DV"); });
-            _btnInvoicePayment = MakeNavButton("💳  Hóa đơn & TT", (s, e) => { SetActive(_btnInvoicePayment); LoadModule(new FrmInvoicePaymentUnified(_branchId, false, true), "Hóa đơn & Thanh toán"); });
+            _btnInvoicePayment = MakeNavButton("💳  Hóa đơn & TT", (s, e) => { SetActive(_btnInvoicePayment); LoadModule(new FrmInvoicePaymentUnified(_branchId, false, true, _userId), "Hóa đơn & Thanh toán"); });
             _btnMaintenance = MakeNavButton("🔧  Bảo trì", (s, e) => { SetActive(_btnMaintenance); LoadModule(new FrmMaintenanceManager(_branchId, true), "Bảo trì"); });
             _btnAsset = MakeNavButton("📦  Tài sản", (s, e) => { SetActive(_btnAsset); LoadModule(new FrmAssetManager(_branchId, true), "Tài sản"); });
             _btnReport = MakeNavButton("📈  Báo cáo", (s, e) => { SetActive(_btnReport); LoadModule(new FrmReportManager(_branchId, true), "Báo cáo"); });
@@ -342,6 +344,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private void LoadModule(Form module, string headerTitle)
         {
             _lblHeader.Text = headerTitle;
+            AdminEvents.SetActivityScope(headerTitle);
 
             ClearCurrentModule();
 
@@ -364,6 +367,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             SetActive(_btnOverview);
             _lblHeader.Text = "Tổng quan";
+            AdminEvents.SetActivityScope("Tổng quan");
             ClearCurrentModule();
 
             _overviewHost = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent, Padding = new Padding(20) };

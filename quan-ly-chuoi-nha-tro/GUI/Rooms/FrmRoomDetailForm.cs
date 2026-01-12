@@ -46,7 +46,9 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _tenantHistory = tenantHistory;
             InitializeComponent();
             AdminEvents.DataChanged += HandleAdminDataChanged;
+            DataSyncManager.TenantsDataChanged += HandleTenantsDataChanged;
             FormClosing += (s, e) => AdminEvents.DataChanged -= HandleAdminDataChanged;
+            FormClosing += (s, e) => DataSyncManager.TenantsDataChanged -= HandleTenantsDataChanged;
             Activated += async (s, e) => await RefreshOnActivateAsync();
             Load += async (s, e) =>
             {
@@ -459,6 +461,19 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 await LoadUtilitiesAsync();
                 await LoadAssetsAsync();
                 await ReloadRoomAsync();
+            }
+            catch
+            {
+                // ignore refresh errors
+            }
+        }
+
+        private async void HandleTenantsDataChanged(object sender, EventArgs e)
+        {
+            if (IsDisposed || !IsHandleCreated) return;
+            try
+            {
+                await LoadTenantsAsync();
             }
             catch
             {
