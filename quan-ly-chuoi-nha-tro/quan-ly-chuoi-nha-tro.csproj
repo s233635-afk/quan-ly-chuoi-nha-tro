@@ -15,7 +15,6 @@
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
     <UseRoslyn>true</UseRoslyn>
-    <LangVersion>8.0</LangVersion>
     <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
     <DisableOutOfProcTaskHost>true</DisableOutOfProcTaskHost>
     <SkipGenerateResourceDesigner>true</SkipGenerateResourceDesigner>
@@ -193,308 +192,215 @@
   <ItemGroup>
     <Compile Include="BLL\AdminDataBLL.cs" />
     <Compile Include="BLL\BranchBLL.cs" />
-    <Compile Include="BLL\StaffBLL.cs" />
     <Compile Include="BLL\UserBLL.cs" />
-    <Compile Include="BLL\Rooms\RoomBLL.cs" />
-    <Compile Include="BLL\Rooms\RoomStatusBLL.cs" />
-    <Compile Include="BLL\Rooms\BranchSectionBLL.cs" />
-    <Compile Include="BLL\Tenants\TenantBLL.cs" />
-    <Compile Include="BLL\Tenants\DependentBLL.cs" />
-    <Compile Include="BLL\Tenants\TenantHistoryBLL.cs" />
-    <Compile Include="BLL\Contracts\ContractBLL.cs" />
-    <Compile Include="BLL\Contracts\DepositBLL.cs" />
-    <Compile Include="BLL\Invoices\InvoiceBLL.cs" />
-    <Compile Include="BLL\Invoices\PaymentBLL.cs" />
-    <Compile Include="BLL\Utilities\UtilityTypeBLL.cs" />
-    <Compile Include="BLL\Utilities\UtilityReadingBLL.cs" />
-    <Compile Include="BLL\Maintenance\MaintenanceBLL.cs" />
-    <Compile Include="BLL\Assets\AssetBLL.cs" />
-    <Compile Include="BLL\Notifications\NotificationBLL.cs" />
-    <Compile Include="BLL\SystemSettings\SystemSettingBLL.cs" />
-    <!-- Temporarily disabled due to encoding issues from previous session
-    <Compile Include="BLL\Models\RoomDataContext.cs" />
-    <Compile Include="BLL\Models\RoomFilter.cs" />
-    <Compile Include="BLL\Models\RoomValidationResult.cs" />
-    <Compile Include="BLL\Services\RoomDataService.cs" />
-    <Compile Include="BLL\Services\RoomUIService.cs" />
-    <Compile Include="BLL\Services\RoomValidationService.cs" />
-    -->
     <Compile Include="DAL\DatabaseHelper.cs" />
     <Compile Include="DAL\DatabaseInitializer.cs" />
     <Compile Include="DAL\BranchDAL.cs" />
     <Compile Include="DAL\AdminDataDAL.cs" />
     <Compile Include="DAL\InvoicePaymentDAL.cs" />
     <Compile Include="DAL\StaffDAL.cs" />
-    <Compile Include="GUI\Branches\Admin.cs">
+    <Compile Include="GUI\Admin.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Branches\AdminScopeConfig.cs" />
-    <Compile Include="GUI\Branches\Admin.Designer.cs">
+    <Compile Include="GUI\AdminScopeConfig.cs" />
+    <Compile Include="GUI\Admin.Designer.cs">
       <DependentUpon>Admin.cs</DependentUpon>
     </Compile>
-    <Compile Include="GUI\Dashboard\FrmAdminDashboard.cs">
+    <Compile Include="GUI\FrmAdminDashboard.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Dashboard\FrmAdminDashboard.Designer.cs">
+    <Compile Include="GUI\FrmAdminDashboard.Designer.cs">
       <DependentUpon>FrmAdminDashboard.cs</DependentUpon>
     </Compile>
-    <Compile Include="GUI\Staff\FrmStaffManager.cs">
+    <Compile Include="GUI\FrmStaffManager.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Staff\FrmStaffEditor.cs">
+    <Compile Include="GUI\FrmStaffEditor.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Tenants\FrmTenantManager.cs">
+    <Compile Include="GUI\FrmTenantManager.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Tenants\FrmTenantEditor.cs">
+    <Compile Include="GUI\FrmTenantEditor.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Tenants\FrmTenantDetail.cs">
+    <Compile Include="GUI\FrmTenantDetail.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Tenants\FrmDependentEditor.cs">
+    <Compile Include="GUI\FrmDependentEditor.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Tenants\FrmTenantHistoryEditor.cs">
+    <Compile Include="GUI\FrmTenantHistoryEditor.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Utilities\FrmUtilityManager.cs">
+    <Compile Include="GUI\FrmUtilityManager.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Utilities\FrmUtilityTypeEditor.cs">
+    <Compile Include="GUI\FrmUtilityTypeEditor.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Utilities\FrmUtilityReadingEditor.cs">
+    <Compile Include="GUI\FrmUtilityReadingEditor.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Dashboard\FrmMaintenanceManager.cs">
+    <Compile Include="GUI\FrmMaintenanceManager.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Dashboard\FrmMaintenanceEditor.cs">
+    <Compile Include="GUI\FrmMaintenanceEditor.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Assets\FrmAssetManager.cs">
+    <Compile Include="GUI\FrmAssetManager.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Assets\FrmAssetEditor.cs">
+    <Compile Include="GUI\FrmAssetEditor.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Notifications\FrmNotificationManager.cs">
+    <Compile Include="GUI\FrmNotificationManager.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Notifications\FrmNotificationEditor.cs">
+    <Compile Include="GUI\FrmNotificationEditor.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\SystemSettings\FrmSystemSettingsManager.cs">
+    <Compile Include="GUI\FrmSystemSettingsManager.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\SystemSettings\FrmSystemSettingEditor.cs">
+    <Compile Include="GUI\FrmSystemSettingEditor.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Dashboard\FrmStaffDashboard.cs">
+    <Compile Include="GUI\FrmStaffDashboard.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Contracts\FrmContractManager.cs">
+    <Compile Include="GUI\FrmContractManager.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Contracts\FrmContractEditor.cs">
+    <Compile Include="GUI\FrmContractEditor.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Contracts\FrmDepositManager.cs">
+    <Compile Include="GUI\FrmDepositManager.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Tenants\FrmTenantQuickInfo.cs">
+    <Compile Include="GUI\FrmTenantQuickInfo.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Contracts\FrmDepositEditor.cs">
+    <Compile Include="GUI\FrmDepositEditor.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Invoices\FrmInvoiceManager.cs">
+    <Compile Include="GUI\FrmInvoiceManager.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Invoices\FrmInvoiceEditor.cs">
+    <Compile Include="GUI\FrmInvoiceEditor.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Invoices\FrmInvoiceExportForm.cs">
+    <Compile Include="GUI\FrmInvoiceDetailForm.cs">
+    <Compile Include="GUI\FrmInvoiceExportForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Invoices\FrmInvoicePaymentUnified.cs">
+    <Compile Include="GUI\FrmInvoicePaymentUnified.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Invoices\FrmPaymentManager.cs">
+    <Compile Include="GUI\FrmPaymentManager.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Rooms\FrmRoomPaymentSelector.cs">
+    <Compile Include="GUI\FrmRoomPaymentSelector.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Invoices\FrmBulkPaymentRunner.cs">
+    <Compile Include="GUI\FrmBulkPaymentRunner.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Invoices\FrmPaymentEditor.cs">
+    <Compile Include="GUI\FrmPaymentEditor.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Invoices\FrmPaymentWithTenantInfo.cs">
+    <Compile Include="GUI\FrmPaymentWithTenantInfo.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Reports\FrmDataViewer.cs">
+    <Compile Include="GUI\MonthlyInvoiceDialog.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Reports\FrmReportManager.cs">
+    <Compile Include="GUI\FrmDataViewer.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Branches\FrmBranch.cs">
+    <Compile Include="GUI\FrmReportManager.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Branches\FrmBranch.Designer.cs">
+    <Compile Include="GUI\FrmBranch.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GUI\FrmBranch.Designer.cs">
       <DependentUpon>FrmBranch.cs</DependentUpon>
     </Compile>
-    <Compile Include="GUI\Branches\FrmBranchCards.cs">
+    <Compile Include="GUI\FrmBranchCards.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Branches\FrmBranchOverview.cs">
+    <Compile Include="GUI\FrmBranchOverview.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Branches\FrmSectionOverview.cs">
+    <Compile Include="GUI\FrmSectionOverview.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Rooms\FrmRoomTenantQuickView.cs">
+    <Compile Include="GUI\FrmRoomTenantQuickView.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Branches\FrmBranchDetail.cs">
+    <Compile Include="GUI\FrmBranchDetail.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Branches\FrmBranchDetail.Designer.cs">
+    <Compile Include="GUI\FrmBranchDetail.Designer.cs">
       <DependentUpon>FrmBranchDetail.cs</DependentUpon>
     </Compile>
-    <Compile Include="GUI\Auth\FrmLogin.cs">
+    <Compile Include="GUI\FrmLogin.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Auth\FrmLogin.Designer.cs">
+    <Compile Include="GUI\FrmLogin.Designer.cs">
       <DependentUpon>FrmLogin.cs</DependentUpon>
     </Compile>
-    <Compile Include="GUI\Auth\FrmRegister.cs">
+    <Compile Include="GUI\FrmRegister.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Auth\FrmRegister.Designer.cs">
+    <Compile Include="GUI\FrmRegister.Designer.cs">
       <DependentUpon>FrmRegister.cs</DependentUpon>
     </Compile>
-    <Compile Include="GUI\Auth\FrmForgotPassword.cs">
+    <Compile Include="GUI\FrmForgotPassword.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Auth\FrmForgotPassword.Designer.cs">
+    <Compile Include="GUI\FrmForgotPassword.Designer.cs">
       <DependentUpon>FrmForgotPassword.cs</DependentUpon>
     </Compile>
-    <Compile Include="GUI\Rooms\FrmRoomEditor.cs">
+    <Compile Include="GUI\FrmRoomEditor.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Rooms\FrmRoomManager.cs">
+    <Compile Include="GUI\FrmRoomManager.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Rooms\FrmRoomDetailForm.cs">
+    <Compile Include="GUI\FrmRoomDetailForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <!-- Temporarily disabled - Room components depend on RoomUIService which has encoding issues
-    <Compile Include="GUI\Rooms\Components\RoomCard.cs">
-      <SubType>Component</SubType>
-    </Compile>
-    <Compile Include="GUI\Rooms\Components\RoomFilterPanel.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="GUI\Rooms\Components\RoomStatsPanel.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    -->
-    <Compile Include="GUI\Shared\DataSyncManager.cs" />
-    <Compile Include="GUI\Shared\ModernControls.cs">
-      <SubType>Component</SubType>
-    </Compile>
-    <Compile Include="GUI\Shared\ModernTheme.cs" />
-    <Compile Include="GUI\Shared\UIHelper.cs" />
-    <Compile Include="GUI\Shared\UiKit.cs" />
-    <Compile Include="GUI\Shared\Components\ToastNotification.cs">
+    <Compile Include="GUI\DataSyncManager.cs" />
+    <Compile Include="GUI\UiKit.cs" />
+    <Compile Include="GUI\AdminBranchScope.cs" />
+    <Compile Include="GUI\AdminEvents.cs" />
+    <Compile Include="GUI\TextFixer.cs" />
+    <Compile Include="GUI\RoomTypeCatalog.cs" />
+    <Compile Include="GUI\BranchSectionCatalog.cs" />
+    <Compile Include="GUI\FrmBranchSectionManager.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Shared\Components\LoadingOverlay.cs">
-      <SubType>Component</SubType>
-    </Compile>
-    <Compile Include="GUI\Shared\Components\KeyboardShortcutManager.cs" />
-    <Compile Include="GUI\Shared\Components\ValidationHelper.cs" />
-    <Compile Include="GUI\Shared\Components\ModernConfirmDialog.cs">
+    <Compile Include="GUI\FrmBranchSectionEditor.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Shared\Components\TooltipManager.cs" />
-    <Compile Include="GUI\Shared\Components\PaginationHelper.cs" />
-    <Compile Include="GUI\Shared\Components\PaginationControl.cs">
-      <SubType>Component</SubType>
-    </Compile>
-    <Compile Include="GUI\Shared\Components\DataCache.cs" />
-    <Compile Include="GUI\Shared\Components\AsyncHelper.cs" />
-    <Compile Include="GUI\Shared\Components\ExcelExporter.cs" />
-    <Compile Include="GUI\Shared\Components\ThemeManager.cs" />
-    <Compile Include="GUI\Shared\Components\ErrorLogger.cs" />
-    <Compile Include="GUI\Shared\Components\GlobalSearchBox.cs">
-      <SubType>Component</SubType>
-    </Compile>
-    <Compile Include="GUI\Shared\Components\NotificationBell.cs">
-      <SubType>Component</SubType>
-    </Compile>
-    <Compile Include="GUI\Shared\Components\ModernDialog.cs" />
-    <Compile Include="GUI\Shared\Components\ModernInputField.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="GUI\Shared\Components\ModernCard.cs">
-      <SubType>Component</SubType>
-    </Compile>
-    <Compile Include="GUI\Shared\Components\ModernCheckbox.cs">
-      <SubType>Component</SubType>
-    </Compile>
-    <Compile Include="GUI\Shared\Components\ModernDatePicker.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="GUI\Shared\Components\SkeletonLoader.cs">
-      <SubType>Component</SubType>
-    </Compile>
-    <Compile Include="GUI\Shared\Components\EmptyStatePanel.cs">
-      <SubType>Component</SubType>
-    </Compile>
-    <Compile Include="GUI\Shared\Components\ModernSearchBox.cs">
-      <SubType>Component</SubType>
-    </Compile>
-    <Compile Include="GUI\Shared\Components\ProgressOverlay.cs">
+    <Compile Include="GUI\FrmRoomTypeManager.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Shared\Components\SimpleLoadingOverlay.cs">
+    <Compile Include="GUI\FrmRoomTypeEditor.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Branches\AdminBranchScope.cs" />
-    <Compile Include="GUI\Branches\AdminEvents.cs" />
-    <Compile Include="GUI\Shared\TextFixer.cs" />
-    <Compile Include="GUI\Rooms\RoomStatusCatalog.cs" />
-    <Compile Include="GUI\Rooms\RoomTypeCatalog.cs" />
-    <Compile Include="GUI\Rooms\BranchSectionCatalog.cs" />
-    <Compile Include="GUI\Rooms\FrmBranchSectionManager.cs">
+    <Compile Include="GUI\FrmRoomStatusManager.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Rooms\FrmBranchSectionEditor.cs">
+    <Compile Include="GUI\FrmRoomStatusEditor.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Rooms\FrmRoomTypeManager.cs">
+    <Compile Include="GUI\FrmMain.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="GUI\Rooms\FrmRoomTypeEditor.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="GUI\Rooms\FrmRoomStatusManager.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="GUI\Rooms\FrmRoomStatusEditor.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="GUI\Dashboard\FrmMain.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="GUI\Dashboard\FrmMain.Designer.cs">
+    <Compile Include="GUI\FrmMain.Designer.cs">
       <DependentUpon>FrmMain.cs</DependentUpon>
     </Compile>
     <Compile Include="Program.cs" />
