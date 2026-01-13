@@ -516,6 +516,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
                         null,
                         "Active");
 
+                    await SyncDepositFromTenantAsync(newId, roomId);
+
                     await _bll.AddTenantHistoryAsync(
                         newId,
                         roomId,
@@ -557,6 +559,10 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     }
 
                     await SyncTenantRoomAssignmentAsync(tenantId);
+                    if (cboRoom.SelectedValue is int selectedRoomId && selectedRoomId > 0)
+                    {
+                        await SyncDepositFromTenantAsync(tenantId, selectedRoomId);
+                    }
                 }
 
                 AdminEvents.NotifyDataChanged();
@@ -680,6 +686,77 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 "Active");
         }
 
+        private async System.Threading.Tasks.Task SyncDepositFromTenantAsync(int tenantId, int roomId)
+        {
+            decimal depositAmount = ReadMoney(txtDeposit.Text);
+            if (depositAmount <= 0) return;
+
+            DateTime? depositDate = dtContractDate.Checked
+                ? (DateTime?)dtContractDate.Value.Date
+                : (dtStartDate.Checked ? (DateTime?)dtStartDate.Value.Date : DateTime.Today);
+
+            string contractNumber = string.IsNullOrWhiteSpace(txtContractId.Text) ? null : txtContractId.Text.Trim();
+
+            try
+            {
+                var deposits = await _bll.GetDepositsAsync();
+                if (deposits == null || !deposits.Columns.Contains("TenantId") || !deposits.Columns.Contains("RoomId"))
+                    return;
+
+                var existing = deposits.AsEnumerable()
+                    .Where(r => r["TenantId"]?.ToString() == tenantId.ToString()
+                             && r["RoomId"]?.ToString() == roomId.ToString())
+                    .OrderByDescending(r => TryReadDate(r, "DepositDate") ?? TryReadDate(r, "CreatedDate") ?? DateTime.MinValue)
+                    .FirstOrDefault();
+
+                if (existing == null)
+                {
+                    string note = string.IsNullOrWhiteSpace(contractNumber)
+                        ? "[Khách thuê] Tạo cọc tự động"
+                        : $"[Khách thuê] Tạo cọc từ {contractNumber}";
+                    await _bll.AddDepositAsync(
+                        tenantId,
+                        roomId,
+                        depositAmount,
+                        depositDate,
+                        "Official",
+                        "Pending",
+                        null,
+                        null,
+                        note);
+                }
+                else
+                {
+                    int depositId = Convert.ToInt32(existing["DepositId"]);
+                    string type = existing.Table.Columns.Contains("DepositType") ? existing["DepositType"]?.ToString() : "Official";
+                    string status = existing.Table.Columns.Contains("Status") ? existing["Status"]?.ToString() : "Pending";
+                    decimal? returned = TryReadDecimal(existing, "ReturnedAmount");
+                    DateTime? returnedDate = TryReadDate(existing, "ReturnedDate");
+                    string notes = existing.Table.Columns.Contains("Notes") ? existing["Notes"]?.ToString() : null;
+                    string append = string.IsNullOrWhiteSpace(contractNumber)
+                        ? "[Khách thuê] Đồng bộ cọc"
+                        : $"[Khách thuê] Đồng bộ cọc từ {contractNumber}";
+                    notes = AppendNote(notes, append);
+
+                    await _bll.UpdateDepositAsync(
+                        depositId,
+                        tenantId,
+                        roomId,
+                        depositAmount,
+                        depositDate,
+                        type,
+                        status,
+                        returned,
+                        returnedDate,
+                        notes);
+                }
+            }
+            catch
+            {
+                // ignore sync errors
+            }
+        }
+
         private static bool IsActiveHistory(DataRow row)
         {
             if (row == null) return false;
@@ -725,6 +802,20 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (row == null || row.Table == null || !row.Table.Columns.Contains(col)) return null;
             return DateTime.TryParse(row[col]?.ToString(), out var v) ? (DateTime?)v : null;
+        }
+
+        private static decimal? TryReadDecimal(DataRow row, string col)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(col)) return null;
+            return decimal.TryParse(row[col]?.ToString(), out var val) ? val : (decimal?)null;
+        }
+
+        private static string AppendNote(string notes, string extra)
+        {
+            if (string.IsNullOrWhiteSpace(extra)) return notes;
+            if (string.IsNullOrWhiteSpace(notes)) return extra;
+            if (notes.Contains(extra)) return notes;
+            return notes.TrimEnd() + " | " + extra.Trim();
         }
 
         private void SetSavingState(bool isSaving)

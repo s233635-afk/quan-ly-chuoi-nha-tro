@@ -1,6 +1,8 @@
 using System;
 using System.Data;
 using System.IO;
+using System.Globalization;
+using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 
@@ -12,6 +14,47 @@ namespace quan_ly_chuoi_nha_tro.GUI.Shared.Components
     /// </summary>
     public static class ExcelExporter
     {
+        /// <summary>
+        /// Export DataTable to Excel-compatible HTML file (XLS extension) with basic formatting.
+        /// </summary>
+        public static bool ExportToExcelHtml(DataTable table, string title = null)
+        {
+            if (table == null || table.Rows.Count == 0)
+            {
+                ToastNotification.Warning("Không có dữ liệu để xuất");
+                return false;
+            }
+
+            using (var dialog = new SaveFileDialog())
+            {
+                dialog.Filter = "Excel Files (*.xls)|*.xls|All Files (*.*)|*.*";
+                dialog.Title = "Xuất dữ liệu ra Excel";
+                string safeTitle = MakeSafeFileName(string.IsNullOrWhiteSpace(title) ? "Export" : title);
+                dialog.FileName = $"{safeTitle}_{DateTime.Now:yyyyMMdd_HHmmss}.xls";
+
+                if (dialog.ShowDialog() != DialogResult.OK)
+                    return false;
+
+                try
+                {
+                    var filePath = EnsureSafeExportPath(dialog.FileName, "xls");
+                    ExportTableToExcelHtml(table, filePath, title);
+                    ToastNotification.Success($"Đã xuất {table.Rows.Count} dòng ra file Excel");
+
+                    if (ModernConfirmDialog.Confirm("Mở file vừa xuất?"))
+                    {
+                        System.Diagnostics.Process.Start(filePath);
+                    }
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    ToastNotification.Error($"Lỗi xuất file: {ex.Message}");
+                    return false;
+                }
+            }
+        }
+
         /// <summary>
         /// Export DataGridView to Excel (CSV format)
         /// </summary>
@@ -34,13 +77,14 @@ namespace quan_ly_chuoi_nha_tro.GUI.Shared.Components
 
                 try
                 {
-                    ExportGridToCsv(grid, dialog.FileName);
+                    var filePath = EnsureSafeExportPath(dialog.FileName, "csv");
+                    ExportGridToCsv(grid, filePath);
                     ToastNotification.Success($"Đã xuất {grid.Rows.Count} dòng ra file Excel");
                     
                     // Ask to open file
                     if (ModernConfirmDialog.Confirm("Mở file vừa xuất?"))
                     {
-                        System.Diagnostics.Process.Start(dialog.FileName);
+                        System.Diagnostics.Process.Start(filePath);
                     }
                     return true;
                 }
@@ -74,12 +118,13 @@ namespace quan_ly_chuoi_nha_tro.GUI.Shared.Components
 
                 try
                 {
-                    ExportTableToCsv(table, dialog.FileName);
+                    var filePath = EnsureSafeExportPath(dialog.FileName, "csv");
+                    ExportTableToCsv(table, filePath);
                     ToastNotification.Success($"Đã xuất {table.Rows.Count} dòng ra file Excel");
 
                     if (ModernConfirmDialog.Confirm("Mở file vừa xuất?"))
                     {
-                        System.Diagnostics.Process.Start(dialog.FileName);
+                        System.Diagnostics.Process.Start(filePath);
                     }
                     return true;
                 }
@@ -156,6 +201,120 @@ namespace quan_ly_chuoi_nha_tro.GUI.Shared.Components
             }
 
             File.WriteAllText(filePath, sb.ToString(), new UTF8Encoding(true));
+        }
+
+        /// <summary>
+        /// Export DataTable to Excel-compatible HTML table (XLS extension).
+        /// </summary>
+        private static void ExportTableToExcelHtml(DataTable table, string filePath, string title)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("<html>");
+            sb.AppendLine("<head>");
+            sb.AppendLine("<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" />");
+            sb.AppendLine("<style>");
+            sb.AppendLine("body{font-family:'Segoe UI',Arial,sans-serif;font-size:10pt;color:#222;}");
+            sb.AppendLine("h1{font-size:13pt;margin:0 0 10px 0;color:#0c63a6;}");
+            sb.AppendLine("table{border-collapse:collapse;}");
+            sb.AppendLine("th{background:#0c63a6;color:#fff;font-weight:bold;padding:8px 14px;border:1px solid #0b5a96;}");
+            sb.AppendLine("td{padding:8px 14px;border:1px solid #d7e0ea;white-space:nowrap;}");
+            sb.AppendLine("tr:nth-child(even) td{background:#f7fbff;}");
+            sb.AppendLine("</style>");
+            sb.AppendLine("</head>");
+            sb.AppendLine("<body>");
+            if (!string.IsNullOrWhiteSpace(title))
+                sb.AppendLine($"<h1>{EscapeHtml(title)}</h1>");
+            sb.AppendLine("<table>");
+
+            sb.AppendLine("<tr>");
+            foreach (DataColumn col in table.Columns)
+            {
+                sb.AppendLine($"<th>{EscapeHtml(col.ColumnName)}</th>");
+            }
+            sb.AppendLine("</tr>");
+
+            foreach (DataRow row in table.Rows)
+            {
+                sb.AppendLine("<tr>");
+                foreach (DataColumn col in table.Columns)
+                {
+                    bool forceText = IsTextColumn(col.ColumnName);
+                    string value = forceText ? NormalizeIdValue(row[col]) : (row[col] == null || row[col] == DBNull.Value ? string.Empty : row[col].ToString());
+                    string style = forceText ? " style=\"mso-number-format:'\\@';\"" : string.Empty;
+                    sb.AppendLine($"<td{style}>{EscapeHtml(value)}</td>");
+                }
+                sb.AppendLine("</tr>");
+            }
+
+            sb.AppendLine("</table>");
+            sb.AppendLine("</body>");
+            sb.AppendLine("</html>");
+
+            File.WriteAllText(filePath, sb.ToString(), new UTF8Encoding(true));
+        }
+
+        private static string EscapeHtml(string value)
+        {
+            if (string.IsNullOrEmpty(value)) return string.Empty;
+            return value.Replace("&", "&amp;")
+                        .Replace("<", "&lt;")
+                        .Replace(">", "&gt;")
+                        .Replace("\"", "&quot;")
+                        .Replace("'", "&#39;");
+        }
+
+        private static string MakeSafeFileName(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return "Export";
+            var invalids = Path.GetInvalidFileNameChars();
+            var sanitized = new string(name.Select(ch => invalids.Contains(ch) ? '_' : ch).ToArray());
+            return string.IsNullOrWhiteSpace(sanitized) ? "Export" : sanitized;
+        }
+
+        private static bool IsTextColumn(string columnName)
+        {
+            if (string.IsNullOrWhiteSpace(columnName)) return false;
+            return columnName.IndexOf("CCCD", StringComparison.OrdinalIgnoreCase) >= 0
+                || columnName.IndexOf("CMND", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static string NormalizeIdValue(object value)
+        {
+            if (value == null || value == DBNull.Value) return string.Empty;
+
+            if (value is long longValue) return longValue.ToString(CultureInfo.InvariantCulture);
+            if (value is int intValue) return intValue.ToString(CultureInfo.InvariantCulture);
+            if (value is decimal decimalValue) return decimalValue.ToString("0", CultureInfo.InvariantCulture);
+            if (value is double doubleValue) return doubleValue.ToString("0", CultureInfo.InvariantCulture);
+            if (value is float floatValue) return floatValue.ToString("0", CultureInfo.InvariantCulture);
+
+            return value.ToString();
+        }
+
+        private static string EnsureSafeExportPath(string filePath, string defaultExtension)
+        {
+            var directory = Path.GetDirectoryName(filePath);
+            var extension = Path.GetExtension(filePath);
+            var name = Path.GetFileNameWithoutExtension(filePath);
+
+            if (string.IsNullOrWhiteSpace(extension))
+            {
+                extension = "." + (defaultExtension ?? "xls").TrimStart('.');
+            }
+
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                name = "Export";
+            }
+
+            var safeName = MakeSafeFileName(name);
+
+            if (string.IsNullOrWhiteSpace(directory))
+            {
+                return safeName + extension;
+            }
+
+            return Path.Combine(directory, safeName + extension);
         }
 
         /// <summary>

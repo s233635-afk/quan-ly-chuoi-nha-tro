@@ -2,6 +2,7 @@ using System;
 using System.Data;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -23,10 +24,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private DataTable _tenants;
         private DataTable _history;
         private DataTable _rooms;
+        private Dictionary<int, string> _roomMap;
 
         private FlowLayoutPanel _tenantCardsHost;
         private ModernSearchBox _txtSearch;
         private Label _lblTotal;
+        private Label _lblActive;
+        private Label _lblInactive;
+        private Button _btnExportTemp;
         
         // Selected tenant tracking
         private int _selectedTenantId = 0;
@@ -48,35 +53,108 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             Text = "Quản lý khách thuê";
             StartPosition = FormStartPosition.CenterParent;
-            BackColor = Color.FromArgb(240, 242, 245);
+            BackColor = Color.FromArgb(245, 247, 250);
             Font = new Font("Segoe UI", 10F);
             Width = 1100;
             Height = 650;
+            DoubleBuffered = true;
 
-            var toolbar = new Panel
+            var header = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 70,
-                Padding = new Padding(12, 10, 12, 10),
+                Height = 64,
+                Padding = new Padding(18, 12, 18, 10),
                 BackColor = Color.White
             };
+            header.Paint += (s, e) =>
+            {
+                using (var pen = new Pen(Color.FromArgb(230, 235, 242)))
+                {
+                    e.Graphics.DrawLine(pen, 0, header.Height - 1, header.Width, header.Height - 1);
+                }
+            };
 
-            var searchLabel = new Label { Text = "Tìm:", AutoSize = true, Margin = new Padding(0, 8, 6, 0) };
+            var headerStack = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Left,
+                AutoSize = true,
+                WrapContents = false,
+                FlowDirection = FlowDirection.TopDown,
+                Margin = new Padding(0)
+            };
+
+            var lblTitle = new Label
+            {
+                Text = "Khách thuê",
+                AutoSize = true,
+                Font = new Font("Segoe UI Semibold", 14f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(24, 40, 80)
+            };
+
+            var lblSubtitle = new Label
+            {
+                Text = "Quản lý hồ sơ, thông tin liên hệ và trạng thái",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 9.2f),
+                ForeColor = Color.FromArgb(110, 120, 140),
+                Margin = new Padding(0, 2, 0, 0)
+            };
+
+            headerStack.Controls.Add(lblTitle);
+            headerStack.Controls.Add(lblSubtitle);
+
+            _lblTotal = new Label
+            {
+                Text = "0 khách",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 98, 186),
+                BackColor = Color.FromArgb(235, 242, 252),
+                Padding = new Padding(10, 4, 10, 4),
+                Dock = DockStyle.Right
+            };
+
+            header.Controls.Add(_lblTotal);
+            header.Controls.Add(headerStack);
+
+            var content = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.FromArgb(245, 247, 250),
+                Padding = new Padding(18, 12, 18, 18)
+            };
+
+            var toolbarCard = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 74,
+                Padding = new Padding(12, 12, 12, 12),
+                BackColor = Color.White
+            };
+            ApplyCardStyle(toolbarCard);
+
+            var searchLabel = new Label
+            {
+                Text = "Tìm kiếm",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(90, 105, 125),
+                Margin = new Padding(0, 6, 8, 0)
+            };
             _txtSearch = new ModernSearchBox
             {
                 Width = 260,
                 PlaceholderText = SearchPlaceholder,
-                Margin = new Padding(0, 4, 12, 0)
+                Margin = new Padding(0, 3, 14, 0)
             };
             _txtSearch.SearchTriggered += (s, e) => ApplySearch();
 
-            var btnSearch = MakeButton("Tìm", Color.FromArgb(0, 122, 204), (s, e) => ApplySearch());
-            var btnAdd = MakeButton("Thêm", Color.FromArgb(0, 122, 204), (s, e) => AddTenant());
-            var btnEdit = MakeButton("Sửa", Color.FromArgb(0, 122, 204), (s, e) => EditTenant());
-            var btnDelete = MakeButton("Xóa", Color.FromArgb(211, 47, 47), (s, e) => DeleteTenant());
-            var btnRefresh = MakeButton("Làm mới", Color.FromArgb(40, 167, 69), async (s, e) => await LoadDataAsync());
-
-            _lblTotal = new Label { Text = "Tổng: 0", AutoSize = true, Font = new Font("Segoe UI", 10, FontStyle.Bold), ForeColor = Color.FromArgb(0, 122, 204), Margin = new Padding(12, 8, 0, 0) };
+            var btnSearch = MakeButton("Tìm", Color.FromArgb(0, 98, 186), (s, e) => ApplySearch(), 70);
+            var btnAdd = MakeButton("Thêm", Color.FromArgb(0, 122, 204), (s, e) => AddTenant(), 78);
+            var btnEdit = MakeButton("Sửa", Color.FromArgb(0, 122, 204), (s, e) => EditTenant(), 78);
+            var btnDelete = MakeButton("Xóa", Color.FromArgb(211, 47, 47), (s, e) => DeleteTenant(), 78);
+            var btnRefresh = MakeButton("Làm mới", Color.FromArgb(46, 164, 79), async (s, e) => await LoadDataAsync(), 92);
+            _btnExportTemp = MakeButton("Xuất Excel", Color.FromArgb(0, 176, 80), (s, e) => ExportTemporaryResidence(), 104);
 
             var actions = new FlowLayoutPanel
             {
@@ -98,10 +176,26 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 actions.Controls.Add(btnDelete);
             }
             
+            actions.Controls.Add(_btnExportTemp);
             actions.Controls.Add(btnRefresh);
-            actions.Controls.Add(_lblTotal);
 
-            toolbar.Controls.Add(actions);
+            var summaryPanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Right,
+                AutoSize = true,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                Margin = new Padding(0)
+            };
+
+            _lblActive = CreateStatChip("Đang ở: 0", Color.FromArgb(232, 247, 239), Color.FromArgb(40, 167, 69));
+            _lblInactive = CreateStatChip("Tạm ngưng: 0", Color.FromArgb(252, 236, 238), Color.FromArgb(220, 53, 69));
+
+            summaryPanel.Controls.Add(_lblActive);
+            summaryPanel.Controls.Add(_lblInactive);
+
+            toolbarCard.Controls.Add(summaryPanel);
+            toolbarCard.Controls.Add(actions);
 
             _tenantCardsHost = new FlowLayoutPanel
             {
@@ -109,12 +203,15 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 AutoScroll = true,
                 WrapContents = true,
                 FlowDirection = FlowDirection.LeftToRight,
-                BackColor = Color.WhiteSmoke,
-                Padding = new Padding(6)
+                BackColor = Color.FromArgb(245, 247, 250),
+                Padding = new Padding(6, 6, 6, 10)
             };
 
-            Controls.Add(_tenantCardsHost);
-            Controls.Add(toolbar);
+            content.Controls.Add(_tenantCardsHost);
+            content.Controls.Add(toolbarCard);
+
+            Controls.Add(content);
+            Controls.Add(header);
 
             Load += async (s, e) => await LoadDataAsync();
         }
@@ -136,12 +233,12 @@ namespace quan_ly_chuoi_nha_tro.GUI
             return grid;
         }
 
-        private Button MakeButton(string text, Color backColor, EventHandler onClick)
+        private Button MakeButton(string text, Color backColor, EventHandler onClick, int width = 90)
         {
             var btn = new ModernButton
             {
                 Text = text,
-                Width = 90,
+                Width = width,
                 Height = 32,
                 BaseColor = backColor,
                 BackColor = Color.Transparent,
@@ -164,6 +261,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 _tenants = await _bll.GetTenantsAsync() ?? new DataTable();
                 _history = await _bll.GetTenantHistoryAsync() ?? new DataTable();
                 _rooms = await _bll.GetRoomsAsync() ?? new DataTable();
+                _roomMap = BuildRoomMap();
 
                 if (_branchId.HasValue && _tenants.Columns.Contains("BranchId"))
                 {
@@ -172,7 +270,6 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     _tenants = filtered.Any() ? filtered.CopyToDataTable() : _tenants.Clone();
                 }
 
-                _lblTotal.Text = $"Tổng: {_tenants.Rows.Count}";
                 ApplySearch();
             }
             catch (Exception ex)
@@ -203,8 +300,134 @@ namespace quan_ly_chuoi_nha_tro.GUI
             }
 
             var filtered = view.ToTable();
-            _lblTotal.Text = $"Tổng: {filtered.Rows.Count}";
+            UpdateSummary(filtered);
             RenderTenantCards(filtered);
+        }
+
+        private void ExportTemporaryResidence()
+        {
+            if (_tenants == null || _tenants.Rows.Count == 0)
+            {
+                ToastNotification.Warning("Không có dữ liệu để xuất");
+                return;
+            }
+
+            var filtered = GetFilteredTenantsForExport();
+            var report = BuildTemporaryResidenceTable(filtered);
+            ExcelExporter.ExportToExcelHtml(report, "Danh sách tạm trú/tạm vắng");
+        }
+
+        private DataTable GetFilteredTenantsForExport()
+        {
+            var view = new DataView(_tenants);
+            string keyword = (_txtSearch.Text ?? string.Empty).Trim();
+            if (keyword == SearchPlaceholder) keyword = string.Empty;
+            if (!string.IsNullOrWhiteSpace(keyword))
+            {
+                string escaped = keyword.Replace("'", "''");
+                view.RowFilter = $"Convert(FullName, 'System.String') LIKE '%{escaped}%' " +
+                                 $"OR Convert(IdentityCard, 'System.String') LIKE '%{escaped}%' " +
+                                 $"OR Convert(PhoneNumber, 'System.String') LIKE '%{escaped}%'";
+            }
+            else
+            {
+                view.RowFilter = string.Empty;
+            }
+            return view.ToTable();
+        }
+
+        private DataTable BuildTemporaryResidenceTable(DataTable tenants)
+        {
+            var table = new DataTable("TamTru_TamVang");
+            table.Columns.Add("Họ tên");
+            table.Columns.Add("CCCD/CMND");
+            table.Columns.Add("SĐT");
+            table.Columns.Add("Email");
+            table.Columns.Add("Phòng");
+            table.Columns.Add("Tạm trú tại");
+            table.Columns.Add("Ngày đăng ký tạm trú");
+            table.Columns.Add("Hạn tạm trú");
+            table.Columns.Add("Ngày vào");
+            table.Columns.Add("Ngày ra");
+            table.Columns.Add("Trạng thái");
+
+            var roomMap = BuildRoomMap();
+
+            foreach (DataRow tenant in tenants.Rows)
+            {
+                int tenantId = TryReadInt(tenant, "TenantId");
+                var historyRow = FindLatestHistoryRow(tenantId);
+
+                string roomNumber = historyRow != null
+                    ? ReadString(roomMap, TryReadInt(historyRow, "RoomId"))
+                    : string.Empty;
+
+                string checkIn = FormatDate(ReadString(historyRow, "CheckInDate"));
+                string checkOut = FormatDate(ReadString(historyRow, "CheckOutDate"));
+
+                string status = ReadString(tenant, "IsActive");
+                if (!string.IsNullOrWhiteSpace(status))
+                    status = status.Equals("True", StringComparison.OrdinalIgnoreCase) ? "Đang hoạt động" : "Ngừng";
+
+                table.Rows.Add(
+                    ReadString(tenant, "FullName"),
+                    ReadString(tenant, "IdentityCard"),
+                    ReadString(tenant, "PhoneNumber"),
+                    ReadString(tenant, "Email"),
+                    roomNumber,
+                    ReadString(tenant, "TemporaryRegistration"),
+                    FormatDate(ReadString(tenant, "TemporaryRegistrationDate")),
+                    FormatDate(ReadString(tenant, "TemporaryRegistrationExpiry")),
+                    checkIn,
+                    checkOut,
+                    string.IsNullOrWhiteSpace(status) ? "—" : status
+                );
+            }
+
+            return table;
+        }
+
+        private Dictionary<int, string> BuildRoomMap()
+        {
+            var map = new Dictionary<int, string>();
+            if (_rooms == null || !_rooms.Columns.Contains("RoomId")) return map;
+            foreach (DataRow row in _rooms.Rows)
+            {
+                if (!int.TryParse(row["RoomId"]?.ToString(), out var id)) continue;
+                string roomNumber = _rooms.Columns.Contains("RoomNumber") ? row["RoomNumber"]?.ToString() : null;
+                map[id] = roomNumber ?? id.ToString();
+            }
+            return map;
+        }
+
+        private DataRow FindLatestHistoryRow(int tenantId)
+        {
+            if (_history == null || !_history.Columns.Contains("TenantId")) return null;
+            var rows = _history.AsEnumerable()
+                .Where(r => TryReadInt(r, "TenantId") == tenantId);
+            if (!rows.Any()) return null;
+            return rows
+                .OrderByDescending(r => ReadDate(r, "CheckInDate") ?? ReadDate(r, "CreatedDate") ?? DateTime.MinValue)
+                .FirstOrDefault();
+        }
+
+        private static string ReadString(Dictionary<int, string> map, int key)
+        {
+            return map != null && map.TryGetValue(key, out var val) ? val : string.Empty;
+        }
+
+        private static DateTime? ReadDate(DataRow row, string column)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(column)) return null;
+            if (DateTime.TryParse(row[column]?.ToString(), out var dt)) return dt;
+            return null;
+        }
+
+        private static string FormatDate(string raw)
+        {
+            if (DateTime.TryParse(raw, out var dt))
+                return dt.ToString("dd/MM/yyyy");
+            return string.Empty;
         }
 
         private void RenderTenantCards(DataTable tenants)
@@ -215,13 +438,32 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
             if (tenants == null || tenants.Rows.Count == 0)
             {
-                _tenantCardsHost.Controls.Add(new Label
+                var emptyPanel = new Panel
+                {
+                    Width = 420,
+                    Height = 120,
+                    BackColor = Color.White,
+                    Margin = new Padding(10),
+                    Padding = new Padding(16)
+                };
+                ApplyCardStyle(emptyPanel);
+                emptyPanel.Controls.Add(new Label
                 {
                     AutoSize = true,
-                    Text = "Chưa có khách thuê.",
-                    ForeColor = Color.FromArgb(90, 90, 90),
-                    Margin = new Padding(8, 6, 0, 0)
+                    Text = "Chưa có khách thuê",
+                    Font = new Font("Segoe UI Semibold", 12f, FontStyle.Bold),
+                    ForeColor = Color.FromArgb(40, 50, 70),
+                    Location = new Point(16, 18)
                 });
+                emptyPanel.Controls.Add(new Label
+                {
+                    AutoSize = true,
+                    Text = "Hãy thêm mới hoặc điều chỉnh bộ lọc tìm kiếm.",
+                    Font = new Font("Segoe UI", 9.5f),
+                    ForeColor = Color.FromArgb(120, 130, 150),
+                    Location = new Point(16, 46)
+                });
+                _tenantCardsHost.Controls.Add(emptyPanel);
                 _tenantCardsHost.ResumeLayout();
                 return;
             }
@@ -237,23 +479,17 @@ namespace quan_ly_chuoi_nha_tro.GUI
 
         private Control CreateTenantCard(DataRow tenantRow)
         {
+            bool isActive = tenantRow.Table.Columns.Contains("IsActive") &&
+                            bool.TryParse(tenantRow["IsActive"]?.ToString(), out var active) && active;
             var panel = new Panel
             {
-                Width = 240,
-                Height = 140,
+                Width = 320,
+                Height = 186,
                 BackColor = Color.White,
-                Margin = new Padding(8),
-                Padding = new Padding(12),
+                Margin = new Padding(10),
                 Cursor = Cursors.Hand
             };
-            panel.Paint += (s, e) =>
-            {
-                using (var pen = new Pen(Color.FromArgb(210, 220, 230)))
-                {
-                    var rect = new Rectangle(0, 0, panel.Width - 1, panel.Height - 1);
-                    e.Graphics.DrawRectangle(pen, rect);
-                }
-            };
+            ApplyCardStyle(panel);
 
             int tenantId = TryReadInt(tenantRow, "TenantId");
             string name = TextFixer.FixUtf8Mojibake(ReadString(tenantRow, "FullName") ?? "");
@@ -261,24 +497,72 @@ namespace quan_ly_chuoi_nha_tro.GUI
             string identity = ReadString(tenantRow, "IdentityCard");
             string email = ReadString(tenantRow, "Email");
             string address = TextFixer.FixUtf8Mojibake(ReadString(tenantRow, "Address"));
-            string status = (tenantRow.Table.Columns.Contains("IsActive") && bool.TryParse(tenantRow["IsActive"]?.ToString(), out var active) && active) ? "Đang ở" : "Tạm ngưng";
+            string status = isActive ? "Đang ở" : "Tạm ngưng";
+            string roomNumber = GetRoomNumberForTenant(tenantId);
+
+            var accent = new Panel
+            {
+                Dock = DockStyle.Left,
+                Width = 4,
+                BackColor = isActive ? Color.FromArgb(40, 167, 69) : Color.FromArgb(220, 53, 69)
+            };
+
+            var contentHost = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(12, 12, 12, 10)
+            };
+
+            var headerRow = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 44
+            };
+
+            var avatar = CreateAvatarBadge(name, isActive);
+            avatar.Dock = DockStyle.Left;
+
+            var nameStack = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(8, 2, 0, 0)
+            };
 
             var lblName = new Label
             {
                 Dock = DockStyle.Top,
-                Height = 24,
-                Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                Text = $"{tenantId} · {NullDash(name)}",
-                ForeColor = Color.FromArgb(0, 79, 159)
+                Height = 20,
+                Font = new Font("Segoe UI Semibold", 10.2f, FontStyle.Bold),
+                Text = NullDash(name),
+                ForeColor = Color.FromArgb(24, 40, 80)
             };
 
-            var lblInfo = new Label
+            var lblMeta = new Label
             {
                 Dock = DockStyle.Top,
-                Height = 46,
-                Font = new Font("Segoe UI", 9f, FontStyle.Regular),
-                ForeColor = Color.FromArgb(70, 70, 70),
-                Text = $"☎ {NullDash(phone)}   |   CCCD: {NullDash(identity)}\n✉ {NullDash(email)}",
+                Height = 18,
+                Font = new Font("Segoe UI", 8.6f),
+                ForeColor = Color.FromArgb(120, 130, 150),
+                Text = $"ID {tenantId} · CCCD {NullDash(identity)}"
+            };
+
+            var lblStatus = CreateStatusBadge(status, isActive);
+            lblStatus.Dock = DockStyle.Right;
+
+            nameStack.Controls.Add(lblMeta);
+            nameStack.Controls.Add(lblName);
+
+            headerRow.Controls.Add(nameStack);
+            headerRow.Controls.Add(lblStatus);
+            headerRow.Controls.Add(avatar);
+
+            var lblContact = new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 40,
+                Font = new Font("Segoe UI", 9f),
+                ForeColor = Color.FromArgb(70, 80, 100),
+                Text = $"☎ {NullDash(phone)}\n✉ {NullDash(email)}",
                 AutoSize = false
             };
 
@@ -288,24 +572,36 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 Height = 32,
                 Text = $"🏠 {NullDash(address)}",
                 Font = new Font("Segoe UI", 8.8f),
-                ForeColor = Color.FromArgb(90, 90, 90)
+                ForeColor = Color.FromArgb(90, 100, 120)
             };
 
-            var lblStatus = new Label
+            var footerRow = new Panel
+            {
+                Dock = DockStyle.Bottom,
+                Height = 24
+            };
+
+            var lblRoom = new Label
             {
                 AutoSize = true,
-                Text = status,
-                BackColor = status.Contains("Đang") ? Color.FromArgb(232, 247, 239) : Color.FromArgb(252, 236, 238),
-                ForeColor = status.Contains("Đang") ? Color.FromArgb(40, 167, 69) : Color.FromArgb(220, 53, 69),
-                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
-                Padding = new Padding(6, 2, 6, 2),
-                Location = new Point(12, panel.Height - 28)
+                Text = string.IsNullOrWhiteSpace(roomNumber) ? "Chưa gán phòng" : $"Phòng {roomNumber}",
+                Font = new Font("Segoe UI", 8.8f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 98, 186),
+                BackColor = Color.FromArgb(234, 242, 252),
+                Padding = new Padding(8, 2, 8, 2),
+                Location = new Point(0, 2)
             };
 
-            panel.Controls.Add(lblStatus);
-            panel.Controls.Add(lblAddress);
-            panel.Controls.Add(lblInfo);
-            panel.Controls.Add(lblName);
+            footerRow.Controls.Add(lblRoom);
+
+            contentHost.Controls.Add(footerRow);
+            contentHost.Controls.Add(lblAddress);
+            contentHost.Controls.Add(lblContact);
+            contentHost.Controls.Add(headerRow);
+
+            panel.Controls.Add(contentHost);
+            panel.Controls.Add(accent);
+            ApplyHoverEffect(panel);
 
             // Click handler - open edit form with full info
             EventHandler onClick = (s, e) =>
@@ -313,11 +609,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 _selectedTenantId = tenantId;
                 OpenTenantEditor();
             };
-            panel.Click += onClick;
-            foreach (Control ctl in panel.Controls)
-            {
-                ctl.Click += onClick;
-            }
+            AttachClickHandlers(panel, onClick);
 
             // Right-click context menu
             var contextMenu = new ContextMenuStrip();
@@ -358,6 +650,32 @@ namespace quan_ly_chuoi_nha_tro.GUI
         {
             if (_selectedTenantId <= 0 || _tenants == null) return null;
             return FindById(_tenants, "TenantId", _selectedTenantId);
+        }
+
+        private void UpdateSummary(DataTable filtered)
+        {
+            int total = filtered?.Rows.Count ?? 0;
+            int active = 0;
+            int inactive = 0;
+
+            if (filtered != null && filtered.Columns.Contains("IsActive"))
+            {
+                foreach (DataRow row in filtered.Rows)
+                {
+                    if (bool.TryParse(row["IsActive"]?.ToString(), out var isActive) && isActive)
+                        active++;
+                    else
+                        inactive++;
+                }
+            }
+            else
+            {
+                inactive = total;
+            }
+
+            if (_lblTotal != null) _lblTotal.Text = $"{total} khách";
+            if (_lblActive != null) _lblActive.Text = $"Đang ở: {active}";
+            if (_lblInactive != null) _lblInactive.Text = $"Tạm ngưng: {inactive}";
         }
 
         private void ShowDetail()
@@ -431,6 +749,102 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 if (int.TryParse(r[col]?.ToString(), out var currentId) && currentId == id) return r;
             }
             return null;
+        }
+
+        private string GetRoomNumberForTenant(int tenantId)
+        {
+            var historyRow = FindLatestHistoryRow(tenantId);
+            if (historyRow == null || _roomMap == null) return string.Empty;
+            return ReadString(_roomMap, TryReadInt(historyRow, "RoomId"));
+        }
+
+        private static Label CreateStatChip(string text, Color backColor, Color foreColor)
+        {
+            return new Label
+            {
+                AutoSize = true,
+                Text = text,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                ForeColor = foreColor,
+                BackColor = backColor,
+                Padding = new Padding(8, 4, 8, 4),
+                Margin = new Padding(6, 2, 0, 2)
+            };
+        }
+
+        private static Control CreateAvatarBadge(string name, bool isActive)
+        {
+            var label = new Label
+            {
+                Width = 36,
+                Height = 36,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Font = new Font("Segoe UI", 9.2f, FontStyle.Bold),
+                ForeColor = Color.White,
+                BackColor = isActive ? Color.FromArgb(46, 164, 79) : Color.FromArgb(220, 53, 69),
+                Text = GetInitials(name)
+            };
+
+            label.Resize += (s, e) =>
+            {
+                var path = new GraphicsPath();
+                path.AddEllipse(0, 0, label.Width, label.Height);
+                label.Region = new Region(path);
+            };
+
+            return label;
+        }
+
+        private static string GetInitials(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return "KH";
+            var parts = name.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 1) return parts[0].Substring(0, 1).ToUpperInvariant();
+            return (parts[0].Substring(0, 1) + parts[parts.Length - 1].Substring(0, 1)).ToUpperInvariant();
+        }
+
+        private static Label CreateStatusBadge(string text, bool isActive)
+        {
+            return new Label
+            {
+                AutoSize = true,
+                Text = text,
+                BackColor = isActive ? Color.FromArgb(232, 247, 239) : Color.FromArgb(252, 236, 238),
+                ForeColor = isActive ? Color.FromArgb(40, 167, 69) : Color.FromArgb(220, 53, 69),
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                Padding = new Padding(8, 2, 8, 2),
+                Margin = new Padding(6, 2, 0, 0)
+            };
+        }
+
+        private static void ApplyCardStyle(Panel panel)
+        {
+            panel.Paint += (s, e) =>
+            {
+                using (var pen = new Pen(Color.FromArgb(225, 232, 240)))
+                {
+                    var rect = new Rectangle(0, 0, panel.Width - 1, panel.Height - 1);
+                    e.Graphics.DrawRectangle(pen, rect);
+                }
+            };
+        }
+
+        private static void ApplyHoverEffect(Panel panel)
+        {
+            var normal = Color.White;
+            var hover = Color.FromArgb(248, 250, 255);
+            panel.MouseEnter += (s, e) => panel.BackColor = hover;
+            panel.MouseLeave += (s, e) => panel.BackColor = normal;
+        }
+
+        private static void AttachClickHandlers(Control root, EventHandler handler)
+        {
+            if (root == null) return;
+            root.Click += handler;
+            foreach (Control child in root.Controls)
+            {
+                AttachClickHandlers(child, handler);
+            }
         }
 
         private void AddTenant()
