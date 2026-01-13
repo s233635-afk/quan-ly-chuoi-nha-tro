@@ -4,6 +4,8 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Drawing.Printing;
+using System.Windows.Forms.DataVisualization.Charting;
 using System.Windows.Forms;
 using QuanLyNhaTro.BLL;
 using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
@@ -25,7 +27,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private FlowLayoutPanel _cards;
         private Label _lblCount;
         private Label _lblFooterSummary;
-        private Button _btnExport;
+        private Button _btnExportPdf;
         private Button _btnRefresh;
 
         private Panel _pnlTaxFilters;
@@ -36,6 +38,20 @@ namespace quan_ly_chuoi_nha_tro.GUI
         private Button _btnTaxRecalc;
         private Button _btnTaxSaveRate;
         private Button _btnTaxOpenInvoices;
+        private Panel _chartHost;
+        private Chart _revenueChart;
+        private Label _lblChartTitle;
+        private Label _lblChartSub;
+        private Label _lblChartEmpty;
+        private Label _lblChartTip;
+        private PrintDocument _printDoc;
+        private int _printRowIndex;
+        private bool _printSummaryPending;
+        private DataTable _printTable;
+        private System.Collections.Generic.List<DataColumn> _printColumns;
+        private System.Collections.Generic.Dictionary<string, string> _printColumnMap;
+        private string _printTitle;
+        private string _printSummary;
 
         private DataTable _raw;
         private DataTable _viewTable;
@@ -102,8 +118,8 @@ namespace quan_ly_chuoi_nha_tro.GUI
             };
             _txtSearch.SearchTriggered += (s, e) => ApplyFilter();
 
-            _btnExport = UiKit.MakeButton("📥 Xuất CSV", UiKit.Purple, (s, e) => ExportCsv(), 120);
-            _btnExport.Margin = new Padding(5, 3, 5, 3);
+            _btnExportPdf = UiKit.MakeButton("📄 Xuất PDF", UiKit.Primary, (s, e) => ExportPdf(), 120);
+            _btnExportPdf.Margin = new Padding(5, 3, 5, 3);
             _btnRefresh = UiKit.MakeButton("🔄 Tải Lại", UiKit.Primary, async (s, e) => await LoadDataAsync(), 120);
             _btnRefresh.Margin = new Padding(5, 3, 5, 3);
 
@@ -155,7 +171,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 BackColor = Color.Transparent,
                 Margin = new Padding(0)
             };
-            pnlActions.Controls.Add(_btnExport);
+            pnlActions.Controls.Add(_btnExportPdf);
             pnlActions.Controls.Add(_btnRefresh);
             pnlActions.Controls.Add(_lblCount);
 
@@ -199,13 +215,18 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _pnlTaxFilters.Visible = !_isStaffMode && false;
 
             // ===== GRID HOST =====
-            var gridHost = new Panel 
-            { 
-                Dock = DockStyle.Fill, 
-                Padding = new Padding(12), 
-                BackColor = BackColor 
+            var gridHost = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(12),
+                BackColor = BackColor
             };
+            _chartHost = BuildRevenueChartPanel();
+            _chartHost.Dock = DockStyle.Top;
+            _chartHost.Visible = false;
+            _cards.Dock = DockStyle.Fill;
             gridHost.Controls.Add(_cards);
+            gridHost.Controls.Add(_chartHost);
 
             // ===== FOOTER PANEL =====
             var pnlFooter = new Panel
@@ -282,6 +303,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 ApplyTaxReportDefaults();
                 _viewTable = _raw;
                 RenderCards(_viewTable);
+                UpdateRevenueChart(_viewTable);
                 _lblCount.Text = $"Tổng: {_viewTable?.Rows.Count ?? 0}";
                 UpdateFooterSummary();
                 ApplyFilter();
@@ -1043,6 +1065,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 _viewTable = _raw;
                 _lblCount.Text = $"Tổng: {_raw.Rows.Count}";
                 RenderCards(_viewTable);
+                UpdateRevenueChart(_viewTable);
                 return;
             }
 
@@ -1056,6 +1079,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _viewTable = filtered;
             _lblCount.Text = $"Tổng: {filtered.Rows.Count}";
             RenderCards(_viewTable);
+            UpdateRevenueChart(_viewTable);
         }
 
         private static bool RowContains(DataRow row, string keyword)
@@ -1105,6 +1129,272 @@ namespace quan_ly_chuoi_nha_tro.GUI
                     ErrorLogger.HandleException(ex, "ExportCsv", "Lỗi xuất CSV");
                 }
             }
+        }
+
+        private async void ExportPdf()
+        {
+            var dt = _viewTable ?? _raw;
+            if (dt == null || dt.Rows.Count == 0)
+            {
+                ToastNotification.Warning("Không có dữ liệu để xuất");
+                return;
+            }
+
+            using (var sfd = new SaveFileDialog
+            {
+                Filter = "PDF (*.pdf)|*.pdf",
+                FileName = $"report_{DateTime.Now:yyyyMMdd_HHmmss}.pdf"
+            })
+            {
+                if (sfd.ShowDialog(this) != DialogResult.OK) return;
+
+                if (!IsPdfPrinterAvailable())
+                {
+                    ToastNotification.Error("Không tìm thấy máy in Microsoft Print to PDF.");
+                    return;
+                }
+
+                PreparePrintDocument(dt, sfd.FileName);
+
+                try
+                {
+                    UseWaitCursor = true;
+                    if (_btnExportPdf != null) _btnExportPdf.Enabled = false;
+                    await System.Threading.Tasks.Task.Run(() => _printDoc.Print());
+                    ToastNotification.Success("Đã xuất PDF: " + sfd.FileName);
+                }
+                catch (Exception ex)
+                {
+                    ErrorLogger.HandleException(ex, "ExportPdf", "Lỗi xuất PDF");
+                }
+                finally
+                {
+                    UseWaitCursor = false;
+                    if (_btnExportPdf != null) _btnExportPdf.Enabled = true;
+                }
+            }
+        }
+
+        private bool IsPdfPrinterAvailable()
+        {
+            foreach (string printer in PrinterSettings.InstalledPrinters)
+            {
+                if (string.Equals(printer, "Microsoft Print to PDF", StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+            return false;
+        }
+
+        private void PreparePrintDocument(DataTable table, string filePath)
+        {
+            var reportType = _cboSource.SelectedItem?.ToString() ?? "Báo cáo";
+            _printTable = table;
+            _printColumns = GetDisplayColumns(table, reportType);
+            _printColumnMap = GetColumnMap();
+            _printRowIndex = 0;
+            _printTitle = $"BÁO CÁO - {reportType.ToUpperInvariant()}";
+            _printSummary = _lblFooterSummary?.Text ?? string.Empty;
+            _printSummaryPending = !string.IsNullOrWhiteSpace(_printSummary);
+
+            bool useLandscape = _printColumns.Count > 6;
+            _printDoc = new PrintDocument();
+            _printDoc.DocumentName = _printTitle;
+            _printDoc.DefaultPageSettings.Landscape = useLandscape;
+            _printDoc.DefaultPageSettings.Margins = new System.Drawing.Printing.Margins(40, 40, 50, 50);
+            _printDoc.PrinterSettings.PrinterName = "Microsoft Print to PDF";
+            _printDoc.PrinterSettings.PrintToFile = true;
+            _printDoc.PrinterSettings.PrintFileName = filePath;
+            _printDoc.PrintController = new StandardPrintController();
+            _printDoc.PrintPage -= PrintDoc_PrintPage;
+            _printDoc.PrintPage += PrintDoc_PrintPage;
+        }
+
+        private void PrintDoc_PrintPage(object sender, PrintPageEventArgs e)
+        {
+            if (_printTable == null || _printColumns == null || _printColumnMap == null)
+            {
+                e.HasMorePages = false;
+                return;
+            }
+
+            var g = e.Graphics;
+            var bounds = e.MarginBounds;
+            float y = bounds.Top;
+
+            var titleFont = new Font("Segoe UI", 13, FontStyle.Bold);
+            var subtitleFont = new Font("Segoe UI", 9f, FontStyle.Regular);
+            var headerFont = new Font("Segoe UI", 9f, FontStyle.Bold);
+            var cellFont = new Font("Segoe UI", 9f, FontStyle.Regular);
+
+            // Header
+            g.DrawString("QUẢN LÝ NHÀ TRỌ", new Font("Segoe UI", 10f, FontStyle.Bold), new SolidBrush(Color.FromArgb(0, 120, 215)), bounds.Left, y);
+            y += 18;
+            g.DrawString(_printTitle, titleFont, Brushes.Black, bounds.Left, y);
+            var dateText = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
+            var dateSize = g.MeasureString(dateText, subtitleFont);
+            g.DrawString(dateText, subtitleFont, Brushes.Gray, bounds.Right - dateSize.Width, y + 2);
+            y += 26;
+
+            if (!string.IsNullOrWhiteSpace(_printSummary))
+            {
+                g.DrawString(_printSummary, subtitleFont, Brushes.DimGray, bounds.Left, y);
+                y += 18;
+            }
+
+            y += 4;
+
+            // Table header
+            float headerHeight = headerFont.GetHeight(g) + 10;
+            float rowHeight = cellFont.GetHeight(g) + 8;
+            var colWidths = CalculateColumnWidths(g, bounds.Width, _printColumns, headerFont, cellFont);
+
+            using (var headerBrush = new SolidBrush(Color.FromArgb(0, 120, 215)))
+            using (var headerTextBrush = new SolidBrush(Color.White))
+            using (var gridPen = new Pen(Color.FromArgb(210, 220, 230)))
+            {
+                float x = bounds.Left;
+                g.FillRectangle(headerBrush, bounds.Left, y, bounds.Width, headerHeight);
+                for (int i = 0; i < _printColumns.Count; i++)
+                {
+                    var col = _printColumns[i];
+                    string headerText = _printColumnMap.TryGetValue(col.ColumnName, out var mapped) ? mapped : col.ColumnName;
+                    var rect = new RectangleF(x, y, colWidths[i], headerHeight);
+                    var format = CreateStringFormat(col.ColumnName, header: true);
+                    g.DrawString(headerText, headerFont, headerTextBrush, rect, format);
+                    x += colWidths[i];
+                }
+                y += headerHeight;
+
+                // Rows
+                while (_printRowIndex < _printTable.Rows.Count)
+                {
+                    if (y + rowHeight > bounds.Bottom)
+                    {
+                        e.HasMorePages = true;
+                        return;
+                    }
+
+                    var row = _printTable.Rows[_printRowIndex];
+                    x = bounds.Left;
+                    bool isAlt = _printRowIndex % 2 == 1;
+                    using (var altBrush = new SolidBrush(isAlt ? Color.FromArgb(247, 250, 255) : Color.White))
+                    {
+                        g.FillRectangle(altBrush, bounds.Left, y, bounds.Width, rowHeight);
+                    }
+
+                    for (int i = 0; i < _printColumns.Count; i++)
+                    {
+                        var col = _printColumns[i];
+                        var rect = new RectangleF(x, y, colWidths[i], rowHeight);
+                        string valueText = FormatValueForPrint(row, col);
+                        var format = CreateStringFormat(col.ColumnName, header: false);
+                        g.DrawString(valueText, cellFont, Brushes.Black, rect, format);
+                        g.DrawRectangle(gridPen, rect.X, rect.Y, rect.Width, rect.Height);
+                        x += colWidths[i];
+                    }
+
+                    y += rowHeight;
+                    _printRowIndex++;
+                }
+            }
+
+            if (_printSummaryPending)
+            {
+                float boxHeight = 40;
+                if (y + boxHeight <= bounds.Bottom)
+                {
+                    var rect = new RectangleF(bounds.Left, y + 6, bounds.Width, boxHeight);
+                    using (var summaryBrush = new SolidBrush(Color.FromArgb(248, 249, 250)))
+                    using (var pen = new Pen(Color.FromArgb(220, 230, 240)))
+                    {
+                        g.FillRectangle(summaryBrush, rect);
+                        g.DrawRectangle(pen, rect.X, rect.Y, rect.Width, rect.Height);
+                    }
+                    g.DrawString("Tổng kết: " + _printSummary, subtitleFont, Brushes.Black,
+                        new RectangleF(rect.X + 8, rect.Y + 10, rect.Width - 16, rect.Height));
+                    _printSummaryPending = false;
+                }
+                else
+                {
+                    e.HasMorePages = true;
+                    return;
+                }
+            }
+
+            e.HasMorePages = false;
+        }
+
+        private static float[] CalculateColumnWidths(Graphics g, int totalWidth,
+            System.Collections.Generic.List<DataColumn> columns, Font headerFont, Font cellFont)
+        {
+            var widths = new float[columns.Count];
+            float total = 0;
+            for (int i = 0; i < columns.Count; i++)
+            {
+                string header = columns[i].ColumnName;
+                float headerWidth = g.MeasureString(header, headerFont).Width + 16;
+                widths[i] = Math.Max(60, headerWidth);
+                total += widths[i];
+            }
+
+            if (total > totalWidth)
+            {
+                float scale = totalWidth / total;
+                for (int i = 0; i < widths.Length; i++)
+                    widths[i] = widths[i] * scale;
+                return widths;
+            }
+
+            float remaining = totalWidth - total;
+            float extra = remaining / widths.Length;
+            for (int i = 0; i < widths.Length; i++)
+                widths[i] += extra;
+            return widths;
+        }
+
+        private static StringFormat CreateStringFormat(string columnName, bool header)
+        {
+            var format = new StringFormat
+            {
+                LineAlignment = StringAlignment.Center,
+                Trimming = StringTrimming.EllipsisCharacter,
+                FormatFlags = StringFormatFlags.NoWrap
+            };
+
+            if (!header && (columnName.Contains("Amount") || columnName.Contains("Revenue") || columnName.Contains("Price") || columnName.Contains("Tax")))
+                format.Alignment = StringAlignment.Far;
+            else
+                format.Alignment = StringAlignment.Near;
+
+            return format;
+        }
+
+        private static string FormatValueForPrint(DataRow row, DataColumn col)
+        {
+            if (row == null || col == null) return "—";
+            var v = row[col];
+            if (v == null || v == DBNull.Value) return "—";
+
+            if (col.DataType == typeof(DateTime) || col.ColumnName.Contains("Date"))
+            {
+                if (DateTime.TryParse(v.ToString(), out var dt))
+                    return dt.ToString("dd/MM/yyyy");
+            }
+
+            if (col.ColumnName.Equals("TaxRate", StringComparison.OrdinalIgnoreCase))
+            {
+                if (decimal.TryParse(v.ToString(), out var rate))
+                    return rate.ToString("N2");
+            }
+
+            if (col.ColumnName.Contains("Amount") || col.ColumnName.Contains("Revenue")
+                || col.ColumnName.Contains("Cost") || col.ColumnName.Contains("Price"))
+            {
+                if (decimal.TryParse(v.ToString(), out var money))
+                    return money.ToString("N0") + "đ";
+            }
+
+            return v.ToString();
         }
 
         private Panel BuildTaxFilterPanel()
@@ -1181,6 +1471,323 @@ namespace quan_ly_chuoi_nha_tro.GUI
             return panel;
         }
 
+        private Panel BuildRevenueChartPanel()
+        {
+            var host = new Panel
+            {
+                Height = 380,
+                Padding = new Padding(0, 0, 0, 12),
+                BackColor = BackColor
+            };
+
+            var card = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White,
+                Padding = new Padding(16)
+            };
+            card.Paint += (s, e) =>
+            {
+                using (var pen = new Pen(Color.FromArgb(220, 230, 240)))
+                {
+                    var rect = new Rectangle(0, 0, card.Width - 1, card.Height - 1);
+                    e.Graphics.DrawRectangle(pen, rect);
+                }
+            };
+
+            var header = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 56,
+                BackColor = Color.White,
+                Padding = new Padding(2, 2, 2, 2)
+            };
+
+            var headerLeft = new Panel
+            {
+                Dock = DockStyle.Fill
+            };
+
+            _lblChartTitle = new Label
+            {
+                Text = "Xu hướng doanh thu",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 79, 159),
+                Location = new Point(2, 2)
+            };
+
+            _lblChartSub = new Label
+            {
+                Text = "",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 9f),
+                ForeColor = Color.FromArgb(120, 130, 150),
+                Location = new Point(2, 24)
+            };
+
+            headerLeft.Controls.Add(_lblChartTitle);
+            headerLeft.Controls.Add(_lblChartSub);
+
+            _lblChartTip = new Label
+            {
+                AutoSize = true,
+                Text = "Nhấn Doanh thu/Thuế để ẩn/hiện đường",
+                Font = new Font("Segoe UI", 8.5f),
+                ForeColor = Color.FromArgb(70, 90, 120),
+                BackColor = Color.FromArgb(240, 245, 252),
+                Padding = new Padding(8, 4, 8, 4),
+                Dock = DockStyle.Right,
+                Margin = new Padding(0)
+            };
+
+            header.Controls.Add(_lblChartTip);
+            header.Controls.Add(headerLeft);
+
+            _revenueChart = new Chart
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White
+            };
+
+            var area = new ChartArea("Main");
+            area.BackColor = Color.White;
+            area.AxisX.MajorGrid.LineColor = Color.FromArgb(235, 238, 243);
+            area.AxisY.MajorGrid.LineColor = Color.FromArgb(235, 238, 243);
+            area.AxisY.MinorGrid.Enabled = true;
+            area.AxisY.MinorGrid.LineColor = Color.FromArgb(245, 248, 252);
+            area.AxisY.MinorGrid.LineDashStyle = ChartDashStyle.Dot;
+            area.AxisX.LabelStyle.Font = new Font("Segoe UI", 8.5f);
+            area.AxisY.LabelStyle.Font = new Font("Segoe UI", 8.5f);
+            area.AxisY.LabelStyle.Format = "N0";
+            area.AxisX.Interval = 1;
+            area.AxisX.LabelStyle.Angle = -30;
+            area.AxisX.LabelStyle.IsStaggered = true;
+            area.AxisX.LabelStyle.IsEndLabelVisible = true;
+            area.AxisX.MajorTickMark.Enabled = false;
+            area.AxisX.LineColor = Color.FromArgb(210, 220, 230);
+            area.AxisY.LineColor = Color.FromArgb(210, 220, 230);
+            area.AxisY.IsStartedFromZero = true;
+            area.AxisX.LabelAutoFitStyle = LabelAutoFitStyles.None;
+            area.AxisY.MajorTickMark.Enabled = false;
+            area.AxisY.MinorTickMark.Enabled = false;
+            area.AxisY.LabelStyle.ForeColor = Color.FromArgb(90, 100, 120);
+            area.AxisX.LabelStyle.ForeColor = Color.FromArgb(90, 100, 120);
+            area.Position = new ElementPosition(2, 8, 96, 86);
+            area.InnerPlotPosition = new ElementPosition(6, 6, 90, 78);
+            _revenueChart.ChartAreas.Add(area);
+
+            var revenueSeries = new Series("Doanh thu")
+            {
+                ChartType = SeriesChartType.Line,
+                BorderWidth = 3,
+                Color = Color.FromArgb(0, 122, 204),
+                MarkerStyle = MarkerStyle.Circle,
+                MarkerSize = 7,
+                MarkerColor = Color.White,
+                MarkerBorderColor = Color.FromArgb(0, 122, 204),
+                MarkerBorderWidth = 2
+            };
+            var taxSeries = new Series("Thuế")
+            {
+                ChartType = SeriesChartType.Line,
+                BorderWidth = 3,
+                Color = Color.FromArgb(255, 140, 0),
+                MarkerStyle = MarkerStyle.Circle,
+                MarkerSize = 6,
+                MarkerColor = Color.White,
+                MarkerBorderColor = Color.FromArgb(255, 140, 0),
+                MarkerBorderWidth = 2
+            };
+
+            _revenueChart.Series.Add(revenueSeries);
+            _revenueChart.Series.Add(taxSeries);
+            RegisterSeriesStyle(revenueSeries);
+            RegisterSeriesStyle(taxSeries);
+            _revenueChart.Legends.Add(new Legend
+            {
+                Docking = Docking.Top,
+                Alignment = StringAlignment.Far,
+                Font = new Font("Segoe UI", 8.5f),
+                BackColor = Color.Transparent
+            });
+            _revenueChart.BorderlineColor = Color.FromArgb(230, 235, 242);
+            _revenueChart.BorderlineDashStyle = ChartDashStyle.Solid;
+            _revenueChart.BorderlineWidth = 1;
+            _revenueChart.AntiAliasing = AntiAliasingStyles.All;
+            _revenueChart.MouseClick += RevenueChart_MouseClick;
+
+            _lblChartEmpty = new Label
+            {
+                Text = "Chưa có dữ liệu để hiển thị biểu đồ.",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 9f, FontStyle.Italic),
+                ForeColor = Color.FromArgb(150, 150, 150),
+                Visible = false
+            };
+
+            var chartHost = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, 6, 0, 0) };
+            chartHost.Controls.Add(_revenueChart);
+            chartHost.Controls.Add(_lblChartEmpty);
+            _lblChartEmpty.Location = new Point(8, 8);
+
+            card.Controls.Add(chartHost);
+            card.Controls.Add(header);
+            host.Controls.Add(card);
+
+            return host;
+        }
+
+        private void UpdateRevenueChart(DataTable table)
+        {
+            bool isTaxReport = (_cboSource.SelectedItem?.ToString() ?? string.Empty) == "Thuế Doanh Thu";
+            if (_chartHost == null) return;
+            _chartHost.Visible = isTaxReport;
+            if (!isTaxReport || _revenueChart == null)
+                return;
+
+            var revenueSeries = _revenueChart.Series["Doanh thu"];
+            var taxSeries = _revenueChart.Series["Thuế"];
+            revenueSeries.Points.Clear();
+            taxSeries.Points.Clear();
+
+            if (table == null || table.Rows.Count == 0 || !table.Columns.Contains("Revenue"))
+            {
+                _lblChartEmpty.Visible = true;
+                return;
+            }
+
+            _lblChartEmpty.Visible = false;
+            _lblChartSub.Text = BuildChartSubTitle();
+
+            var rows = table.AsEnumerable().ToList();
+            if (table.Columns.Contains("PeriodLabel"))
+            {
+                rows = rows.OrderBy(r => r["PeriodLabel"]?.ToString()).ToList();
+            }
+
+            foreach (var row in rows)
+            {
+                string label = ReadString(row, "PeriodLabel") ?? ReadString(row, "Period") ?? "—";
+                if (decimal.TryParse(row["Revenue"]?.ToString(), out var revenue))
+                {
+                    int idx = revenueSeries.Points.AddXY(label, revenue);
+                    revenueSeries.Points[idx].AxisLabel = label;
+                }
+
+                if (table.Columns.Contains("TaxAmount") && decimal.TryParse(row["TaxAmount"]?.ToString(), out var tax))
+                {
+                    int idx = taxSeries.Points.AddXY(label, tax);
+                    taxSeries.Points[idx].AxisLabel = label;
+                }
+            }
+
+            ApplySeriesVisibility();
+        }
+
+        private string BuildChartSubTitle()
+        {
+            string periodType = _cboTaxPeriodType?.SelectedItem?.ToString() ?? "Tháng";
+            int year = _numTaxYear != null ? (int)_numTaxYear.Value : DateTime.Now.Year;
+            int period = _numTaxPeriod != null ? (int)_numTaxPeriod.Value : 1;
+
+            if (periodType == "Năm")
+                return $"Năm {year}";
+            return $"{periodType} {period}/{year}";
+        }
+
+        private void RevenueChart_MouseClick(object sender, MouseEventArgs e)
+        {
+            if (_revenueChart == null) return;
+            var hit = _revenueChart.HitTest(e.X, e.Y);
+            if (hit == null) return;
+
+            if (hit.ChartElementType == ChartElementType.LegendItem && hit.Series != null)
+            {
+                ToggleSeriesVisibility(hit.Series);
+                return;
+            }
+
+            if (hit.Series == null || hit.PointIndex < 0) return;
+
+            var point = hit.Series.Points[hit.PointIndex];
+            string label = string.IsNullOrWhiteSpace(point.AxisLabel) ? "Kỳ" : point.AxisLabel;
+            decimal value = point.YValues.Length > 0 ? (decimal)point.YValues[0] : 0m;
+            string seriesName = hit.Series.Name;
+
+            string message = $"{label}\n{seriesName}: {value:N0}đ";
+            MessageBox.Show(message, "Chi tiết doanh thu", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private sealed class SeriesStyle
+        {
+            public Color Color { get; set; }
+            public int BorderWidth { get; set; }
+            public MarkerStyle MarkerStyle { get; set; }
+            public int MarkerSize { get; set; }
+            public Color MarkerBorderColor { get; set; }
+            public Color MarkerColor { get; set; }
+            public bool Hidden { get; set; }
+        }
+
+        private void RegisterSeriesStyle(Series series)
+        {
+            if (series == null || series.Tag is SeriesStyle) return;
+            series.Tag = new SeriesStyle
+            {
+                Color = series.Color,
+                BorderWidth = series.BorderWidth,
+                MarkerStyle = series.MarkerStyle,
+                MarkerSize = series.MarkerSize,
+                MarkerBorderColor = series.MarkerBorderColor,
+                MarkerColor = series.MarkerColor,
+                Hidden = false
+            };
+        }
+
+        private void ToggleSeriesVisibility(Series series)
+        {
+            var style = series != null ? series.Tag as SeriesStyle : null;
+            if (style == null) return;
+            SetSeriesHidden(series, !style.Hidden);
+        }
+
+        private void SetSeriesHidden(Series series, bool hidden)
+        {
+            var style = series != null ? series.Tag as SeriesStyle : null;
+            if (style == null) return;
+            if (style.Hidden == hidden) return;
+
+            style.Hidden = hidden;
+            if (hidden)
+            {
+                series.BorderWidth = 0;
+                series.MarkerStyle = MarkerStyle.None;
+                series.MarkerSize = 0;
+                series.Color = Color.FromArgb(150, style.Color);
+            }
+            else
+            {
+                series.BorderWidth = style.BorderWidth;
+                series.MarkerStyle = style.MarkerStyle;
+                series.MarkerSize = style.MarkerSize;
+                series.Color = style.Color;
+                series.MarkerBorderColor = style.MarkerBorderColor;
+                series.MarkerColor = style.MarkerColor;
+            }
+            series.IsVisibleInLegend = true;
+        }
+
+        private void ApplySeriesVisibility()
+        {
+            if (_revenueChart == null) return;
+            foreach (var series in _revenueChart.Series)
+            {
+                if (series.Tag is SeriesStyle style)
+                    SetSeriesHidden(series, style.Hidden);
+            }
+        }
+
         private void UpdateTaxPeriodPicker()
         {
             string periodType = _cboTaxPeriodType.SelectedItem?.ToString() ?? "Tháng";
@@ -1205,6 +1812,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
             _raw = await LoadRevenueTaxAsync();
             _viewTable = _raw;
             _lblCount.Text = $"Tổng: {_raw?.Rows.Count ?? 0}";
+            UpdateRevenueChart(_viewTable);
             UpdateFooterSummary();
             ApplyFilter();
         }
@@ -1250,6 +1858,7 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 return;
             ApplyTaxColumns(_raw, _numTaxRate.Value);
             RenderCards(_viewTable ?? _raw);
+            UpdateRevenueChart(_viewTable ?? _raw);
             UpdateFooterSummary();
         }
 
