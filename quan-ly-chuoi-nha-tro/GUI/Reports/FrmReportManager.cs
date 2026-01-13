@@ -1666,6 +1666,14 @@ namespace quan_ly_chuoi_nha_tro.GUI
                 rows = rows.OrderBy(r => r["PeriodLabel"]?.ToString()).ToList();
             }
 
+            if (rows.Count > 0)
+            {
+                int baseIdx = revenueSeries.Points.AddXY(string.Empty, 0m);
+                revenueSeries.Points[baseIdx].AxisLabel = string.Empty;
+                int taxBaseIdx = taxSeries.Points.AddXY(string.Empty, 0m);
+                taxSeries.Points[taxBaseIdx].AxisLabel = string.Empty;
+            }
+
             foreach (var row in rows)
             {
                 string label = ReadString(row, "PeriodLabel") ?? ReadString(row, "Period") ?? "—";
