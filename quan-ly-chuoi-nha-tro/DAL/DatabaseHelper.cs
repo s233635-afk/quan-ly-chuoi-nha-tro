@@ -13,8 +13,8 @@ namespace QuanLyNhaTro.DAL
         private const int DefaultDbConnectTimeoutSeconds = 10;
         private const int DefaultDbCommandTimeoutSeconds = 10;
 
-        private const string FallbackConnectionString =
-            "Data Source=(LocalDB)\\MSSQLLocalDB;Initial Catalog=db_ac1f11_quanlynhatro;Integrated Security=True";
+        private const string FallbackConnectionString = "Data Source=SQL9001.site4now.net;Initial Catalog=db_ac1f11_quanlynhatro;User Id=db_ac1f11_quanlynhatro_admin;Password=admin123";
+            // "Data Source=(LocalDB)\\MSSQLLocalDB;Initial Catalog=db_ac1f11_quanlynhatro;Integrated Security=True";
 
         private readonly string connectionString;
         private readonly int commandTimeoutSeconds;
