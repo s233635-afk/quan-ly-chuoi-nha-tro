@@ -1,0 +1,1086 @@
+using System;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
+
+namespace quan_ly_chuoi_nha_tro.GUI
+{
+    /// <summary>
+    /// Payment form with full tenant information display and editing
+    /// </summary>
+    public class FrmPaymentWithTenantInfo : Form
+    {
+        private readonly AdminDataBLL _bll;
+        private DataRow _invoiceRow;
+        private DataRow _tenantRow;
+        private DataRow _existingPayment;
+        private readonly int? _currentUserId;
+
+        // Tenant Info Controls
+        private Label lblTenantInfo;
+        private Label lblRoomInfo;
+        private Label lblPhoneInfo;
+        private Label lblEmailInfo;
+        private Button _btnEditTenant;
+
+        // Invoice Info Controls
+        private Label lblInvoice;
+        private Label lblAmounts;
+
+        // Payment Controls
+        private DateTimePicker dtPaymentDate;
+        private NumericUpDown numAmount;
+        private Button btnPayFull;
+        private ComboBox cboMethod;
+        private Label lblReference;
+        private TextBox txtReference;
+        private Button btnCopyReference;
+        private TextBox txtNotes;
+        private Button btnSave;
+        private Button btnCancel;
+        private Button btnExportInvoice;
+        private bool _exportAllowed;
+        private string _autoTransferCode;
+
+        // Bank & QR Controls
+        private Panel pnlBankInfo;
+        private PictureBox picQrCode;
+        private Label lblBankDetails;
+        private Button btnEditBank;
+
+        public FrmPaymentWithTenantInfo(AdminDataBLL bll, DataRow invoiceRow, DataRow existingPayment = null, int? currentUserId = null)
+        {
+            _bll = bll;
+            _invoiceRow = invoiceRow;
+            _existingPayment = existingPayment;
+            _currentUserId = currentUserId;
+            InitializeComponent();
+            Load += async (s, e) => await LoadTenantInfoAsync();
+        }
+
+        private void InitializeComponent()
+        {
+            Text = _existingPayment == null ? "Thu tiền & Thông tin khách" : "Cập nhật thanh toán";
+            StartPosition = FormStartPosition.CenterParent;
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            MaximizeBox = false;
+            MinimizeBox = false;
+            ClientSize = new Size(800, 650);
+            BackColor = Color.White;
+            Font = new Font("Segoe UI", 10F);
+
+            // Bottom panel with buttons
+            var pnlBottom = new Panel
+            {
+                Dock = DockStyle.Bottom,
+                Height = 58,
+                Padding = new Padding(12, 10, 12, 10),
+                BackColor = Color.FromArgb(240, 242, 245)
+            };
+
+            btnSave = new ModernButton
+            {
+                Text = "Lưu",
+                Width = 100,
+                Height = 36,
+                DialogResult = DialogResult.None,
+                BaseColor = Color.FromArgb(0, 120, 215),
+                BackColor = Color.Transparent,
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat
+            };
+            btnSave.Click += async (s, e) => await SavePaymentAsync();
+
+            btnExportInvoice = new ModernButton
+            {
+                Text = "📄 Xuất PDF/In",
+                Width = 140,
+                Height = 36,
+                BaseColor = Color.FromArgb(107, 105, 123),
+                BackColor = Color.Transparent,
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat
+            };
+            btnExportInvoice.Click += (s, e) => HandleInvoiceExport();
+            btnExportInvoice.Enabled = false;
+            _exportAllowed = false;
+
+            btnCancel = new ModernButton
+            {
+                Text = "Đóng",
+                Width = 100,
+                Height = 36,
+                DialogResult = DialogResult.Cancel,
+                BaseColor = Color.FromArgb(200, 200, 200),
+                BackColor = Color.Transparent,
+                ForeColor = Color.Black,
+                FlatStyle = FlatStyle.Flat
+            };
+
+            pnlBottom.Controls.Add(btnSave);
+            pnlBottom.Controls.Add(btnExportInvoice);
+            pnlBottom.Controls.Add(btnCancel);
+
+            btnSave.Location = new Point(pnlBottom.Width - 350, 10);
+            btnExportInvoice.Location = new Point(pnlBottom.Width - 240, 10);
+            btnCancel.Location = new Point(pnlBottom.Width - 110, 10);
+
+            pnlBottom.Resize += (s, e) =>
+            {
+                btnSave.Location = new Point(pnlBottom.Width - 350, 10);
+                btnExportInvoice.Location = new Point(pnlBottom.Width - 240, 10);
+                btnCancel.Location = new Point(pnlBottom.Width - 110, 10);
+            };
+
+            // Main body with scroll
+            var pnlBody = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(18, 18, 18, 10),
+                AutoScroll = true,
+                BackColor = Color.White
+            };
+
+            int labelWidth = 160;
+            int inputWidth = 500;
+            int top = 10;
+            int left = 6;
+            int line = 34;
+
+            // ===== TENANT INFO SECTION =====
+            var lblTenantSection = new Label
+            {
+                Text = "👤 THÔNG TIN KHÁCH THUÊ",
+                Font = new Font("Segoe UI", 11F, FontStyle.Bold),
+                Location = new Point(left, top),
+                AutoSize = true
+            };
+            pnlBody.Controls.Add(lblTenantSection);
+            top += 30;
+
+            lblTenantInfo = new Label
+            {
+                Location = new Point(left, top),
+                Width = 600,
+                Height = 60,
+                AutoSize = false,
+                Text = "Đang tải...",
+                BorderStyle = BorderStyle.FixedSingle,
+                Padding = new Padding(8),
+                BackColor = Color.FromArgb(240, 248, 255)
+            };
+            pnlBody.Controls.Add(lblTenantInfo);
+            top += 70;
+
+            lblRoomInfo = new Label { Location = new Point(left, top), Width = 600, AutoSize = true, Text = "Phòng: ..." };
+            pnlBody.Controls.Add(lblRoomInfo);
+            top += 28;
+
+            lblPhoneInfo = new Label { Location = new Point(left, top), Width = 600, AutoSize = true, Text = "Điện thoại: ..." };
+            pnlBody.Controls.Add(lblPhoneInfo);
+            top += 28;
+
+            lblEmailInfo = new Label { Location = new Point(left, top), Width = 600, AutoSize = true, Text = "Email: ..." };
+            pnlBody.Controls.Add(lblEmailInfo);
+            top += 28;
+
+            _btnEditTenant = new ModernButton { Text = "✏️ Chỉnh sửa thông tin khách", Width = 200, Height = 32, Location = new Point(left, top), BaseColor = Color.FromArgb(240, 240, 240), BackColor = Color.Transparent, ForeColor = Color.Black };
+            _btnEditTenant.Click += (s, e) => EditTenantInfo();
+            pnlBody.Controls.Add(_btnEditTenant);
+            top += 42;
+
+            // Separator
+            var pnlSep1 = new Panel { Location = new Point(left, top), Width = 600, Height = 1, BackColor = Color.LightGray };
+            pnlBody.Controls.Add(pnlSep1);
+            top += 20;
+
+            // ===== INVOICE INFO SECTION =====
+            var lblInvoiceSection = new Label
+            {
+                Text = "📋 THÔNG TIN HÓA ĐƠN",
+                Font = new Font("Segoe UI", 11F, FontStyle.Bold),
+                Location = new Point(left, top),
+                AutoSize = true
+            };
+            pnlBody.Controls.Add(lblInvoiceSection);
+            top += 30;
+
+            lblInvoice = new Label
+            {
+                Location = new Point(left, top),
+                Width = 600,
+                Height = 40,
+                AutoSize = false,
+                Text = "Đang tải...",
+                Font = new Font("Segoe UI", 10F, FontStyle.Bold)
+            };
+            pnlBody.Controls.Add(lblInvoice);
+            top += 50;
+
+            lblAmounts = new Label
+            {
+                Location = new Point(left, top),
+                Width = 600,
+                Height = 60,
+                AutoSize = false,
+                Text = "Tổng tiền: ...",
+                BorderStyle = BorderStyle.FixedSingle,
+                Padding = new Padding(8),
+                BackColor = Color.FromArgb(240, 255, 240)
+            };
+            pnlBody.Controls.Add(lblAmounts);
+            top += 70;
+
+            // Separator
+            var pnlSep2 = new Panel { Location = new Point(left, top), Width = 600, Height = 1, BackColor = Color.LightGray };
+            pnlBody.Controls.Add(pnlSep2);
+            top += 20;
+
+            // ===== PAYMENT INFO SECTION =====
+            var lblPaymentSection = new Label
+            {
+                Text = "💳 THÔNG TIN THANH TOÁN",
+                Font = new Font("Segoe UI", 11F, FontStyle.Bold),
+                Location = new Point(left, top),
+                AutoSize = true
+            };
+            pnlBody.Controls.Add(lblPaymentSection);
+            top += 35;
+
+            // Use a FlowLayoutPanel for payment fields to handle dynamic visibility of Bank Info
+            var flowPayment = new FlowLayoutPanel
+            {
+                Location = new Point(left, top),
+                Width = 620,
+                Height = 500, // Will be adjusted or scrollable
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink
+            };
+            pnlBody.Controls.Add(flowPayment);
+
+            // Helper to create row panel for FlowLayoutPanel
+            Panel CreateRow(Control lbl, Control input, Control extra = null)
+            {
+                var p = new Panel { Width = 600, Height = 35 };
+                lbl.Location = new Point(0, 5);
+                input.Location = new Point(labelWidth, 2);
+                p.Controls.Add(lbl);
+                p.Controls.Add(input);
+                if (extra != null)
+                {
+                    extra.Location = new Point(labelWidth + input.Width + 10, 2);
+                    p.Controls.Add(extra);
+                }
+                return p;
+            }
+
+            // Payment Date
+            var lblDate = new Label { Text = "Ngày thanh toán:", Width = labelWidth, TextAlign = ContentAlignment.MiddleLeft };
+            dtPaymentDate = new DateTimePicker { Format = DateTimePickerFormat.Short, Value = DateTime.Today, Width = 200 };
+            flowPayment.Controls.Add(CreateRow(lblDate, dtPaymentDate));
+
+            // Amount
+            var lblAmount = new Label { Text = "Số tiền:", Width = labelWidth, TextAlign = ContentAlignment.MiddleLeft };
+            numAmount = new NumericUpDown
+            {
+                Minimum = 0,
+                Maximum = 100000000000,
+                DecimalPlaces = 0,
+                ThousandsSeparator = true,
+                Width = 200
+            };
+            numAmount.ValueChanged += async (s, e) =>
+            {
+                if (cboMethod.SelectedItem?.ToString() == "Chuyển khoản")
+                    await LoadAndGenerateQrAsync();
+            };
+            btnPayFull = new ModernButton { Text = "Thu đủ", Width = 90, Height = 28, BaseColor = Color.FromArgb(240, 240, 240), BackColor = Color.Transparent, ForeColor = Color.Black };
+            btnPayFull.Click += (s, e) =>
+            {
+                if (numAmount.Maximum > 0)
+                    numAmount.Value = numAmount.Maximum;
+            };
+            btnPayFull.FlatStyle = FlatStyle.Flat;
+            btnPayFull.FlatAppearance.BorderSize = 1;
+            flowPayment.Controls.Add(CreateRow(lblAmount, numAmount, btnPayFull));
+
+            // Payment Method
+            var lblMethod = new Label { Text = "Hình thức:", Width = labelWidth, TextAlign = ContentAlignment.MiddleLeft };
+            cboMethod = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 200 };
+            cboMethod.Items.AddRange(new object[] { "Tiền mặt", "Chuyển khoản", "Thẻ" });
+            cboMethod.SelectedIndex = 0;
+            cboMethod.SelectedIndexChanged += (s, e) => UpdateBankInfoVisibility();
+            flowPayment.Controls.Add(CreateRow(lblMethod, cboMethod));
+
+            // Bank & QR Panel
+            pnlBankInfo = new Panel
+            {
+                Width = 600,
+                Height = 220,
+                Visible = false,
+                BackColor = Color.FromArgb(250, 250, 250),
+                BorderStyle = BorderStyle.FixedSingle,
+                Margin = new Padding(labelWidth, 5, 0, 10)
+            };
+
+            picQrCode = new PictureBox
+            {
+                Location = new Point(10, 10),
+                Size = new Size(200, 200),
+                SizeMode = PictureBoxSizeMode.Zoom,
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle
+            };
+            pnlBankInfo.Controls.Add(picQrCode);
+
+            lblBankDetails = new Label
+            {
+                Location = new Point(220, 10),
+                Size = new Size(360, 160),
+                Font = new Font("Segoe UI", 10F),
+                Text = "Đang tải thông tin ngân hàng..."
+            };
+            pnlBankInfo.Controls.Add(lblBankDetails);
+
+            var btnCopyBank = new ModernButton
+            {
+                Text = "📋 Sao chép STK",
+                Location = new Point(220, 175),
+                Width = 140,
+                Height = 30,
+                BaseColor = Color.FromArgb(240, 240, 240),
+                ForeColor = Color.Black
+            };
+            btnCopyBank.Click += (s, e) =>
+            {
+                var stk = lblBankDetails.Text.Split('\n').FirstOrDefault(l => l.Contains("SỐ TÀI KHOẢN:"))?.Replace("SỐ TÀI KHOẢN:", "").Trim();
+                if (!string.IsNullOrEmpty(stk))
+                {
+                    Clipboard.SetText(stk);
+                    ToastNotification.Success("Đã sao chép số tài khoản");
+                }
+            };
+            pnlBankInfo.Controls.Add(btnCopyBank);
+
+            btnEditBank = new ModernButton
+            {
+                Text = "⚙️ Tùy chỉnh",
+                Location = new Point(370, 175),
+                Width = 150,
+                Height = 30,
+                BaseColor = Color.FromArgb(240, 240, 240),
+                ForeColor = Color.Black
+            };
+            btnEditBank.Click += async (s, e) => await EditBankSettingsAsync();
+            btnEditBank.Enabled = _currentUserId.HasValue;
+            pnlBankInfo.Controls.Add(btnEditBank);
+
+            flowPayment.Controls.Add(pnlBankInfo);
+
+            // Reference
+            lblReference = new Label { Text = "Tham chiếu:", Width = labelWidth, TextAlign = ContentAlignment.MiddleLeft };
+            txtReference = new TextBox { Width = 300 };
+            btnCopyReference = new ModernButton
+            {
+                Text = "📋 Copy mã",
+                Width = 110,
+                Height = 28,
+                BaseColor = Color.FromArgb(240, 240, 240),
+                BackColor = Color.Transparent,
+                ForeColor = Color.Black,
+                Visible = false
+            };
+            btnCopyReference.Click += (s, e) =>
+            {
+                if (!string.IsNullOrWhiteSpace(txtReference.Text))
+                {
+                    Clipboard.SetText(txtReference.Text.Trim());
+                    ToastNotification.Success("Đã sao chép mã chuyển khoản");
+                }
+            };
+            flowPayment.Controls.Add(CreateRow(lblReference, txtReference, btnCopyReference));
+
+            // Notes
+            var lblNotes = new Label { Text = "Ghi chú:", Width = labelWidth, TextAlign = ContentAlignment.TopLeft };
+            txtNotes = new TextBox
+            {
+                Multiline = true,
+                Width = 400,
+                Height = 80
+            };
+            var pnlNotes = new Panel { Width = 600, Height = 90 };
+            lblNotes.Location = new Point(0, 5);
+            txtNotes.Location = new Point(labelWidth, 2);
+            pnlNotes.Controls.Add(lblNotes);
+            pnlNotes.Controls.Add(txtNotes);
+            flowPayment.Controls.Add(pnlNotes);
+
+            Controls.Add(pnlBody);
+            Controls.Add(pnlBottom);
+        }
+
+        private async System.Threading.Tasks.Task LoadTenantInfoAsync()
+        {
+            try
+            {
+                // Get tenant ID from invoice
+                if (_invoiceRow == null || !_invoiceRow.Table.Columns.Contains("TenantId"))
+                {
+                    ModernDialog.Error("Không tìm thấy thông tin khách thuê");
+                    return;
+                }
+
+                int tenantId = Convert.ToInt32(_invoiceRow["TenantId"]);
+                var tenantTable = await _bll.GetTenantsAsync();
+                if (tenantTable == null || tenantTable.Rows.Count == 0)
+                {
+                    ModernDialog.Error("Không tìm thấy dữ liệu khách thuê");
+                    return;
+                }
+
+                // Find tenant row
+                foreach (DataRow r in tenantTable.Rows)
+                {
+                    if (Convert.ToInt32(r["TenantId"]) == tenantId)
+                    {
+                        _tenantRow = r;
+                        break;
+                    }
+                }
+
+                if (_tenantRow == null)
+                {
+                    ModernDialog.Error($"Không tìm thấy khách thuê ID {tenantId}");
+                }
+            }
+            catch (Exception ex)
+            {
+                ModernDialog.Error("Lỗi tải thông tin: " + ex.Message);
+            }
+            finally
+            {
+                DisplayTenantInfo();
+                DisplayInvoiceInfo();
+                if (_existingPayment != null && _existingPayment.Table.Columns.Contains("PaymentMethod"))
+                {
+                    var method = _existingPayment["PaymentMethod"]?.ToString();
+                    cboMethod.SelectedItem = MapPaymentMethodToDisplay(method);
+                }
+
+                if (_existingPayment != null)
+                {
+                    if (_existingPayment.Table.Columns.Contains("PaymentDate") &&
+                        DateTime.TryParse(_existingPayment["PaymentDate"]?.ToString(), out var payDate))
+                        dtPaymentDate.Value = payDate;
+
+                    if (_existingPayment.Table.Columns.Contains("PaymentAmount") &&
+                        decimal.TryParse(_existingPayment["PaymentAmount"]?.ToString(), out var payAmount))
+                    {
+                        if (payAmount < numAmount.Minimum) payAmount = numAmount.Minimum;
+                        if (payAmount > numAmount.Maximum) payAmount = numAmount.Maximum;
+                        numAmount.Value = payAmount;
+                    }
+
+                    if (_existingPayment.Table.Columns.Contains("TransactionReference"))
+                        txtReference.Text = _existingPayment["TransactionReference"]?.ToString();
+
+                    if (_existingPayment.Table.Columns.Contains("Notes"))
+                        txtNotes.Text = _existingPayment["Notes"]?.ToString();
+                }
+
+                UpdateBankInfoVisibility();
+            }
+        }
+
+        private void DisplayTenantInfo()
+        {
+            string tenantName = ReadTenantValue(_tenantRow, "TenantName", "FullName") ?? ReadInvoiceValue("TenantName");
+            string tenantId = ReadTenantValue(_tenantRow, "TenantId") ?? ReadInvoiceValue("TenantId");
+            string phone = ReadTenantValue(_tenantRow, "Phone", "PhoneNumber") ?? ReadInvoiceValue("Phone");
+            string email = ReadTenantValue(_tenantRow, "Email") ?? ReadInvoiceValue("TenantEmail");
+            string address = ReadTenantValue(_tenantRow, "Address") ?? ReadInvoiceValue("TenantAddress");
+            string idCard = ReadTenantValue(_tenantRow, "IdCard", "IdentityCard") ?? ReadInvoiceValue("IdentityCard");
+
+            if (string.IsNullOrWhiteSpace(tenantName)) tenantName = "N/A";
+            if (string.IsNullOrWhiteSpace(tenantId)) tenantId = "N/A";
+            if (string.IsNullOrWhiteSpace(phone)) phone = "N/A";
+            if (string.IsNullOrWhiteSpace(email)) email = "N/A";
+            if (string.IsNullOrWhiteSpace(address)) address = "N/A";
+            if (string.IsNullOrWhiteSpace(idCard)) idCard = "N/A";
+
+            lblTenantInfo.Text = $"ID: {tenantId}\n{tenantName}\nĐC: {address}\nCMND: {idCard}";
+            lblPhoneInfo.Text = $"Điện thoại: {phone}";
+            lblEmailInfo.Text = $"Email: {email}";
+
+            // Get room info
+            if (_invoiceRow != null && _invoiceRow.Table.Columns.Contains("RoomNumber"))
+            {
+                string roomNumber = _invoiceRow["RoomNumber"]?.ToString() ?? "N/A";
+                lblRoomInfo.Text = $"Phòng: {roomNumber}";
+            }
+            else
+            {
+                lblRoomInfo.Text = "Phòng: N/A";
+            }
+        }
+
+        private void DisplayInvoiceInfo()
+        {
+            if (_invoiceRow == null) return;
+
+            string invoiceNumber = _invoiceRow["InvoiceNumber"]?.ToString() ?? "N/A";
+            string invoiceDate = _invoiceRow["InvoiceDate"]?.ToString() ?? "N/A";
+            string dueDate = _invoiceRow["DueDate"]?.ToString() ?? "N/A";
+
+            lblInvoice.Text = $"Hóa đơn: {invoiceNumber} | Ngày lập: {invoiceDate} | Hạn: {dueDate}";
+
+            // Calculate amounts
+            decimal totalAmount = ReadDecimal(_invoiceRow, "TotalAmount");
+            decimal paidAmount = ReadDecimal(_invoiceRow, "PaidAmount");
+            decimal remainingAmount = ReadDecimal(_invoiceRow, "RemainingAmount");
+
+            string rentalCost = ReadDecimal(_invoiceRow, "RentalCost").ToString("N0");
+            string utilityCost = ReadDecimal(_invoiceRow, "UtilityCost").ToString("N0");
+            string otherCost = ReadDecimal(_invoiceRow, "OtherCost").ToString("N0");
+
+            lblAmounts.Text = $"Tiền phòng: {rentalCost}\nTiền dịch vụ: {utilityCost}\nChí phí khác: {otherCost}\n" +
+                $"Tổng tiền: {totalAmount:N0} | Đã thu: {paidAmount:N0} | Còn nợ: {remainingAmount:N0}";
+
+            numAmount.Maximum = (decimal)remainingAmount;
+            numAmount.Value = (decimal)remainingAmount;
+            SetExportAllowed(true); // Luôn cho phép xuất hóa đơn để gửi khách
+        }
+
+        private decimal ReadDecimal(DataRow row, string col)
+        {
+            if (row == null || !row.Table.Columns.Contains(col)) return 0m;
+            var v = row[col];
+            if (v == null || v == DBNull.Value) return 0m;
+            if (v is decimal d) return d;
+            if (decimal.TryParse(v.ToString(), out var parsed)) return parsed;
+            return 0m;
+        }
+
+        private void EditTenantInfo()
+        {
+            if (_tenantRow == null) return;
+
+            using (var frm = new FrmTenantEditor(_bll, _tenantRow))
+            {
+                if (frm.ShowDialog(this) == DialogResult.OK)
+                {
+                    _ = LoadTenantInfoAsync();
+                }
+            }
+        }
+
+        private async Task SavePaymentAsync()
+        {
+            try
+            {
+                if (_invoiceRow == null)
+                {
+                    ModernDialog.Error("Không tìm thấy thông tin hóa đơn");
+                    return;
+                }
+
+                int invoiceId = Convert.ToInt32(_invoiceRow["InvoiceId"]);
+                decimal amount = numAmount.Value;
+
+                if (amount <= 0)
+                {
+                    ToastNotification.Warning("Số tiền phải lớn hơn 0");
+                    return;
+                }
+
+                // Create payment record
+                await _bll.InsertPaymentAsync(
+                    invoiceId: invoiceId,
+                    paymentDate: dtPaymentDate.Value,
+                    amount: amount,
+                    method: MapPaymentMethodToStored(cboMethod.SelectedItem?.ToString()),
+                    reference: txtReference.Text,
+                    notes: txtNotes.Text
+                );
+
+                await ReloadInvoiceRowAsync();
+                DisplayInvoiceInfo();
+
+                decimal remaining = ReadDecimal(_invoiceRow, "RemainingAmount");
+                SetExportAllowed(remaining <= 0);
+                await NotifyTenantInvoiceSentAsync();
+
+                AdminEvents.NotifyDataChanged();
+                DataSyncManager.NotifyInvoicesChanged();
+                DataSyncManager.NotifyPaymentsChanged();
+                DataSyncManager.NotifyRoomsChanged();
+
+                if (_exportAllowed && remaining <= 0 && ModernConfirmDialog.Confirm(
+                    "Đã thanh toán đủ.\nBạn có muốn xuất/in hóa đơn ngay?",
+                    "Hoàn tất"))
+                {
+                    OpenExportForm();
+                }
+
+                DialogResult = DialogResult.OK;
+                Close();
+            }
+            catch (Exception ex)
+            {
+                ModernDialog.Error("Lỗi lưu thanh toán: " + ex.Message);
+            }
+        }
+
+        private void SetExportAllowed(bool allowed)
+        {
+            _exportAllowed = true; // Luôn cho phép xuất hóa đơn
+            btnExportInvoice.Enabled = true;
+        }
+
+        private async void UpdateBankInfoVisibility()
+        {
+            bool isTransfer = cboMethod.SelectedItem?.ToString() == "Chuyển khoản";
+            pnlBankInfo.Visible = isTransfer;
+            UpdateReferenceDisplay(isTransfer);
+
+            if (isTransfer)
+            {
+                await LoadAndGenerateQrAsync();
+            }
+        }
+
+        private void UpdateReferenceDisplay(bool isTransfer)
+        {
+            if (isTransfer)
+            {
+                lblReference.Text = "Mã chuyển khoản:";
+                btnCopyReference.Visible = true;
+                if (string.IsNullOrWhiteSpace(_autoTransferCode))
+                    _autoTransferCode = BuildTransferCode();
+                if (!string.IsNullOrWhiteSpace(txtReference.Text))
+                    _autoTransferCode = txtReference.Text.Trim();
+                if (string.IsNullOrWhiteSpace(txtReference.Text) || txtReference.Text == _autoTransferCode)
+                    txtReference.Text = _autoTransferCode;
+                txtReference.ReadOnly = true;
+            }
+            else
+            {
+                lblReference.Text = "Tham chiếu:";
+                btnCopyReference.Visible = false;
+                txtReference.ReadOnly = false;
+            }
+        }
+
+        private string BuildTransferCode()
+        {
+            string invoiceNumber = ReadInvoiceValue("InvoiceNumber");
+            int invoiceId = ReadInt(_invoiceRow, "InvoiceId");
+            if (!string.IsNullOrWhiteSpace(invoiceNumber))
+                return $"TT-{invoiceNumber.Trim()}";
+            if (invoiceId > 0)
+                return $"TT-INV{invoiceId}";
+            return $"TT-{DateTime.Now:yyyyMMddHHmmss}";
+        }
+
+        private async Task<(string BankId, string AccountNumber, string AccountName, string Template)> ResolveBankSettingsAsync()
+        {
+            string bankId = null;
+            string accountNo = null;
+            string accountName = null;
+            string template = null;
+
+            int branchId = await ResolveBranchIdAsync();
+            if (branchId > 0)
+            {
+                var branchSetting = await _bll.GetBranchBankSettingsAsync(branchId);
+                if (branchSetting.HasValue)
+                {
+                    bankId = branchSetting.Value.BankId;
+                    accountNo = branchSetting.Value.AccountNumber;
+                    accountName = branchSetting.Value.AccountName;
+                    template = branchSetting.Value.Template;
+                }
+            }
+
+            if (_currentUserId.HasValue)
+            {
+                var userSetting = await _bll.GetUserBankSettingsAsync(_currentUserId.Value);
+                if (userSetting.HasValue)
+                {
+                    bankId = userSetting.Value.BankId;
+                    accountNo = userSetting.Value.AccountNumber;
+                    accountName = userSetting.Value.AccountName;
+                    template = userSetting.Value.Template;
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(bankId))
+                bankId = await _bll.GetSystemSettingValueAsync("BankId") ?? "VietinBank";
+            if (string.IsNullOrWhiteSpace(accountNo))
+                accountNo = await _bll.GetSystemSettingValueAsync("BankAccountNumber") ?? "0338352423";
+            if (string.IsNullOrWhiteSpace(accountName))
+                accountName = await _bll.GetSystemSettingValueAsync("BankAccountName") ?? "NGUYEN TRUNG KIEN";
+            if (string.IsNullOrWhiteSpace(template))
+                template = await _bll.GetSystemSettingValueAsync("BankTemplate") ?? "compact";
+
+            return (bankId, accountNo, accountName, template);
+        }
+
+        private async Task<int> ResolveBranchIdAsync()
+        {
+            int branchId = ReadInt(_invoiceRow, "BranchId");
+            if (branchId > 0) return branchId;
+
+            int roomId = ReadInt(_invoiceRow, "RoomId");
+            if (roomId <= 0) return 0;
+
+            var rooms = await _bll.GetRoomsAsync();
+            var roomRow = rooms?.AsEnumerable().FirstOrDefault(r => ReadInt(r, "RoomId") == roomId);
+            branchId = roomRow != null ? ReadInt(roomRow, "BranchId") : 0;
+            if (branchId > 0) return branchId;
+
+            int tenantId = ReadInt(_invoiceRow, "TenantId");
+            if (tenantId <= 0) return 0;
+            var history = await _bll.GetTenantHistoryAsync();
+            var active = history?.AsEnumerable()
+                .FirstOrDefault(r => ReadInt(r, "TenantId") == tenantId && IsActiveHistory(r));
+            if (active == null) return 0;
+
+            roomId = ReadInt(active, "RoomId");
+            if (roomId <= 0) return 0;
+            roomRow = rooms?.AsEnumerable().FirstOrDefault(r => ReadInt(r, "RoomId") == roomId);
+            return roomRow != null ? ReadInt(roomRow, "BranchId") : 0;
+        }
+
+        private async Task LoadAndGenerateQrAsync()
+        {
+            try
+            {
+                var bank = await ResolveBankSettingsAsync();
+                decimal amount = numAmount.Value;
+                if (string.IsNullOrWhiteSpace(_autoTransferCode))
+                    _autoTransferCode = BuildTransferCode();
+                string transferCode = string.IsNullOrWhiteSpace(txtReference.Text)
+                    ? _autoTransferCode
+                    : txtReference.Text.Trim();
+                _autoTransferCode = transferCode;
+                string invoiceNumber = ReadInvoiceValue("InvoiceNumber");
+                string description = string.IsNullOrWhiteSpace(invoiceNumber)
+                    ? _autoTransferCode
+                    : $"{_autoTransferCode} {invoiceNumber}";
+
+                // VietQR API URL
+                // https://img.vietqr.io/image/<BANK_ID>-<ACCOUNT_NO>-<TEMPLATE>.png?amount=<AMOUNT>&addInfo=<CONTENT>&accountName=<NAME>
+                string qrUrl = $"https://img.vietqr.io/image/{bank.BankId}-{bank.AccountNumber}-{bank.Template}.png" +
+                               $"?amount={amount:0}" +
+                               $"&addInfo={Uri.EscapeDataString(description)}" +
+                               $"&accountName={Uri.EscapeDataString(bank.AccountName)}";
+
+                lblBankDetails.Text = $"NGÂN HÀNG: {bank.BankId}\n" +
+                                     $"SỐ TÀI KHOẢN: {bank.AccountNumber}\n" +
+                                     $"CHỦ TÀI KHOẢN: {bank.AccountName}\n\n" +
+                                     $"MÃ CHUYỂN KHOẢN: {_autoTransferCode}\n" +
+                                     $"NỘI DUNG: {description}\n" +
+                                     $"SỐ TIỀN: {amount:N0} VNĐ";
+
+                picQrCode.ImageLocation = qrUrl;
+            }
+            catch (Exception ex)
+            {
+                lblBankDetails.Text = "Lỗi tải thông tin ngân hàng: " + ex.Message;
+            }
+        }
+
+        private async Task EditBankSettingsAsync()
+        {
+            int branchId = await ResolveBranchIdAsync();
+            if (branchId <= 0 && !_currentUserId.HasValue)
+            {
+                ModernDialog.Error("Không xác định được chi nhánh hoặc tài khoản đăng nhập.");
+                return;
+            }
+
+            var current = await ResolveBankSettingsAsync();
+            using (var frm = new FrmBankSettingsEditor(current.BankId, current.AccountNumber, current.AccountName, current.Template))
+            {
+                if (frm.ShowDialog(this) != DialogResult.OK)
+                    return;
+
+                bool saved;
+                if (branchId > 0)
+                {
+                    saved = await _bll.UpsertBranchBankSettingsAsync(
+                        branchId,
+                        frm.BankId,
+                        frm.AccountNumber,
+                        frm.AccountName,
+                        frm.Template);
+                }
+                else
+                {
+                    saved = await _bll.UpsertUserBankSettingsAsync(
+                        _currentUserId.Value,
+                        frm.BankId,
+                        frm.AccountNumber,
+                        frm.AccountName,
+                        frm.Template);
+                }
+
+                if (!saved)
+                {
+                    ModernDialog.Error("Không thể lưu cấu hình ngân hàng.");
+                    return;
+                }
+
+                await LoadAndGenerateQrAsync();
+            }
+        }
+
+        private static string MapPaymentMethodToStored(string displayValue)
+        {
+            switch ((displayValue ?? string.Empty).Trim())
+            {
+                case "Tiền mặt":
+                    return "Cash";
+                case "Chuyển khoản":
+                    return "Transfer";
+                case "Thẻ":
+                    return "Card";
+                default:
+                    return "Cash";
+            }
+        }
+
+        private static string MapPaymentMethodToDisplay(string storedValue)
+        {
+            switch ((storedValue ?? string.Empty).Trim())
+            {
+                case "Cash":
+                    return "Tiền mặt";
+                case "Transfer":
+                    return "Chuyển khoản";
+                case "Check":
+                    return "Séc";
+                case "Card":
+                    return "Thẻ";
+                default:
+                    return "Tiền mặt";
+            }
+        }
+
+        private async Task NotifyTenantInvoiceSentAsync()
+        {
+            await Task.Delay(1);
+            string tenantName = ReadTenantValue(_tenantRow, "TenantName", "FullName")
+                ?? ReadInvoiceValue("TenantName")
+                ?? "khách thuê";
+            string tenantEmail = _tenantRow?["Email"]?.ToString() ?? _invoiceRow?["TenantEmail"]?.ToString() ?? "chưa cung cấp";
+            ToastNotification.Success($"Hóa đơn đã được gửi đến {tenantName} ({tenantEmail})");
+        }
+
+        private static string ReadTenantValue(DataRow row, params string[] cols)
+        {
+            if (row == null || row.Table == null || cols == null) return null;
+            foreach (var col in cols)
+            {
+                if (row.Table.Columns.Contains(col))
+                {
+                    var v = row[col];
+                    if (v != null && v != DBNull.Value)
+                        return v.ToString();
+                }
+            }
+            return null;
+        }
+
+        private static int ReadInt(DataRow row, string col)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(col)) return 0;
+            return int.TryParse(row[col]?.ToString(), out var val) ? val : 0;
+        }
+
+        private static bool IsActiveHistory(DataRow row)
+        {
+            if (row == null) return false;
+            string checkout = row.Table.Columns.Contains("CheckOutDate") ? row["CheckOutDate"]?.ToString() : null;
+            if (string.IsNullOrWhiteSpace(checkout)) return true;
+            if (row.Table.Columns.Contains("Status"))
+            {
+                var status = row["Status"]?.ToString() ?? string.Empty;
+                if (status.IndexOf("active", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+                if (status.IndexOf("đang", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            }
+            return false;
+        }
+
+        private string ReadInvoiceValue(string col)
+        {
+            if (_invoiceRow == null || _invoiceRow.Table == null || !_invoiceRow.Table.Columns.Contains(col)) return null;
+            var v = _invoiceRow[col];
+            return v == null || v == DBNull.Value ? null : v.ToString();
+        }
+
+        private async void HandleInvoiceExport()
+        {
+            // Đã bỏ chặn xuất hóa đơn trước khi thanh toán
+            await ReloadInvoiceRowAsync();
+            DisplayInvoiceInfo();
+            OpenExportForm();
+        }
+
+        private async Task ReloadInvoiceRowAsync()
+        {
+            if (_invoiceRow == null)
+                return;
+            try
+            {
+                int invoiceId = Convert.ToInt32(_invoiceRow["InvoiceId"]);
+                var table = await _bll.GetInvoicesViewAsync();
+                var updated = table?.AsEnumerable().FirstOrDefault(r => Convert.ToInt32(r["InvoiceId"]) == invoiceId);
+                if (updated != null)
+                    _invoiceRow = updated;
+            }
+            catch (Exception ex)
+            {
+                ModernDialog.Error("Lỗi tải lại hóa đơn: " + ex.Message);
+            }
+        }
+
+        private void OpenExportForm()
+        {
+            using (var frm = new FrmInvoiceExportForm(_bll, _invoiceRow))
+            {
+                frm.ShowDialog(this);
+            }
+        }
+
+        private class FrmBankSettingsEditor : Form
+        {
+            private readonly TextBox _txtBankId;
+            private readonly TextBox _txtAccountNumber;
+            private readonly TextBox _txtAccountName;
+            private readonly TextBox _txtTemplate;
+
+            public string BankId => (_txtBankId.Text ?? string.Empty).Trim();
+            public string AccountNumber => (_txtAccountNumber.Text ?? string.Empty).Trim();
+            public string AccountName => (_txtAccountName.Text ?? string.Empty).Trim();
+            public string Template => string.IsNullOrWhiteSpace(_txtTemplate.Text) ? "compact" : _txtTemplate.Text.Trim();
+
+            public FrmBankSettingsEditor(string bankId, string accountNumber, string accountName, string template)
+            {
+                Text = "Tùy chỉnh ngân hàng";
+                StartPosition = FormStartPosition.CenterParent;
+                FormBorderStyle = FormBorderStyle.FixedDialog;
+                MaximizeBox = false;
+                MinimizeBox = false;
+                ClientSize = new Size(460, 260);
+                BackColor = Color.White;
+                Font = new Font("Segoe UI", 10F);
+
+                int left = 16;
+                int labelWidth = 130;
+                int inputWidth = 280;
+                int top = 20;
+                int line = 36;
+
+                Controls.Add(MakeLabel("Ngân hàng (BankId):", left, top, labelWidth));
+                _txtBankId = MakeInput(bankId, left + labelWidth + 8, top, inputWidth);
+                Controls.Add(_txtBankId);
+                top += line;
+
+                Controls.Add(MakeLabel("Số tài khoản:", left, top, labelWidth));
+                _txtAccountNumber = MakeInput(accountNumber, left + labelWidth + 8, top, inputWidth);
+                Controls.Add(_txtAccountNumber);
+                top += line;
+
+                Controls.Add(MakeLabel("Chủ tài khoản:", left, top, labelWidth));
+                _txtAccountName = MakeInput(accountName, left + labelWidth + 8, top, inputWidth);
+                Controls.Add(_txtAccountName);
+                top += line;
+
+                Controls.Add(MakeLabel("Template QR:", left, top, labelWidth));
+                _txtTemplate = MakeInput(string.IsNullOrWhiteSpace(template) ? "compact" : template, left + labelWidth + 8, top, inputWidth);
+                Controls.Add(_txtTemplate);
+
+                var pnlBottom = new Panel
+                {
+                    Dock = DockStyle.Bottom,
+                    Height = 56,
+                    Padding = new Padding(12),
+                    BackColor = Color.FromArgb(245, 246, 248)
+                };
+
+                var btnSave = new ModernButton
+                {
+                    Text = "Lưu",
+                    Width = 100,
+                    Height = 32,
+                    BaseColor = Color.FromArgb(0, 120, 215),
+                    ForeColor = Color.White
+                };
+                btnSave.Click += (s, e) =>
+                {
+                    if (string.IsNullOrWhiteSpace(BankId) || string.IsNullOrWhiteSpace(AccountNumber) || string.IsNullOrWhiteSpace(AccountName))
+                    {
+                        ModernDialog.Error("Vui lòng nhập ngân hàng, số tài khoản và chủ tài khoản.");
+                        return;
+                    }
+
+                    DialogResult = DialogResult.OK;
+                    Close();
+                };
+
+                var btnCancel = new ModernButton
+                {
+                    Text = "Hủy",
+                    Width = 100,
+                    Height = 32,
+                    BaseColor = Color.FromArgb(200, 200, 200),
+                    ForeColor = Color.Black,
+                    DialogResult = DialogResult.Cancel
+                };
+
+                pnlBottom.Controls.Add(btnSave);
+                pnlBottom.Controls.Add(btnCancel);
+                btnSave.Location = new Point(pnlBottom.Width - 220, 12);
+                btnCancel.Location = new Point(pnlBottom.Width - 110, 12);
+                pnlBottom.Resize += (s, e) =>
+                {
+                    btnSave.Location = new Point(pnlBottom.Width - 220, 12);
+                    btnCancel.Location = new Point(pnlBottom.Width - 110, 12);
+                };
+
+                Controls.Add(pnlBottom);
+                AcceptButton = btnSave;
+                CancelButton = btnCancel;
+            }
+
+            private static Label MakeLabel(string text, int x, int y, int width)
+            {
+                return new Label
+                {
+                    Text = text,
+                    Location = new Point(x, y + 4),
+                    Width = width,
+                    TextAlign = ContentAlignment.MiddleLeft
+                };
+            }
+
+            private static TextBox MakeInput(string value, int x, int y, int width)
+            {
+                return new TextBox
+                {
+                    Location = new Point(x, y),
+                    Width = width,
+                    Text = value ?? string.Empty
+                };
+            }
+        }
+    }
+}

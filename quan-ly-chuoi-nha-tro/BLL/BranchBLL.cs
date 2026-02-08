@@ -45,8 +45,15 @@ namespace QuanLyNhaTro.BLL
         /// <summary>
         /// Thêm chi nhánh mới
         /// </summary>
-        public async Task<bool> AddBranchAsync(string branchCode, string branchName, string address, 
-            string phone, string managerName, bool isActive)
+        public async Task<bool> AddBranchAsync(
+            string branchCode,
+            string branchName,
+            string address,
+            string phone,
+            string hotline,
+            string operatingHours,
+            string description,
+            bool isActive)
         {
             // Kiểm tra dữ liệu
             if (string.IsNullOrWhiteSpace(branchCode) || string.IsNullOrWhiteSpace(branchName))
@@ -57,7 +64,7 @@ namespace QuanLyNhaTro.BLL
 
             try
             {
-                return await dbHelper.AddBranchAsync(branchCode, branchName, address, phone, managerName, isActive);
+                return await dbHelper.AddBranchAsync(branchCode, branchName, address, phone, hotline, operatingHours, description, isActive);
             }
             catch (Exception ex)
             {
@@ -70,8 +77,16 @@ namespace QuanLyNhaTro.BLL
         /// <summary>
         /// Sửa thông tin chi nhánh
         /// </summary>
-        public async Task<bool> UpdateBranchAsync(int branchId, string branchCode, string branchName, 
-            string address, string phone, string managerName, bool isActive)
+        public async Task<bool> UpdateBranchAsync(
+            int branchId,
+            string branchCode,
+            string branchName,
+            string address,
+            string phone,
+            string hotline,
+            string operatingHours,
+            string description,
+            bool isActive)
         {
             if (branchId <= 0)
                 throw new Exception("ID Chi nhánh không hợp lệ!");
@@ -81,7 +96,7 @@ namespace QuanLyNhaTro.BLL
 
             try
             {
-                return await dbHelper.UpdateBranchAsync(branchId, branchCode, branchName, address, phone, managerName, isActive);
+                return await dbHelper.UpdateBranchAsync(branchId, branchCode, branchName, address, phone, hotline, operatingHours, description, isActive);
             }
             catch (Exception ex)
             {

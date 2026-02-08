@@ -1,0 +1,425 @@
+using System;
+using System.Data;
+using System.Drawing;
+using System.IO;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using QuanLyNhaTro.BLL;
+
+namespace quan_ly_chuoi_nha_tro.GUI
+{
+    public class FrmTenantQuickInfo : Form
+    {
+        private readonly AdminDataBLL _bll;
+        private readonly int _tenantId;
+        private DataTable _tenantData;
+        private DataTable _dependents;
+        private DataTable _contracts;
+        private DataTable _history;
+
+        public FrmTenantQuickInfo(AdminDataBLL bll, int tenantId)
+        {
+            _bll = bll ?? new AdminDataBLL();
+            _tenantId = tenantId;
+            InitializeComponent();
+        }
+
+        private void InitializeComponent()
+        {
+            this.Text = $"Thông Tin Khách Thuê";
+            this.StartPosition = FormStartPosition.CenterParent;
+            this.Width = 850;
+            this.Height = 750;
+            this.BackColor = Color.FromArgb(240, 242, 245);
+            this.MaximizeBox = false;
+            this.MinimizeBox = false;
+            this.FormBorderStyle = FormBorderStyle.FixedDialog;
+
+            // Header Bar
+            var headerBar = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 60,
+                BackColor = Color.FromArgb(0, 120, 215),
+                Padding = new Padding(20, 10, 20, 10)
+            };
+
+            var lblTenantName = new Label
+            {
+                Text = $"Khách Thuê #{_tenantId}",
+                Font = new Font("Times New Roman", 16, FontStyle.Bold),
+                ForeColor = Color.White,
+                AutoSize = true,
+                Location = new Point(0, 5)
+            };
+
+            var btnClose = new Button
+            {
+                Text = "✕",
+                Width = 45,
+                Height = 40,
+                Dock = DockStyle.Right,
+                BackColor = Color.FromArgb(0, 100, 180),
+                FlatStyle = FlatStyle.Flat,
+                ForeColor = Color.White,
+                Font = new Font("Times New Roman", 16, FontStyle.Bold)
+            };
+            btnClose.FlatAppearance.BorderSize = 0;
+            btnClose.Click += (s, e) => this.Close();
+
+            headerBar.Controls.Add(btnClose);
+            headerBar.Controls.Add(lblTenantName);
+
+            // Main content with TabControl
+            var tabControl = new TabControl
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Point(0, 0),
+                BackColor = Color.White
+            };
+            tabControl.DrawMode = TabDrawMode.OwnerDrawFixed;
+            tabControl.ItemSize = new Size(150, 40);
+            tabControl.DrawItem += TabControl_DrawItem;
+
+            // Tab 1: Thông tin chi tiết
+            var tabBasic = new TabPage { Text = "Thông Tin", Padding = new Padding(20) };
+            tabBasic.BackColor = Color.White;
+            var pnlBasic = new Panel { Dock = DockStyle.Fill, AutoScroll = true };
+            tabBasic.Controls.Add(pnlBasic);
+
+            // Tab 2: Người phụ thuộc
+            var tabDependents = new TabPage { Text = "Người Phụ Thuộc", Padding = new Padding(10) };
+            tabDependents.BackColor = Color.White;
+            var gridDependents = new DataGridView
+            {
+                Dock = DockStyle.Fill,
+                ReadOnly = true,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                AllowUserToAddRows = false,
+                BackgroundColor = Color.White,
+                BorderStyle = BorderStyle.None
+            };
+            gridDependents.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(0, 120, 215);
+            gridDependents.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            gridDependents.ColumnHeadersDefaultCellStyle.Font = new Font("Times New Roman", 10, FontStyle.Bold);
+            gridDependents.DefaultCellStyle.Font = new Font("Times New Roman", 10);
+            gridDependents.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            tabDependents.Controls.Add(gridDependents);
+
+            // Tab 3: Hợp đồng
+            var tabContracts = new TabPage { Text = "Hợp Đồng", Padding = new Padding(10) };
+            tabContracts.BackColor = Color.White;
+            var gridContracts = new DataGridView
+            {
+                Dock = DockStyle.Fill,
+                ReadOnly = true,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                AllowUserToAddRows = false,
+                BackgroundColor = Color.White,
+                BorderStyle = BorderStyle.None
+            };
+            gridContracts.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(0, 120, 215);
+            gridContracts.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            gridContracts.ColumnHeadersDefaultCellStyle.Font = new Font("Times New Roman", 10, FontStyle.Bold);
+            gridContracts.DefaultCellStyle.Font = new Font("Times New Roman", 10);
+            gridContracts.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            tabContracts.Controls.Add(gridContracts);
+
+            // Tab 4: Lịch sử nhân phòng
+            var tabHistory = new TabPage { Text = "Lịch Sử", Padding = new Padding(10) };
+            tabHistory.BackColor = Color.White;
+            var gridHistory = new DataGridView
+            {
+                Dock = DockStyle.Fill,
+                ReadOnly = true,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                AllowUserToAddRows = false,
+                BackgroundColor = Color.White,
+                BorderStyle = BorderStyle.None
+            };
+            gridHistory.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(0, 120, 215);
+            gridHistory.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            gridHistory.ColumnHeadersDefaultCellStyle.Font = new Font("Times New Roman", 10, FontStyle.Bold);
+            gridHistory.DefaultCellStyle.Font = new Font("Times New Roman", 10);
+            gridHistory.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            tabHistory.Controls.Add(gridHistory);
+
+            tabControl.TabPages.Add(tabBasic);
+            tabControl.TabPages.Add(tabDependents);
+            tabControl.TabPages.Add(tabContracts);
+            tabControl.TabPages.Add(tabHistory);
+
+            this.Controls.Add(tabControl);
+            this.Controls.Add(headerBar);
+
+            this.Load += async (s, e) => await LoadDataAsync(pnlBasic, gridDependents, gridContracts, gridHistory);
+        }
+
+        private void TabControl_DrawItem(object sender, DrawItemEventArgs e)
+        {
+            var tabControl = sender as TabControl;
+            var tab = tabControl?.TabPages[e.Index];
+            if (tab == null) return;
+
+            var font = new Font("Times New Roman", 10, FontStyle.Regular);
+            var color = e.State == DrawItemState.Selected ? Color.FromArgb(0, 120, 215) : Color.FromArgb(80, 80, 80);
+            
+            e.Graphics.DrawString(tab.Text, font, new SolidBrush(color), e.Bounds.X + 15, e.Bounds.Y + 10);
+        }
+
+        private async Task LoadDataAsync(Panel basicPanel, DataGridView dependentsGrid, DataGridView contractsGrid, DataGridView historyGrid)
+        {
+            try
+            {
+                // Load tenant data
+                var allTenants = await _bll.GetTenantsAsync();
+                _tenantData = new DataTable();
+                foreach (DataColumn col in allTenants.Columns)
+                    _tenantData.Columns.Add(col.ColumnName, col.DataType);
+
+                foreach (DataRow row in allTenants.Rows)
+                {
+                    if (row["TenantId"] != DBNull.Value && Convert.ToInt32(row["TenantId"]) == _tenantId)
+                    {
+                        _tenantData.ImportRow(row);
+                        break;
+                    }
+                }
+
+                if (_tenantData.Rows.Count > 0)
+                    DisplayBasicInfo(basicPanel, _tenantData.Rows[0]);
+
+                // Load dependents
+                _dependents = await _bll.GetDependentsAsync();
+                FilterDependentsByTenant(_dependents, _tenantId);
+                dependentsGrid.DataSource = _dependents;
+                FormatDependentsGrid(dependentsGrid);
+
+                // Load contracts
+                _contracts = await _bll.GetContractsAsync();
+                FilterContractsByTenant(_contracts, _tenantId);
+                contractsGrid.DataSource = _contracts;
+                FormatContractsGrid(contractsGrid);
+
+                // Load history
+                _history = await _bll.GetTenantHistoryAsync();
+                FilterHistoryByTenant(_history, _tenantId);
+                historyGrid.DataSource = _history;
+                FormatHistoryGrid(historyGrid);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi tải dữ liệu: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void DisplayBasicInfo(Panel panel, DataRow tenant)
+        {
+            panel.Controls.Clear();
+            int y = 0;
+
+            // Create a nice grouped layout with sections
+            var sections = new (string title, string[] fields)[]
+            {
+                ("THÔNG TIN CÁ NHÂN", new[] {
+                    "FullName:Họ và tên",
+                    "IdentityCard:CMND/CCCD",
+                    "BirthDate:Ngày sinh",
+                    "Address:Địa chỉ"
+                }),
+                ("THÔNG TIN LIÊN HỆ", new[] {
+                    "PhoneNumber:Số điện thoại",
+                    "Email:Email"
+                }),
+                ("THÔNG TIN TẠM TRÚ", new[] {
+                    "TempReg:Sổ tạm trú",
+                    "TempRegDate:Ngày lập sổ",
+                    "TempRegExpiry:Hết hạn sổ"
+                }),
+                ("TRẠNG THÁI", new[] {
+                    "IsActive:Tình trạng"
+                })
+            };
+
+            foreach (var (sectionTitle, fields) in sections)
+            {
+                // Section header
+                var lblSection = new Label
+                {
+                    Text = sectionTitle,
+                    Font = new Font("Times New Roman", 11, FontStyle.Bold),
+                    ForeColor = Color.FromArgb(0, 120, 215),
+                    AutoSize = true,
+                    Location = new Point(0, y)
+                };
+                panel.Controls.Add(lblSection);
+                y += 30;
+
+                // Divider line
+                var divider = new Panel
+                {
+                    Height = 1,
+                    BackColor = Color.FromArgb(200, 220, 240),
+                    Location = new Point(0, y - 8),
+                    Width = panel.Width - 30
+                };
+                panel.Controls.Add(divider);
+
+                // Fields for this section
+                foreach (var fieldDef in fields)
+                {
+                    var parts = fieldDef.Split(':');
+                    var fieldName = parts[0];
+                    var label = parts[1];
+
+                    var lbl = new Label
+                    {
+                        Text = label + ":",
+                        Location = new Point(10, y),
+                        Width = 140,
+                        Font = new Font("Times New Roman", 10, FontStyle.Regular),
+                        ForeColor = Color.FromArgb(70, 70, 70)
+                    };
+
+                    string value = GetFieldValue(tenant, fieldName);
+
+                    var txt = new TextBox
+                    {
+                        Text = value,
+                        Location = new Point(160, y - 3),
+                        Width = panel.Width - 200,
+                        Height = 28,
+                        ReadOnly = true,
+                        BorderStyle = BorderStyle.FixedSingle,
+                        BackColor = Color.FromArgb(250, 250, 250),
+                        Font = new Font("Times New Roman", 10)
+                    };
+
+                    panel.Controls.Add(lbl);
+                    panel.Controls.Add(txt);
+                    y += 35;
+                }
+
+                y += 10; // Space between sections
+            }
+        }
+
+        private string GetFieldValue(DataRow tenant, string fieldName)
+        {
+            if (!tenant.Table.Columns.Contains(fieldName))
+                return "";
+
+            var val = tenant[fieldName];
+            if (val == DBNull.Value)
+                return "";
+
+            if (fieldName == "BirthDate" || fieldName == "TempRegDate" || fieldName == "TempRegExpiry")
+            {
+                if (DateTime.TryParse(val.ToString(), out var dt))
+                    return dt.ToString("dd/MM/yyyy");
+            }
+            else if (fieldName == "IsActive")
+            {
+                return Convert.ToBoolean(val) ? "✓ Hoạt động" : "✕ Không hoạt động";
+            }
+
+            return val.ToString();
+        }
+
+        private void FilterDependentsByTenant(DataTable dependents, int tenantId)
+        {
+            if (dependents == null || dependents.Rows.Count == 0)
+                return;
+
+            for (int i = dependents.Rows.Count - 1; i >= 0; i--)
+            {
+                var row = dependents.Rows[i];
+                if (row["TenantId"] != DBNull.Value && Convert.ToInt32(row["TenantId"]) != tenantId)
+                    row.Delete();
+            }
+            dependents.AcceptChanges();
+        }
+
+        private void FilterContractsByTenant(DataTable contracts, int tenantId)
+        {
+            if (contracts == null || contracts.Rows.Count == 0)
+                return;
+
+            for (int i = contracts.Rows.Count - 1; i >= 0; i--)
+            {
+                var row = contracts.Rows[i];
+                if (row["TenantId"] != DBNull.Value && Convert.ToInt32(row["TenantId"]) != tenantId)
+                    row.Delete();
+            }
+            contracts.AcceptChanges();
+        }
+
+        private void FilterHistoryByTenant(DataTable history, int tenantId)
+        {
+            if (history == null || history.Rows.Count == 0)
+                return;
+
+            for (int i = history.Rows.Count - 1; i >= 0; i--)
+            {
+                var row = history.Rows[i];
+                if (row["TenantId"] != DBNull.Value && Convert.ToInt32(row["TenantId"]) != tenantId)
+                    row.Delete();
+            }
+            history.AcceptChanges();
+        }
+
+        private void FormatDependentsGrid(DataGridView grid)
+        {
+            if (grid.Columns.Count == 0) return;
+
+            foreach (DataGridViewColumn col in grid.Columns)
+                col.Visible = !col.Name.Contains("TenantId");
+
+            if (grid.Columns.Contains("DependentName"))
+                grid.Columns["DependentName"].HeaderText = "Tên người phụ thuộc";
+            if (grid.Columns.Contains("Relationship"))
+                grid.Columns["Relationship"].HeaderText = "Quan hệ";
+            if (grid.Columns.Contains("PhoneNumber"))
+                grid.Columns["PhoneNumber"].HeaderText = "Số điện thoại";
+        }
+
+        private void FormatContractsGrid(DataGridView grid)
+        {
+            if (grid.Columns.Count == 0) return;
+
+            foreach (DataGridViewColumn col in grid.Columns)
+                col.Visible = !col.Name.Contains("TenantId") && !col.Name.Contains("BranchId");
+
+            if (grid.Columns.Contains("ContractNumber"))
+                grid.Columns["ContractNumber"].HeaderText = "Số HĐ";
+            if (grid.Columns.Contains("RoomNumber"))
+                grid.Columns["RoomNumber"].HeaderText = "Phòng";
+            if (grid.Columns.Contains("StartDate"))
+                grid.Columns["StartDate"].HeaderText = "Ngày bắt đầu";
+            if (grid.Columns.Contains("EndDate"))
+                grid.Columns["EndDate"].HeaderText = "Ngày kết thúc";
+            if (grid.Columns.Contains("RentalPrice"))
+                grid.Columns["RentalPrice"].HeaderText = "Giá thuê";
+        }
+
+        private void FormatHistoryGrid(DataGridView grid)
+        {
+            if (grid.Columns.Count == 0) return;
+
+            foreach (DataGridViewColumn col in grid.Columns)
+                col.Visible = !col.Name.Contains("TenantId") && !col.Name.Contains("BranchId");
+
+            if (grid.Columns.Contains("RoomNumber"))
+                grid.Columns["RoomNumber"].HeaderText = "Phòng";
+            if (grid.Columns.Contains("CheckInDate"))
+                grid.Columns["CheckInDate"].HeaderText = "Ngày nhận phòng";
+            if (grid.Columns.Contains("CheckOutDate"))
+                grid.Columns["CheckOutDate"].HeaderText = "Ngày trả phòng";
+            if (grid.Columns.Contains("Status"))
+                grid.Columns["Status"].HeaderText = "Trạng thái";
+            if (grid.Columns.Contains("Notes"))
+                grid.Columns["Notes"].HeaderText = "Ghi chú";
+        }
+    }
+}
+

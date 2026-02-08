@@ -21,6 +21,38 @@ namespace QuanLyNhaTro.DAL
                          t.FullName AS TenantName,
                          i.RoomId,
                          r.RoomNumber,
+                         r.BranchId,
+                         i.InvoiceDate,
+                         i.FromDate,
+                         i.ToDate,
+                         i.RentalCost,
+                         i.UtilityCost,
+                         i.OtherCost,
+                         i.TaxRate,
+                         i.TaxAmount,
+                         i.TotalAmount,
+                         i.PaidAmount,
+                         i.RemainingAmount,
+                         CASE
+                            WHEN ISNULL(i.RemainingAmount, (ISNULL(i.TotalAmount,0) - ISNULL(i.PaidAmount,0))) <= 0 THEN N'Paid'
+                            WHEN i.DueDate IS NOT NULL AND i.DueDate < CAST(GETDATE() AS DATE) THEN N'Overdue'
+                            WHEN ISNULL(i.PaidAmount,0) > 0 THEN N'PartialPaid'
+                            ELSE ISNULL(NULLIF(i.Status, ''), N'Issued')
+                         END AS Status,
+                         i.DueDate,
+                         i.CreatedDate,
+                         i.UpdatedDate
+                  FROM Invoices i
+                  LEFT JOIN Tenants t ON t.TenantId = i.TenantId
+                  LEFT JOIN Rooms r ON r.RoomId = i.RoomId
+                  ORDER BY i.InvoiceDate DESC, i.InvoiceId DESC",
+                @"SELECT i.InvoiceId,
+                         i.InvoiceNumber,
+                         i.TenantId,
+                         t.FullName AS TenantName,
+                         i.RoomId,
+                         r.RoomNumber,
+                         r.BranchId,
                          i.InvoiceDate,
                          i.FromDate,
                          i.ToDate,
@@ -59,6 +91,7 @@ namespace QuanLyNhaTro.DAL
                          t.FullName AS TenantName,
                          i.RoomId,
                          r.RoomNumber,
+                         r.BranchId,
                          p.PaymentDate,
                          p.PaymentAmount,
                          p.PaymentMethod,
@@ -94,6 +127,67 @@ namespace QuanLyNhaTro.DAL
             );
         }
 
+        public async Task<DataTable> GetRevenueByPeriodAsync(string periodType, int? year, int? period)
+        {
+            if (!await TableExistsAsync("Payments"))
+                return new DataTable();
+
+            string sql;
+            switch (periodType)
+            {
+                case "Quý":
+                    sql = @"
+                        SELECT YEAR(PaymentDate) AS Year,
+                               DATEPART(QUARTER, PaymentDate) AS Period,
+                               CAST(ISNULL(SUM(ISNULL(PaymentAmount,0)),0) AS DECIMAL(18,2)) AS Revenue
+                        FROM Payments
+                        WHERE PaymentDate IS NOT NULL
+                          AND (@Year IS NULL OR YEAR(PaymentDate) = @Year)
+                          AND (@Period IS NULL OR DATEPART(QUARTER, PaymentDate) = @Period)
+                        GROUP BY YEAR(PaymentDate), DATEPART(QUARTER, PaymentDate)
+                        ORDER BY YEAR(PaymentDate) DESC, DATEPART(QUARTER, PaymentDate) DESC";
+                    break;
+                case "Năm":
+                    sql = @"
+                        SELECT YEAR(PaymentDate) AS Year,
+                               0 AS Period,
+                               CAST(ISNULL(SUM(ISNULL(PaymentAmount,0)),0) AS DECIMAL(18,2)) AS Revenue
+                        FROM Payments
+                        WHERE PaymentDate IS NOT NULL
+                          AND (@Year IS NULL OR YEAR(PaymentDate) = @Year)
+                        GROUP BY YEAR(PaymentDate)
+                        ORDER BY YEAR(PaymentDate) DESC";
+                    break;
+                default:
+                    sql = @"
+                        SELECT YEAR(PaymentDate) AS Year,
+                               MONTH(PaymentDate) AS Period,
+                               CAST(ISNULL(SUM(ISNULL(PaymentAmount,0)),0) AS DECIMAL(18,2)) AS Revenue
+                        FROM Payments
+                        WHERE PaymentDate IS NOT NULL
+                          AND (@Year IS NULL OR YEAR(PaymentDate) = @Year)
+                          AND (@Period IS NULL OR MONTH(PaymentDate) = @Period)
+                        GROUP BY YEAR(PaymentDate), MONTH(PaymentDate)
+                        ORDER BY YEAR(PaymentDate) DESC, MONTH(PaymentDate) DESC";
+                    break;
+            }
+
+            var table = new DataTable();
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand(sql, conn))
+            {
+                cmd.CommandTimeout = commandTimeoutSeconds;
+                cmd.Parameters.AddWithValue("@Year", (object)year ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@Period", (object)period ?? DBNull.Value);
+                using (var adapter = new SqlDataAdapter(cmd))
+                {
+                    await Task.Run(() => adapter.Fill(table));
+                }
+            }
+
+            return table;
+        }
+
         public async Task<int> AddInvoiceAsync(
             string invoiceNumber,
             int tenantId,
@@ -104,7 +198,8 @@ namespace QuanLyNhaTro.DAL
             decimal rentalCost,
             decimal utilityCost,
             decimal otherCost,
-            DateTime? dueDate)
+            DateTime? dueDate,
+            decimal? taxRate = null)
         {
             if (!await TableExistsAsync("Invoices"))
                 throw new Exception("Bảng Invoices không tồn tại.");
@@ -120,18 +215,38 @@ namespace QuanLyNhaTro.DAL
                             ? GenerateInvoiceNumber(invoiceDate)
                             : invoiceNumber.Trim();
 
-                        var total = rentalCost + utilityCost + otherCost;
+                        bool hasTaxRate = await ColumnExistsAsync(conn, tx, "Invoices", "TaxRate");
+                        bool hasTaxAmount = await ColumnExistsAsync(conn, tx, "Invoices", "TaxAmount");
+                        bool hasTaxColumns = hasTaxRate && hasTaxAmount;
+
+                        decimal baseAmount = rentalCost + utilityCost + otherCost;
+                        decimal appliedTaxRate = taxRate ?? await GetDefaultTaxRatePercentAsync(conn, tx);
+                        decimal taxAmount = Math.Round(baseAmount * appliedTaxRate / 100m, 2, MidpointRounding.AwayFromZero);
+                        var total = baseAmount + taxAmount;
                         var paid = 0m;
                         var remaining = total - paid;
                         var status = ComputeInvoiceStatus(dueDate, paid, remaining);
 
-                        const string sql = @"
+                        string sql = hasTaxColumns
+                            ? @"
                             INSERT INTO Invoices
                                 (InvoiceNumber, TenantId, RoomId, InvoiceDate, FromDate, ToDate,
-                                 RentalCost, UtilityCost, OtherCost, TotalAmount, PaidAmount, RemainingAmount, Status, DueDate, CreatedDate, UpdatedDate)
+                                 RentalCost, UtilityCost, OtherCost, TaxRate, TaxAmount, TotalAmount,
+                                 PaidAmount, RemainingAmount, Status, DueDate, CreatedDate, UpdatedDate)
                             VALUES
                                 (@InvoiceNumber, @TenantId, @RoomId, @InvoiceDate, @FromDate, @ToDate,
-                                 @RentalCost, @UtilityCost, @OtherCost, @TotalAmount, @PaidAmount, @RemainingAmount, @Status, @DueDate, GETDATE(), GETDATE());
+                                 @RentalCost, @UtilityCost, @OtherCost, @TaxRate, @TaxAmount, @TotalAmount,
+                                 @PaidAmount, @RemainingAmount, @Status, @DueDate, GETDATE(), GETDATE());
+                            SELECT CAST(SCOPE_IDENTITY() AS INT);"
+                            : @"
+                            INSERT INTO Invoices
+                                (InvoiceNumber, TenantId, RoomId, InvoiceDate, FromDate, ToDate,
+                                 RentalCost, UtilityCost, OtherCost, TotalAmount,
+                                 PaidAmount, RemainingAmount, Status, DueDate, CreatedDate, UpdatedDate)
+                            VALUES
+                                (@InvoiceNumber, @TenantId, @RoomId, @InvoiceDate, @FromDate, @ToDate,
+                                 @RentalCost, @UtilityCost, @OtherCost, @TotalAmount,
+                                 @PaidAmount, @RemainingAmount, @Status, @DueDate, GETDATE(), GETDATE());
                             SELECT CAST(SCOPE_IDENTITY() AS INT);";
 
                         using (var cmd = new SqlCommand(sql, conn, tx))
@@ -145,6 +260,11 @@ namespace QuanLyNhaTro.DAL
                             cmd.Parameters.AddWithValue("@RentalCost", rentalCost);
                             cmd.Parameters.AddWithValue("@UtilityCost", utilityCost);
                             cmd.Parameters.AddWithValue("@OtherCost", otherCost);
+                            if (hasTaxColumns)
+                            {
+                                cmd.Parameters.AddWithValue("@TaxRate", appliedTaxRate);
+                                cmd.Parameters.AddWithValue("@TaxAmount", taxAmount);
+                            }
                             cmd.Parameters.AddWithValue("@TotalAmount", total);
                             cmd.Parameters.AddWithValue("@PaidAmount", paid);
                             cmd.Parameters.AddWithValue("@RemainingAmount", remaining);
@@ -176,7 +296,8 @@ namespace QuanLyNhaTro.DAL
             decimal rentalCost,
             decimal utilityCost,
             decimal otherCost,
-            DateTime? dueDate)
+            DateTime? dueDate,
+            decimal? taxRate = null)
         {
             if (!await TableExistsAsync("Invoices"))
                 throw new Exception("Bảng Invoices không tồn tại.");
@@ -188,12 +309,40 @@ namespace QuanLyNhaTro.DAL
                 {
                     try
                     {
+                        bool hasTaxRate = await ColumnExistsAsync(conn, tx, "Invoices", "TaxRate");
+                        bool hasTaxAmount = await ColumnExistsAsync(conn, tx, "Invoices", "TaxAmount");
+                        bool hasTaxColumns = hasTaxRate && hasTaxAmount;
+
                         decimal paid = await GetInvoicePaidAmountAsync(conn, tx, invoiceId);
-                        var total = rentalCost + utilityCost + otherCost;
+                        decimal baseAmount = rentalCost + utilityCost + otherCost;
+                        decimal appliedTaxRate = taxRate ?? await GetDefaultTaxRatePercentAsync(conn, tx);
+                        decimal taxAmount = Math.Round(baseAmount * appliedTaxRate / 100m, 2, MidpointRounding.AwayFromZero);
+                        var total = baseAmount + taxAmount;
                         var remaining = total - paid;
                         var status = ComputeInvoiceStatus(dueDate, paid, remaining);
 
-                        const string sql = @"
+                        string sql = hasTaxColumns
+                            ? @"
+                            UPDATE Invoices SET
+                                InvoiceNumber = @InvoiceNumber,
+                                TenantId = @TenantId,
+                                RoomId = @RoomId,
+                                InvoiceDate = @InvoiceDate,
+                                FromDate = @FromDate,
+                                ToDate = @ToDate,
+                                RentalCost = @RentalCost,
+                                UtilityCost = @UtilityCost,
+                                OtherCost = @OtherCost,
+                                TaxRate = @TaxRate,
+                                TaxAmount = @TaxAmount,
+                                TotalAmount = @TotalAmount,
+                                PaidAmount = @PaidAmount,
+                                RemainingAmount = @RemainingAmount,
+                                Status = @Status,
+                                DueDate = @DueDate,
+                                UpdatedDate = GETDATE()
+                            WHERE InvoiceId = @InvoiceId;"
+                            : @"
                             UPDATE Invoices SET
                                 InvoiceNumber = @InvoiceNumber,
                                 TenantId = @TenantId,
@@ -224,6 +373,11 @@ namespace QuanLyNhaTro.DAL
                             cmd.Parameters.AddWithValue("@RentalCost", rentalCost);
                             cmd.Parameters.AddWithValue("@UtilityCost", utilityCost);
                             cmd.Parameters.AddWithValue("@OtherCost", otherCost);
+                            if (hasTaxColumns)
+                            {
+                                cmd.Parameters.AddWithValue("@TaxRate", appliedTaxRate);
+                                cmd.Parameters.AddWithValue("@TaxAmount", taxAmount);
+                            }
                             cmd.Parameters.AddWithValue("@TotalAmount", total);
                             cmd.Parameters.AddWithValue("@PaidAmount", paid);
                             cmd.Parameters.AddWithValue("@RemainingAmount", remaining);
@@ -360,6 +514,71 @@ namespace QuanLyNhaTro.DAL
             }
         }
 
+        public async Task<bool> UpdatePaymentAsync(
+            int paymentId,
+            DateTime paymentDate,
+            decimal paymentAmount,
+            string paymentMethod,
+            string transactionReference,
+            string notes)
+        {
+            if (!await TableExistsAsync("Payments"))
+                throw new Exception("Bảng Payments không tồn tại.");
+            if (paymentAmount <= 0) throw new Exception("Số tiền thanh toán phải > 0.");
+
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                using (var tx = conn.BeginTransaction())
+                {
+                    try
+                    {
+                        int invoiceId;
+                        using (var cmd = new SqlCommand("SELECT InvoiceId FROM Payments WHERE PaymentId = @PaymentId", conn, tx))
+                        {
+                            cmd.Parameters.AddWithValue("@PaymentId", paymentId);
+                            var result = await cmd.ExecuteScalarAsync();
+                            if (result == null || result == DBNull.Value)
+                                throw new Exception("Không tìm thấy thanh toán.");
+                            invoiceId = Convert.ToInt32(result);
+                        }
+
+                        const string sql = @"
+                            UPDATE Payments SET
+                                PaymentDate = @PaymentDate,
+                                PaymentAmount = @PaymentAmount,
+                                PaymentMethod = @PaymentMethod,
+                                TransactionReference = @TransactionReference,
+                                Notes = @Notes
+                            WHERE PaymentId = @PaymentId;";
+
+                        using (var cmd = new SqlCommand(sql, conn, tx))
+                        {
+                            cmd.Parameters.AddWithValue("@PaymentId", paymentId);
+                            cmd.Parameters.AddWithValue("@PaymentDate", paymentDate.Date);
+                            cmd.Parameters.AddWithValue("@PaymentAmount", paymentAmount);
+                            cmd.Parameters.AddWithValue("@PaymentMethod", string.IsNullOrWhiteSpace(paymentMethod) ? (object)DBNull.Value : paymentMethod.Trim());
+                            cmd.Parameters.AddWithValue("@TransactionReference", string.IsNullOrWhiteSpace(transactionReference) ? (object)DBNull.Value : transactionReference.Trim());
+                            cmd.Parameters.AddWithValue("@Notes", string.IsNullOrWhiteSpace(notes) ? (object)DBNull.Value : notes.Trim());
+                            int affected = await cmd.ExecuteNonQueryAsync();
+                            if (affected <= 0)
+                                throw new Exception("Không thể cập nhật thanh toán.");
+                        }
+
+                        await RecalculateInvoiceFromPaymentsAsync(conn, tx, invoiceId);
+
+                        tx.Commit();
+                        return true;
+                    }
+                    catch
+                    {
+                        tx.Rollback();
+                        throw;
+                    }
+                }
+            }
+        }
+
         public async Task<bool> DeletePaymentAsync(int paymentId)
         {
             if (!await TableExistsAsync("Payments"))
@@ -404,7 +623,7 @@ namespace QuanLyNhaTro.DAL
             }
         }
 
-        public async Task<int> GenerateMonthlyInvoicesAsync(int year, int month, DateTime? invoiceDate = null, int? dueDay = null)
+        public async Task<int> GenerateMonthlyInvoicesAsync(int year, int month, DateTime? invoiceDate = null, int? dueDay = null, decimal? taxRateOverride = null)
         {
             if (!await TableExistsAsync("Contracts"))
                 throw new Exception("Bảng Contracts không tồn tại.");
@@ -422,6 +641,10 @@ namespace QuanLyNhaTro.DAL
                 {
                     try
                     {
+                        bool hasTaxRate = await ColumnExistsAsync(conn, tx, "Invoices", "TaxRate");
+                        bool hasTaxAmount = await ColumnExistsAsync(conn, tx, "Invoices", "TaxAmount");
+                        bool hasTaxColumns = hasTaxRate && hasTaxAmount;
+
                         int dueDayValue = dueDay ?? await GetInvoiceDueDayAsync(conn, tx) ?? 10;
                         int safeDueDay = Math.Max(1, Math.Min(DateTime.DaysInMonth(year, month), dueDayValue));
                         var dueDate = new DateTime(year, month, safeDueDay);
@@ -479,18 +702,35 @@ namespace QuanLyNhaTro.DAL
 
                                     decimal utilityCost = utilityByRoom.TryGetValue(roomId, out var u) ? u : 0m;
                                     decimal otherCost = 0m;
-                                    decimal total = rentalCost + utilityCost + otherCost;
+                                    decimal appliedTaxRate = taxRateOverride.HasValue && taxRateOverride.Value > 0m
+                                        ? taxRateOverride.Value
+                                        : await GetDefaultTaxRatePercentAsync(conn, tx);
+                                    decimal baseAmount = rentalCost + utilityCost + otherCost;
+                                    decimal taxAmount = Math.Round(baseAmount * appliedTaxRate / 100m, 2, MidpointRounding.AwayFromZero);
+                                    decimal total = baseAmount + taxAmount;
 
                                     string invoiceNumber = await GenerateMonthlyInvoiceNumberAsync(conn, tx, year, month);
                                     string status = ComputeInvoiceStatus(dueDate, 0m, total);
 
-                                    const string sqlInsert = @"
+                                    string sqlInsert = hasTaxColumns
+                                        ? @"
                                         INSERT INTO Invoices
                                             (InvoiceNumber, TenantId, RoomId, InvoiceDate, FromDate, ToDate,
-                                             RentalCost, UtilityCost, OtherCost, TotalAmount, PaidAmount, RemainingAmount, Status, DueDate, CreatedDate, UpdatedDate)
+                                             RentalCost, UtilityCost, OtherCost, TaxRate, TaxAmount, TotalAmount,
+                                             PaidAmount, RemainingAmount, Status, DueDate, CreatedDate, UpdatedDate)
                                         VALUES
                                             (@InvoiceNumber, @TenantId, @RoomId, @InvoiceDate, @FromDate, @ToDate,
-                                             @RentalCost, @UtilityCost, @OtherCost, @TotalAmount, 0, @RemainingAmount, @Status, @DueDate, GETDATE(), GETDATE());";
+                                             @RentalCost, @UtilityCost, @OtherCost, @TaxRate, @TaxAmount, @TotalAmount,
+                                             0, @RemainingAmount, @Status, @DueDate, GETDATE(), GETDATE());"
+                                        : @"
+                                        INSERT INTO Invoices
+                                            (InvoiceNumber, TenantId, RoomId, InvoiceDate, FromDate, ToDate,
+                                             RentalCost, UtilityCost, OtherCost, TotalAmount,
+                                             PaidAmount, RemainingAmount, Status, DueDate, CreatedDate, UpdatedDate)
+                                        VALUES
+                                            (@InvoiceNumber, @TenantId, @RoomId, @InvoiceDate, @FromDate, @ToDate,
+                                             @RentalCost, @UtilityCost, @OtherCost, @TotalAmount,
+                                             0, @RemainingAmount, @Status, @DueDate, GETDATE(), GETDATE());";
 
                                     using (var cmdIns = new SqlCommand(sqlInsert, conn, tx))
                                     {
@@ -503,6 +743,11 @@ namespace QuanLyNhaTro.DAL
                                         cmdIns.Parameters.AddWithValue("@RentalCost", rentalCost);
                                         cmdIns.Parameters.AddWithValue("@UtilityCost", utilityCost);
                                         cmdIns.Parameters.AddWithValue("@OtherCost", otherCost);
+                                        if (hasTaxColumns)
+                                        {
+                                            cmdIns.Parameters.AddWithValue("@TaxRate", appliedTaxRate);
+                                            cmdIns.Parameters.AddWithValue("@TaxAmount", taxAmount);
+                                        }
                                         cmdIns.Parameters.AddWithValue("@TotalAmount", total);
                                         cmdIns.Parameters.AddWithValue("@RemainingAmount", total);
                                         cmdIns.Parameters.AddWithValue("@Status", status);
@@ -664,6 +909,32 @@ namespace QuanLyNhaTro.DAL
                 if (result == null || result == DBNull.Value) return null;
                 if (int.TryParse(result.ToString(), out var v)) return v;
                 return null;
+            }
+        }
+
+        private async Task<decimal> GetDefaultTaxRatePercentAsync(SqlConnection conn, SqlTransaction tx)
+        {
+            if (!await TableExistsAsync("SystemSettings"))
+                return 0m;
+
+            using (var cmd = new SqlCommand("SELECT SettingValue FROM SystemSettings WHERE SettingKey = @Key", conn, tx))
+            {
+                cmd.Parameters.AddWithValue("@Key", "DefaultTaxRatePercent");
+                var result = await cmd.ExecuteScalarAsync();
+                if (result == null || result == DBNull.Value) return 0m;
+                if (decimal.TryParse(result.ToString(), out var v)) return v;
+                return 0m;
+            }
+        }
+
+        private async Task<bool> ColumnExistsAsync(SqlConnection conn, SqlTransaction tx, string tableName, string columnName)
+        {
+            using (var cmd = new SqlCommand("SELECT COL_LENGTH(@TableName, @ColumnName)", conn, tx))
+            {
+                cmd.Parameters.AddWithValue("@TableName", tableName);
+                cmd.Parameters.AddWithValue("@ColumnName", columnName);
+                var result = await cmd.ExecuteScalarAsync();
+                return result != null && result != DBNull.Value;
             }
         }
 

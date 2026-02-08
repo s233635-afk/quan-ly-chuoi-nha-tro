@@ -1,4 +1,4 @@
-ADMIN - TOÀN QUYỀN HỆ THỐNG
+ADMIN - TOÀN QUYỀN HỆ THỐNG (ADMIN-ONLY)
 
 01. Quản lý chi nhánh
 - Thêm/sửa/xóa chi nhánh: Mở rộng hoặc thu hẹp mạng lưới kinh doanh
@@ -11,89 +11,47 @@ ADMIN - TOÀN QUYỀN HỆ THỐNG
 - Quản lý trạng thái phòng: Theo dõi tình trạng phòng (Trống, Đang ở, Đã cọc, Bảo trì)
 - Xem sơ đồ phòng: Quan sát trực quan bố trí phòng theo từng khu vực
 
- 03. Quản lý nhân viên
-- Tạo tài khoản nhân viên: Cấp quyền truy cập hệ thống cho nhân sự mới
-- Gán chi nhánh & phân quyền: Chỉ định nơi làm việc và giới hạn quyền theo module
-- Theo dõi hoạt động: Giám sát lịch sử thao tác và hiệu suất làm việc
-
- 04. Quản lý khách thuê
+ 03. Quản lý khách thuê
 - Hồ sơ khách thuê: Quản lý thông tin chủ hợp đồng (Họ tên, SĐT, CCCD).
+-  Quản lý ảnh CCCD: Lưu đường dẫn ảnh mặt trước/mặt sau theo hồ sơ khách.
 -  Quản lý Người ở chung: Quản lý danh sách, quan hệ và CCCD của người ở ghép.
 -  Quản lý Tạm trú - Tạm vắng: Theo dõi ngày đăng ký, ngày hết hạn, số giấy.
 -  Check-in / Check-out: Quy trình bàn giao nhận phòng và thanh lý hợp đồng.
 -  Lịch sử phòng & Chuyển phòng: Xem lịch sử thuê và thực hiện chuyển đổi phòng cho khách.
 
-05. Quản lý hợp đồng
+04. Quản lý hợp đồng
 - Tạo hợp đồng (Auto-fill): Tạo hợp đồng mới với thông tin tự động điền
 - Xuất & quản lý hợp đồng: Xuất file PDF, gia hạn, điều chỉnh điều khoản
 - Chấm dứt hợp đồng: Kết thúc hợp đồng và lập biên bản thanh lý
 
-06. Đặt phòng & đặt cọc
+05. Đặt phòng & đặt cọc
 - Nhận lead & giữ phòng: Tiếp nhận khách tiềm năng và giữ chỗ tạm thời
 - Thu tiền cọc & chuyển trạng thái: Ghi nhận cọc, chuyển khách thành chính thức
 - Hủy đặt phòng: Hủy yêu cầu và xử lý hoàn tiền theo chính sách
 
- 07. Điện, nước, dịch vụ
+ 06. Điện, nước, dịch vụ
 - Nhập chỉ số & tính tiền: Ghi nhận chỉ số tiêu thụ, hệ thống tự tính chi phí
 - Quản lý dịch vụ & phí phát sinh: Cấu hình dịch vụ định kỳ và chi phí bất thường
 
-08. Hóa đơn & thanh toán
+07. Hóa đơn & thanh toán
 - Tạo hóa đơn tháng (Tự động): Tự động chốt và tạo hóa đơn định kỳ
 - Thu tiền & quản lý công nợ: Ghi nhận thanh toán, theo dõi công nợ, trả cọc
 
-09. Bảo trì & sự cố
+08. Bảo trì & sự cố
 -  Quản lý Yêu cầu sửa chữa: Tiếp nhận danh sách báo hỏng từ các chi nhánh.
 -  Phân công kỹ thuật: Chỉ định nhân viên hoặc thợ phụ trách xử lý sự cố.
 -  Theo dõi tiến độ: Cập nhật và giám sát trạng thái sửa chữa (Chờ xử lý, Đang sửa, Hoàn thành).
 
-10. Quản lý tài sản
+09. Quản lý tài sản
 - Quản lý danh mục tài sản: Theo dõi tài sản (máy lạnh, tủ, giường...)
 - Hư hỏng & thay thế: Ghi nhận tình trạng xuống cấp và thay mới
 
-11. Báo cáo & thống kê
+10. Báo cáo & thống kê
 - Báo cáo tổng hợp: Thống kê phòng, doanh thu, công nợ, điện nước, khách thuê
 
-12. Thông báo & nhắc lịch
+11. Thông báo & nhắc lịch
 - Hệ thống nhắc nhở tự động: Nhắc nợ, hết hạn hợp đồng, nhập chỉ số điện nước
 - Thông báo nội bộ: Gửi thông báo điều hành trong hệ thống
 
-13. Cấu hình hệ thống
+12. Cấu hình hệ thống
 - Thiết lập tham số mặc định: Mẫu hợp đồng, giá phòng, dịch vụ mặc định, chính sách cọc
-
----
-
-NHÂN VIÊN - CHỈ TRONG CHI NHÁNH ĐƯỢC PHÂN CÔNG
-
-01. Quản lý phòng (Chi nhánh)
-- Xem trạng thái phòng: Kiểm tra tình trạng các phòng được phân công
-- Cập nhật trạng thái: Cập nhật sau khi dọn vệ sinh hoặc bảo trì xong
-
-02. Quản lý khách thuê (Chi nhánh)
--  Xem hồ sơ & Tài liệu đính kèm: Tra cứu thông tin khách, xem ảnh chụp giấy tờ/hợp đồng.
--  Thông tin Người ở chung: Kiểm tra thực tế danh sách người đang ở trong phòng.
--  Check-in / Check-out: Thực hiện thủ tục nhận/trả phòng thực tế tại chi nhánh.
--  Cập nhật thông tin: Cập nhật thay đổi liên lạc hoặc khai báo tạm trú mới.
-
-03. Quản lý hợp đồng (Chi nhánh)
-- Tạo hợp đồng mới: Lập hợp đồng thuê phòng cho khách mới
-- Gia hạn/kết thúc hợp đồng: Thực hiện gia hạn hoặc thủ tục chấm dứt
-
-04. Điện, nước, dịch vụ (Chi nhánh)
-- Nhập chỉ số điện nước: Ghi chỉ số điện nước thực tế vào hệ thống
-- Cập nhật dịch vụ: Thay đổi hoặc đăng ký thêm dịch vụ cho phòng
-
-05. Thanh toán (Chi nhánh)
-- Thu tiền & xác nhận: Thu tiền mặt hoặc xác nhận chuyển khoản
-- Gửi hóa đơn: Gửi thông báo hóa đơn thanh toán cho khách thuê
-
-06. Bảo trì & sự cố (Chi nhánh)
-- Lập phiếu báo hỏng: Tạo phiếu mới khi phát hiện hư hỏng hoặc khách báo.
-- Cập nhật tình trạng: Báo cáo tiến độ tại chỗ (ví dụ: Đã gọi thợ, Chờ vật tư).
-- Xác nhận hoàn thành: Đóng phiếu khi sự cố đã được khắc phục xong.
-
-07. Tài sản phòng (Chi nhánh)
-- Kiểm tra tài sản: Kiểm kê hiện trạng tài sản trong phòng
-- Báo cáo hư hỏng: Báo cáo khi phát hiện tài sản hỏng hóc, mất mát
-
-08. Báo cáo (Chi nhánh)
-- Xem báo cáo nội bộ: Báo cáo tình trạng phòng, doanh thu, công nợ trong chi nhánh

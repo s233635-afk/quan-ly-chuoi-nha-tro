@@ -1,0 +1,844 @@
+using System;
+using System.Data;
+using System.Drawing;
+using System.Globalization;
+using System.Linq;
+using System.Windows.Forms;
+using QuanLyNhaTro.BLL;
+using quan_ly_chuoi_nha_tro.GUI.Shared.Components;
+
+namespace quan_ly_chuoi_nha_tro.GUI
+{
+    /// <summary>
+    /// Form Thêm/Sửa khách thuê với các field: Mã HĐ, Họ tên, CMND/CCCD, Ảnh, Tạm trú, Phòng, Giá thuê, Tiền cọc, v.v.
+    /// </summary>
+    public class FrmTenantEditor : Form
+    {
+        private readonly AdminDataBLL _bll;
+        private readonly DataRow _existingRow;
+        private DataTable _rooms;
+
+        // Contract fields
+        private TextBox txtContractId;
+        private DateTimePicker dtContractDate;
+        
+        // Tenant fields
+        private TextBox txtFullName;
+        private TextBox txtIdentity;
+        private TextBox txtPhone;
+        private TextBox txtEmail;
+        private DateTimePicker dtBirth;
+        private TextBox txtAddress;
+        
+        // ID Photo fields
+        private TextBox txtFrontIdPhoto;
+        private TextBox txtBackIdPhoto;
+        private Button btnBrowseFront;
+        private Button btnBrowseBack;
+        
+        // Temporary registration
+        private TextBox txtTempReg;
+        private DateTimePicker dtTempRegFrom;
+        private DateTimePicker dtTempRegTo;
+        
+        // Room & Rental
+        private ComboBox cboRoom;
+        private TextBox txtRentalPrice;  // Auto-filled, read-only
+        private TextBox txtDeposit;      // Auto-calculated (rental price * 1)
+        private DateTimePicker dtStartDate;
+        private DateTimePicker dtEndDate;
+        
+        private CheckBox chkActive;
+        private Button btnSave;
+        private Button btnCancel;
+        private bool _isSaving;
+        private int? _originalRoomId;
+
+        public int? SavedTenantId { get; private set; }
+
+        public FrmTenantEditor(AdminDataBLL bll, DataRow existingRow = null)
+        {
+            _bll = bll;
+            _existingRow = existingRow;
+            InitializeComponent();
+            Load += async (s, e) =>
+            {
+                await LoadRoomsAsync();
+                await LoadExistingAsync();
+            };
+        }
+
+        private void InitializeComponent()
+        {
+            Text = _existingRow == null ? "Thêm khách thuê" : "Cập nhật khách thuê";
+            StartPosition = FormStartPosition.CenterParent;
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            MaximizeBox = false;
+            MinimizeBox = false;
+            ClientSize = new Size(750, 750);
+            BackColor = Color.White;
+
+            var pnlBottom = new Panel
+            {
+                Dock = DockStyle.Bottom,
+                Height = 58,
+                Padding = new Padding(12, 10, 12, 10),
+                BackColor = Color.WhiteSmoke,
+                BorderStyle = BorderStyle.FixedSingle
+            };
+
+            var pnlBody = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(18, 18, 18, 10),
+                AutoScroll = true,
+                BackColor = Color.White
+            };
+
+            int labelWidth = 200;
+            int inputWidth = 450;
+            int top = 10;
+            int left = 6;
+            int line = 34;
+
+            Label MakeLabel(string text, int y) => new Label
+            {
+                Text = text + ":",
+                Location = new Point(left, y),
+                Width = labelWidth,
+                TextAlign = ContentAlignment.MiddleLeft,
+                ForeColor = Color.FromArgb(70, 70, 70)
+            };
+
+            Control MakeInput(Control ctl, int y)
+            {
+                ctl.Location = new Point(left + labelWidth, y);
+                ctl.Width = inputWidth;
+                return ctl;
+            }
+
+            // ===== HỢP ĐỒNG SECTION =====
+            var lblContractSection = new Label
+            {
+                Text = "--- THÔNG TIN HỢP ĐỒNG ---",
+                Location = new Point(left, top),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 122, 204)
+            };
+            pnlBody.Controls.Add(lblContractSection);
+            top += line + 4;
+
+            // Mã Hợp Đồng
+            pnlBody.Controls.Add(MakeLabel("Mã Hợp Đồng (*)", top));
+            txtContractId = new TextBox { ReadOnly = _existingRow != null };
+            pnlBody.Controls.Add(MakeInput(txtContractId, top));
+            top += line;
+
+            // Ngày kí Hợp Đồng
+            pnlBody.Controls.Add(MakeLabel("Ngày kí (*)", top));
+            dtContractDate = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true, Value = DateTime.Now, Checked = true };
+            pnlBody.Controls.Add(MakeInput(dtContractDate, top));
+            top += line;
+
+            // ===== KHÁCH THUÊ SECTION =====
+            var lblTenantSection = new Label
+            {
+                Text = "--- THÔNG TIN KHÁCH THUÊ ---",
+                Location = new Point(left, top),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 122, 204)
+            };
+            pnlBody.Controls.Add(lblTenantSection);
+            top += line + 4;
+
+            // Họ và tên
+            pnlBody.Controls.Add(MakeLabel("Họ và tên (*)", top));
+            txtFullName = new TextBox();
+            pnlBody.Controls.Add(MakeInput(txtFullName, top));
+            top += line;
+
+            // CMND/CCCD
+            pnlBody.Controls.Add(MakeLabel("CMND/CCCD", top));
+            txtIdentity = new TextBox();
+            pnlBody.Controls.Add(MakeInput(txtIdentity, top));
+            top += line;
+
+            // Số điện thoại
+            pnlBody.Controls.Add(MakeLabel("Số điện thoại", top));
+            txtPhone = new TextBox();
+            pnlBody.Controls.Add(MakeInput(txtPhone, top));
+            top += line;
+
+            // Email
+            pnlBody.Controls.Add(MakeLabel("Email", top));
+            txtEmail = new TextBox();
+            pnlBody.Controls.Add(MakeInput(txtEmail, top));
+            top += line;
+
+            // Ngày sinh
+            pnlBody.Controls.Add(MakeLabel("Ngày sinh", top));
+            dtBirth = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true };
+            pnlBody.Controls.Add(MakeInput(dtBirth, top));
+            top += line;
+
+            // Địa chỉ thường trú
+            pnlBody.Controls.Add(MakeLabel("Địa chỉ thường trú", top));
+            txtAddress = new TextBox { Multiline = true, Height = 70, ScrollBars = ScrollBars.Vertical };
+            pnlBody.Controls.Add(MakeInput(txtAddress, top));
+            top += 80;
+
+            // Ảnh CCCD - Mặt trước
+            pnlBody.Controls.Add(MakeLabel("Ảnh CCCD (mặt trước)", top));
+            var pnlFront = new Panel { Location = new Point(left + labelWidth, top), Width = inputWidth, Height = 26, AutoSize = false };
+            txtFrontIdPhoto = new TextBox { Dock = DockStyle.Fill, ReadOnly = true, BorderStyle = BorderStyle.FixedSingle };
+            btnBrowseFront = new ModernButton { Text = "Chọn...", Width = 80, Dock = DockStyle.Right, Margin = new Padding(4, 0, 0, 0), BaseColor = Color.FromArgb(240, 240, 240), BackColor = Color.Transparent, ForeColor = Color.Black };
+            btnBrowseFront.Click += (s, e) => BrowseFileToTextBox(txtFrontIdPhoto, "Chọn ảnh CCCD mặt trước");
+            pnlFront.Controls.Add(txtFrontIdPhoto);
+            pnlFront.Controls.Add(btnBrowseFront);
+            pnlBody.Controls.Add(pnlFront);
+            top += line;
+
+            // Ảnh CCCD - Mặt sau
+            pnlBody.Controls.Add(MakeLabel("Ảnh CCCD (mặt sau)", top));
+            var pnlBack = new Panel { Location = new Point(left + labelWidth, top), Width = inputWidth, Height = 26, AutoSize = false };
+            txtBackIdPhoto = new TextBox { Dock = DockStyle.Fill, ReadOnly = true, BorderStyle = BorderStyle.FixedSingle };
+            btnBrowseBack = new ModernButton { Text = "Chọn...", Width = 80, Dock = DockStyle.Right, Margin = new Padding(4, 0, 0, 0), BaseColor = Color.FromArgb(240, 240, 240), BackColor = Color.Transparent, ForeColor = Color.Black };
+            btnBrowseBack.Click += (s, e) => BrowseFileToTextBox(txtBackIdPhoto, "Chọn ảnh CCCD mặt sau");
+            pnlBack.Controls.Add(txtBackIdPhoto);
+            pnlBack.Controls.Add(btnBrowseBack);
+            pnlBody.Controls.Add(pnlBack);
+            top += line;
+
+            // ===== TẠM TRÚ SECTION =====
+            var lblTempRegSection = new Label
+            {
+                Text = "--- THÔNG TIN TẠM TRÚ ---",
+                Location = new Point(left, top),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 122, 204)
+            };
+            pnlBody.Controls.Add(lblTempRegSection);
+            top += line + 4;
+
+            // Tạm trú tại
+            pnlBody.Controls.Add(MakeLabel("Tạm trú tại", top));
+            txtTempReg = new TextBox();
+            pnlBody.Controls.Add(MakeInput(txtTempReg, top));
+            top += line;
+
+            // Ngày đăng ký tạm trú
+            pnlBody.Controls.Add(MakeLabel("Ngày đăng ký tạm trú", top));
+            dtTempRegFrom = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true };
+            pnlBody.Controls.Add(MakeInput(dtTempRegFrom, top));
+            top += line;
+
+            // Hết hạn tạm trú
+            pnlBody.Controls.Add(MakeLabel("Hết hạn tạm trú", top));
+            dtTempRegTo = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true };
+            pnlBody.Controls.Add(MakeInput(dtTempRegTo, top));
+            top += line;
+
+            // ===== PHÒNG & GIÁ THUÊ SECTION =====
+            var lblRentalSection = new Label
+            {
+                Text = "--- THÔNG TIN PHÒNG & GIÁ THUÊ ---",
+                Location = new Point(left, top),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 122, 204)
+            };
+            pnlBody.Controls.Add(lblRentalSection);
+            top += line + 4;
+
+            // Phòng
+            pnlBody.Controls.Add(MakeLabel("Phòng (*)", top));
+            cboRoom = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
+            cboRoom.SelectedValueChanged += (s, e) => UpdateRentalPrice();
+            pnlBody.Controls.Add(MakeInput(cboRoom, top));
+            top += line;
+
+            // Giá thuê tháng (auto-filled, read-only)
+            pnlBody.Controls.Add(MakeLabel("Giá thuê tháng (đ)", top));
+            txtRentalPrice = new TextBox { ReadOnly = true, BackColor = Color.WhiteSmoke, TextAlign = HorizontalAlignment.Right };
+            pnlBody.Controls.Add(MakeInput(txtRentalPrice, top));
+            top += line;
+
+            // Tiền cọc (auto-calculated)
+            pnlBody.Controls.Add(MakeLabel("Tiền cọc (đ)", top));
+            txtDeposit = new TextBox { ReadOnly = true, BackColor = Color.WhiteSmoke, TextAlign = HorizontalAlignment.Right };
+            pnlBody.Controls.Add(MakeInput(txtDeposit, top));
+            top += line;
+
+            // Ngày bắt đầu
+            pnlBody.Controls.Add(MakeLabel("Ngày bắt đầu (*)", top));
+            dtStartDate = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = true, Value = DateTime.Now, Checked = true };
+            pnlBody.Controls.Add(MakeInput(dtStartDate, top));
+            top += line;
+
+            // Ngày kết thúc
+            pnlBody.Controls.Add(MakeLabel("Ngày kết thúc", top));
+            dtEndDate = new DateTimePicker { Format = DateTimePickerFormat.Short, ShowCheckBox = false };
+            pnlBody.Controls.Add(MakeInput(dtEndDate, top));
+            top += line;
+
+            // Trạng thái
+            pnlBody.Controls.Add(MakeLabel("Trạng thái", top));
+            chkActive = new CheckBox { Text = "Đang hoạt động", Checked = true, AutoSize = true, Location = new Point(left + labelWidth, top + 6) };
+            pnlBody.Controls.Add(chkActive);
+
+            // Buttons
+            btnSave = new ModernButton
+            {
+                Text = "Lưu",
+                Width = 100,
+                Height = 36,
+                BaseColor = Color.FromArgb(0, 123, 255),
+                BackColor = Color.Transparent,
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
+            };
+            btnSave.FlatAppearance.BorderSize = 0;
+            btnSave.Click += async (s, e) => await SaveAsync();
+
+            btnCancel = new ModernButton
+            {
+                Text = "Hủy",
+                Width = 100,
+                Height = 36,
+                BaseColor = Color.FromArgb(108, 117, 125),
+                BackColor = Color.Transparent,
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand,
+                Margin = new Padding(8, 0, 0, 0)
+            };
+            btnCancel.FlatAppearance.BorderSize = 0;
+            btnCancel.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
+
+            var btnPanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Right,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                FlowDirection = FlowDirection.RightToLeft,
+                WrapContents = false,
+                Padding = new Padding(0)
+            };
+            btnPanel.Controls.Add(btnCancel);
+            btnPanel.Controls.Add(btnSave);
+
+            pnlBottom.Controls.Add(btnPanel);
+
+            Controls.Add(pnlBody);
+            Controls.Add(pnlBottom);
+        }
+
+        private async System.Threading.Tasks.Task LoadRoomsAsync()
+        {
+            try
+            {
+                _rooms = await _bll.GetRoomsAsync();
+                if (_rooms != null)
+                {
+                    cboRoom.DataSource = _rooms;
+                    cboRoom.DisplayMember = "RoomNumber";
+                    cboRoom.ValueMember = "RoomId";
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorLogger.HandleException(ex, "LoadRooms", "Lỗi tải danh sách phòng");
+            }
+        }
+
+        private void UpdateRentalPrice()
+        {
+            if (cboRoom.SelectedItem is DataRowView row)
+            {
+                decimal price = 0;
+                if (row["RoomPrice"] != DBNull.Value && decimal.TryParse(row["RoomPrice"].ToString(), out var p))
+                {
+                    price = p;
+                }
+                txtRentalPrice.Text = price.ToString("N0");
+                txtDeposit.Text = price.ToString("N0");  // Deposit = Rental price * 1
+            }
+            else
+            {
+                txtRentalPrice.Text = "";
+                txtDeposit.Text = "";
+            }
+        }
+
+        private async System.Threading.Tasks.Task LoadExistingAsync()
+        {
+            if (_existingRow == null) 
+            {
+                // Generate contract ID for new tenant
+                txtContractId.Text = GenerateContractId();
+                return;
+            }
+
+            // Load from existing row
+            txtFullName.Text = _existingRow["FullName"]?.ToString() ?? "";
+            txtIdentity.Text = _existingRow["IdentityCard"]?.ToString() ?? "";
+            txtPhone.Text = _existingRow["PhoneNumber"]?.ToString() ?? "";
+            txtEmail.Text = _existingRow["Email"]?.ToString() ?? "";
+            txtAddress.Text = _existingRow["Address"]?.ToString() ?? "";
+            txtFrontIdPhoto.Text = _existingRow["FrontIdPhoto"]?.ToString() ?? "";
+            txtBackIdPhoto.Text = _existingRow["BackIdPhoto"]?.ToString() ?? "";
+            txtTempReg.Text = _existingRow["TemporaryRegistration"]?.ToString() ?? "";
+            
+            SetDatePicker(dtBirth, _existingRow["BirthDate"]?.ToString());
+            SetDatePicker(dtTempRegFrom, _existingRow["TemporaryRegistrationDate"]?.ToString());
+            SetDatePicker(dtTempRegTo, _existingRow["TemporaryRegistrationExpiry"]?.ToString());
+            
+            chkActive.Checked = _existingRow.Table.Columns.Contains("IsActive") && bool.TryParse(_existingRow["IsActive"]?.ToString(), out var active) && active;
+
+            int tenantId = TryReadInt(_existingRow, "TenantId");
+            if (tenantId > 0)
+            {
+                await LoadActiveRoomAsync(tenantId);
+            }
+        }
+
+        private void SetDatePicker(DateTimePicker picker, string rawValue)
+        {
+            if (string.IsNullOrEmpty(rawValue)) return;
+            if (DateTime.TryParse(rawValue, out var dt))
+            {
+                picker.Value = dt;
+                picker.Checked = true;
+            }
+        }
+
+        private string GenerateContractId()
+        {
+            // Format: HD-ddMMyyyy-XXXX where XXXX is random 4 digits
+            DateTime now = DateTime.Now;
+            int randomPart = new Random().Next(1000, 10000);
+            return $"HD-{now:ddMMyyyy}-{randomPart}";
+        }
+
+        private void BrowseFileToTextBox(TextBox txt, string title)
+        {
+            using (var ofd = new OpenFileDialog { Filter = "Ảnh (*.jpg;*.jpeg;*.png)|*.jpg;*.jpeg;*.png" })
+            {
+                if (ofd.ShowDialog() == DialogResult.OK)
+                {
+                    txt.Text = ofd.FileName;
+                }
+            }
+        }
+
+        private async System.Threading.Tasks.Task SaveAsync()
+        {
+            if (_isSaving) return;
+            if (string.IsNullOrWhiteSpace(txtFullName.Text))
+            {
+                ToastNotification.Warning("Họ và tên không được trống");
+                return;
+            }
+
+            if (_existingRow == null)
+            {
+                if (string.IsNullOrWhiteSpace(txtContractId.Text))
+                {
+                    ToastNotification.Warning("Vui lòng nhập Mã Hợp Đồng");
+                    return;
+                }
+
+                if (!(cboRoom.SelectedValue is int roomId) || roomId <= 0)
+                {
+                    ToastNotification.Warning("Vui lòng chọn Phòng");
+                    return;
+                }
+
+                if (!dtStartDate.Checked)
+                {
+                    ToastNotification.Warning("Vui lòng chọn Ngày bắt đầu");
+                    return;
+                }
+            }
+
+            _isSaving = true;
+            SetSavingState(true);
+            try
+            {
+                if (_existingRow == null)
+                {
+                    // Add new
+                    int newId = await _bll.AddTenantAsync(
+                        txtFullName.Text.Trim(),
+                        txtIdentity.Text.Trim(),
+                        txtPhone.Text.Trim(),
+                        txtEmail.Text.Trim(),
+                        dtBirth.Checked ? dtBirth.Value : (DateTime?)null,
+                        txtAddress.Text.Trim(),
+                        txtTempReg.Text.Trim(),
+                        dtTempRegFrom.Checked ? dtTempRegFrom.Value : (DateTime?)null,
+                        dtTempRegTo.Checked ? dtTempRegTo.Value : (DateTime?)null,
+                        chkActive.Checked,
+                        txtFrontIdPhoto.Text.Trim(),
+                        txtBackIdPhoto.Text.Trim()
+                    );
+                    if (newId <= 0)
+                    {
+                        ToastNotification.Warning("Không thể lưu khách thuê.");
+                        return;
+                    }
+                    SavedTenantId = newId;
+
+                    int roomId = Convert.ToInt32(cboRoom.SelectedValue);
+                    DateTime startDate = dtStartDate.Checked ? dtStartDate.Value.Date : DateTime.Today;
+                    DateTime endDate = dtEndDate.Value.Date;
+                    if (endDate < startDate)
+                        endDate = startDate;
+
+                    DateTime? signDate = dtContractDate.Checked ? (DateTime?)dtContractDate.Value.Date : null;
+                    decimal rentalPrice = ReadMoney(txtRentalPrice.Text);
+                    decimal depositAmount = ReadMoney(txtDeposit.Text);
+
+                    await _bll.AddContractAsync(
+                        txtContractId.Text.Trim(),
+                        newId,
+                        roomId,
+                        signDate,
+                        startDate,
+                        endDate,
+                        rentalPrice,
+                        depositAmount,
+                        "Tạo từ form khách thuê",
+                        null,
+                        "Active");
+
+                    await SyncDepositFromTenantAsync(newId, roomId);
+
+                    await _bll.AddTenantHistoryAsync(
+                        newId,
+                        roomId,
+                        startDate,
+                        null,
+                        "Active",
+                        "Tạo từ form khách thuê");
+
+                    await _bll.UpdateRoomOccupancyStatusAsync(roomId, 2);
+                }
+                else
+                {
+                    // Update existing
+                    int tenantId = int.TryParse(_existingRow["TenantId"]?.ToString(), out var id) ? id : 0;
+                    if (tenantId <= 0)
+                    {
+                        ToastNotification.Warning("Không tìm thấy ID khách thuê.");
+                        return;
+                    }
+                    var ok = await _bll.UpdateTenantAsync(
+                        tenantId,
+                        txtFullName.Text.Trim(),
+                        txtIdentity.Text.Trim(),
+                        txtPhone.Text.Trim(),
+                        txtEmail.Text.Trim(),
+                        dtBirth.Checked ? dtBirth.Value : (DateTime?)null,
+                        txtAddress.Text.Trim(),
+                        txtTempReg.Text.Trim(),
+                        dtTempRegFrom.Checked ? dtTempRegFrom.Value : (DateTime?)null,
+                        dtTempRegTo.Checked ? dtTempRegTo.Value : (DateTime?)null,
+                        chkActive.Checked,
+                        txtFrontIdPhoto.Text.Trim(),
+                        txtBackIdPhoto.Text.Trim()
+                    );
+                    if (!ok)
+                    {
+                        ToastNotification.Warning("Không thể lưu khách thuê.");
+                        return;
+                    }
+
+                    await SyncTenantRoomAssignmentAsync(tenantId);
+                    if (cboRoom.SelectedValue is int selectedRoomId && selectedRoomId > 0)
+                    {
+                        await SyncDepositFromTenantAsync(tenantId, selectedRoomId);
+                    }
+                }
+
+                AdminEvents.NotifyDataChanged();
+                DataSyncManager.NotifyTenantsChanged();
+                DataSyncManager.NotifyRoomsChanged();
+                DataSyncManager.NotifyContractsChanged();
+                DataSyncManager.NotifyInvoicesChanged();
+                DataSyncManager.NotifyPaymentsChanged();
+                DialogResult = DialogResult.OK;
+                Close();
+            }
+            catch (Exception ex)
+            {
+                ErrorLogger.HandleException(ex, "SaveTenant", "Lỗi lưu khách thuê");
+            }
+            finally
+            {
+                SetSavingState(false);
+                _isSaving = false;
+            }
+        }
+
+        private async System.Threading.Tasks.Task LoadActiveRoomAsync(int tenantId)
+        {
+            _originalRoomId = null;
+            var history = await _bll.GetTenantHistoryAsync();
+            if (history != null)
+            {
+                var active = history.AsEnumerable()
+                    .FirstOrDefault(r => TryReadInt(r, "TenantId") == tenantId && IsActiveHistory(r));
+                if (active != null)
+                {
+                    _originalRoomId = TryReadInt(active, "RoomId");
+                }
+            }
+
+            if (_originalRoomId.HasValue && _rooms != null)
+            {
+                cboRoom.SelectedValue = _originalRoomId.Value;
+                UpdateRentalPrice();
+            }
+            else
+            {
+                cboRoom.SelectedIndex = -1;
+                txtRentalPrice.Text = "";
+                txtDeposit.Text = "";
+            }
+        }
+
+        private async System.Threading.Tasks.Task SyncTenantRoomAssignmentAsync(int tenantId)
+        {
+            if (!(cboRoom.SelectedValue is int selectedRoomId) || selectedRoomId <= 0)
+                return;
+
+            var history = await _bll.GetTenantHistoryAsync();
+            DataRow activeHistory = history?.AsEnumerable()
+                .FirstOrDefault(r => TryReadInt(r, "TenantId") == tenantId && IsActiveHistory(r));
+
+            int activeRoomId = activeHistory != null ? TryReadInt(activeHistory, "RoomId") : 0;
+            int activeHistoryId = activeHistory != null ? TryReadInt(activeHistory, "HistoryId") : 0;
+
+            await EnsureContractAsync(tenantId, selectedRoomId);
+
+            if (activeRoomId == selectedRoomId)
+            {
+                await _bll.UpdateRoomOccupancyStatusAsync(selectedRoomId, 2);
+                return;
+            }
+
+            if (activeHistoryId > 0 && activeRoomId > 0)
+            {
+                DateTime checkIn = TryReadDate(activeHistory, "CheckInDate") ?? DateTime.Today;
+                await _bll.UpdateTenantHistoryAsync(activeHistoryId, activeRoomId, checkIn, DateTime.Today, "Completed", "Chuyển phòng từ form khách thuê");
+
+                if (!HasOtherActiveTenants(history, activeRoomId, tenantId))
+                {
+                    await _bll.UpdateRoomOccupancyStatusAsync(activeRoomId, 1);
+                }
+            }
+
+            DateTime startDate = dtStartDate.Checked ? dtStartDate.Value.Date : DateTime.Today;
+            await _bll.AddTenantHistoryAsync(tenantId, selectedRoomId, startDate, null, "Active", "Cập nhật từ form khách thuê");
+            await _bll.UpdateRoomOccupancyStatusAsync(selectedRoomId, 2);
+        }
+
+        private async System.Threading.Tasks.Task EnsureContractAsync(int tenantId, int roomId)
+        {
+            var contracts = await _bll.GetContractsAsync();
+            bool hasActive = contracts?.AsEnumerable().Any(r =>
+            {
+                if (TryReadInt(r, "TenantId") != tenantId) return false;
+                if (TryReadInt(r, "RoomId") != roomId) return false;
+                return IsActiveContract(r);
+            }) == true;
+
+            if (hasActive) return;
+
+            DateTime startDate = dtStartDate.Checked ? dtStartDate.Value.Date : DateTime.Today;
+            DateTime endDate = dtEndDate.Value.Date;
+            if (endDate < startDate)
+                endDate = startDate;
+            DateTime? signDate = dtContractDate.Checked ? (DateTime?)dtContractDate.Value.Date : null;
+
+            if (string.IsNullOrWhiteSpace(txtContractId.Text))
+                txtContractId.Text = GenerateContractId();
+
+            decimal rentalPrice = ReadMoney(txtRentalPrice.Text);
+            decimal depositAmount = ReadMoney(txtDeposit.Text);
+
+            await _bll.AddContractAsync(
+                txtContractId.Text.Trim(),
+                tenantId,
+                roomId,
+                signDate,
+                startDate,
+                endDate,
+                rentalPrice,
+                depositAmount,
+                "Tạo từ form khách thuê (cập nhật)",
+                null,
+                "Active");
+        }
+
+        private async System.Threading.Tasks.Task SyncDepositFromTenantAsync(int tenantId, int roomId)
+        {
+            decimal depositAmount = ReadMoney(txtDeposit.Text);
+            if (depositAmount <= 0) return;
+
+            DateTime? depositDate = dtContractDate.Checked
+                ? (DateTime?)dtContractDate.Value.Date
+                : (dtStartDate.Checked ? (DateTime?)dtStartDate.Value.Date : DateTime.Today);
+
+            string contractNumber = string.IsNullOrWhiteSpace(txtContractId.Text) ? null : txtContractId.Text.Trim();
+
+            try
+            {
+                var deposits = await _bll.GetDepositsAsync();
+                if (deposits == null || !deposits.Columns.Contains("TenantId") || !deposits.Columns.Contains("RoomId"))
+                    return;
+
+                var existing = deposits.AsEnumerable()
+                    .Where(r => r["TenantId"]?.ToString() == tenantId.ToString()
+                             && r["RoomId"]?.ToString() == roomId.ToString())
+                    .OrderByDescending(r => TryReadDate(r, "DepositDate") ?? TryReadDate(r, "CreatedDate") ?? DateTime.MinValue)
+                    .FirstOrDefault();
+
+                if (existing == null)
+                {
+                    string note = string.IsNullOrWhiteSpace(contractNumber)
+                        ? "[Khách thuê] Tạo cọc tự động"
+                        : $"[Khách thuê] Tạo cọc từ {contractNumber}";
+                    await _bll.AddDepositAsync(
+                        tenantId,
+                        roomId,
+                        depositAmount,
+                        depositDate,
+                        "Official",
+                        "Pending",
+                        null,
+                        null,
+                        note);
+                }
+                else
+                {
+                    int depositId = Convert.ToInt32(existing["DepositId"]);
+                    string type = existing.Table.Columns.Contains("DepositType") ? existing["DepositType"]?.ToString() : "Official";
+                    string status = existing.Table.Columns.Contains("Status") ? existing["Status"]?.ToString() : "Pending";
+                    decimal? returned = TryReadDecimal(existing, "ReturnedAmount");
+                    DateTime? returnedDate = TryReadDate(existing, "ReturnedDate");
+                    string notes = existing.Table.Columns.Contains("Notes") ? existing["Notes"]?.ToString() : null;
+                    string append = string.IsNullOrWhiteSpace(contractNumber)
+                        ? "[Khách thuê] Đồng bộ cọc"
+                        : $"[Khách thuê] Đồng bộ cọc từ {contractNumber}";
+                    notes = AppendNote(notes, append);
+
+                    await _bll.UpdateDepositAsync(
+                        depositId,
+                        tenantId,
+                        roomId,
+                        depositAmount,
+                        depositDate,
+                        type,
+                        status,
+                        returned,
+                        returnedDate,
+                        notes);
+                }
+            }
+            catch
+            {
+                // ignore sync errors
+            }
+        }
+
+        private static bool IsActiveHistory(DataRow row)
+        {
+            if (row == null) return false;
+            string checkout = row.Table.Columns.Contains("CheckOutDate") ? row["CheckOutDate"]?.ToString() : null;
+            if (string.IsNullOrWhiteSpace(checkout)) return true;
+            if (row.Table.Columns.Contains("Status"))
+            {
+                var status = row["Status"]?.ToString() ?? string.Empty;
+                if (status.IndexOf("active", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+                if (status.IndexOf("đang", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            }
+            return false;
+        }
+
+        private static bool IsActiveContract(DataRow row)
+        {
+            if (row == null) return false;
+            if (!row.Table.Columns.Contains("Status")) return true;
+            var status = row["Status"]?.ToString() ?? string.Empty;
+            return status.IndexOf("active", StringComparison.OrdinalIgnoreCase) >= 0
+                || status.IndexOf("đang", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static bool HasOtherActiveTenants(DataTable history, int roomId, int tenantId)
+        {
+            if (history == null) return false;
+            foreach (DataRow r in history.Rows)
+            {
+                if (TryReadInt(r, "RoomId") != roomId) continue;
+                if (TryReadInt(r, "TenantId") == tenantId) continue;
+                if (IsActiveHistory(r)) return true;
+            }
+            return false;
+        }
+
+        private static int TryReadInt(DataRow row, string col)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(col)) return 0;
+            return int.TryParse(row[col]?.ToString(), out var v) ? v : 0;
+        }
+
+        private static DateTime? TryReadDate(DataRow row, string col)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(col)) return null;
+            return DateTime.TryParse(row[col]?.ToString(), out var v) ? (DateTime?)v : null;
+        }
+
+        private static decimal? TryReadDecimal(DataRow row, string col)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(col)) return null;
+            return decimal.TryParse(row[col]?.ToString(), out var val) ? val : (decimal?)null;
+        }
+
+        private static string AppendNote(string notes, string extra)
+        {
+            if (string.IsNullOrWhiteSpace(extra)) return notes;
+            if (string.IsNullOrWhiteSpace(notes)) return extra;
+            if (notes.Contains(extra)) return notes;
+            return notes.TrimEnd() + " | " + extra.Trim();
+        }
+
+        private void SetSavingState(bool isSaving)
+        {
+            UseWaitCursor = isSaving;
+            Cursor = isSaving ? Cursors.WaitCursor : Cursors.Default;
+            if (btnSave != null)
+            {
+                btnSave.Enabled = !isSaving;
+                btnSave.Text = isSaving ? "Đang lưu..." : "Lưu";
+            }
+            if (btnCancel != null)
+            {
+                btnCancel.Enabled = !isSaving;
+            }
+        }
+
+        private static decimal ReadMoney(string raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) return 0m;
+            if (decimal.TryParse(raw, NumberStyles.Any, CultureInfo.InvariantCulture, out var v)) return v;
+            if (decimal.TryParse(raw, NumberStyles.Any, CultureInfo.CurrentCulture, out v)) return v;
+            return 0m;
+        }
+    }
+}

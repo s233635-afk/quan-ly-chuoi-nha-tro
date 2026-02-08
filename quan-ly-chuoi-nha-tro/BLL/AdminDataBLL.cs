@@ -9,8 +9,14 @@ namespace QuanLyNhaTro.BLL
     {
         private readonly DatabaseHelper dbHelper = new DatabaseHelper();
 
+        // --- CÁC HÀM GET DATA (DANH SÁCH) ---
         public Task<DataTable> GetRoomsAsync() => dbHelper.GetRoomsAsync();
+        public Task<DataTable> GetBranchesAsync() => dbHelper.GetBranchesAsync();
+        public Task<DataTable> GetBranchSectionsAsync(int? branchId = null) => dbHelper.GetBranchSectionsAsync(branchId);
+        public Task<DataTable> GetRoomTypesAsync() => dbHelper.GetRoomTypesAsync();
+        public Task<DataTable> GetRoomStatusesAsync() => dbHelper.GetRoomStatusesAsync();
         public Task<DataTable> GetStaffAsync() => dbHelper.GetUsersByRoleAsync(2);
+        public Task<DataTable> GetUsersByBranchAsync(int branchId) => dbHelper.GetUsersByBranchAsync(branchId);
         public Task<DataTable> GetTenantsAsync() => dbHelper.GetTenantsAsync();
         public Task<DataTable> GetDependentsAsync() => dbHelper.GetDependentsAsync();
         public Task<DataTable> GetTenantHistoryAsync() => dbHelper.GetTenantHistoryAsync();
@@ -23,30 +29,154 @@ namespace QuanLyNhaTro.BLL
         public Task<DataTable> GetInvoicesViewAsync() => dbHelper.GetInvoicesViewAsync();
         public Task<DataTable> GetPaymentsViewAsync() => dbHelper.GetPaymentsViewAsync();
         public Task<DataTable> GetPaymentsByInvoiceAsync(int invoiceId) => dbHelper.GetPaymentsByInvoiceAsync(invoiceId);
+        public Task<DataTable> GetRevenueByPeriodAsync(string periodType, int? year, int? period)
+            => dbHelper.GetRevenueByPeriodAsync(periodType, year, period);
         public Task<DataTable> GetMaintenanceAsync() => dbHelper.GetMaintenanceAsync();
         public Task<DataTable> GetAssetsAsync() => dbHelper.GetAssetsAsync();
         public Task<DataTable> GetNotificationsAsync() => dbHelper.GetNotificationsAsync();
         public Task<DataTable> GetSystemSettingsAsync() => dbHelper.GetSystemSettingsAsync();
+        public async Task<string> GetSystemSettingValueAsync(string key)
+        {
+            DataTable dt = await dbHelper.GetSystemSettingsAsync();
+            if (dt != null)
+            {
+                foreach (DataRow row in dt.Rows)
+                {
+                    if (row["SettingKey"]?.ToString() == key)
+                        return row["SettingValue"]?.ToString();
+                }
+            }
+            return null;
+        }
+        public async Task<(string BankId, string AccountNumber, string AccountName, string Template)?> GetUserBankSettingsAsync(int userId)
+        {
+            DataTable dt = await dbHelper.GetUserBankSettingsAsync(userId);
+            if (dt != null && dt.Rows.Count > 0)
+            {
+                var row = dt.Rows[0];
+                string bankId = row["BankId"]?.ToString();
+                string accountNumber = row["BankAccountNumber"]?.ToString();
+                string accountName = row["BankAccountName"]?.ToString();
+                string template = row["BankTemplate"]?.ToString();
+                return (bankId, accountNumber, accountName, template);
+            }
+            return null;
+        }
+        public Task<bool> UpsertUserBankSettingsAsync(int userId, string bankId, string accountNumber, string accountName, string template)
+            => dbHelper.UpsertUserBankSettingsAsync(userId, bankId, accountNumber, accountName, template);
+        public async Task<(string BankId, string AccountNumber, string AccountName, string Template)?> GetBranchBankSettingsAsync(int branchId)
+        {
+            DataTable dt = await dbHelper.GetBranchBankSettingsAsync(branchId);
+            if (dt != null && dt.Rows.Count > 0)
+            {
+                var row = dt.Rows[0];
+                string bankId = row["BankId"]?.ToString();
+                string accountNumber = row["BankAccountNumber"]?.ToString();
+                string accountName = row["BankAccountName"]?.ToString();
+                string template = row["BankTemplate"]?.ToString();
+                return (bankId, accountNumber, accountName, template);
+            }
+            return null;
+        }
+        public Task<bool> UpsertBranchBankSettingsAsync(int branchId, string bankId, string accountNumber, string accountName, string template)
+            => dbHelper.UpsertBranchBankSettingsAsync(branchId, bankId, accountNumber, accountName, template);
         public Task<DataTable> GetDashboardSummaryAsync() => dbHelper.GetDashboardSummaryAsync();
 
-        public Task<int> AddStaffUserAsync(string username, string password, string fullName, string email, string phone, bool isActive)
-            => dbHelper.AddStaffUserAsync(username, password, fullName, email, phone, isActive);
+        // --- STAFF CRUD ---
+        public Task<int> AddStaffUserAsync(string username, string password, string fullName, string email, string phone, int? branchId, bool isActive)
+            => dbHelper.AddStaffUserAsync(username, password, fullName, email, phone, branchId, isActive);
 
-        public Task<bool> UpdateStaffUserAsync(int userId, string fullName, string email, string phone, bool isActive, string newPassword = null)
-            => dbHelper.UpdateStaffUserAsync(userId, fullName, email, phone, isActive, newPassword);
+        public Task<bool> UpdateStaffUserAsync(int userId, string fullName, string email, string phone, int? branchId, bool isActive, string newPassword = null)
+            => dbHelper.UpdateStaffUserAsync(userId, fullName, email, phone, branchId, isActive, newPassword);
 
         public Task<bool> DeleteStaffUserAsync(int userId) => dbHelper.DeleteStaffUserAsync(userId);
 
+        // --- TENANT CRUD ---
         public Task<int> AddTenantAsync(string fullName, string identityCard, string phoneNumber, string email,
             DateTime? birthDate, string address, string tempReg, DateTime? tempRegDate, DateTime? tempRegExpiry, bool isActive)
             => dbHelper.AddTenantAsync(fullName, identityCard, phoneNumber, email, birthDate, address, tempReg, tempRegDate, tempRegExpiry, isActive);
+
+        public Task<int> AddTenantAsync(string fullName, string identityCard, string phoneNumber, string email,
+            DateTime? birthDate, string address, string tempReg, DateTime? tempRegDate, DateTime? tempRegExpiry, bool isActive,
+            string frontIdPhoto, string backIdPhoto)
+            => dbHelper.AddTenantAsync(fullName, identityCard, phoneNumber, email, birthDate, address, tempReg, tempRegDate, tempRegExpiry, isActive, frontIdPhoto, backIdPhoto);
 
         public Task<bool> UpdateTenantAsync(int tenantId, string fullName, string identityCard, string phoneNumber, string email,
             DateTime? birthDate, string address, string tempReg, DateTime? tempRegDate, DateTime? tempRegExpiry, bool isActive)
             => dbHelper.UpdateTenantAsync(tenantId, fullName, identityCard, phoneNumber, email, birthDate, address, tempReg, tempRegDate, tempRegExpiry, isActive);
 
+        public Task<bool> UpdateTenantAsync(int tenantId, string fullName, string identityCard, string phoneNumber, string email,
+            DateTime? birthDate, string address, string tempReg, DateTime? tempRegDate, DateTime? tempRegExpiry, bool isActive,
+            string frontIdPhoto, string backIdPhoto)
+            => dbHelper.UpdateTenantAsync(tenantId, fullName, identityCard, phoneNumber, email, birthDate, address, tempReg, tempRegDate, tempRegExpiry, isActive, frontIdPhoto, backIdPhoto);
+
         public Task<bool> DeleteTenantAsync(int tenantId) => dbHelper.DeleteTenantAsync(tenantId);
 
+        // --- DEPENDENT CRUD ---
+        public Task<int> AddDependentAsync(int tenantId, string fullName, string relationship, string phoneNumber)
+            => dbHelper.AddDependentAsync(tenantId, fullName, relationship, phoneNumber);
+
+        public Task<bool> UpdateDependentAsync(int dependentId, int tenantId, string fullName, string relationship, string phoneNumber)
+            => dbHelper.UpdateDependentAsync(dependentId, tenantId, fullName, relationship, phoneNumber);
+
+        public Task<bool> DeleteDependentAsync(int dependentId)
+            => dbHelper.DeleteDependentAsync(dependentId);
+
+        // --- TENANT HISTORY CRUD ---
+        public Task<int> AddTenantHistoryAsync(int tenantId, int roomId, DateTime checkInDate, DateTime? checkOutDate, string status, string notes)
+            => dbHelper.AddTenantHistoryAsync(tenantId, roomId, checkInDate, checkOutDate, status, notes);
+
+        public Task<bool> UpdateTenantHistoryAsync(int historyId, int roomId, DateTime checkInDate, DateTime? checkOutDate, string status, string notes)
+            => dbHelper.UpdateTenantHistoryAsync(historyId, roomId, checkInDate, checkOutDate, status, notes);
+
+        public Task<bool> DeleteTenantHistoryAsync(int historyId)
+            => dbHelper.DeleteTenantHistoryAsync(historyId);
+
+        // --- CONTRACT CRUD ---
+
+        // 🔥 ĐÂY LÀ HÀM CÒN THIẾU MÀ MÌNH ĐÃ THÊM VÀO 🔥
+        public async Task<DataRow> GetContractByIdAsync(int contractId)
+        {
+            DataTable dt = await dbHelper.GetContractByIdAsync(contractId);
+            if (dt != null && dt.Rows.Count > 0)
+            {
+                return dt.Rows[0];
+            }
+            return null;
+        }
+
+        public Task<int> AddContractAsync(
+            string contractNumber,
+            int tenantId,
+            int roomId,
+            DateTime? signDate,
+            DateTime startDate,
+            DateTime endDate,
+            decimal? rentalPrice,
+            decimal? depositRequired,
+            string terms,
+            string contractPdfPath,
+            string status)
+            => dbHelper.AddContractAsync(contractNumber, tenantId, roomId, signDate, startDate, endDate, rentalPrice, depositRequired, terms, contractPdfPath, status);
+
+        public Task<bool> UpdateContractAsync(
+            int contractId,
+            string contractNumber,
+            int tenantId,
+            int roomId,
+            DateTime? signDate,
+            DateTime startDate,
+            DateTime endDate,
+            decimal? rentalPrice,
+            decimal? depositRequired,
+            string terms,
+            string contractPdfPath,
+            string status)
+            => dbHelper.UpdateContractAsync(contractId, contractNumber, tenantId, roomId, signDate, startDate, endDate, rentalPrice, depositRequired, terms, contractPdfPath, status);
+
+        public Task<bool> DeleteContractAsync(int contractId) => dbHelper.DeleteContractAsync(contractId);
+
+        // --- DEPOSIT CRUD ---
         public Task<int> AddDepositAsync(int tenantId, int roomId, decimal depositAmount, DateTime? depositDate,
             string depositType, string status, decimal? returnedAmount, DateTime? returnedDate, string notes)
             => dbHelper.AddDepositAsync(tenantId, roomId, depositAmount, depositDate, depositType, status, returnedAmount, returnedDate, notes);
@@ -57,6 +187,7 @@ namespace QuanLyNhaTro.BLL
 
         public Task<bool> DeleteDepositAsync(int depositId) => dbHelper.DeleteDepositAsync(depositId);
 
+        // --- INVOICE CRUD ---
         public Task<int> AddInvoiceAsync(
             string invoiceNumber,
             int tenantId,
@@ -67,8 +198,9 @@ namespace QuanLyNhaTro.BLL
             decimal rentalCost,
             decimal utilityCost,
             decimal otherCost,
-            DateTime? dueDate)
-            => dbHelper.AddInvoiceAsync(invoiceNumber, tenantId, roomId, invoiceDate, fromDate, toDate, rentalCost, utilityCost, otherCost, dueDate);
+            DateTime? dueDate,
+            decimal? taxRate = null)
+            => dbHelper.AddInvoiceAsync(invoiceNumber, tenantId, roomId, invoiceDate, fromDate, toDate, rentalCost, utilityCost, otherCost, dueDate, taxRate);
 
         public Task<bool> UpdateInvoiceAsync(
             int invoiceId,
@@ -81,28 +213,229 @@ namespace QuanLyNhaTro.BLL
             decimal rentalCost,
             decimal utilityCost,
             decimal otherCost,
-            DateTime? dueDate)
-            => dbHelper.UpdateInvoiceAsync(invoiceId, invoiceNumber, tenantId, roomId, invoiceDate, fromDate, toDate, rentalCost, utilityCost, otherCost, dueDate);
+            DateTime? dueDate,
+            decimal? taxRate = null)
+            => dbHelper.UpdateInvoiceAsync(invoiceId, invoiceNumber, tenantId, roomId, invoiceDate, fromDate, toDate, rentalCost, utilityCost, otherCost, dueDate, taxRate);
 
         public Task<bool> DeleteInvoiceAsync(int invoiceId, bool deletePaymentsFirst)
             => dbHelper.DeleteInvoiceAsync(invoiceId, deletePaymentsFirst);
 
+        public Task<int> GenerateMonthlyInvoicesAsync(int year, int month, DateTime? invoiceDate = null, int? dueDay = null, decimal? taxRateOverride = null)
+            => dbHelper.GenerateMonthlyInvoicesAsync(year, month, invoiceDate, dueDay, taxRateOverride);
+
+        // --- PAYMENT CRUD ---
         public Task<int> AddPaymentAsync(int invoiceId, DateTime paymentDate, decimal paymentAmount, string paymentMethod, string transactionReference, string notes)
             => dbHelper.AddPaymentAsync(invoiceId, paymentDate, paymentAmount, paymentMethod, transactionReference, notes);
 
+        public Task<bool> UpdatePaymentAsync(int paymentId, DateTime paymentDate, decimal paymentAmount, string paymentMethod, string transactionReference, string notes)
+            => dbHelper.UpdatePaymentAsync(paymentId, paymentDate, paymentAmount, paymentMethod, transactionReference, notes);
+
         public Task<bool> DeletePaymentAsync(int paymentId) => dbHelper.DeletePaymentAsync(paymentId);
 
-        public Task<int> GenerateMonthlyInvoicesAsync(int year, int month, DateTime? invoiceDate = null, int? dueDay = null)
-            => dbHelper.GenerateMonthlyInvoicesAsync(year, month, invoiceDate, dueDay);
+        // Alias for InsertPaymentAsync
+        public Task<int> InsertPaymentAsync(int invoiceId, DateTime paymentDate, decimal amount, string method, string reference, string notes)
+            => dbHelper.AddPaymentAsync(invoiceId, paymentDate, amount, method, reference, notes);
 
-        public Task<int> AddRoomAsync(string roomNumber, int branchId, int? sectionId, int? roomTypeId, decimal? roomPrice,
-            int? currentStatusId, int? floor, decimal? area, bool? isActive)
-            => dbHelper.AddRoomAsync(roomNumber, branchId, sectionId, roomTypeId, roomPrice, currentStatusId, floor, area, isActive);
+        public async Task<Tuple<int, int>> CreateDepositPaymentAsync(
+            int tenantId,
+            int roomId,
+            decimal amount,
+            DateTime actionDate,
+            string actionType,
+            string paymentMethod,
+            string notes)
+        {
+            if (amount <= 0)
+                return Tuple.Create(0, 0);
 
-        public Task<bool> UpdateRoomAsync(int roomId, string roomNumber, int branchId, int? sectionId, int? roomTypeId, decimal? roomPrice,
-            int? currentStatusId, int? floor, decimal? area, bool? isActive)
-            => dbHelper.UpdateRoomAsync(roomId, roomNumber, branchId, sectionId, roomTypeId, roomPrice, currentStatusId, floor, area, isActive);
+            bool isRefund = string.Equals(actionType, "Refund", StringComparison.OrdinalIgnoreCase);
+            string prefix = isRefund ? "REF" : "COK";
+            string invoiceNumber = $"{prefix}-{actionDate:yyyyMMdd}-{DateTime.Now:HHmmss}";
+            decimal signedAmount = isRefund ? -Math.Abs(amount) : Math.Abs(amount);
+            string method = string.IsNullOrWhiteSpace(paymentMethod) ? "Cash" : paymentMethod.Trim();
+
+            int invoiceId = await AddInvoiceAsync(
+                invoiceNumber,
+                tenantId,
+                roomId,
+                actionDate.Date,
+                null,
+                null,
+                0m,
+                0m,
+                signedAmount,
+                actionDate.Date,
+                0m);
+
+            int paymentId = await AddPaymentAsync(
+                invoiceId,
+                actionDate.Date,
+                signedAmount,
+                method,
+                null,
+                notes);
+
+            return Tuple.Create(invoiceId, paymentId);
+        }
+
+        // --- ROOM CRUD ---
+        public async Task<int> AddRoomAsync(
+            string roomNumber,
+            int branchId,
+            int? sectionId,
+            int? roomTypeId,
+            decimal? roomPrice,
+            int? currentStatusId,
+            int? floor,
+            decimal? area,
+            bool? isActive)
+        {
+            if (string.IsNullOrWhiteSpace(roomNumber))
+                throw new Exception("Số phòng không được để trống.");
+            if (branchId <= 0)
+                throw new Exception("Chi nhánh không hợp lệ.");
+            if (!sectionId.HasValue || sectionId.Value <= 0)
+                throw new Exception("Vui lòng chọn Khu/Dãy.");
+            if (!roomTypeId.HasValue || roomTypeId.Value <= 0)
+                throw new Exception("Vui lòng chọn Loại phòng.");
+
+            if (!currentStatusId.HasValue || currentStatusId.Value <= 0)
+                currentStatusId = 1;
+
+            return await dbHelper.AddRoomAsync(roomNumber.Trim(), branchId, sectionId, roomTypeId, roomPrice, currentStatusId, floor, area, isActive);
+        }
+
+        public async Task<bool> UpdateRoomAsync(
+            int roomId,
+            string roomNumber,
+            int branchId,
+            int? sectionId,
+            int? roomTypeId,
+            decimal? roomPrice,
+            int? currentStatusId,
+            int? floor,
+            decimal? area,
+            bool? isActive,
+            int? occupants = null)
+        {
+            if (roomId <= 0)
+                throw new Exception("ID phòng không hợp lệ.");
+            if (string.IsNullOrWhiteSpace(roomNumber))
+                throw new Exception("Số phòng không được để trống.");
+            if (branchId <= 0)
+                throw new Exception("Chi nhánh không hợp lệ.");
+            if (!sectionId.HasValue || sectionId.Value <= 0)
+                throw new Exception("Vui lòng chọn Khu/Dãy.");
+            if (!roomTypeId.HasValue || roomTypeId.Value <= 0)
+                throw new Exception("Vui lòng chọn Loại phòng.");
+
+            if (!currentStatusId.HasValue || currentStatusId.Value <= 0)
+                currentStatusId = 1;
+
+            return await dbHelper.UpdateRoomAsync(roomId, roomNumber.Trim(), branchId, sectionId, roomTypeId, roomPrice, currentStatusId, floor, area, isActive, occupants);
+        }
+
+        public Task<int> UpdateRoomOccupancyStatusAsync(int roomId, int statusId)
+            => dbHelper.UpdateRoomOccupancyStatusAsync(roomId, statusId);
 
         public Task<bool> DeleteRoomAsync(int roomId) => dbHelper.DeleteRoomAsync(roomId);
+
+        // --- UTILITY TYPE CRUD ---
+        public Task<int> AddUtilityTypeAsync(string utilityName, string utilityCode, string unit, bool isRecurring, decimal? defaultPrice, string description, bool isActive)
+            => dbHelper.AddUtilityTypeAsync(utilityName, utilityCode, unit, isRecurring, defaultPrice, description, isActive);
+
+        public Task<bool> UpdateUtilityTypeAsync(int utilityTypeId, string utilityName, string utilityCode, string unit, bool isRecurring, decimal? defaultPrice, string description, bool isActive)
+            => dbHelper.UpdateUtilityTypeAsync(utilityTypeId, utilityName, utilityCode, unit, isRecurring, defaultPrice, description, isActive);
+
+        public Task<bool> DeleteUtilityTypeAsync(int utilityTypeId)
+            => dbHelper.DeleteUtilityTypeAsync(utilityTypeId);
+
+        public Task<DataTable> GetUtilityReadingsAsync()
+            => dbHelper.GetUtilityReadingsAsync();
+
+        // --- UTILITY READING CRUD ---
+        public Task<int> AddUtilityReadingAsync(int roomId, int utilityTypeId, DateTime? readingDate, decimal? previousReading, decimal? currentReading, decimal? usageAmount, decimal? unitPrice, decimal? totalCost, string notes)
+            => dbHelper.AddUtilityReadingAsync(roomId, utilityTypeId, readingDate, previousReading, currentReading, usageAmount, unitPrice, totalCost, notes);
+
+        public Task<bool> UpdateUtilityReadingAsync(int readingId, int roomId, int utilityTypeId, DateTime? readingDate, decimal? previousReading, decimal? currentReading, decimal? usageAmount, decimal? unitPrice, decimal? totalCost, string notes)
+            => dbHelper.UpdateUtilityReadingAsync(readingId, roomId, utilityTypeId, readingDate, previousReading, currentReading, usageAmount, unitPrice, totalCost, notes);
+
+        public Task<bool> DeleteUtilityReadingAsync(int readingId)
+            => dbHelper.DeleteUtilityReadingAsync(readingId);
+
+        // --- MAINTENANCE CRUD ---
+        public Task<int> AddMaintenanceTicketAsync(string ticketNumber, int roomId, string requestorType, int? requestorId,
+            string issueDescription, string priority, int? assignedToUserId, string status, DateTime? completedDate, string notes)
+            => dbHelper.AddMaintenanceTicketAsync(ticketNumber, roomId, requestorType, requestorId, issueDescription, priority, assignedToUserId, status, completedDate, notes);
+
+        public Task<bool> UpdateMaintenanceTicketAsync(int ticketId, int roomId, string requestorType, int? requestorId,
+            string issueDescription, string priority, int? assignedToUserId, string status, DateTime? completedDate, string notes)
+            => dbHelper.UpdateMaintenanceTicketAsync(ticketId, roomId, requestorType, requestorId, issueDescription, priority, assignedToUserId, status, completedDate, notes);
+
+        public Task<bool> DeleteMaintenanceTicketAsync(int ticketId)
+            => dbHelper.DeleteMaintenanceTicketAsync(ticketId);
+
+        // --- ASSET CRUD ---
+        public Task<int> AddAssetAsync(string assetCode, string assetName, string category, int? roomId, int quantity, string condition,
+            DateTime? purchaseDate, decimal? purchasePrice, string description, bool isActive)
+            => dbHelper.AddAssetAsync(assetCode, assetName, category, roomId, quantity, condition, purchaseDate, purchasePrice, description, isActive);
+
+        public Task<bool> UpdateAssetAsync(int assetId, string assetCode, string assetName, string category, int? roomId, int quantity, string condition,
+            DateTime? purchaseDate, decimal? purchasePrice, string description, bool isActive)
+            => dbHelper.UpdateAssetAsync(assetId, assetCode, assetName, category, roomId, quantity, condition, purchaseDate, purchasePrice, description, isActive);
+
+        public Task<bool> DeleteAssetAsync(int assetId)
+            => dbHelper.DeleteAssetAsync(assetId);
+
+        // --- NOTIFICATION CRUD ---
+        public Task<int> AddNotificationAsync(int? userId, string title, string message, string status)
+            => dbHelper.AddNotificationAsync(userId, title, message, status);
+
+        public Task<bool> UpdateNotificationAsync(int notificationId, int? userId, string title, string message, string status)
+            => dbHelper.UpdateNotificationAsync(notificationId, userId, title, message, status);
+
+        public Task<bool> DeleteNotificationAsync(int notificationId)
+            => dbHelper.DeleteNotificationAsync(notificationId);
+
+        // --- SYSTEM SETTINGS CRUD ---
+        public Task<bool> AddSystemSettingAsync(string key, string value, string description)
+            => dbHelper.AddSystemSettingAsync(key, value, description);
+
+        public Task<bool> UpdateSystemSettingAsync(string key, string value, string description)
+            => dbHelper.UpdateSystemSettingAsync(key, value, description);
+
+        public Task<bool> DeleteSystemSettingAsync(string key)
+            => dbHelper.DeleteSystemSettingAsync(key);
+
+        #region Lookups (BranchSections / RoomTypes / RoomStatuses)
+
+        public Task<int> AddBranchSectionAsync(int branchId, string sectionCode, string sectionName, string description, bool isActive)
+            => dbHelper.AddBranchSectionAsync(branchId, sectionCode, sectionName, description, isActive);
+
+        public Task<bool> UpdateBranchSectionAsync(int sectionId, int branchId, string sectionCode, string sectionName, string description, bool isActive)
+            => dbHelper.UpdateBranchSectionAsync(sectionId, branchId, sectionCode, sectionName, description, isActive);
+
+        public Task<bool> DeleteBranchSectionAsync(int sectionId)
+            => dbHelper.DeleteBranchSectionAsync(sectionId);
+
+        public Task<int> AddRoomTypeAsync(string roomTypeName, decimal? defaultPrice, string amenities, int? maxCapacity, string description, bool isActive)
+            => dbHelper.AddRoomTypeAsync(roomTypeName, defaultPrice, amenities, maxCapacity, description, isActive);
+
+        public Task<bool> UpdateRoomTypeAsync(int roomTypeId, string roomTypeName, decimal? defaultPrice, string amenities, int? maxCapacity, string description, bool isActive)
+            => dbHelper.UpdateRoomTypeAsync(roomTypeId, roomTypeName, defaultPrice, amenities, maxCapacity, description, isActive);
+
+        public Task<bool> DeleteRoomTypeAsync(int roomTypeId)
+            => dbHelper.DeleteRoomTypeAsync(roomTypeId);
+
+        public Task<int> AddRoomStatusAsync(string statusName, string description)
+            => dbHelper.AddRoomStatusAsync(statusName, description);
+
+        public Task<bool> UpdateRoomStatusAsync(int statusId, string statusName, string description)
+            => dbHelper.UpdateRoomStatusAsync(statusId, statusName, description);
+
+        public Task<bool> DeleteRoomStatusAsync(int statusId)
+            => dbHelper.DeleteRoomStatusAsync(statusId);
+
+        #endregion
     }
 }
